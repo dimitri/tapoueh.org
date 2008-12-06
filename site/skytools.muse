@@ -1,0 +1,179 @@
+#author Dimitri Fontaine
+#title /dev/dim/projects/skytools
+#date 20081206
+#desc Tapoueh.org Inc. Projects
+
+* PostgreSQL master slave(s) asynchronous replication
+
+**The easy way**. Really.
+
+<include file="prj.skytools.muse">
+
+Given the current state of affairs, I'm thinking that a kind of =FAQ= could be
+welcomed.
+
+** Basic vocabulary
+
+SkyTools uses those terms, so maybe you want to hear about them first:
+
+provider :: server at the origin of data, often called *master*.
+
+subscriber :: server receiving the data changes and applying them, often
+  called *slave.*
+
+lag :: time delta between latter produced event on the *provider* and latter
+  consumed event (or batch) by a *subscriber* (or *consumer*), measure per
+  *subscriber* (actually, per *consumer*).
+
+consumer :: generic term for a =PGQ= daemon fetching data from the provider,
+  =londiste.py= is an example of a =PGQ= consumer.
+
+queue :: events to get consumed. In londiste terms, a *queue* can be seen as a
+  set of tables for which subscription is offered to *subscribers*.
+
+** When is it a good idea to use londiste?
+
+Let's try to have a simple easy answer, as that's the spirit here:
+
+ - you want to replicate some data from a PostgreSQL server to another,
+ - from only one master,
+ - to any number of slaves,
+ - asynchronously,
+ - with some control of the =lag= of data flow,
+ - accepting this =lag= to reach =20s= in normal operation,
+ - replicating any mix of =INSERT= and =UPDATE= and =DELETE=,
+ - and possibly a **great amount** of them.
+
+Then =londiste.py= is for you. Really, it is. It's even shining as a solution.
+
+Some other projects are claiming to be solutions to, but from what I've been
+hearing (and from people in the know), they're as much problems as solutions.
+
+*** Let's talk about this *master*
+
+Londiste is a single master to several slaves solutions. That means any
+given =table= has to see its data flow from *its master* to *its slaves*.
+
+Now it's possible to have, in the same PostgreSQL database, some *provider*
+tables, **from** which the data are flowing, and some *subscriber* tables, **to**
+which some other data are flowing.
+
+Single master only means than any one given =table= on a given host can not be
+considered at the same time as *providing* data and as *subscribing* to remote
+data. That is multi-master replication, and another topic entirely.
+
+*** Multi-master, single slave (federated databse)
+
+Yes, you can.
+
+Ok, what we are talking about here is having a central database containing a
+live copy of the data *provided* by more than one slave.
+
+This is quite easy to do when you realize that PostgreSQL and londiste both
+refer to tables by their schema-qualified name internally. Ok, that's not
+exactly that in the case of PostgreSQL, but it's akin to that.
+
+The solution is then to create a globaly unique local schema on each
+*provider*, and to create all those schemas on the central *subscriber*. You
+then independantly replicate =provider1.table= and =provider2.table= to tables
+of the same *schema-qualified* name on the central server.
+
+And the cherry on the cake is to create a =federation.table= table on the
+*central* server, and to either use [[http://www.postgresql.org/docs/8.3/interactive/ddl-inherit.html][inheritance]] or a *subscriber trigger* to
+move data to the main table.
+
+When using a *subscriber trigger*, mind the =londiste.py= handling of triggers
+and the following command:
+
+<src lang="bash">
+  $ londiste.py <ini> subscriber restore-triggers <schema.table>
+</src>
+
+*** Asynchronous-what?
+
+That *async* thing means you don't have any guarantee **at commit time** on the
+*provider* (the master) that the changeset you made is replayed **already** on the
+slave.
+
+The drawback is that cases exist where the *provider* has happily commited a
+change that the slave finds itself unable to apply (=no space left on device=
+is the first example coming to my mind).
+
+The advantage is that in case of network failure, disk shortage, or some
+other kinf of outage, the *provider* see very little impact: its queues are
+growing more than usual, that's it.
+
+Depending on your needs, you'll be more interrested into the advantage or
+the drawback.
+
+*** Next FAQ Entry
+
+Yes there will be some more, please don't be shy and ask for more if you
+feel the need. That could even be the source of some documentation
+editing...
+
+** Can I use =PGQ= alone?
+
+[[http://wiki.postgresql.org/wiki/Image:Prato_2008_pgq_batches.pdf][Yes please!]]
+
+You even have more than one option in term of =API= to use:
+
+ - the plain =SQL= one, documented at
+   [[http://skytools.projects.postgresql.org/doc/pgq-sql.html]]
+ - the =python= one, for which you'd be better started with [[http://kaiv.wordpress.com/2007/10/19/skytools-database-scripting-framework-pgq/][this blog entry]]
+ - the =php= one I'm authoring for you to enjoy, hosted and documented on
+   [[http://pgsql.tapoueh.org/pgq/pgq-php/][pgsql.tapoueh.org]]
+
+Pick your choice, which mainly depends on your existing code *models*, or I
+wouldn't ever have made a =PHP= layer for it in the first place.
+
+** What's about documentation? Where is it, first?
+
+Documentation can be found online on the [[http://pgfoundry/]] [[http://skytools.projects.postgresql.org/doc/][Skytools]] project
+page. With some luck it's even up to date. Or you could simply download the
+=tarball= and check the already generated documentation material.
+
+Now, what you'll find is a very thin amount of documentation, almost only a
+man page per *Skytools* subprojects. There are two points to keep in mind just
+before being so disappointed as to consider switching to another solution:
+
+ - first, *SkyTools* are made to be very simple from the concepts used to
+   their implementation and most of all, usage. And this goal has been
+   fulfilled, which means you **don't need** much more documentation than what's
+   available.
+
+ - ok, maybe you need some more. Don't hesitate to contribute some to the
+   project, it's always nicely accepted! (*been there, done that*)
+
+** Tip & tricks, troubleshooting
+
+I think I should provide some things in this section.
+
+** Useful =SQL= queries
+
+*** consumers state
+
+This query is to be run at the *provider* site, it gives some information for
+each queue and consumer.
+
+<src lang="sql">
+  SELECT queue_name, consumer_name, lag, last_seen
+    FROM pgq.get_consumer_info();
+</src>
+
+The =lag= column is showing this same =lag= we were talking at the beginning of
+this document, the =last_seen= column shows the =timestamptz= of the latter
+*consumer* request. The value of this column should never be more than =60s=
+(and some, it's quick but not instantaneous) in the default configuration.
+
+*** More to come
+
+Stay tuned, or ask.
+
+** Tutorial
+
+And maybe a new tutorial is to be written, too.
+
+** Advanced reading material
+
+[[http://www.pgcon.org/2008/schedule/events/79.en.html][Marko gave a talk]] about =PGQ= internals.

@@ -6,13 +6,18 @@
 
 (require 'muse-project)  ; publication par projets
 
+(muse-derive-style
+ "tapoueh-html" "html"
+ :header "../../css/header.html"
+ :footer "../../css/footer.html"
+ :style-sheet "<link rel=\"stylesheet\" type=\"text/css\"  media=\"all\" href=\"../../css/styles.css\" />") 
+
 (setq muse-project-alist
-      '(("pgsql.tapoueh.org" ("~/dev/muse/site" :default "index")
-	 (:base "html" 
-		;; FIXME: try to properly link to the stylesheet
-		:muse-html-style-sheet "../styles.css"
-		:path "~/dev/muse/out/site"
-		))
+      '(("pgsql.tapoueh.org" 
+	 (,@(muse-project-alist-dirs "~/dev/muse/site") 
+	  :default "index")
+	 (:base "tapoueh-html" 
+		:path "~/dev/muse/out/site"))
 	
 	("blog.tapoueh.org" ("~/dev/muse/blog")
 	 (:base "journal-html" 
