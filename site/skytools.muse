@@ -12,6 +12,8 @@
 Given the current state of affairs, I'm thinking that a kind of =FAQ= could be
 welcomed.
 
+#glossary
+
 ** Basic vocabulary
 
 SkyTools uses those terms, so maybe you want to hear about them first:
@@ -31,6 +33,8 @@ consumer :: generic term for a =PGQ= daemon fetching data from the provider,
 queue :: events to get consumed. In londiste terms, a *queue* can be seen as a
   set of tables for which subscription is offered to *subscribers*.
 
+#use-case
+
 ** When is it a good idea to use londiste?
 
 Let's try to have a simple easy answer, as that's the spirit here:
@@ -49,6 +53,8 @@ Then =londiste.py= is for you. Really, it is. It's even shining as a solution.
 Some other projects are claiming to be solutions to, but from what I've been
 hearing (and from people in the know), they're as much problems as solutions.
 
+#single-master
+
 *** Let's talk about this *master*
 
 Londiste is a single master to several slaves solutions. That means any
@@ -61,6 +67,8 @@ which some other data are flowing.
 Single master only means than any one given =table= on a given host can not be
 considered at the same time as *providing* data and as *subscribing* to remote
 data. That is multi-master replication, and another topic entirely.
+
+#federate
 
 *** Multi-master, single slave (federated database)
 
@@ -89,6 +97,8 @@ and the following command:
   $ londiste.py <ini> subscriber restore-triggers <schema.table>
 </src>
 
+#async
+
 *** Asynchronous-what?
 
 That *async* thing means you don't have any guarantee **at commit time** on the
@@ -106,11 +116,15 @@ growing more than usual, that's it.
 Depending on your needs, you'll be more interrested into the advantage or
 the drawback.
 
+#FAQ
+
 *** Next FAQ Entry
 
 Yes there will be some more, please don't be shy and ask for more if you
 feel the need. That could even be the source of some documentation
 editing...
+
+#pgq
 
 ** Can I use =PGQ= alone?
 
@@ -126,6 +140,8 @@ You even have more than one option in term of =API= to use:
 
 Pick your choice, which mainly depends on your existing code *models*, or I
 wouldn't ever have made a =PHP= layer for it in the first place.
+
+#doc
 
 ** What's about documentation? Where is it, first?
 
@@ -145,11 +161,17 @@ before being so disappointed as to consider switching to another solution:
  - ok, maybe you need some more. Don't hesitate to contribute some to the
    project, it's always nicely accepted! (*been there, done that*)
 
-** Tip & tricks, troubleshooting
+#tips
+
+** Tips & tricks, troubleshooting
 
 I think I should provide some things in this section.
 
+#sql
+
 ** Useful =SQL= queries
+
+#get_consumer_info
 
 *** consumers state
 
@@ -165,6 +187,24 @@ The =lag= column is showing this same =lag= we were talking at the beginning of
 this document, the =last_seen= column shows the =timestamptz= of the latter
 *consumer* request. The value of this column should never be more than =60s=
 (and some, it's quick but not instantaneous) in the default configuration.
+
+#unregister_consumer
+
+*** drop all queue events from a former consumer
+
+When you're playing with =londiste= you can easily be in a situation were you
+want to clear up all your installation in order to start again cleanly. Or
+it could be that a former =PGQ= *consumer* has been deprecated in your
+architecture, and you want =PGQ= to forget all about it.
+
+For =PGQ= to stop accumulating events for a never to come back *consumer*, use
+the following =API=:
+
+<src lang="sql">
+  SELECT pgq.unregister_consumer('queue_name', 'consumer_name');
+</src>
+
+#more-sql
 
 *** More to come
 
