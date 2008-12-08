@@ -19,8 +19,8 @@
  :style-sheet "<link rel=\"stylesheet\" type=\"text/css\"  media=\"all\" href=\"../css/styles.css\" />") 
 
 (setq muse-project-alist
-      '(("pgsql.tapoueh.org" 
-	 (,@(muse-project-alist-dirs "~/dev/muse/site") 
+      '(("pgsql.tapoueh.org" ("~/dev/muse/site"
+	 ;;(,@(muse-project-alist-dirs "~/dev/muse/site") 
 	  :default "index")
 	 (:base "tapoueh-html" 
 		:path "~/dev/muse/out/site"))
@@ -29,7 +29,7 @@
 	 (:base "tapoueh-journal-html" 
 		:path "~/dev/muse/out/blog")
 	 (:base "journal-rss" 
-		:base-url "http://blog/tapoueh.org/" 
+		:base-url "http://blog.tapoueh.org/" 
 		:path "~/dev/muse/out/blog"))))
 
 (provide 'dim-muse)
