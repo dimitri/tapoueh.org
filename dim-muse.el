@@ -16,7 +16,8 @@
  "tapoueh-journal-html" "journal-html"
  :header "../css/blog-header.html"
  :footer "../css/blog-footer.html"
- :style-sheet "<link rel=\"stylesheet\" type=\"text/css\"  media=\"all\" href=\"../css/styles.css\" />") 
+ :style-sheet "<link rel=\"stylesheet\" type=\"text/css\"  media=\"all\" href=\"../css/styles.css\" />"
+ :date-format "%a, %e %b %Y, %k:%M")
 
 (setq muse-project-alist
       '(("pgsql.tapoueh.org" ("~/dev/muse/site" :default "index")
