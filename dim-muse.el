@@ -27,6 +27,7 @@
 	("blog.tapoueh.org" ("~/dev/muse/blog")
 	 (:base "tapoueh-journal-html" 
 		:path "~/dev/muse/out/")
+
 	 (:base "journal-rss" 
 		:base-url "http://blog.tapoueh.org/" 
 		:path "~/dev/muse/out/"))))
