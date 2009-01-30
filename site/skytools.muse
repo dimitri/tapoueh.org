@@ -57,6 +57,52 @@ Then =londiste.py= is for you. Really, it is. It's even shining as a solution.
 Some other projects are claiming to be solutions to, but from what I've been
 hearing (and from people in the know), they're as much problems as solutions.
 
+#slony
+
+*** what does londiste lack that slony has?
+
+Short answer: cascading support, execute script, failover/switchover.
+
+Some more details, maybe...
+
+**** cascading support
+
+If you consider cascading is supported when your data flows from *master* =A= to
+*slave* =B= and from there to *slave* =C=, then in case of =B= crashing, =C= still
+receives its data. This is not yet supported by londiste.
+
+**** DDL management
+
+Londiste does none, but that does not mean you can't do it. It's even not
+tricky at all in the simple cases. Say you have a *master* named =M= which is
+providing data for a consumer named =S=, and you want to add the table =T= to
+the replication:
+
+<src lang="bash">
+ $ londiste.py <ini> provider add schema.T
+ $ londiste.py <ini> subscriber add schema.T
+</src>
+
+Ok that's supported and easy. Now you want to add a column =C= to this table:
+
+<src lang="bash">
+ $ psql B
+ B# ALTER TABLE schema.T ADD COLUMN C ...;
+
+ $ psql A
+ A# ALTER TABLE schema.T ADD COLUMN C ...;
+ A# SELECT pgq.provider_refresh_triggers('queue_name', 'schema.T');
+</src>
+
+**** failover / switchover
+
+The londiste manual page talks about it, and what it has to say it's simply
+that it's not part of the design and use case of =londiste=. If you really
+need it, please use another software.
+
+Now, of course you can get it to work, but =londiste= won't help you not mess
+up your lagging data, so don't rely too much on it.
+
 #single-master
 
 *** Let's talk about this *master*
