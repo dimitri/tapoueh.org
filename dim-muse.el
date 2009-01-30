@@ -3,6 +3,7 @@
 (require 'muse-mode)
 (require 'muse-html) 
 (require 'muse-journal)
+(require 'muse-latex)
 
 (require 'muse-project)  ; publication par projets
 
@@ -22,7 +23,10 @@
 (setq muse-project-alist
       '(("pgsql.tapoueh.org" ("~/dev/muse/site" :default "index")
 	 (:base "tapoueh-html" 
-		:path "~/dev/muse/out/"))
+		:path "~/dev/muse/out/")
+
+	 (:base "pdf"
+		:path "~/dev/muse/pdf/"))
 	
 	("blog.tapoueh.org" ("~/dev/muse/blog")
 	 (:base "tapoueh-journal-html" 
