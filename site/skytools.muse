@@ -37,9 +37,13 @@ consumer :: generic term for a =PGQ= daemon fetching data from the provider,
 queue :: events to get consumed. In londiste terms, a *queue* can be seen as a
   set of tables for which subscription is offered to *subscribers*.
 
+#FAQ
+
+** Frequently Asked Questions
+
 #use-case
 
-** When is it a good idea to use londiste?
+*** When is it a good idea to use londiste?
 
 Let's try to have a simple easy answer, as that's the spirit here:
 
@@ -86,13 +90,16 @@ the replication:
 Ok that's supported and easy. Now you want to add a column =C= to this table:
 
 <src lang="bash">
- $ psql B
- B# ALTER TABLE schema.T ADD COLUMN C ...;
+ $ psql S
+ S# ALTER TABLE schema.T ADD COLUMN C ...;
 
- $ psql A
- A# ALTER TABLE schema.T ADD COLUMN C ...;
- A# SELECT pgq.provider_refresh_triggers('queue_name', 'schema.T');
+ $ psql M
+ M# ALTER TABLE schema.T ADD COLUMN C ...;
+ M# SELECT pgq.provider_refresh_triggers('queue_name', 'schema.T');
 </src>
+
+(Remember, =M= is master and =S= slave, or in londiste terms, provider and
+subscriber).
 
 **** failover / switchover
 
@@ -166,7 +173,30 @@ growing more than usual, that's it.
 Depending on your needs, you'll be more interrested into the advantage or
 the drawback.
 
-#FAQ
+#ticker
+
+*** How do this *ticker* thing relates to londiste?
+
+The =ticker= is an independant daemon facility which is responsible for
+generating =ticks=. Those ticks are produced on-demand, each time a consumer
+is asking for a new batch, and will get produced such as any =batch= contains
+either =ticker_max_lag= seconds worth of events or =ticker_max_count= events,
+whichever *comes* first.
+
+Now, =londiste= is the replicating daemon, and in fact is *just another* kind of
+=PGQ= subscriber. So you're running a =londiste.py= daemon for each
+subscriber. This londiste daemon is configured to get events from the
+=pgq_queue_name= queue, which can be used on as many subscribers as you want
+to. On the other hand, each subscriber must have a unique =job_name=.
+
+The queue daemon, =pgqadm.py= can be hosted on any machine, it'll often be the
+provider host or a third machine, independant of the replication
+databases. A single =ticker= instance can host as many =queues= as you want it
+to, but in the case of replication with =londiste.py= (remember, you could be
+using your own subscriber code atop =PGQ=), the queue will need to be
+installed on the =provider= database.
+
+#NextFAQ
 
 *** Next FAQ Entry
 
