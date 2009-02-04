@@ -39,7 +39,7 @@
 	 (:base "tapoueh-html" 
 		:path "~/dev/muse/out/")
 
-	 (:base "tapoueh-pdf"
+	 (:base "pdf"
 		:path "~/dev/muse/pdf/"))
 	
 	("blog.tapoueh.org" ("~/dev/muse/blog")
