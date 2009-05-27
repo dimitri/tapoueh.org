@@ -8,6 +8,8 @@
 
 (require 'muse-project)  ; publication par projets
 
+(require 'dim-muse-hack)
+
 ;; toolset paths
 (when (string-match "apple-darwin" system-configuration)
   (setenv "PATH" (concat (getenv "PATH") ":/sw/bin"))
@@ -28,7 +30,8 @@
  :header "~dim/dev/muse/css/blog-header.html"
  :footer "~dim/dev/muse/css/blog-footer.html"
  :style-sheet "<link rel=\"stylesheet\" type=\"text/css\"  media=\"all\" href=\"css/styles.css\" />"
- :date-format "%a, %e %b %Y, %k:%M")
+ :date-format "%a, %e %b %Y, %k:%M"
+ :date-format-notime "%a, %e %b %Y")
 
 (muse-derive-style
  "tapoueh-pdf" "pdf"
