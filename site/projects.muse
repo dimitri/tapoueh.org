@@ -27,3 +27,55 @@ so I hope...
 ** ClusterSSH Emacs Lisp implementation, cssh.el
 
 <include file="prj.cssh.muse">
+
+* PostgreSQL extensions and packaging
+
+The *big* extention I'm working on is =prefix=, but I sometime work on other
+stuff too. Some of them are not cleaned enough to get published (even in a
+public CVS)...
+
+** preprepare
+
+The [[http://preprepare.projects.postgresql.org/README.html][pre_prepare]] module aims to prepare all your statements as soon as
+possible and in a way that allows client queries not to bother at all and
+just call =EXECUTE=. It's a C-coded PostgreSQL extension in order to be able
+to preload it at backend start, but =local_preload_libraries= currently can
+not initialize =SPI=, so it could be a simple =plpgsql= script.
+
+** min_update
+
+This is part of the [[http://pgfoundry.org/projects/backports][backports]] project and is indeed a backport of the
+[[http://www.postgresql.org/docs/8.4/static/functions-trigger.html][suppress_redundant_updates_trigger]] that [[http://people.planetpostgresql.org/andrew/][Andrew Dunstan]] made and commited
+into =8.4=. The name of the trigger is intentionnaly not the same in order for
+smoothing the upgrade:
+
+<src lang="sql">
+BEGIN;
+ CREATE TRIGGER ... ON tablename ... suppress_redundant_updates_trigger();
+ ALTER TABLE tablename DISABLE TRIGGER _min_update;
+COMMIT;
+</src>
+
+** btree_fr_ops
+
+A BTree =OPERATOR CLASS= which will use the following hardcoded collation
+setting in the index, allowing for sorting and comparing in it when the
+cluster is in another locale: 
+
+<src lang="c"> 
+ #define BTREE_FR_OPS_COLLATION "fr_FR.UTF8"
+</src>
+
+The extension defines its own set of operators, in order not to step on
+standard provided operators shoes, it does this in a specific =schema=. So
+you'll have to have this =schema= in your =search_path= in order to use the
+index.
+
+It's yet to be proven correct and useful, but if you're interrested it's
+online: [[http://pgsql.tapoueh.org/btree_fr_ops/][btree_fr_ops]].
+
+** debian
+
+They have a nice developer [[http://qa.debian.org/developer.php?login=dim%40tapoueh.org][QA page]] where to see the packages I'm maintaining
+currently. If you have something simple I can get my hands on easily, and
+want it to get to debian, I'm open to discussion :)
