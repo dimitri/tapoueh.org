@@ -28,7 +28,7 @@ so I hope...
 
 <include file="prj.cssh.muse">
 
-* PostgreSQL extensions and packaging
+* PostgreSQL extensions
 
 The *big* extention I'm working on is =prefix=, but I sometime work on other
 stuff too. Some of them are not cleaned enough to get published (even in a
@@ -41,20 +41,6 @@ possible and in a way that allows client queries not to bother at all and
 just call =EXECUTE=. It's a C-coded PostgreSQL extension in order to be able
 to preload it at backend start, but =local_preload_libraries= currently can
 not initialize =SPI=, so it could be a simple =plpgsql= script.
-
-** min_update
-
-This is part of the [[http://pgfoundry.org/projects/backports][backports]] project and is indeed a backport of the
-[[http://www.postgresql.org/docs/8.4/static/functions-trigger.html][suppress_redundant_updates_trigger]] that [[http://people.planetpostgresql.org/andrew/][Andrew Dunstan]] made and commited
-into =8.4=. The name of the trigger is intentionnaly not the same in order for
-smoothing the upgrade:
-
-<src lang="sql">
-BEGIN;
- CREATE TRIGGER ... ON tablename ... suppress_redundant_updates_trigger();
- ALTER TABLE tablename DISABLE TRIGGER _min_update;
-COMMIT;
-</src>
 
 ** btree_fr_ops
 
@@ -74,7 +60,54 @@ index.
 It's yet to be proven correct and useful, but if you're interrested it's
 online: [[http://pgsql.tapoueh.org/btree_fr_ops/][btree_fr_ops]].
 
-** debian
+* PostgreSQL backports (available as extensions)
+
+Sometime you need newer features of PostgreSQL in past releases. In those
+case, and when it's possible, I tend to backport the new feature and make
+the work available on the [[http://pgfoundry.org/projects/backports][backports]] pgfoundry's project. And here's a
+maintained list of [[http://cvs.pgfoundry.org/cgi-bin/cvsweb.cgi/backports/][those]].
+
+Please note that I'm not making releases at the moment, for lack of interest
+and demand, so take the code from the CVS. As I'm using [[http://debian.org/][debian]] you should be
+able to build a package with:
+
+<src lang="bash">
+  debuild -us -uc
+</src>
+
+** min_update
+
+This is part of the [[http://pgfoundry.org/projects/backports][backports]] project and is indeed a backport of the
+[[http://www.postgresql.org/docs/8.4/static/functions-trigger.html][suppress_redundant_updates_trigger]] that [[http://people.planetpostgresql.org/andrew/][Andrew Dunstan]] made and commited
+into =8.4=. The name of the trigger is intentionnaly not the same in order for
+smoothing the upgrade:
+
+<src lang="sql">
+BEGIN;
+ CREATE TRIGGER ... ON tablename ... suppress_redundant_updates_trigger();
+ ALTER TABLE tablename DISABLE TRIGGER _min_update;
+COMMIT;
+</src>
+
+** uuid
+
+New in =8.3=, the [[http://www.postgresql.org/docs/8.3/interactive/datatype-uuid.html][uuid]] datatype allows one to store [[http://en.wikipedia.org/wiki/UUID][UUID]] values in your
+database, compare them, index them, etc. So [[http://cvs.pgfoundry.org/cgi-bin/cvsweb.cgi/backports/uuid/][here]] is an =8.2= version of it, as
+an extension.
+
+** uuid-ossp
+
+Now that you're able to store =UUID=, you want to generate them to, right? For
+this you need to link to an existing external library, PostgreSQL project
+choosed the [[http://www.postgresql.org/docs/8.3/interactive/uuid-ossp.html][ossp]] one, but it's not available on as many platforms as the
+main project is, so it's an additional supplied module in =8.3=.
+
+For this to work while being simple to install and configure (read, you have
+nothing more than =debuild= or =make install= to care about) I've duplicated
+some code from =uuid= into =uuid-ossp=. So now it's possible to =SELECT
+uuid_generate_v4();= from an =8.2= database.
+
+* debian packaging
 
 They have a nice developer [[http://qa.debian.org/developer.php?login=dim%40tapoueh.org][QA page]] where to see the packages I'm maintaining
 currently. If you have something simple I can get my hands on easily, and
