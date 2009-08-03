@@ -2,6 +2,46 @@
 #title tail -f /dev/dim
 #desc dim's PostgreSQL blog
 
+* 20090803-14:50 prefix 1.0~rc2 in debian testing
+
+#20090803-14:50
+#%20prefix%201%2E0%7Erc2%20in%20debian%20testing
+
+At long last, [[http://packages.debian.org/search?searchon=sourcenames&keywords=prefix][here it is]]. With binary versions both for =postgresal-8.3= and
+=postgresal-8.4=! Unfortunately my other packaging efforts are still waiting
+on the =NEW= queue, but I hope to soon see =hstore-new= and =preprepare= enter
+debian too.
+
+Anyway, the plan for =prefix= is to now wait something like 2 weeks, then,
+baring showstopper bugs, release the =1.0= final version. If you have a use
+for it, now is the good time for testing it!
+
+About upgrading a current =prefix= installation, the advice is to save data as
+=text= instead of =prefix_range=, remove prefix support, install new version,
+change again the columns data type:
+
+<src lang="sql">
+BEGIN;
+  ALTER TABLE foo
+     ALTER COLUMN prefix
+             TYPE text USING text(prefix);
+
+  DROP TYPE prefix_range CASCADE;
+  \i prefix.sql
+
+  ALTER TABLE foo
+     ALTER COLUMN prefix
+             TYPE prefix_range USING prefix_range(prefix);
+
+  CREATE INDEX idx_foo_prefix ON foo
+         USING gist(prefix gist_prefix_range_ops);
+COMMIT;
+</src>
+
+Note: I just added the =gist_prefix_range_ops= as default for type
+=prefix_range= so it'll be optional to specify this in final =1.0=. I got so
+used to typing it I didn't realize we don't have to :)
+
 * 20090709-12:48 prefix 1.0~rc2-1
 
 #20090709-12:48
