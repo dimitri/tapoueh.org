@@ -1,0 +1,133 @@
+#author Dimitri Fontaine
+#title tail -f /dev/dim
+#desc dim's general purpose blog, which might turn into emacs specific
+
+* 20090803-15:15 Some emacs nifties
+
+First, here's a way to insert at current position the last message printed
+into the minibuffer... well not exactly, in =*Messages*= buffer in fact. I was
+tired of doing it myself after invoking, e.g., =M-x emacs-version=.
+
+<src lang="emacs-lisp">
+;; print last message
+;; current-message is already lost by the time this gets called
+(defun dim:previous-message (&optional nth)
+  "get last line of *Message* buffer"
+  (with-current-buffer (get-buffer "*Messages*")
+    (save-excursion
+      (goto-char (point-max))
+      (setq nth (if nth nth 1))
+      (while (> nth 0)
+	(previous-line)
+	(setq nth (- nth 1)))
+      (buffer-substring (line-beginning-position) (line-end-position)))))
+
+(defun dim:insert-previous-message (&optional nth)
+  "insert last message of *Message* to current position"
+  (interactive "p")
+  (insert (format "%s" (dim:previous-message nth))))
+
+(global-set-key (kbd "C-c m") 'dim:insert-previous-message)
+</src>
+
+Now I stumbled accross [[http://planet.emacsen.org/][Planet Emacsen]] and saw this [[http://curiousprogrammer.wordpress.com/2009/07/26/emacs-utility-functions/][Emacs Utility Functions]]
+post, containing a version of =duplicate-current-line= that I didn't
+like... here's mine:
+
+<src lang="emacs-lisp">
+;; duplicate current line
+(defun duplicate-current-line (&optional n)
+  "duplicate current line, make more than 1 copy given a numeric argument"
+  (interactive "p")
+  (save-excursion
+    (let ((nb (or n 1))
+	  (current-line (thing-at-point 'line)))
+      ;; when on last line, insert a newline first
+      (when (or (= 1 (forward-line 1)) (eq (point) (point-max)))
+	(insert "\n"))
+
+      ;; now insert as many time as requested
+      (while (> n 0)
+	(insert current-line)
+	(decf n)))))
+
+(global-set-key (kbd "C-S-d") 'duplicate-current-line)  
+</src>
+
+And a last one inspired by some strange =vim= behavior for which I fail to see
+a need:
+
+<src lang="emacs-lisp">
+;; on request by cyrilb, who missed it from vim
+;; no global-set-key yet, still have to think I'll use it someday...
+(defun copy-char-from-prev-line ()
+  "Copy char at same position on previous line, when such a line and position exists"
+  (interactive)
+  (let ((c)
+	(p (- (point) (line-beginning-position))))
+    (save-excursion
+      (when (eq 0 (forward-line -1))
+	(when (< (+ (point) p) (line-end-position))
+	  (forward-char p)
+	  (setq c (thing-at-point 'char)))))
+    (when c
+      (insert c))))
+</src>
+
+Next time I'll try to talk about =rcirc-groups= or =cssh= which have managed to
+take some of my free time recently.
+
+* Tue,  9 Dec 2008,  0:00 Useful emacs trick
+
+<src lang="emacs-lisp">
+(defun insert-date()
+  "Insert a time-stamp according to locale's date and time format."
+  (interactive)
+  (insert (format-time-string "%a, %e %b %Y, %k:%M" (current-time)))) 
+
+(global-set-key "\C-cd" 'insert-date)
+</src>
+
+* Mon,  8 Dec 2008, 23:59 Predicting the next 5,000 days of the web
+
+Watch [[http://www.ted.com/index.php/talks/kevin_kelly_on_the_next_5_000_days_of_the_web.html][Kevin Kelly's Talk]] here, it's about trying to predict what the
+Internet will look like 5 thousands days from now.
+
+* Mon,  8 Dec 2008, 16:10 emacs-snapshot
+
+If you want to live on the bleeding edge, it's easy enough to get a non
+existing release of [[http://www.gnu.org/software/emacs/][GNU Emacs]] under [[http://www.debian.org/releases/unstable/][debian sid]], thanks to
+[[http://emacs.orebokech.com/]].
+
+The problem is that [[http://mwolson.org/projects/EmacsMuse.html][Emacs Muse]] is broken on =emacs-snapshot=, partly because
+of [[http://www.emacswiki.org/emacs/Htmlize][Htmlize]] which is unable to find the face fonts (I got =(error "Invalid
+face")=), partly because of my configuration itself:
+
+<src lang="emacs-lisp">
+hunk ./dim-muse.el 22
+-      '(("pgsql.tapoueh.org" $
+-        (,@(muse-project-alist-dirs "~/dev/muse/site") $
++      '(("pgsql.tapoueh.org" ("~/dev/muse/site"
++        ;;(,@(muse-project-alist-dirs "~/dev/muse/site") $
+</src>
+
+The solution was to switch to using =Emacs 22= on sid for [[http://pgsql.tapoueh.org/site/muse/site/][pgsql.tapoueh.org]]
+editing, while using [[http://www.emacswiki.org/emacs/?action=browse;oldid=EmacsCVS;id=EmacsFromCVS][EmacsCVS]] for other activities.
+
+And I'm using the patched =Htmlize= on both the versions, by the way.
+
+* December, 6th 2008
+
+A new site, using new software. See [[index.html][Home Page]] to read a rant about it all.
+
+Oh and check out the [[skytools.html][skytools]] page too. [[http://mwolson.org/projects/EmacsMuse.html][Emacs Muse]] is so great a project
+that instead of just working on how to publish a website with this tool, I
+found myself editing a rather large document about =londite.py=.
+
+* 20081205 Emacs Muse powered blog
+
+So finaly a blogging software for *geeks* exists?
+
+<qotd>
+The problem with communication is that you think it happened.
+</qotd>
