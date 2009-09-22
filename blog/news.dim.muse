@@ -2,6 +2,92 @@
 #title tail -f /dev/dim
 #desc dim's general purpose blog, which might turn into emacs specific
 
+* 20090922-23:04 Escreen integration
+
+After having used [[http://www.morishima.net/~naoto/software/elscreen/][elscreen]] for a long time, I'm now a very happy user of
+[[http://www.splode.com/~friedman/software/emacs-lisp/#ui][escreen]], which feels much better integrated and allows to have one ring of
+recently visited buffers per screen. Which is what you need when using a
+*screen* like feature, really.
+
+At first, it seemed so good as not to require any tweaking, but soon enough
+I had to adapt it to my workflow. After all that's exactly for being able to
+do this that I'm using emacs :)
+
+It began quite simple with things like =M-[= and =M-]= to navigate in screens,
+and mouse wheel support to, but then I found that the =C-\ b= list of screens
+could also support the =C-\ a runs the command
+escreen-get-active-screen-numbers= command by just adding some *emphasis* to
+the current escreen in use.
+
+As soon as I had this, and seeing people eyes blinking when working with me
+in front of my computer, I wanted to have *escreen* switching display where I
+am in the minibuffer. You have to try the mouse wheel navigation to fully
+appreciate it I guess. Anyway, here it is:
+
+<src lang="emacs-lisp">
+(load "escreen")
+(escreen-install)
+
+;; add C-\ l to list screens with emphase for current one
+(defun escreen-get-active-screen-numbers-with-emphasis ()
+  "what the name says"
+  (interactive)
+  (let ((escreens (escreen-get-active-screen-numbers))
+	(emphased ""))
+
+    (dolist (s escreens)
+      (setq emphased
+	    (concat emphased (if (= escreen-current-screen-number s)
+				 (propertize (number-to-string s)
+					     ;;'face 'custom-variable-tag) " ")
+					     'face 'info-title-3)
+					     ;;'face 'font-lock-warning-face)
+					     ;;'face 'secondary-selection)
+			       (number-to-string s))
+		    " ")))
+    (message "escreen: active screens: %s" emphased)))
+
+(global-set-key (kbd "C-\\ l") 'escreen-get-active-screen-numbers-with-emphasis)
+
+(defun dim:escreen-goto-last-screen ()
+  (interactive)
+  (escreen-goto-last-screen)
+  (escreen-get-active-screen-numbers-with-emphasis))
+
+(defun dim:escreen-goto-prev-screen (&optional n)
+  (interactive "p")
+  (escreen-goto-prev-screen n)
+  (escreen-get-active-screen-numbers-with-emphasis))
+
+(defun dim:escreen-goto-next-screen (&optional n)
+  (interactive "p")
+  (escreen-goto-next-screen n)
+  (escreen-get-active-screen-numbers-with-emphasis))
+
+(define-key escreen-map escreen-prefix-char 'dim:escreen-goto-last-screen)
+
+(global-set-key (kbd "M-[") 'dim:escreen-goto-prev-screen)
+(global-set-key (kbd "M-]") 'dim:escreen-goto-next-screen)
+(global-set-key (kbd "C-\\ DEL") 'dim:escreen-goto-prev-screen)
+(global-set-key (kbd "C-\\ SPC") 'dim:escreen-goto-next-screen)
+
+(global-set-key '[s-mouse-4] 'dim:escreen-goto-prev-screen)
+(global-set-key '[s-mouse-5] 'dim:escreen-goto-next-screen)
+</src>
+
+Oh, and as I'm in the *terms in emacs* part of universe (rather than using
+=emacs -nw= in some terminal emulator, but loosing sync between X clipbloard
+and emacs selection), I had to add this too:
+
+<src lang="emacs-lisp">
+;; add support for C-\ from terms
+(require 'term)
+(define-key term-raw-map escreen-prefix-char escreen-map)
+(define-key term-raw-map (kbd "M-[") 'dim:escreen-goto-prev-screen)
+(define-key term-raw-map (kbd "M-]") 'dim:escreen-goto-next-screen)
+</src>
+
+
 * 20090907-12:50 Follow-up on dim:mailrc-add-entry
 
 The function didn't allow for using more than one =mailrc= file, which isn't a
