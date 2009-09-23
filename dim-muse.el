@@ -27,8 +27,8 @@
 
 (muse-derive-style
  "tapoueh-journal-html" "journal-html"
- :header "~dim/dev/muse/css/blog-header.html"
- :footer "~dim/dev/muse/css/blog-footer.html"
+ :header "~dim/dev/muse/css/header.html"
+ :footer "~dim/dev/muse/css/footer.html"
  :style-sheet "<link rel=\"stylesheet\" type=\"text/css\"  media=\"all\" href=\"css/styles.css\" />"
  :date-format "%a, %e %b %Y, %k:%M"
  :date-format-notime "%a, %e %b %Y")
