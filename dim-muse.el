@@ -53,19 +53,19 @@
 		:base-url "http://blog.tapoueh.org/" 
 		:path "~/dev/muse/out/"))))
 
-(defvar dim:muse-rsync-options "-avz --delete"
-  "local path from where to rsync")
+(defvar dim:muse-rsync-options "-avz"
+  "rsync options")
 
 (defvar dim:muse-rsync-source "~/dev/muse/out"
-  "local path from where to rsync")
+  "local path from where to rsync, with no ending /")
 
 (defvar dim:muse-rsync-target
   "dim@tapoueh.org:/home/www/tapoueh.org/blog.tapoueh.org"
-  "Remote URL to use as rsync target")
+  "Remote URL to use as rsync target, with no ending /")
 
 (defvar dim:muse-rsync-extra-subdirs
   '("../css" "../images" "../pdf")
-  "static subdirs to rsync too")
+  "static subdirs to rsync too, path from dim:muse-rsync-source, no ending /")
 
 (defun dim:muse-project-rsync (&optional static)
   "publish tapoueh.org using rsync"
