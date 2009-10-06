@@ -53,4 +53,45 @@
 		:base-url "http://blog.tapoueh.org/" 
 		:path "~/dev/muse/out/"))))
 
+(defvar dim:muse-rsync-options "-avz --delete"
+  "local path from where to rsync")
+
+(defvar dim:muse-rsync-source "~/dev/muse/out"
+  "local path from where to rsync")
+
+(defvar dim:muse-rsync-target
+  "dim@tapoueh.org:/home/www/tapoueh.org/blog.tapoueh.org"
+  "Remote URL to use as rsync target")
+
+(defvar dim:muse-rsync-extra-subdirs
+  '("../css" "../images" "../pdf")
+  "static subdirs to rsync too")
+
+(defun dim:muse-project-rsync (&optional static)
+  "publish tapoueh.org using rsync"
+  (interactive "P")
+  (let* ((rsync-command (format "rsync %s %s %s" 
+				dim:muse-rsync-options
+				(concat dim:muse-rsync-source "/")
+				(concat dim:muse-rsync-target "/"))))
+    (with-current-buffer (get-buffer-create "*muse-rsync*")
+      (erase-buffer)
+      (insert (concat rsync-command "\n"))
+      (message "%s" rsync-command)
+      (insert (shell-command-to-string rsync-command))
+      (insert "\n")
+
+      (when static
+	(dolist (subdir dim:muse-rsync-extra-subdirs)
+	  (let ((cmd (format "rsync %s %s %s" 
+			     dim:muse-rsync-options
+			     (concat dim:muse-rsync-source "/" subdir)
+			     dim:muse-rsync-target)))
+	    (insert (concat cmd "\n"))
+	    (message "%s" cmd)
+	    (insert (shell-command-to-string cmd))
+	    (insert "\n")))))))
+
+(define-key muse-mode-map (kbd "C-c R") 'dim:muse-project-rsync)
+
 (provide 'dim-muse)
