@@ -2,6 +2,151 @@
 #title tail -f /dev/dim
 #desc dim's PostgreSQL blog
 
+* 20091130-12:10 prefix 1.1.0
+
+#20091130-12:10
+#%20prefix%201%2E1%2E0
+
+So I had two [[http://archives.postgresql.org/pgsql-general/2009-11/msg01042.php][bug]] [[http://lists.pgfoundry.org/pipermail/prefix-users/2009-November/000005.html][reports]] about [[prefix.html][prefix]] in less than a week. It means several
+things, one of them is that my code is getting used in the wild, which is
+nice. The other side of the coin is that people do find bugs in there. This
+one is about the behavior of the =btree opclass= of the type =prefix range=. We
+cheat a lot there by simply having written one, because a range does not
+have a strict ordering: is =[1-3]= before of after =[2-4]=? But when you know
+you have no overlapping intervals in your =prefix_range= column, being able to
+have it part of a *primary key* is damn useful.
+
+Note: in =8.5= we should have a way to express *contraint exclusion* and have
+PostgreSQL forbids overlapping entries for us. Not being there yet, you
+could write a *constraint trigger* and use the *GiST index* to have nice speed
+there, which is exactly what this *constraint exclusion* support is about.
+
+It turns out the code change required is pretty simple:
+
+<src lang="c">
+-    return (a->first == b->first) ? (a->last - b->last) : (a->first - b->first);
++    /*
++     * we are comparing e.g. '1' and '12' (the shorter contains the
++     * smaller), so let's pretend '12' < '1' as it contains less elements.
++     */
++    return (alen == mlen) ? 1 : -1;
+</src>
+
+This happens in the *compare support function* (see
+[[http://www.postgresql.org/docs/8.4/interactive/xindex.html][Interfacing Extensions To Indexes]]) so that means you now have to rebuild
+your =prefix_range= btree indexes, hence the version number bump.
+
+* 20091125-11:49 Yet Another PostgreSQL tool hits debian
+
+#20091125-11:49
+#%20Yet%20Another%20PostgreSQL%20tool%20hits%20debian
+
+So there it is, this newer contribution of mine that I presented at [[http://2009.pgday.eu][PGDay]] is
+now in =debian NEW= queue. [[pgstaging.html][pg_staging]] will empower you with respect to what
+you do about those nightly backups (=pg_dump -Fc= or something).
+
+The tool provides a lot of commands to either =dump= or =restore= a database. It
+comes with documentation covering about it all, except for the *londiste*
+support part, which will be there in time for =1.0.0= release. The [[http://github.com/dimitri/pg_staging/blob/master/TODO][Todo list]]
+is getting smaller and smaller, the version you'll soon find in =debian sid=
+is already called =0.9=.
+
+So, how do you go about using this software, and what service it implements?
+
+** it's all about deriving a staging environment from your backups
+
+To validate backups, you want to restore them and check the database you get
+from them. And your developers will want to sometime refresh the database
+they're working with. And you could have both an integration environment and
+a pre-live one: On the former, you develop new code atop a stable set of
+data; while on the latter you test stable enough code (ready to go live) on
+a set of data as near as live data as possible.
+
+And you want to be flexible about it, so that there's not a fulltime job to
+handle retoring databases each and every days, for project A integration or
+project B pre-live testing, or project C accounting snapshot. Or you name
+it.
+
+And of course you want to have a single point of control of all your
+databases. Let's call it the *controler*.
+
+** setting up pg_staging
+
+The [[pgstaging.html][pg_staging]] setup consists of one =pg_staging.ini= file wherein you
+describe your different target databases (those =dev= and =prelive= ones), and
+of course where to get the production backups from. Currently you have to
+serve the backups file in a format suitable for =pg_restore= (that means you
+use either =pg_dump -Ft= or =pg_dump -Fc=) on an =apache= folder. The produced
+=HTML= will get parsed.
+
+So you setup the =DEFAULT= section with common settings, then one section per
+target: the databases you want to restore. Tell =pg_staging= where they are
+(=host=), etc, and it'll be able to drive them.
+
+In order to being able to host more than a single restored dump on a staging
+server, for the same database, we use =pgbouncer=:
+<src>
+pg_staging> pgbouncer some_db.dev
+              some_db      some_db_20091029 :5432
+     some_db_20090717      some_db_20090717 :5432
+     some_db_20091029      some_db_20091029 :5432
+</src>
+
+So as explained into the =pg_staging(1)= man page, you have to open
+non-interactive =SSH= connection from the *controler* to the *hosts* where the
+databases will get restored. Then you have to do a minimal setup pgbouncer
+on the *hosts* with a =trust= connection. It'll get used from =pg_staging= for
+adding newly restored database and have them accessible. Then you can also
+=switch= the new database to being the virtual *some_db* so that you avoid
+editing any connection string on your softwares.
+
+Also, install the =pgstaging-client= package on every host you target. The
+client is a simple shell script that must run as root (=sudo= is used) in
+order to replace your =pgbouncer= setup or manage your =londiste= services.
+
+See =man 5 pg_staging= for available options, including *schemas* to filter out
+either completely or just skipping data restoring in those.
+
+** pg_staging usage
+
+Now you're all setup, you can begin to enjoy using =pgstaging=. Enter the
+console and see what you have in there.
+<src>
+$ pg_staging 
+Welcome to pg_staging 0.9.
+pg_staging> databases
+...
+pg_staging> restore some_db.dev
+...
+pg_staging> pgbouncer some_db.dev
+...
+pg_staging> dbsizes --all some_db.dev
+...
+pg_staging> psql some_db.dev
+some_db_20091125=# 
+</src>
+
+And as you can see in =man pg_staging= there are a lot of commands
+already. You can for example obtain a new *pg_restore catalog* from a dump
+file, with some *schemas* commented out. It will even comment out =triggers=
+that are using a =function= which is defined in a filtered out =schema=, for
+example a =PGQ= trigger. And much much more.
+
+[[pgstaging.html][pg_staging]] will even allow you to =dump= your production databases, but
+consider installing a separate instance of it on the machine serving the
+backups to your local network thanks to an =apache= directory listing!
+
+** Roadmap to =1.0.0=
+
+What's remain to be done is testing and having =PITR= based restoring to work,
+and adding some documentation (tutorial, which this blog post about is; and
+*londiste* support). At this point, unless some reader here asks for a new
+feature (set), I'll consider =pg_staging= ready for =1.0.0=. After all, we're
+using it about daily here :)
+
+Consider commenting, you should be able to easily spot my private mail
+address...
+
 * 20091109-09:50 PGDay.eu, Paris: it was awesome!
 
 #20091109-09:50
