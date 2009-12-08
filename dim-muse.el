@@ -21,42 +21,42 @@
 
 (muse-derive-style
  "tapoueh-html" "html"
- :header "~dim/dev/muse/css/header.html"
- :footer "~dim/dev/muse/css/footer.html"
+ :header "~dim/dev/tapoueh.org/css/header.html"
+ :footer "~dim/dev/tapoueh.org/css/footer.html"
  :style-sheet "<link rel=\"stylesheet\" type=\"text/css\"  media=\"all\" href=\"css/styles.css\" />") 
 
 (muse-derive-style
  "tapoueh-journal-html" "journal-html"
- :header "~dim/dev/muse/css/header.html"
- :footer "~dim/dev/muse/css/footer.html"
+ :header "~dim/dev/tapoueh.org/css/header.html"
+ :footer "~dim/dev/tapoueh.org/css/footer.html"
  :style-sheet "<link rel=\"stylesheet\" type=\"text/css\"  media=\"all\" href=\"css/styles.css\" />"
  :date-format "%a, %e %b %Y, %k:%M"
  :date-format-notime "%a, %e %b %Y")
 
 (muse-derive-style
  "tapoueh-pdf" "pdf"
- :header "~dim/dev/muse/css/latex-header.tex")
+ :header "~dim/dev/tapoueh.org/css/latex-header.tex")
 
 (setq muse-project-alist
-      '(("pgsql.tapoueh.org" ("~/dev/muse/site" :default "index")
+      '(("pgsql.tapoueh.org" ("~/dev/tapoueh.org/site" :default "index")
 	 (:base "tapoueh-html" 
-		:path "~/dev/muse/out/")
+		:path "~/dev/tapoueh.org/out/")
 
 	 (:base "pdf"
-	 	:path "~/dev/muse/pdf/"))
+	 	:path "~/dev/tapoueh.org/pdf/"))
 	
-	("blog.tapoueh.org" ("~/dev/muse/blog")
+	("blog.tapoueh.org" ("~/dev/tapoueh.org/blog")
 	 (:base "tapoueh-journal-html" 
-		:path "~/dev/muse/out/")
+		:path "~/dev/tapoueh.org/out/")
 
 	 (:base "journal-rss" 
 		:base-url "http://blog.tapoueh.org/" 
-		:path "~/dev/muse/out/"))))
+		:path "~/dev/tapoueh.org/out/"))))
 
 (defvar dim:muse-rsync-options "-avz"
   "rsync options")
 
-(defvar dim:muse-rsync-source "~/dev/muse/out"
+(defvar dim:muse-rsync-source "~/dev/tapoueh.org/out"
   "local path from where to rsync, with no ending /")
 
 (defvar dim:muse-rsync-target
