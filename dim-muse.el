@@ -64,7 +64,7 @@
   "Remote URL to use as rsync target, with no ending /")
 
 (defvar dim:muse-rsync-extra-subdirs
-  '("../css" "../images" "../pdf")
+  '("../css" "../images" "../pdf" "../static")
   "static subdirs to rsync too, path from dim:muse-rsync-source, no ending /")
 
 (defun dim:muse-project-rsync (&optional static)
