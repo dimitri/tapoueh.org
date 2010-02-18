@@ -93,5 +93,6 @@
 	    (insert "\n")))))))
 
 (define-key muse-mode-map (kbd "C-c R") 'dim:muse-project-rsync)
+(define-key muse-mode-map (kbd "C-c C-r") 'dim:muse-project-rsync)
 
 (provide 'dim-muse)
