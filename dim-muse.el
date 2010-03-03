@@ -81,18 +81,40 @@
       (forward-line -1)
       (setq current-position (point))
 
-      ;; get the name too
+      ;; get the name too, and have a filename version of it
       (goto-char previous-position)
       (let* ((hs (re-search-forward "<h2>"))
 	     (he (re-search-forward "</h2>"))
 	     (an (buffer-substring-no-properties hs (- he 5))))
-	(setq name (mapconcat 'identity (split-string an "[ /\\]") "_")))
+	(setq name 
+	      (cons an (mapconcat 'identity (split-string an "[ /\\]") "_"))))
 
       (setq positions 
 	    (cons (list name previous-position current-position) positions))
       (setq previous-position current-position)
       (goto-char current-position))
-    positions))
+    (reverse positions)))
+
+(defun dim:muse-make-index (header footer dir articles)
+  "return the index content (string) from the article list, header and footer"
+  (concat header
+	  "<ul>\n"
+	  (mapconcat 
+	   (lambda (article)
+	     (let ((name  (caar  article))
+		   (fname (cdar  article))
+		   (start (cadr  article))
+		   (end   (caddr article)))
+	       ;; fetch the date, good to have in the index
+	       (goto-char start)
+	       (let* ((ds (re-search-forward "<span class=\"date\">"))
+		      (de (re-search-forward "</span>"))
+		      (ad (buffer-substring-no-properties ds (- de 7))))
+		 (format "<li><a href=\"%s\">%s</a>, %s</li>\n"
+			 (concat dir fname ".html") name ad))))
+	     articles "\n")
+	  "</ul>\n"
+	  footer))
 
 (defun tapoueh-journal-html-split-entries (source target sstarget)
   "Split HTML output in one file per entry, called as a Muse :final function"
@@ -103,16 +125,21 @@
 	   (footer-and-end   (dim:muse-get-footer-and-end))
 	   (footer           (car footer-and-end))
 	   (end              (cdr footer-and-end))
-	   (directory 
+	   (dir 
 	    (file-name-as-directory
 	     (concat 
 	      (file-name-directory target) 
 	      "articles/"
-	      (car (split-string (file-name-nondirectory target) "[.]"))))))
-      (dolist (e (dim:muse-collect-entries start end))
-	(let ((name (concat directory (car e) ".html"))
-	      (from (cadr e))
-	      (to   (caddr e)))
+	      (car (split-string (file-name-nondirectory target) "[.]")))))
+	   (articles         (dim:muse-collect-entries start end))
+	   (index            (dim:muse-make-index header footer dir articles)))
+      ;; write the index
+      (write-region index nil (concat dir "index.html"))
+      ;; produce one file per article
+      (dolist (a articles)
+	(let ((name    (concat dir (cdar a) ".html"))
+	      (from    (cadr a))
+	      (to      (caddr a)))
 	  (write-region header nil name)
 	  (write-region from to name 'append)
 	  (write-region footer nil name 'append)
