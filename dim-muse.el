@@ -95,6 +95,31 @@
       (goto-char current-position))
     (reverse positions)))
 
+(defun dim:muse-relocate-links (header &optional depth)
+  "edit the HTML relative links in the header string to depth up-levels"
+  (if (and depth (> depth 1))
+      (progn
+	(let ((up        "../")
+	      (relocated "")
+	      (pos       0))
+	  (dotimes (d (- depth 1)) (setq up (concat up "../")))
+
+	  (while (string-match "<a href=\"" header pos)
+	    (setq relocated (concat relocated (substring header pos (match-end 0))))
+	    (setq pos (match-end 0))
+	    ;; get the link
+	    (string-match "\">" header pos)
+	    (let ((link (substring header pos (match-end 0))))
+	      (if (not (string-match-p "http://\\|mailto:" link))
+		  (setq relocated (concat relocated up link))
+		(setq relocated (concat relocated link))))
+	    ;; continue advancing
+	    (setq pos (match-end 0)))
+
+	  ;; return the edited header
+	  (concat relocated (substring header pos))))
+    header))
+
 (defun dim:muse-make-index (header footer articles)
   "return the index content (string) from the article list, header and footer"
   (concat header
@@ -120,7 +145,8 @@
   "Split HTML output in one file per entry, called as a Muse :final function"
   (save-excursion
     (let* ((header-and-start (dim:muse-get-header-and-start))
-	   (header           (car header-and-start))
+	   (header-orig      (car header-and-start))
+	   (header           (dim:muse-relocate-links header-orig 2))
 	   (start            (cdr header-and-start))
 	   (footer-and-end   (dim:muse-get-footer-and-end))
 	   (footer           (car footer-and-end))
@@ -141,7 +167,9 @@
 	      (from    (cadr a))
 	      (to      (caddr a)))
 	  (write-region header nil name)
-	  (write-region from to name 'append)
+	  (write-region 
+	   (dim:muse-relocate-links
+	    (buffer-substring-no-properties from to) 2) nil name 'append)
 	  (write-region footer nil name 'append)
 	  (message "tapoueh-journal-html-split-entries: %s." name))))))
 
