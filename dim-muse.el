@@ -86,8 +86,9 @@
       (let* ((hs (re-search-forward "<h2>"))
 	     (he (re-search-forward "</h2>"))
 	     (an (buffer-substring-no-properties hs (- he 5))))
-	(setq name 
-	      (cons an (mapconcat 'identity (split-string an "[ /\\]") "_"))))
+	(setq name
+	      (cons an (mapconcat 'identity 
+				  (split-string an "[ /\\]\\|&amp;") "_"))))
 
       (setq positions 
 	    (cons (list name previous-position current-position) positions))
@@ -110,8 +111,8 @@
 	       (let* ((ds (re-search-forward "<span class=\"date\">"))
 		      (de (re-search-forward "</span>"))
 		      (ad (buffer-substring-no-properties ds (- de 7))))
-		 (format "<li><a href=\"%s\">%s</a>, %s</li>\n"
-			 (concat fname ".html") name ad))))
+		 (format 
+		  "<li><a href=\"%s.html\">%s</a>, %s</li>\n" fname name ad))))
 	     articles "\n")
 	  "</ul>\n"
 	  footer))
