@@ -95,7 +95,7 @@
       (goto-char current-position))
     (reverse positions)))
 
-(defun dim:muse-make-index (header footer dir articles)
+(defun dim:muse-make-index (header footer articles)
   "return the index content (string) from the article list, header and footer"
   (concat header
 	  "<ul>\n"
@@ -111,7 +111,7 @@
 		      (de (re-search-forward "</span>"))
 		      (ad (buffer-substring-no-properties ds (- de 7))))
 		 (format "<li><a href=\"%s\">%s</a>, %s</li>\n"
-			 (concat dir fname ".html") name ad))))
+			 (concat fname ".html") name ad))))
 	     articles "\n")
 	  "</ul>\n"
 	  footer))
@@ -125,14 +125,14 @@
 	   (footer-and-end   (dim:muse-get-footer-and-end))
 	   (footer           (car footer-and-end))
 	   (end              (cdr footer-and-end))
+	   (articles         (dim:muse-collect-entries start end))
+	   (index            (dim:muse-make-index header footer articles))
 	   (dir 
 	    (file-name-as-directory
 	     (concat 
 	      (file-name-directory target) 
 	      "articles/"
-	      (car (split-string (file-name-nondirectory target) "[.]")))))
-	   (articles         (dim:muse-collect-entries start end))
-	   (index            (dim:muse-make-index header footer dir articles)))
+	      (car (split-string (file-name-nondirectory target) "[.]"))))))
       ;; write the index
       (write-region index nil (concat dir "index.html"))
       ;; produce one file per article
