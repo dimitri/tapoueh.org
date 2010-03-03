@@ -71,7 +71,6 @@
 (defun dim:muse-collect-entries (start end)
   "return a list of region positions where to find entries"
   (goto-char start)
-  (forward-line -1)
   (let ((positions '())
 	(name              "")
 	(date              "")
