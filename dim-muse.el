@@ -32,6 +32,7 @@
  :style-sheet "<link rel=\"stylesheet\" type=\"text/css\"  media=\"all\" href=\"css/styles.css\" />"
  :date-format "%a, %e %b %Y, %k:%M"
  :date-format-notime "%a, %e %b %Y"
+ :after 'tapoueh-journal-html-index
  :final 'tapoueh-journal-html-split-entries)
 
 (muse-derive-style
@@ -54,10 +55,21 @@
 		:base-url "http://blog.tapoueh.org/" 
 		:path "~/dev/tapoueh.org/out/"))))
 
+;;;
+;;; tapoueh-journal-html-split-entries will produce a HTML page per article
+;;; in the blog, and an index page to reference them, in a
+;;; subdirectory. Another index is also generated to be put on the main
+;;; page, where we keep only dim:muse-most-recent-articles then put the index.
+;;;
+(defcustom dim:muse-most-recent-articles 3
+  "Keep that many articles from the blog on the main page"
+  :type 'int)
+
 (defun dim:muse-get-header-and-start ()
   "return the header string and its end position"
   (goto-char (point-min))
-  (re-search-forward "<div class=\"entry\">")
+  (unless (re-search-forward "<div class=\"toc\">" nil t)
+    (re-search-forward "<div class=\"entry\">"))
   (beginning-of-line)
   (cons (buffer-substring-no-properties 1 (point)) (point)))
 
@@ -71,6 +83,12 @@
 (defun dim:muse-collect-entries (start end)
   "return a list of region positions where to find entries"
   (goto-char start)
+
+  ;; skip our "Previous Articles" section
+  (when (re-search-forward "<div class=\"toc\">" nil t)
+    (re-search-forward "<div class=\"entry\">")
+    (forward-line -1))
+
   (let ((positions '())
 	(name              "")
 	(date              "")
@@ -104,11 +122,12 @@
 	      (pos       0))
 	  (dotimes (d (- depth 1)) (setq up (concat up "../")))
 
-	  (while (string-match "<a href=\"" header pos)
-	    (setq relocated (concat relocated (substring header pos (match-end 0))))
+	  (while (string-match "href=\"\\|src=\"" header pos)
+	    (setq 
+	     relocated (concat relocated (substring header pos (match-end 0))))
 	    (setq pos (match-end 0))
 	    ;; get the link
-	    (string-match "\">" header pos)
+	    (string-match "\"" header pos)
 	    (let ((link (substring header pos (match-end 0))))
 	      (if (not (string-match-p "http://\\|mailto:" link))
 		  (setq relocated (concat relocated up link))
@@ -120,10 +139,9 @@
 	  (concat relocated (substring header pos))))
     header))
 
-(defun dim:muse-make-index (header footer articles)
+(defun dim:muse-make-index (articles &optional subdir)
   "return the index content (string) from the article list, header and footer"
-  (concat header
-	  "<ul>\n"
+  (concat "<ul>\n"
 	  (mapconcat 
 	   (lambda (article)
 	     (let ((name  (caar  article))
@@ -136,10 +154,34 @@
 		      (de (re-search-forward "</span>"))
 		      (ad (buffer-substring-no-properties ds (- de 7))))
 		 (format 
-		  "<li><a href=\"%s.html\">%s</a>, %s</li>\n" fname name ad))))
+		  "<li><a href=\"%s.html\">%s</a>, %s</li>\n" 
+		  (if subdir
+		      (concat (file-name-as-directory subdir) fname)
+		    fname)
+		  name ad))))
 	     articles "\n")
-	  "</ul>\n"
-	  footer))
+	  "</ul>\n"))
+
+(defun tapoueh-journal-html-index ()
+  ":after function for Muse, to add in the output buffer an articles index"
+  (let* ((subdir 
+	  (concat 
+	   "articles/" 
+	   (car (split-string
+		 (file-name-nondirectory 
+		  muse-publishing-current-output-path) "[.]"))))
+	 (header-and-start (dim:muse-get-header-and-start))
+	 (header           (car header-and-start))
+	 (start            (cdr header-and-start))
+	 (footer-and-end   (dim:muse-get-footer-and-end))
+	 (footer           (car footer-and-end))
+	 (end              (cdr footer-and-end))
+	 (articles         (dim:muse-collect-entries start end))
+	 (index            (dim:muse-make-index articles subdir)))
+    (goto-char start)
+    (insert (concat "<div class=\"toc\"><h2>Previous Articles</h2>\n"
+		    index
+		    "</div>\n\n"))))
 
 (defun tapoueh-journal-html-split-entries (source target sstarget)
   "Split HTML output in one file per entry, called as a Muse :final function"
@@ -152,15 +194,17 @@
 	   (footer           (car footer-and-end))
 	   (end              (cdr footer-and-end))
 	   (articles         (dim:muse-collect-entries start end))
-	   (index            (dim:muse-make-index header footer articles))
+	   (index            (dim:muse-make-index articles))
+	   (subdir
+	    (concat "articles/" 
+		    (car (split-string (file-name-nondirectory target) "[.]"))))
 	   (dir 
 	    (file-name-as-directory
-	     (concat 
-	      (file-name-directory target) 
-	      "articles/"
-	      (car (split-string (file-name-nondirectory target) "[.]"))))))
+	     (concat (file-name-directory target) subdir))))
+
       ;; write the index
-      (write-region index nil (concat dir "index.html"))
+      (write-region (concat header index footer) nil (concat dir "index.html"))
+
       ;; produce one file per article
       (dolist (a articles)
 	(let ((name    (concat dir (cdar a) ".html"))
@@ -170,9 +214,19 @@
 	  (write-region 
 	   (dim:muse-relocate-links
 	    (buffer-substring-no-properties from to) 2) nil name 'append)
+
+	  ;; add a local index
+	  (write-region 
+	   (concat "<div class=\"entry\"><h2>Other Articles</h2>\n"
+		   index
+		   "</div>\n\n") nil name 'append)
+
 	  (write-region footer nil name 'append)
 	  (message "tapoueh-journal-html-split-entries: %s." name))))))
 
+;;;
+;;; C-c C-r to rsync the static website to the hosting server
+;;;
 (defvar dim:muse-rsync-options "-avz"
   "rsync options")
 
