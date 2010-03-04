@@ -61,7 +61,7 @@
 ;;; subdirectory. Another index is also generated to be put on the main
 ;;; page, where we keep only dim:muse-most-recent-articles then put the index.
 ;;;
-(defcustom dim:muse-most-recent-articles 3
+(defcustom dim:muse-index-length 3
   "Keep that many articles from the blog on the main page"
   :type 'int)
 
@@ -139,7 +139,7 @@
 	  (concat relocated (substring header pos))))
     header))
 
-(defun dim:muse-make-index (articles &optional subdir)
+(defun dim:muse-make-index (articles &optional subdir n)
   "return the index content (string) from the article list, header and footer"
   (concat "<ul>\n"
 	  (mapconcat 
@@ -159,7 +159,10 @@
 		      (concat (file-name-as-directory subdir) fname)
 		    fname)
 		  name ad))))
-	     articles "\n")
+	   (if n 
+	       (cdr (butlast articles (- (length articles) n 1)))
+	     articles) 
+	   "\n")
 	  "</ul>\n"))
 
 (defun tapoueh-journal-html-index ()
@@ -177,7 +180,8 @@
 	 (footer           (car footer-and-end))
 	 (end              (cdr footer-and-end))
 	 (articles         (dim:muse-collect-entries start end))
-	 (index            (dim:muse-make-index articles subdir)))
+	 (index            (dim:muse-make-index 
+			    articles subdir dim:muse-index-length)))
     (goto-char start)
     (insert (concat "<div class=\"toc\"><h2>Previous Articles</h2>\n"
 		    index
