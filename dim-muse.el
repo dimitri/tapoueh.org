@@ -129,7 +129,7 @@
 	    ;; get the link
 	    (string-match "\"" header pos)
 	    (let ((link (substring header pos (match-end 0))))
-	      (if (not (string-match-p "http://\\|mailto:" link))
+	      (if (not (string-match-p "https?://\\|mailto:" link))
 		  (setq relocated (concat relocated up link))
 		(setq relocated (concat relocated link))))
 	    ;; continue advancing
