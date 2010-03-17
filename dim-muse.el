@@ -183,9 +183,15 @@
 	 (index            (dim:muse-make-index 
 			    articles subdir dim:muse-index-length)))
     (goto-char start)
-    (insert (concat "<div class=\"toc\"><h2>Previous Articles</h2>\n"
-		    index
-		    "</div>\n\n"))))
+    (insert 
+     (concat
+      "<div class=\"toc\"><h2>Previous Articles</h2>\n"
+      index
+      "\n"
+      (format 
+       "There's also an <a href=\"%s/index.html\">index of all entries</a>."
+       subdir)
+      "</div>\n\n"))))
 
 (defun tapoueh-journal-html-split-entries (source target sstarget)
   "Split HTML output in one file per entry, called as a Muse :final function"
@@ -221,7 +227,7 @@
 
 	  ;; add a local index
 	  (write-region 
-	   (concat "<div class=\"entry\"><h2>Other Articles</h2>\n"
+	   (concat "<div class=\"entry\"><h2>Index of All Articles</h2>\n"
 		   index
 		   "</div>\n\n") nil name 'append)
 
