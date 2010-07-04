@@ -244,7 +244,7 @@
   "local path from where to rsync, with no ending /")
 
 (defvar dim:muse-rsync-target
-  "dim@tapoueh.org:/home/www/tapoueh.org/blog.tapoueh.org"
+  "dim@tapoueh.org:/var/www/blog.tapoueh.org"
   "Remote URL to use as rsync target, with no ending /")
 
 (defvar dim:muse-rsync-extra-subdirs
