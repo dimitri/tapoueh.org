@@ -1,0 +1,295 @@
+#author Dimitri Fontaine
+#title /dev/dim/pg/evolution
+#date 20100703
+#desc A collection of ideas about the future of PostgreSQL
+
+* Sharing a vision of some possible future of PostgreSQL
+
+[[http://char10.org]] was a great venue with great people. The conference itself
+and the "Hall's Talks" have been a huge source of ideas popping up. Again...
+
+In this article I'll try to organise and share those ideas that I'm growing
+in my head, in the hope that some people will think that maybe the ideas are
+worthwile enough to think about them, make them theirs, then why not work on
+them!
+
+Organising ideas is all about putting them togother in boxes and attach to
+them the more meaningfull label you can think of. Here, I think the labels
+are MVCC in the Cloud, and How to Further Optimise PostgreSQL.
+
+** DISCLAIMER
+
+Those ideas that I try to organise and present in this documents are
+expressed like if they were good designs. I realise that may well be not
+true, but that's the best way I can think of to share them. So not only that
+is a *Work In Progress* but you're welcome to find this collection nothing but
+a waste of time. Apologies if that's the case.
+
+** MVCC in the Cloud
+
+Nowadays all the rage is in the virtualised environments, dynamic sizing of
+resources and pay-only-what-you-use. They even found a funny name to sell
+this, welcome to the Cloud!
+
+The problem is that while it's quite easy to understand how to apply such a
+reasonning to stateless services, such as webservers, it's a lot more
+difficult to apply the same to persistent storage services, like, say, a
+traditional relational database. Let's not forget that the main services of
+an RDBMS ain't interpreting SQL, but offering transactions and durability. 
+
+I think forgetting about that would be awful and could lead to strange
+solutions appearing, where you play with highly dynamic non-structured
+non-normalized caches that people would be happy to use as persistent
+storage services. Oh and of course only provide APIs, so that the
+application has to know all about the storage and data location, rather than
+having to describe what data they need. Yeah, descriptive languages are not
+cool anymore, we don't want no XML, no XSLT, noSQL!
+
+So, well, is it possible to apply those Cloud concepts to ACID persistent
+storage services such as PostgreSQL, and get some benefits out of that? I
+think so, and will try to explain how. If you're a web indexer robot of some
+kind, please consider attaching that to your *distributed computing* label,
+would you have one.
+
+*** Transparent cluster
+
+The first problem I'd try to have an idea about is how to offer a
+transparent service to users in the presence of replication. Say you're
+running a master slave *Hot Standby* setup, using *Streaming Replication* for
+transfering the data. Now the application code will either connect to the
+master or to the slave, and depending on this choice will not be able to
+benefit from the same *service*.
+
+So the idea would be for the *service* offered by both the *nodes* of this
+*cluster* to be the same, as far as the user is concerned. This simplification
+could come in two steps. First, you need *XID* feedback from the slave to the
+master. That means that the older snapshot still in use in any slave should
+be known by the master, so that it will refrain from cleaning up the house
+while the party's still ongoing. It's rude to do that, even more so to
+friends.
+
+Once you can trust that any snapshot on the slave is still valid on the
+master, the second step would be for the slave to forward a transaction to
+its master (=primary_coninfo=) as soon as it can't serve it itself. I think
+this is as soon as the transaction would require the *Virtual XID* to turn
+into a real one. Oh, and as you know the current transaction's snapshot is
+still valid on the master, the only thing you need is being able to open a
+transaction on this very *snapshot* over there.
+
+And it so happens that being able to connect to a system and ask for a given
+snapshot you know about already would be useful for other projects (parallel
+dumps and distributing query processing). I think some hackers are already
+contemplating on how to offer such a facility. Thanks guys!
+
+*** I want a ticket to the cloud!
+
+The previous idea goes a long way to help offering a global service to users
+but does nothing to help solve the real complex *Cloud* challenges. Those are
+related to the flexibility you want from the *Cloud*, the marketing name of it
+being *Elasticity*. To be a *Cloud* service, you need to be able to add and
+remove nodes to your service and stay online.
+
+So, let's continue thinking, but focusing a little more.
+
+Lots of efforts are ongoing in the domains of replications and remote acces
+to data. I'm thinking about link:Postgres-XC, link:Postgres-R and =SQL/MED=
+related work. I like those projects and architecture but I don't think
+getting them to the *Cloud* will be practical, except for =SQL/MED=.
+
+If you missed it, =SQL/MED= is the part of the link:standard that allows a
+database server to expose objects from the outer space. Meaning anything
+from a local text file to another database server, of the same or another
+technology. It's very powerful and valuable, but the limitation is that you
+can't reach outer space within your transaction boundaries. That's a pretty
+good *limit*, though, because it means you now get autonomous transactions
+(you embed a transaction into another and their =COMMIT/ROLLBACK= statuses are
+independant, or, say, autonomous).
+
+To provide elastic clustering in the *Cloud*, with some kind of transparency
+for the user, you don't want to lose MVCC, that thing that allows the
+database to respect the *ACID* guarantees. Maintaining MVCC in a cluster is,
+on the other hand, exactly what Postgres-XC, Postgres-R and
+MiddleWareReplication are working on. 
+
+The problem there is that either you have full support of PostgreSQL
+features, that's Postgres-R, or you have data distribution, that's
+Postgres-XC (which does not yet provide node fault-tolerance, by the way).
+
+In the latter case, it's even a big problem to offer all the PostgreSQL
+features (user defined functions, triggers, rules, etc) because for
+parallelizing query processing (you *have* to do that if you're distributing
+the data) the vast majority of the work they're doing is in the planner and
+optimiser. I don't even want to think how they will make it possible for a
+trigger to touch a non-local table in a distributed cluster.
+
+*** Remote tablespace
+
+So, the idea would be to keep the global MVCC facilities that those project
+provide. I'll confess that I like the Postgres-R implementation of it, even
+if it relies on a *Global Communication System* to deliver a total ordering of
+transactions in the cluster. But the advantage is that the design has been
+made with the idea of supporting dynamic cluster configuration: you can
+accept new nodes and lose some others online.
+
+Then, the data distribution would be easier to address at the *executor* level
+I think. What you need to be able to say is that some data are stored on
+another node. You need the catalogs to exists on all the nodes, and I think
+that the physical location property of the data is already well defined in
+the notion of a *tablespace*. So we should extend this notion to remote
+PostgreSQL nodes that happen to share the MVCC details with us.
+
+Then the planner would work as it's doing now, but certain parts of the plan
+would have to be handled to another PostgreSQL instance. And as we're
+working with a global MVCC idea, we keep transactional behavior.
+
+*** Mirrored tablespace
+
+Now of course we all like to have a choice. Here the choice would be about
+data locality. Certain systems already exists (distributed file systems,
+like link:GlusterFS) that propose to mix and match data replication and data
+distribution. Or simply think about =RAID-10=. You have both *stripping* and
+*mirroring* there, so that's somewhat expected to want to have that in your
+database product too...
+
+That leads me to think we should offer *mirror tablespaces* while at
+it. Implementing that can be as complex as optimising *2 Phase Commit* or as
+simple as having a *per tablespace Streaming Replication* solution.
+
+Now of course you have to explain data locality in the network to the
+planner, so that it can compare the cost of running a =JOIN= over there then
+retrieving the result set against doing that locally. It seems clean what's
+best until you think that while the other node is hashing your fact table
+you're free to locally execute another part of the same query plan...
+
+*** It's so cloudy now I can feel the rain coming
+
+And as all the rage is about offering *elastic* capabilities to your
+clustering solution, the next step after that is having some smart agent in
+the system that will notice that we're doing this or that data transfers to
+solve user queries so often that we should setup a mirror of this remote
+tablespace now.
+
+Of course, you also want newcomers to be able to extend your elasticity,
+like "hey guys I'm new there, how can I help?".
+
+While at it, your smart cluster manager program should be able to arrange
+things so that the loss of any node at any time is just an optimisation
+problem, not a data loss one. Nothing more critical than a *serialisation
+error*, but maybe we should invent a new =SQLERR= here, I'd like to propose the
+following error message to the transactions you need to abort in case of
+some node unexpected disapearing: *the elastic just shrinked*.
+
+** How to Further Optimise PostgreSQL
+
+It seems harder and harder to find good ideas that look effective and that
+are not too complex to understand. It's simply because about all of them
+already have been implemented into the product, if you ask me. But that does
+not mean there isn't a way to go, that means finding it is getting tough,
+and that when pursuing the ideas used to be some 1-man work for some
+*consolidated* weeks, it's getting to collaborative working of several
+talented people sharing a common goal and able to dedicate **months** of their
+time.
+
+I hope it does not mean we should be happy with what we have but we rather
+continue improving our prefered product.
+
+*** On the usage of indexes as column store
+
+When you're handling very big tables, there's a very good chance that some
+column's value will get repeated all over the place. But if you index that
+column, you'll see the value only once and a list of pointers to the rows
+that are hosting it. Column storage is about compressing that data set in a
+way that you store the column value only once.
+
+The idea here would need to first have the ability to use the index in an
+authoritative way, without refering the main table storage to confirm the
+visibility. That's already a work in progress.
+
+When we have that, then we could think about how we're using the indexes
+now. Their only purpose in life is to help solve restrictive queries by
+accessing directly to the rows of interrest, avoiding to *scan* all those data
+that won't fit in main memory, so that you rely on your slow drives to get
+access to it.
+
+Another idea here would be to be able to use the index to solve queries in
+other cases than just applying the restrictions and filtering they
+require. By that I mean that we could use our indexes to retrieve some
+column's value, rather than the main table's data, when we have the idea
+that the columns cardinality is low enough.
+
+I guess that would mean we have optional column storage.
+
+*** The Executor should be a Virtual Machine
+
+I've been talking a lot with ***Gavin***, and his mind is full of datawarehouse
+optimisation problems. One of them is how to speed up the data retrieval
+from disk. Given what are modern =CPU=, we should be saturating read
+capabilities of any hard drive without a sweat, and we're not there yet. It
+happens that link:MonetDB is about there.
+
+The big difference in architecture between they and us is how they execute
+the queries, with code path that contain very little branches, loops, or
+function calls. That alone would be responsible for an incredible
+performance benefit, like, a factor of =25= to =50= times what we have now.
+
+If you think about it in the *right* angle, to be able to suppress all the
+looping and branching and function calling we currently have into the
+executor code, it could be that the simplest solution (ahah) would be to
+expose the executor capabilities as *opcodes* and have the planner and
+optimiser be *just in time compilers* for this new Virtual Machine.
+
+*** Matching a query against some "template" at runtime
+
+*** Analyzing VIEWs as a correlated-statistics solution
+
+*** Planner costs and system usage statistics, or admission control
+
+** And some other thoughts
+
+There are 10 kinds of people in the world, those that know how to count in
+binary and others, to quote some famous T-Shirt brand. You though that
+counting to 3 in decimal was so much easier, didn't you?
+
+*** Supervized guest deamons, with an API please
+
+There are several projects that could benefit from being *integrated*
+alongside **core** processes. By that I mean being part of the start, reload,
+stop and restart procedures. The current list includes *autovacuum*, a *pgagent*
+scheduler, and a ticker. And *helper backgrounds* like PostgreSQL had in some
+=6.x= branch, and that ***Markus*** implemented in [[http://postgres-r.org][Postgres-R]]. There's even an
+argument about including a connection pool into the mix, but ***Jan*** won that
+over a beer in Ottawa this year, so I won't insist. You'll notice there's a
+lucky winner here, we needed *autovacuum* so bad that it's thankfully already
+in *core*.
+
+Providing an API that would allow to register user defined *deamon* processes
+would allow for including those other projects, and maybe some more, in a
+very easy way for the user.
+
+My current thinking about that would be to steal as much as meaningfull from
+the Erlang/OTP supervisor processes API, including the =MaxR= and =MaxT=
+variables to protect the main system to suffer from user deamons
+mis-behaviors. 
+
+It would even make sense to only provide support for =gen_fsm= kind of hosted
+processes, meaning the API is to register a global unique name per process,
+a state and code entry points (transitions). Now that we have a mecanism to
+send signals to backends, with a payload, it's called =LISTEN/NOTIFY=. We
+could certainly reuse that to send messages to the hosted state machines:
+that would be the events that trigger te transitions --- the event name
+would match the code function.
+
+In the case of a pgagent scheduler, we would need to be able to produce
+events internally, without user interaction, but my understanding of
+=SIGALARM= is that it's made for that. It's not clear what the best design
+would be here, but maybe registering a *pgagent clock service* that would
+=NOTIFY= the *pgagent launcher service* would do. It would also have to =LISTEN=
+for changes on its underlying job scheduling tables, I guess.
+
+And for querying the database, we'd use =SPI=, I guess.
+
+* Conclusion
+
+I hope some of those ideas are viable and interresting to some people, and
+should that be the case, seeing progress made on those would be awesome!
+Meanwhile, thanks for reading.
