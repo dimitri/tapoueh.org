@@ -21,14 +21,14 @@
 
 (muse-derive-style
  "tapoueh-html" "html"
- :header "~dim/dev/tapoueh.org/css/header.html"
- :footer "~dim/dev/tapoueh.org/css/footer.html"
+ :header "~/dev/tapoueh.org/css/header.html"
+ :footer "~/dev/tapoueh.org/css/footer.html"
  :style-sheet "<link rel=\"stylesheet\" type=\"text/css\"  media=\"all\" href=\"css/styles.css\" />") 
 
 (muse-derive-style
  "tapoueh-journal-html" "journal-html"
- :header "~dim/dev/tapoueh.org/css/header.html"
- :footer "~dim/dev/tapoueh.org/css/footer.html"
+ :header "~/dev/tapoueh.org/css/header.html"
+ :footer "~/dev/tapoueh.org/css/footer.html"
  :style-sheet "<link rel=\"stylesheet\" type=\"text/css\"  media=\"all\" href=\"css/styles.css\" />"
  :date-format "%a, %e %b %Y, %k:%M"
  :date-format-notime "%a, %e %b %Y"
@@ -37,7 +37,7 @@
 
 (muse-derive-style
  "tapoueh-pdf" "pdf"
- :header "~dim/dev/tapoueh.org/css/latex-header.tex")
+ :header "~/dev/tapoueh.org/css/latex-header.tex")
 
 (setq muse-project-alist
       '(("pgsql.tapoueh.org" ("~/dev/tapoueh.org/site" :default "index")
