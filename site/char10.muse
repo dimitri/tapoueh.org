@@ -131,21 +131,36 @@ the data) the vast majority of the work they're doing is in the planner and
 optimiser. I don't even want to think how they will make it possible for a
 trigger to touch a non-local table in a distributed cluster.
 
+And one of the thing ***Markus*** showed at [[http://char10.org/talk-schedule-details#talk13][CHAR(10)]] is that what's killing
+replicated systems really is the communication overhead. In this light,
+really, the worst case would be [[http://en.wikipedia.org/wiki/Serializability#Common_mechanism_-_SS2PL][Two Phase Commit]], but it appears that
+*Postgres-XC* might not be that far away. The real big winner is *Postgres-R*
+which shows very low communication overhead, detailed next.
+
 *** Remote tablespace
 
 The idea here would be to keep the global MVCC facilities that those project
 provide. I'll confess that I like the *Postgres-R* implementation of it, even
-if it relies on a *Global Communication System* to deliver a total *commit*
+if it relies on a [[http://en.wikipedia.org/wiki/Group_communication_system][Group Communication System]] to deliver a total *commit*
 ordering of transactions in the cluster. But the advantage is that the
 design has been made with the idea of supporting dynamic cluster
 configuration: you can accept new nodes and lose some others online.
 
-Then, the data distribution would be easier to address at the *executor* level
-I think. What you need to be able to say is that some data are stored on
-another node. You need the catalogs to exists on all the nodes, and I think
-that the physical location property of the data is already well defined in
-the notion of a *tablespace*. So we should extend this notion to remote
-PostgreSQL nodes that happen to share the MVCC details with us. 
+Now the =GCS= is a hard-sell in our community, because finding a good
+implementation of one ain't an easy task, and it seems that some of
+PostgreSQL developers either burnt themselves on a *work-in-progress*
+implementation, or just don't trust the theory. So I'd like to find out some
+trustworthy and light way to derive a distributed sequence that would be a
+reference for XID ordering in the cluster. I'm reading docs on [[http://en.wikipedia.org/wiki/Vector_clock][Vector Clock]]
+and [[http://en.wikipedia.org/wiki/Paxos_algorithm][Paxos algorithm]] now.
+
+So, say we have a global MVCC we can trust. Then, the data distribution
+would be easier to address at the *executor* level I think. What you need to
+be able to say is that some data are stored on another node. You need the
+catalogs to exists on all the nodes, and I think that the physical location
+property of the data is already well defined in the notion of a
+*tablespace*. So we should extend this notion to remote PostgreSQL nodes that
+happen to share the MVCC details with us.
 
 That certainly already means that any and all =DDL= targeting the remote
 tablespace needs to happen using *2 Phase Commit*, or maybe an asynchronous
@@ -230,7 +245,8 @@ When you're handling very big tables, there's a very good chance that some
 column's value will get repeated all over the place. But if you index that
 column, you'll see the value only once and a list of pointers to the rows
 that are hosting it. Column storage is about compressing that data set in a
-way that you store the column value only once.
+way that you store the column value only once, and also about avoiding to
+pass the data around in the *executor*.
 
 The idea here would need to first have the ability to use the index in an
 authoritative way, without refering the main table storage to confirm the
@@ -248,7 +264,19 @@ require. By that I mean that we could use our indexes to retrieve some
 column's value, rather than the main table's data, when we have the idea
 that the columns cardinality is low enough.
 
-I guess that would mean we have optional column storage.
+I guess that would mean we have optional column storage, in the case all the
+values you need from the table are in the available index(es). 
+
+***Gavin*** reports that this idea may not provide the bangs for the bucks, but
+warns that it could be he's too much used to thinking on datawarehouse
+terms. Also that before engaging into such an effort, it might be good to
+have an idea of the benefit you're running after, which is the classic
+[[http://en.wikipedia.org/wiki/Amdahl%27s_law][Amdahl's law]] or the old saying that you should always profile before to
+spend time on optimizing.
+
+So it's impossible without some preliminary work to assess how useful this
+kind of *index as a column store* would be in the general case, but that
+wouldn't stop me to share the idea, see...
 
 *** The Executor as a Virtual Machine
 
@@ -259,11 +287,11 @@ capabilities of any hard drive without a sweat, and we're not there yet. It
 happens that [[http://monetdb.cwi.nl/][MonetDB]] is about there, with their [[http://monetdb.cwi.nl/MonetDB/Documentation/MAL-Synopsis.html][MonetDB Assembly Language]],
 further described on the [[http://monetdb.cwi.nl/MonetDB/Documentation/MAL-Reference.html][MAL reference]] page.
 
-The big difference in architecture between they and us is how they execute
+The big difference in architecture between them and us is how they execute
 the queries, with code path that contain very little branches, loops, or
 function calls. That alone would be responsible for an incredible
 performance benefit, like, a factor of =25= to =50= times what we have now, have
-I been hinted. 
+I been hinted.
 
 If you think about it in the *right* angle, to be able to suppress all the
 looping and branching and function calling we currently have into the
@@ -440,6 +468,27 @@ would be here, but maybe registering a *pgagent clock service* that would
 for changes on its underlying job scheduling tables, I guess.
 
 And for querying the database, we'd use =SPI=, I guess.
+
+*** Logs analysis
+
+Nowadays to analyze logs and provide insights, the more common tool to use
+is [[http://pgfouine.projects.postgresql.org/][pgfouine]], which does an excellent job. But there has been some
+improvements in logs capabilities that we're not benefiting from yet, and
+I'm thinking about the =CSV= log format.
+
+So the idea would be to turn *pgfouine* into a set of =SQL= queries against the
+logs themselves once imported into the database. Wait. What about having our
+next PostgreSQL version, which is meant to include CSV support in *SQL/MED*,
+to directly expose its logs as a system view?
+
+A good thing would be to expose that as a ddl-partitioned table following
+the log rotation scheme as setup in =postgresql.conf=, or maybe given in some
+sort of a setup, in order to support =logrotate= users. At least some
+facilities to do that would be welcome, and I'm not sure plain *SQL/MED* is
+that when it comes to *source* partitioning.
+
+Then all that remains to be done is a set of =SQL= queries and some static or
+dynamic application to derive reports from there.
 
 * Conclusion
 
