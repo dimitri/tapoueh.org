@@ -257,19 +257,35 @@ optimisation problems. One of them is how to speed up the data retrieval
 pipeline from disk. Given what are modern =CPU=, we should be saturating read
 capabilities of any hard drive without a sweat, and we're not there yet. It
 happens that [[http://monetdb.cwi.nl/][MonetDB]] is about there, with their [[http://monetdb.cwi.nl/MonetDB/Documentation/MAL-Synopsis.html][MonetDB Assembly Language]],
-further describe on the [[http://monetdb.cwi.nl/MonetDB/Documentation/MAL-Reference.html][MAL reference]] page.
+further described on the [[http://monetdb.cwi.nl/MonetDB/Documentation/MAL-Reference.html][MAL reference]] page.
 
 The big difference in architecture between they and us is how they execute
 the queries, with code path that contain very little branches, loops, or
 function calls. That alone would be responsible for an incredible
 performance benefit, like, a factor of =25= to =50= times what we have now, have
-I been hinted.
+I been hinted. 
 
 If you think about it in the *right* angle, to be able to suppress all the
 looping and branching and function calling we currently have into the
 executor code, it could be that the simplest solution (ahah) would be to
 expose the executor capabilities as *opcodes* or *assembly* and have the planner
 and optimiser be *just in time compilers* for this new Virtual Machine.
+
+And while at it, we then might benefit from some intermediate representation
+of the plan tree, which could start out as what the planner works with in
+term of data structure. Out of that, the optimiser job would be to generate
+the *executor code*, and I think it should be possible to define an
+optimisation effort target at this point, akin to =-O0= to =-O3= option of
+=gcc=. This is another much wanted feature, being able to set the amount of
+effort to put into finding the best plan possible, and this *executor virtual
+machine* or *executor assembly* idea may not be the most simple way to get
+there, but I see it as a conceptually simple fallout.
+
+Another thing we might want to look at is how we batch the disk level
+reads. The current executor will fetch a row at a time, and fetching
+something like =2 MB= at a time (maybe only for *seqscans*) might offer some
+great speed benefits, that should even balance out the waste in case you
+filter out some of those data.
 
 *** Automatic use of Materialized VIEWs
 
