@@ -2,9 +2,47 @@
 #title tail -f /dev/dim
 #desc dim's PostgreSQL blog
 
+* 20100708-11:15 Using indexes as column store?
+
+#20100708-11:15
+#%20Using%20indexes%20as%20column%20store%3F
+
+There's a big trend nowadays about using column storage as opposed to what
+PostgreSQL is doing, which would be row storage. The difference is that if
+you have the same column value in a lot of rows, you could get to a point
+where you have this value only once in the underlying storage file. That
+means high compression. Then you tweak the *executor* to be able to load this
+value only once, not once per row, and you win another huge source of data
+traffic (often enough, from disk).
+
+Well, it occurs to me that maybe we could have column oriented storage
+support without adding any new storage facility into PostgreSQL itself, just
+using in new ways what we already have now. Column oriented storage looks
+somewhat like an index, where any given value is meant to appear only
+once. And you have *links* to know where to find the full row associated in
+the main storage.
+
+There's a work in progress to allow for PostgreSQL to use indexes on their
+own, without having to get to the main storage for checking the
+visibility. That's known as the [[http://www.postgresql.org/docs/8.4/static/storage-vm.html][Visibility Map]], which is still only a hint
+in released versions. The goal is to turn that into a crash-safe trustworthy
+source in the future, so that we get *covering indexes*. That means we can use
+an index and skip getting to the full row in main storage and get the
+visibility information there.
+
+Now, once we have that, we could consider using the indexes in more
+queries. It could be a win to get the column values from the index when
+possible and if you don't *output* more columns from the *heap*, return the
+values from there. Scanning the index only once per value, not once per row.
+
+There's a little more though on the point in the [[char10.html#sec10][Next Generation PostgreSQL]]
+article I've been referencing already, should you be interested.
+
+
 * 20100706-10:50 MVCC in the Cloud
 
 #20100706-10:50
+#%20MVCC%20in%20the%20Cloud
 
 At [[http://char10.org/][CHAR(10)]] ***Markus*** had a talk about
 [[http://char10.org/talk-schedule-details#talk13][Using MVCC for Clustered Database Systems]] and explained how [[http://postgres-r.org/][Postgres-R]] does
