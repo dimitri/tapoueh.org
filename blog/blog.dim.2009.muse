@@ -1,0 +1,732 @@
+* 20091208-12:04 pg_staging's bird view
+
+#20091208-12:04
+#%20pg_staging%27s%20bird%20view
+
+One of the most important feedback I got about the presentation of [[pgstaging.html][pgstaging]]
+were the lack of pictures, something like a bird-view of how you operate
+it. Well, thanks to [[http://ditaa.sourceforge.net/][ditaa]] and Emacs =picture-mode= here it is:
+
+	    [[../images/pg_staging.png]]
+
+Hope you enjoy, it should not be necessary to comment much if I got to the
+point!
+
+Of course I commited the [[http://github.com/dimitri/pg_staging/blob/master/bird-view.txt][text source file]] to the =Git= repository. The only
+problem I ran into is that =ditaa= defaults to ouputing a quite big right
+margin containing only white pixels, and that didn't fit well, visually, in
+this blog. So I had to resort to [[http://www.imagemagick.org/script/command-line-options.php#crop][ImageMagik crop command]] in order to avoid
+any mouse usage in the production of this diagram.
+
+<src lang="sh">
+convert .../pg_staging/bird-view.png -crop '!550' bird-view.png
+mv bird-view-0.png pg_staging.png
+</src>
+
+Quicker than learning to properly use a mouse, at least for me :)
+
+* 20091201-16:45 PGday.eu feedback
+
+#20091201-16:45
+#%20PGday%2Eeu%20feedback
+
+At [[http://2009.pgday.eu/][pgday]] there was this form you could fill to give speakers some *feedback*
+about their talks. And that's a really nice way as a speaker to know what to
+improve. And as [[http://blog.hagander.net/archives/157-Feedback-from-pgday.eu.html][Magnus]] was searching a nice looking chart facility in python
+and I spoke about [[http://matplotlib.sourceforge.net/gallery.html][matplotlib]], it felt like having to publish something.
+
+Here is my try at some nice graphics. Well I'll let you decide how nice the
+result is:
+
+	      [[../images/feedback.png][../images/feedback.png]]
+
+If you want to see the little python script I used, here it is: [[http://pgsql.tapoueh.org/confs/pgday_2009/feedback.py][feedback.py]],
+with the data embedded and all...
+
+Now, how to read it? Well, the darker the color the better the score. For
+example I had =5= people score me =5= for *Topic Importance* on the Hi-Media talk
+(in french) and only =3= people at this same score and topic for =pg_staging=
+talk. The scores are from =1= to =5=, =5= being the best.
+
+The comitee accepted interesting enough topics and it seems I managed to
+deliver acceptable content from there. Not very good content, because
+reading the comments I missed some nice birds-eye pictures to help the
+audience get into the subject. As I'm unable to draw (with or without a
+mouse) I plan to fix this in latter talks by using [[http://ditaa.sourceforge.net/][ditaa]], the *DIagrams
+Through Ascii Art* tool. I already used it and together with [[news.dim.html][Emacs]]
+=picture-mode= it's very nice.
+
+Oh yes the baseline of this post is that there will be later talks. I seem
+to be liking those and the audience feedback this time is saying that it's
+not too bad for them. See you soon :)
+
+* 20091130-12:10 prefix 1.1.0
+
+#20091130-12:10
+#%20prefix%201%2E1%2E0
+
+So I had two [[http://archives.postgresql.org/pgsql-general/2009-11/msg01042.php][bug]] [[http://lists.pgfoundry.org/pipermail/prefix-users/2009-November/000005.html][reports]] about [[prefix.html][prefix]] in less than a week. It means several
+things, one of them is that my code is getting used in the wild, which is
+nice. The other side of the coin is that people do find bugs in there. This
+one is about the behavior of the =btree opclass= of the type =prefix range=. We
+cheat a lot there by simply having written one, because a range does not
+have a strict ordering: is =[1-3]= before of after =[2-4]=? But when you know
+you have no overlapping intervals in your =prefix_range= column, being able to
+have it part of a *primary key* is damn useful.
+
+Note: in =8.5= we should have a way to express *contraint exclusion* and have
+PostgreSQL forbids overlapping entries for us. Not being there yet, you
+could write a *constraint trigger* and use the *GiST index* to have nice speed
+there, which is exactly what this *constraint exclusion* support is about.
+
+It turns out the code change required is pretty simple:
+
+<src lang="c">
+-    return (a->first == b->first) ? (a->last - b->last) : (a->first - b->first);
++    /*
++     * we are comparing e.g. '1' and '12' (the shorter contains the
++     * smaller), so let's pretend '12' < '1' as it contains less elements.
++     */
++    return (alen == mlen) ? 1 : -1;
+</src>
+
+This happens in the *compare support function* (see
+[[http://www.postgresql.org/docs/8.4/interactive/xindex.html][Interfacing Extensions To Indexes]]) so that means you now have to rebuild
+your =prefix_range= btree indexes, hence the version number bump.
+
+* 20091125-11:49 Yet Another PostgreSQL tool hits debian
+
+#20091125-11:49
+#%20Yet%20Another%20PostgreSQL%20tool%20hits%20debian
+
+So there it is, this newer contribution of mine that I presented at [[http://2009.pgday.eu][PGDay]] is
+now in =debian NEW= queue. [[pgstaging.html][pg_staging]] will empower you with respect to what
+you do about those nightly backups (=pg_dump -Fc= or something).
+
+The tool provides a lot of commands to either =dump= or =restore= a database. It
+comes with documentation covering about it all, except for the *londiste*
+support part, which will be there in time for =1.0.0= release. The [[http://github.com/dimitri/pg_staging/blob/master/TODO][Todo list]]
+is getting smaller and smaller, the version you'll soon find in =debian sid=
+is already called =0.9=.
+
+So, how do you go about using this software, and what service it implements?
+
+** it's all about deriving a staging environment from your backups
+
+To validate backups, you want to restore them and check the database you get
+from them. And your developers will want to sometime refresh the database
+they're working with. And you could have both an integration environment and
+a pre-live one: On the former, you develop new code atop a stable set of
+data; while on the latter you test stable enough code (ready to go live) on
+a set of data as near as live data as possible.
+
+And you want to be flexible about it, so that there's not a fulltime job to
+handle retoring databases each and every days, for project A integration or
+project B pre-live testing, or project C accounting snapshot. Or you name
+it.
+
+And of course you want to have a single point of control of all your
+databases. Let's call it the *controler*.
+
+** setting up pg_staging
+
+The [[pgstaging.html][pg_staging]] setup consists of one =pg_staging.ini= file wherein you
+describe your different target databases (those =dev= and =prelive= ones), and
+of course where to get the production backups from. Currently you have to
+serve the backups file in a format suitable for =pg_restore= (that means you
+use either =pg_dump -Ft= or =pg_dump -Fc=) on an =apache= folder. The produced
+=HTML= will get parsed.
+
+So you setup the =DEFAULT= section with common settings, then one section per
+target: the databases you want to restore. Tell =pg_staging= where they are
+(=host=), etc, and it'll be able to drive them.
+
+In order to being able to host more than a single restored dump on a staging
+server, for the same database, we use =pgbouncer=:
+<src>
+pg_staging> pgbouncer some_db.dev
+              some_db      some_db_20091029 :5432
+     some_db_20090717      some_db_20090717 :5432
+     some_db_20091029      some_db_20091029 :5432
+</src>
+
+So as explained into the =pg_staging(1)= man page, you have to open
+non-interactive =SSH= connection from the *controler* to the *hosts* where the
+databases will get restored. Then you have to do a minimal setup pgbouncer
+on the *hosts* with a =trust= connection. It'll get used from =pg_staging= for
+adding newly restored database and have them accessible. Then you can also
+=switch= the new database to being the virtual *some_db* so that you avoid
+editing any connection string on your softwares.
+
+Also, install the =pgstaging-client= package on every host you target. The
+client is a simple shell script that must run as root (=sudo= is used) in
+order to replace your =pgbouncer= setup or manage your =londiste= services.
+
+See =man 5 pg_staging= for available options, including *schemas* to filter out
+either completely or just skipping data restoring in those.
+
+** pg_staging usage
+
+Now you're all setup, you can begin to enjoy using =pgstaging=. Enter the
+console and see what you have in there.
+<src>
+$ pg_staging 
+Welcome to pg_staging 0.9.
+pg_staging> databases
+...
+pg_staging> restore some_db.dev
+...
+pg_staging> pgbouncer some_db.dev
+...
+pg_staging> dbsizes --all some_db.dev
+...
+pg_staging> psql some_db.dev
+some_db_20091125=# 
+</src>
+
+And as you can see in =man pg_staging= there are a lot of commands
+already. You can for example obtain a new *pg_restore catalog* from a dump
+file, with some *schemas* commented out. It will even comment out =triggers=
+that are using a =function= which is defined in a filtered out =schema=, for
+example a =PGQ= trigger. And much much more.
+
+[[pgstaging.html][pg_staging]] will even allow you to =dump= your production databases, but
+consider installing a separate instance of it on the machine serving the
+backups to your local network thanks to an =apache= directory listing!
+
+** Roadmap to =1.0.0=
+
+What's remain to be done is testing and having =PITR= based restoring to work,
+and adding some documentation (tutorial, which this blog post about is; and
+*londiste* support). At this point, unless some reader here asks for a new
+feature (set), I'll consider =pg_staging= ready for =1.0.0=. After all, we're
+using it about daily here :)
+
+Consider commenting, you should be able to easily spot my private mail
+address...
+
+* 20091109-09:50 PGDay.eu, Paris: it was awesome!
+
+#20091109-09:50
+#%20PGDay%2Eeu%2C%20Paris%3A%20it%20was%20awesome%21
+
+[[http://2009.pgday.eu/][PGDay.eu]] was held this week-end in Paris, and it really was a great
+moment. Lots of [[http://2009.pgday.eu/_media/group_2009_1.jpg?cache=][attendees]], lots of quality talks ([[http://wiki.postgresql.org/wiki/PGDay.EU%2C_Paris_2009][slides]] are online), good
+food, great party: all the ingredients were there!
+
+It also was for me the occasion to first talk about this tool I've been
+working on for months, called [[pgstaging.html][pg_staging]], which aims to empower those boring
+production backups to help maintaining *staging* environments (for your
+developers and testers).
+
+All in all such events keep reminding me what it means exactly when we way
+that one of the greatest things about [[http://www.postgresql.org/][PostgreSQL]] is its community. If you
+don't know what I'm talking about, consider [[http://www.postgresql.org/community/][joining]]!
+
+* 20091006-15:56 prefix 1.0.0
+
+#20091006-15:56
+#%20prefix%201%2E0%2E0
+
+So there it is, at long last, the final =1.0.0= release of prefix! It's on its
+way into the debian repository (targetting sid, in testing in 10 days) and
+available on [[http://pgfoundry.org/frs/?group_id=1000352][pgfoundry]] to.
+
+In order to make it clear that I intend to maintain this version, the number
+has 3 digits rather than 2... which is also what [[http://www.postgresql.org/support/versioning][PostgreSQL]] users will
+expect.
+
+The only last minute change is that you can now use the first version of the
+two following rather than the second one:
+
+<src lang="sql">
+-  create index idx_prefix on prefixes using gist(prefix gist_prefix_range_ops);
++  create index idx_prefix on prefixes using gist(prefix);
+</src>
+
+For you information, I'm thinking about leaving =pgfoundry= as far as the
+source code management goes, because I'd like to be done with =CVS=. I'd still
+use the release file hosting though at least for now. It's a burden but it's
+easier for the users to find them, when they are not using plain =apt-get
+install=. That move would lead to host [[http://pgfoundry.org/projects/prefix/][prefix]] and [[http://pgfoundry.org/projects/pgloader][pgloader]] and the [[http://cvs.pgfoundry.org/cgi-bin/cvsweb.cgi/backports/][backports]]
+over there at [[http://github.com/dimitri][github]], where my next pet project, =pg_staging=, will be hosted
+too.
+
+The way to see this *pgfoundry* leaving is that if everybody does the same,
+then migrating the facility to some better or more recent hosting software
+will be easier. Maybe some other parts of the system are harder than the
+sources to migrate, though. If that's the case I'll consider moving them out
+too, maybe getting listed on the [[http://www.postgresql.org/download/product-categories][PostgreSQL Software Catalogue]] will prove
+enough as far as web presence goes?
+
+
+* 20090818-09:14 hstore-new & preprepare reach debian too
+
+#20090818-09:14
+#%20hstore%2Dnew%20%26%20preprepare%20reach%20debian%20too
+
+It seems like debian developers are back from annual conference and holiday,
+so they have had a look at the =NEW= queue and processed the packages in
+there. Two of them were mines and waiting to get in =unstable=, [[http://packages.debian.org/hstore-new][hstore-new]] and
+[[http://packages.debian.org/preprepare][preprepare]].
+
+Time to do some bug fixing already, as =hstore-new= packaging is using a
+*bash'ism* I shouldn't rely on (or so the debian buildfarm is [[https://buildd.debian.org/~luk/status/package.php?p=hstore-new][telling me]]) and
+for =preprepare= I was waiting for inclusion before to go improving the =GUC=
+management, stealing some code from [[http://blog.endpoint.com/search/label/postgres][Selena]]'s [[http://blog.endpoint.com/2009/07/pggearman-01-release.html][pgGearman]] :)
+
+As some of you wonder about =prefix 1.0= scheduling, it should soon get there
+now it's been in testing long enough and no bug has been reported. Of course
+releasing =1.0= in august isn't good timing, so maybe I should just wait some
+more weeks.
+
+* 20090803-14:50 prefix 1.0~rc2 in debian testing
+
+#20090803-14:50
+#%20prefix%201%2E0%7Erc2%20in%20debian%20testing
+
+At long last, [[http://packages.debian.org/search?searchon=sourcenames&keywords=prefix][here it is]]. With binary versions both for =postgresal-8.3= and
+=postgresal-8.4=! Unfortunately my other packaging efforts are still waiting
+on the =NEW= queue, but I hope to soon see =hstore-new= and =preprepare= enter
+debian too.
+
+Anyway, the plan for =prefix= is to now wait something like 2 weeks, then,
+baring showstopper bugs, release the =1.0= final version. If you have a use
+for it, now is the good time for testing it!
+
+About upgrading a current =prefix= installation, the advice is to save data as
+=text= instead of =prefix_range=, remove prefix support, install new version,
+change again the columns data type:
+
+<src lang="sql">
+BEGIN;
+  ALTER TABLE foo
+     ALTER COLUMN prefix
+             TYPE text USING text(prefix);
+
+  DROP TYPE prefix_range CASCADE;
+  \i prefix.sql
+
+  ALTER TABLE foo
+     ALTER COLUMN prefix
+             TYPE prefix_range USING prefix_range(prefix);
+
+  CREATE INDEX idx_foo_prefix ON foo
+         USING gist(prefix gist_prefix_range_ops);
+COMMIT;
+</src>
+
+Note: I just added the =gist_prefix_range_ops= as default for type
+=prefix_range= so it'll be optional to specify this in final =1.0=. I got so
+used to typing it I didn't realize we don't have to :)
+
+* 20090709-12:48 prefix 1.0~rc2-1
+
+#20090709-12:48
+#%20prefix%201%2E0%7Erc2%2D1
+
+I've been having problem with building both =postgresql-8.3-prefix= and
+=postgresql-8.4-prefix= debian packages from the same source package, and
+fixing the packaging issue forced me into modifying the main =prefix=
+=Makefile=. So while reaching =rc2=, I tried to think about missing pieces easy
+to add this late in the game: and there's one, that's a function
+=length(prefix_range)=, so that you don't have to cast to text no more in the
+following wildspread query:
+<src lang="sql">
+  SELECT foo, bar
+    FROM prefixes
+   WHERE prefix @> '012345678'
+ORDER BY length(prefix) DESC
+   LIMIT 1;
+</src>
+
+And here's a simple stupid benchmark of the new function, here in
+[[http://prefix.projects.postgresql.org/prefix-1.0~rc2.tar.gz][prefix-1.0~rc2.tar.gz]]. And it'll soon reach debian, if my QA dept agrees (my
+[[http://julien.danjou.info/blog/][sponsor]] is a QA dept all by himself!).
+
+First some preparation:
+
+<src lang="sql">
+dim=#   create table prefixes (
+dim(#          prefix    prefix_range primary key,
+dim(#          name      text not null,
+dim(#          shortname text,
+dim(#          status    char default 'S',
+dim(# 
+dim(#          check( status in ('S', 'R') )
+dim(#   );
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "prefixes_pkey" for
+ table "prefixes"                                                                
+CREATE TABLE
+Time: 74,357 ms
+dim=#   \copy prefixes from 'prefixes.fr.csv' with delimiter ; csv quote '"'
+Time: 200,982 ms
+dim=# select count(*) from prefixes ;
+ count 
+-------
+ 11966
+(1 row)
+Time: 3,047 ms
+</src>
+
+And now for the micro-benchmark:
+
+<src lang="sql">
+dim=# \o /dev/null
+dim=# select length(prefix) from prefixes;
+Time: 16,040 ms
+dim=# select length(prefix::text) from prefixes;
+Time: 23,364 ms
+dim=# \o
+</src>
+
+Hope you enjoy!
+
+* 20090623-10:53 prefix extension reaches 1.0 (rc1)
+
+#20090623-10:53
+#%20prefix%20extension%20reaches%201%2E0%20
+
+At long last, after millions and millions of queries just here at work and
+some more in other places, the [[prefix.html][prefix]] project is reaching =1.0= milestone. The
+release candidate is getting uploaded into debian at the moment of this
+writing, and available at the following place: [[http://prefix.projects.postgresql.org/prefix-1.0~rc1.tar.gz][prefix-1.0~rc1.tar.gz]].
+
+If you have any use for it (as some *VoIP* companies have already), please
+consider testing it, in order for me to release a shiny =1.0= next week! :)
+
+Recent changes include getting rid of those square brackets output when it's
+not neccesary, fixing btree operators, adding support for more operators in
+the =GiST= support code (now supported: =@>=, =<@=, <code>=</code>, =&&=). Enjoy!
+
+* 20090527-14:30 PgCon 2009
+
+#20090527
+#%20PgCon2009
+
+I can't really compare [[http://www.pgcon.org/2009/][PgCon 2009]] with previous years versions, last time I
+enjoyed the event it was in 2006, in Toronto. But still I found the
+experience to be a great one, and I hope I'll be there next year too!
+
+I've met a lot of known people in the community, some of them I already had
+the chance to run into at Toronto or [[http://2008.pgday.org/en/][Prato]], but this was the first time I
+got to talk to many of them about interresting projects and ideas. That only
+was awesome already, and we also had a lot of talks to listen to: as others
+have said, it was really hard to get to choose to go to only one place out
+of three.
+
+I'm now back home and seems to be recovering quite fine from jet lag, and I
+even begun to move on the todo list from the conference. It includes mainly
+=Skytools 3= testing and contributions (code and documentation),
+[[http://wiki.postgresql.org/wiki/ExtensionPackaging][Extension Packaging]] work (Stephen Frost seems to be willing to help, which I
+highly appreciate) begining with [[http://archives.postgresql.org/pgsql-hackers/2009-05/msg00912.php][search_path issues]], and posting some
+backtrace to help fix some [[http://archives.postgresql.org/pgsql-hackers/2009-05/msg00923.php][SPI_connect()]] bug at =_PG_init()= time in an
+extension.
+
+The excellent [[http://wiki.postgresql.org/wiki/PgCon_2009_Lightning_talks][lightning talk]] about _How not to Review a Patch_ by Joshua
+Tolley took me out of the *dim*, I'll try to be *bright* enough and participate
+as a reviewer in later commit fests (well maybe not the first next ones as
+some personal events on the agenda will take all my *"free"* time)...
+
+Oh and the [[http://code.google.com/p/golconde/][Golconde]] presentation gave some insights too: this queueing based
+solution is to compare to the =listen/notify= mechanisms we already have in
+[[http://www.postgresql.org/docs/current/static/sql-listen.html][PostgreSQL]], in the sense that's it's not transactional, and the events are
+kept in memory only to achieve very high distribution rates. So it's a very
+fine solution to manage a distributed caching system, for example, but not
+so much for asynchronous replication (you need not to replicate events tied
+to rollbacked transactions).
+
+So all in all, spending last week in Ottawa was a splendid way to get more
+involved in the PostgreSQL community, which is a very fine place to be
+spending ones free time, should you ask me. See you soon!
+
+* 20090514 Prepared Statements and pgbouncer
+
+#20090514
+#%20Prepared%20Statements%20and%20pgbouncer
+
+On the performance mailing list, a recent [[http://archives.postgresql.org/pgsql-performance/2009-05/msg00026.php][thread]] drew my attention. It
+devired to be about using a connection pool software and prepared statements
+in order to increase scalability of PostgreSQL when confronted to a lot of
+concurrent clients all doing simple =select= queries. The advantage of the
+*pooler* is to reduce the number of *backends* needed to serve the queries, thus
+reducing PostgreSQL internal bookkeeping. Of course, my choice of software
+here is clear: [[https://developer.skype.com/SkypeGarage/DbProjects/PgBouncer][PgBouncer]] is an excellent top grade solution, performs real
+well (it won't parse queries), reliable, flexible.
+
+The problem is that while conbining =pgbouncer= and [[http://www.postgresql.org/docs/current/static/sql-prepare.html][prepared statements]] is
+possible, it requires the application to check at connection time if the
+statements it's interrested in are already prepared. This can be done by a
+simple catalog query of this kind:
+
+<src lang="sql">
+  SELECT name
+    FROM pg_prepared_statements 
+   WHERE name IN ('my', 'prepared', 'statements');
+</src>
+
+Well, this is simple but requires to add some application logic. What would
+be great would be to only have to =EXECUTE my_statement(x, y, z)= and never
+bother if the =backend= connection is a fresh new one or an existing one, as
+to avoid having to check if the application should =prepare=.
+
+The [[http://preprepare.projects.postgresql.org/][preprepare]] pgfoundry project is all about this: it comes with a
+=prepare_all()= function which will take all statements present in a given
+table (=SET preprepare.relation TO 'schema.the_table';=) and prepare them for
+you. If you now tell =pgbouncer= to please call the function at =backend=
+creation time, you're done (see =connect_query=).
+
+There's even a detailed [[http://preprepare.projects.postgresql.org/README.html][README]] file, but no release yet (check out the code
+in the [[http://cvs.pgfoundry.org/cgi-bin/cvsweb.cgi/preprepare/preprepare/][CVS]], =pgfoundry= project page has [[http://pgfoundry.org/scm/?group_id=1000442][clear instruction]] about how to do so.
+
+* 20090414 Skytools 3.0 reaches alpha1
+
+#20090414
+#%20Skytools%203%2E0%20reaches%20alpha1
+
+It's time for [[http://wiki.postgresql.org/wiki/Skytools][Skytools]] news again! First, we did improve documentation of
+current stable branch with hosting high level presentations and [[http://wiki.postgresql.org/wiki/Londiste_Tutorial][tutorials]] on
+the [[http://wiki.postgresql.org/][PostgreSQL wiki]]. Do check out the [[http://wiki.postgresql.org/wiki/Londiste_Tutorial][Londiste Tutorial]], it seems that's
+what people hesitating to try out londiste were missing the most.
+
+The other things people miss out a lot in current stable Skytools (version
+=2.1.9= currently) are cascading replication (which allows for *switchover* and
+*failover*) and =DDL= support. The new incarnation of skytools, version =3.0=
+[[http://lists.pgfoundry.org/pipermail/skytools-users/2009-April/001029.html][reaches alpha1]] today. It comes with full support for *cascading* and *DDL*, so
+you might want to give it a try.
+
+It's a rough release, documentation is still to get written for a large part
+of it, and bugs are still to get fixed. But it's all in the Skytools spirit:
+simple and efficient concepts, easy to use and maintain. Think about this
+release as a *developer preview* and join us :)
+
+* 20090210 Prefix GiST index now in 8.1
+
+#20090210
+#%20Prefix%20GiST%20index%20now%20in%208%2E1
+
+The [[http://blog.tapoueh.org/prefix.html][prefix]] project is about matching a *literal* against *prefixes* in your
+table, the typical example being a telecom routing table. Thanks to the
+excellent work around *generic* indexes in PostgreSQL with [[http://www.postgresql.org/docs/current/static/gist-intro.html][GiST]], indexing
+prefix matches is easy to support in an external module. Which is what
+the [[http://prefix.projects.postgresql.org/][prefix]] extension is all about.
+
+Maybe you didn't come across this project before, so here's the typical
+query you want to run to benefit from the special indexing, where the =@>=
+operator is read *contains* or *is a prefix of*:
+
+<src lang="sql">
+  SELECT * FROM prefixes WHERE prefix @> '0123456789';
+</src>
+
+Now, a user asked about an =8.1= version of the module, as it's what some
+distributions ship (here, Red Hat Enterprise Linux 5.2). It turned out it
+was easy to support =8.1= when you already support =8.2=, so the =CVS= now hosts
+[[http://cvs.pgfoundry.org/cgi-bin/cvsweb.cgi/prefix/prefix/][8.1 support code]]. And here's what the user asking about the feature has to
+say:
+
+<quote>
+It's works like a charm now with 3ms queries over 200,000+ rows.  The speed
+also stays less than 4ms when doing complex queries designed for fallback,
+priority shuffling, and having multiple carriers.
+</quote>
+
+* 20090205 Importing XML content from file
+
+#20090205
+#%20Importing%20XML%20content%20from%20file
+
+The problem was raised this week on [[http://www.postgresql.org/community/irc][IRC]] and this time again I felt it would
+be a good occasion for a blog entry: how to load an =XML= file content into a
+single field?
+
+The usual tool used to import files is [[http://www.postgresql.org/docs/current/interactive/sql-copy.html][COPY]], but it'll want each line of the
+file to host a text representation of a database tuple, so it doesn't apply
+to the case at hand. [[http://blog.rhodiumtoad.org.uk/][RhodiumToad]] was online and offered the following code
+to solve the problem:
+
+<src lang="sql">
+create or replace function xml_import(filename text)
+  returns xml
+  volatile
+  language plpgsql as
+$f$
+    declare
+        content bytea;
+        loid oid;
+        lfd integer;
+        lsize integer;
+    begin
+        loid := lo_import(filename);
+        lfd := lo_open(loid,262144);
+        lsize := lo_lseek(lfd,0,2);
+        perform lo_lseek(lfd,0,0);
+        content := loread(lfd,lsize);
+        perform lo_close(lfd);
+        perform lo_unlink(loid);
+ 
+        return xmlparse(document convert_from(content,'UTF8'));
+    end;
+$f$;
+</src>
+
+As you can see, the trick here is to use the [[http://www.postgresql.org/docs/current/interactive/largeobjects.html][large objects]] API to load the
+file content into memory (=content= variable), then to parse it knowing it's
+an =UTF8= encoded =XML= file and return an [[http://www.postgresql.org/docs/current/interactive/datatype-xml.html][XML]] datatype object.
+
+* 20090204 Asko Oja talks about Skype architecture
+
+#20090204
+#%20Asko%20Oja%20talks%20about%20Skype%20architecture
+
+In this [[http://postgresqlrussia.org/articles/view/131][russian page]] you'll see a nice presentation of Skype databases
+architectures by Asko Oja himself. It's the talk at Russian PostgreSQL
+Community meeting, October 2008, Moscow, and it's a good read.
+
+		       [[http://postgresqlrussia.org/articles/view/131][../images/Moskva_DB_Tools.v3.png]]
+
+The presentation page is in russian but the slides are in English, so have a
+nice read!
+
+* 20090203 Skytools ticker daemon and londiste
+
+#20090203
+#20090203%20Skytools%20ticker%20daemon%20and%20londiste
+
+One of the difficulties in getting to understand and configure =londiste=
+reside in the relation between the =ticker= and the replication. This question
+was raised once more on IRC yesterday, so I made a new FAQ entry about it:
+[[http://blog.tapoueh.org/skytools.html#ticker][How do this ticker thing relates to londiste?]]
+
+* 20090131 Comparing Londiste and Slony
+
+#20090131
+#%20Skytools%20ticker%20daemon%20and%20londiste
+
+In the page about [[skytools.html][Skytools]] I've encouraged people to ask some more questions
+in order for me to be able to try and answer them. That just happened, as
+usual on the =#postgresql= IRC, and the question is
+[[skytools.html#slony][What does londiste lack that slony has?]]
+
+* 20090128 Controling HOT usage in 8.3
+
+#20090128
+#%20Controling%20HOT%20usage%20in%208%2E3
+
+As it happens, I've got some environments where I want to make sure =HOT= (*aka
+Heap Only Tuples*) is in use. Because we're doing so much updates a second
+that I want to get sure it's not killing my database server. I not only
+wrote some checking view to see about it, but also made a [[http://www.postgresql.fr/support:trucs_et_astuces:controler_l_utilisation_de_hot_a_partir_de_la_8.3][quick article]]
+about it in the [[http://postgresql.fr/][French PostgreSQL website]]. Handling around in =#postgresql=
+means that I'm now bound to write about it in English too!
+
+So =HOT= will get used each time you update a row without changing an indexed
+value of it, and the benefit is skipping index maintenance, and as far as I
+understand it, easying =vacuum= hard work too. To get the benefit, =HOT= will
+need some place where to put new version of the =UPDATEd= tuple in the same
+disk page, which means you'll probably want to set your table [[http://www.postgresql.org/docs/8.3/static/sql-createtable.html#SQL-CREATETABLE-STORAGE-PARAMETERS][fillfactor]] to
+something much less than =100=.
+
+Now, here's how to check you're benefitting from =HOT=:
+
+<src lang="sql">
+SELECT schemaname, relname,
+       n_tup_upd,n_tup_hot_upd,
+       case when n_tup_upd > 0
+            then ((n_tup_hot_upd::numeric/n_tup_upd::numeric)*100.0)::numeric(5,2) 
+            else NULL
+       end AS hot_ratio
+ 
+ FROM pg_stat_all_tables;
+ 
+ schemaname | relname | n_tup_upd | n_tup_hot_upd | hot_ratio
+------------+---------+-----------+---------------+-----------
+ public     | table1  |         6 |             6 |    100.00
+ public     | table2  |   2551200 |       2549474 |     99.93
+</src>
+
+Here's even an extended version of the same request, displaying the
+=fillfactor= option value for the tables you're inquiring about. This comes
+separated from the first example because you get the =fillfactor= of a
+relation into the =pg_class= catalog =reloptions= field, and to filter against a
+schema qualified table name, you want to join against =pg_namespace= too.
+
+<src lang="sql">
+SELECT t.schemaname, t.relname, c.reloptions, 
+       t.n_tup_upd, t.n_tup_hot_upd, 
+       case when n_tup_upd > 0 
+            then ((n_tup_hot_upd::numeric/n_tup_upd::numeric)*100.0)::numeric(5,2)
+            else NULL
+        end AS hot_ratio
+FROM pg_stat_all_tables t 
+      JOIN (pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid) 
+        ON n.nspname = t.schemaname AND c.relname = t.relname
+ 
+ schemaname | relname |   reloptions    | n_tup_upd | n_tup_hot_upd | hot_ratio
+------------+---------+-----------------+-----------+---------------+-----------
+ public     | table1  | {fillfactor=50} |   1585920 |       1585246 |     99.96
+ public     | table2  | {fillfactor=50} |   2504880 |       2503154 |     99.93
+</src>
+
+Don't let the =HOT= question affect your sleeping no more!
+
+* 20090121 Londiste Trick
+
+#20090121
+#%20Londiste%20Trick
+
+So, you're using =londiste= and the =ticker= has not been running all night
+long, due to some restart glitch in your procedures, and the *on call* admin
+didn't notice the restart failure. If you blindly restart the replication
+daemon, it will load in memory all those events produced during the night,
+at once, because you now have only one tick where to put them all.
+
+The following query allows you to count how many events that represents,
+with the magic tick numbers coming from =pgq.subscription= in columns
+=sub_last_tick= and =sub_next_tick=.
+
+<src lang="sql">
+SELECT count(*) 
+  FROM pgq.event_1, 
+      (SELECT tick_snapshot
+         FROM pgq.tick
+        WHERE tick_id BETWEEN 5715138 AND 5715139
+      ) as t(snapshots)
+WHERE txid_visible_in_snapshot(ev_txid, snapshots);
+</src>
+
+In our case, this was more than *5 millions and 400 thousands* of events. With
+this many events to care about, if you start londiste, it'll eat as many
+memory as needed to have them all around, which might be more that what your
+system is able to give it. So you want a way to tell =londiste= not to load
+all events at once. Here's how: add the following knob to your *.ini*
+configuration file before to restart the londiste daemon:
+
+<src>
+    pgq_lazy_fetch = 500
+</src>
+
+Now, =londiste= will lazyly fetch =500= events at once or less, even if a single
+=batch= (which contains all *events* between two *ticks*) contains a huge number
+of events. This number seems a good choice as it's the default =PGQ= setting
+of number of events in a single *batch*. This number is only outgrown when the
+ticker is not running or when you're producing more *events* than that in a
+single transaction.
+
+Hope you'll find the tip useful!
+
+
+* 20081204 Fake entry
+
+#20081204
+#20081204%20Fake%20entry
+
+This is a test of a fake entry to see how muse will manage this.
+
+With some =SQL= inside:
+
+<quote>
+<src lang="sql">
+SELECT * FROM planet.postgresql.org WHERE author = "dim";
+</src>
+</quote>
