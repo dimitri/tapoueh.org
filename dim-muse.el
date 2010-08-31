@@ -105,7 +105,7 @@
 	     (an (buffer-substring-no-properties hs (- he 5))))
 	(setq name
 	      (cons an (mapconcat 'identity 
-				  (split-string an "[ /\\]\\|&amp;") "_"))))
+				  (split-string an "[ /\\?]\\|&amp;") "_"))))
 
       (setq positions 
 	    (cons (list name previous-position current-position) positions))
