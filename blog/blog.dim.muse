@@ -2,6 +2,56 @@
 #title tail -f /dev/dim
 #desc dim's PostgreSQL blog
 
+* 20101107-13:45 pg_basebackup
+
+[[http://2ndquadrant.com/about/#krosing][Hannu]] just gave me a good idea in [[http://archives.postgresql.org/pgsql-hackers/2010-11/msg00236.php][this email]] on [[http://archives.postgresql.org/pgsql-hackers/][-hackers]], proposing that
+[[https://github.com/dimitri/pg_basebackup][pg_basebackup]] should get the =xlog= files again and again in a loop for the
+whole duration of the *base backup*. That's now done in the aforementioned
+tool, whose options got a little more useful now:
+
+<src>
+Usage: pg_basebackup.py [-v] [-f] [-j jobs] "dsn" dest
+
+Options:
+  -h, --help            show this help message and exit
+  --version             show version and quit
+  -x, --pg_xlog         backup the pg_xlog files
+  -v, --verbose         be verbose and about processing progress
+  -d, --debug           show debug information, including SQL queries
+  -f, --force           remove destination directory if it exists
+  -j JOBS, --jobs=JOBS  how many helper jobs to launch
+  -D DELAY, --delay=DELAY
+                        pg_xlog subprocess loop delay, see -x
+  -S, --slave           auxilliary process
+  --stdin               get list of files to backup from stdin
+</src>
+
+Yeah, as implementing the =xlog= idea required having some kind of
+parallelism, I built on it and the script now has a =--jobs= option for you to
+setup how many processes to launch in parallel, all fetching some =base
+backup= files in its own standard (=libpq=) [[http://www.postgresql.org/][PostgreSQL]] connection, in
+compressed chunks of =8 MB= (so that's not =8 MB= chunks sent over).
+
+The =xlog= loop will fetch any =WAL= file whose =ctime= changed again,
+wholesale. It's easier this way, and tools to get optimized behavior already
+do exist, either [[http://skytools.projects.postgresql.org/doc/walmgr.html][walmgr]] or [[http://www.postgresql.org/docs/9.0/interactive/warm-standby.html#STREAMING-REPLICATION][walreceiver]].
+
+The script is still a little [[http://python.org/][python]] self-contained short file, it just went
+from about =100= lines of code to about =400= lines. There's no external
+dependency, all it needs is provided by a standard python installation. The
+problem with that is that it's using =select.poll()= that I think is not
+available on windows. Supporting every system or adding to the dependencies,
+I've been choosing what's easier for me.
+
+<src lang="python">
+    import select
+    p = select.poll()
+    p.register(sys.stdin, select.POLLIN)
+</src>
+
+If you get to try it, please report about it, you should know or easily
+discover my *email*!
+
 * 20101021-13:45 Introducing Extensions
 
 After reading [[http://database-explorer.blogspot.com/2010/10/extensions-in-91.html][Simon's blog post]], I can't help but try to give some details
