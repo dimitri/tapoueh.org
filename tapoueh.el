@@ -1,5 +1,6 @@
 ;;; tapoueh.el --- Muse Setup for tapoueh.org
 ;;
+(require 'muse-mode)
 (require 'muse-project)  ; publication par projets
 
 (setq muse-project-alist nil)
@@ -7,7 +8,7 @@
 (add-to-list
  'muse-project-alist
  `("tapoueh.org"
-   (,@(loop for d in (muse-project-alist-dirs "~/dev/new.tapoueh.org/")
+   (,@(loop for d in (muse-project-alist-dirs "~/dev/tapoueh.org/")
 	    unless (string-match (rx (or "images")) d)
 	    collect d)
     :default "index"
@@ -427,7 +428,8 @@ An article is a list of SOURCE LINK TITLE DATE FORMATED-DATE TAGS"
   (let* ((project (muse-project-of-file (muse-current-file)))
 	 (root    (muse-style-element :path (caddr project)))
 	 (cwd     (file-name-directory muse-publishing-current-output-path))
-	 (d       (file-name-as-directory (expand-file-name dir root)))
+	 (d       (file-name-as-directory
+		   (if dir (expand-file-name dir root) root)))
 	 (updir   (unless (string= cwd d) (file-relative-name d cwd))))
     (loop for (src link title date fdate tags) in (tapoueh-latest-articles n d)
 	  do (tapoueh-insert-article-link-li
@@ -476,7 +478,7 @@ opening line, and return the item's pubDate"
 in fact, from the current buffer."
   (let* ((title   (tapoueh-extract-directive "title" source))
 	 (desc    (tapoueh-get-output-rss-content))
-	 (author  "Dimitri Fontaine (dim@tapoueh.org)")
+	 (author  "Dimitri Fontaine <dim@tapoueh.org>")
 	 (date    (tapoueh-parse-date
 		   (tapoueh-extract-directive "date" source)))
 	 (pubdate (format-time-string "%a, %d %b %Y %T %z" date)))
