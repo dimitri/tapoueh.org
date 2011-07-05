@@ -518,3 +518,32 @@ file to be the relevant information."
 	    when (or (null tag) (member tag tags))
 	    do (tapoueh-add-article-to-rss
 		(concat root "/" rss) source output link)))))
+
+;;;
+;;; C-c C-r to rsync the static website to the hosting server
+;;;
+(defvar dim:muse-rsync-options "-avz"
+  "rsync options")
+
+(defvar dim:muse-rsync-source "~/dev/tapoueh.org"
+  "local path from where to rsync, with no ending /")
+
+(defvar dim:muse-rsync-target
+  "dim@tapoueh.org:/var/www/blog.tapoueh.org"
+  "Remote URL to use as rsync target, with no ending /")
+
+(defun dim:muse-project-rsync ()
+  "publish tapoueh.org using rsync"
+  (interactive)
+  (let* ((rsync-command (format "rsync %s %s %s"
+				dim:muse-rsync-options
+				(concat dim:muse-rsync-source "/")
+				(concat dim:muse-rsync-target "/"))))
+    (with-current-buffer (get-buffer-create "*muse-rsync*")
+      (erase-buffer)
+      (insert (concat rsync-command "\n"))
+      (message "%s" rsync-command)
+      (insert (shell-command-to-string rsync-command))
+      (insert "\n"))))
+
+(define-key muse-mode-map (kbd "C-c C-r") 'dim:muse-project-rsync)
