@@ -478,7 +478,7 @@ opening line, and return the item's pubDate"
 in fact, from the current buffer."
   (let* ((title   (tapoueh-extract-directive "title" source))
 	 (desc    (tapoueh-get-output-rss-content))
-	 (author  "Dimitri Fontaine <dim@tapoueh.org>")
+	 (author  "dim@tapoueh.org (Dimitri Fontaine)")
 	 (date    (tapoueh-parse-date
 		   (tapoueh-extract-directive "date" source)))
 	 (pubdate (format-time-string "%a, %d %b %Y %T %z" date)))
