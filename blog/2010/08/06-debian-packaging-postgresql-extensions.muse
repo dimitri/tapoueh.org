@@ -1,0 +1,102 @@
+#author Dimitri Fontaine
+#title  debian packaging PostgreSQL extensions
+#date   20100806-13:00
+#tags   PostgreSQL debian Extensions release prefix
+
+* debian packaging PostgreSQL extensions
+
+In trying to help an extension *debian packaging* effort, I've once again
+proposed to handle it. That's because I now begin to know how to do it, as
+you can see in my [[http://qa.debian.org/developer.php?login=dim%40tapoueh.org][package overview]] page at *debian QA* facility. There's a
+reason why I proposed myself here, it's that yet another tool of mine is now
+to be found in *debian*, and should greatly help *extension packaging*
+there. You can already check for the [[http://packages.debian.org/sid/postgresql-server-dev-all][postgresql-server-dev-all]] package page
+if you're that impatient!
+
+Back? Ok, so I used to have two main gripes against debian support for
+[[http://www.postgresql.org/][PostgreSQL]]. The first one, which is now feeling alone, is that both project
+[[http://wiki.postgresql.org/wiki/PostgreSQL_Release_Support_Policy][release support policy]] aren't compatible enough for debian stable to include
+all currently supported stable PostgreSQL major version. That's very bad
+that debian stable will only propose one major version, knowing that the
+support for several of them is in there.
+
+The problem is two fold: first, debian stable has to maintain any
+distributed package. There's no *deprecation policy* allowing for droping the
+ball. So the other side of this coin is that debian developers must take on
+themselves maintaining included software for as long as stable is not
+renamed =oldstable=. And it so happens that there's no debian developer that
+feels like maintaining *end of lined* PostgreSQL releases without help from
+[[http://www.postgresql.org/community/contributors/][PostgreSQL Core Team]]. Or, say, without official statement that they would
+help.
+
+Now, why I don't like this situation is because I'm pretty sure there's very
+few software development group offering as long and reliable maintenance
+policy as PostgreSQL is doing, but debian will still happily distribute
+*unknown-maintenance-policy* pieces of code in its stable repositories. So the
+*uncertainty* excuse is rather poor. And highly frustrating.
+
+<quote>
+  ***Note:*** you have to admit that the debian stable management model copes very
+  well with all the debian included software. You can't release stable with
+  a new PostgreSQL major version unless each and every package depending on
+  PostgreSQL will actually work with the newer version, and the debian
+  scripts will care for upgrading the cluster. Where it's not working good
+  is when you're using debian for a PostgreSQL server for a proprietary
+  application, which happens quite frequently too.
+</quote>
+
+The consequence of this fact leads to my second main gripe against debian
+support for PostgreSQL: the extensions. It so happens that the PostgreSQL
+extensions are developped for supporting several major versions from the
+same source code. So typically, all you need to do is recompile the
+extension against the new major version, and there you go.
+
+Now, say debian new stable is coming with [[http://packages.debian.org/squeeze/postgresql-8.4][8.4]] rather than [[http://packages.debian.org/lenny/postgresql-8.3][8.3]] as it used
+to. You should be able to just build the extensions (like [[http://packages.debian.org/squeeze/postgresql-8.4-prefix][prefix]]), without
+changing the source package, nor droping =postgresql-8.3-prefix= from the
+distribution on the grounds that =8.3= ain't in debian stable anymore.
+
+I've been ranting a lot about this state of facts, and I finally provided a
+patch to the [[http://packages.debian.org/sid/postgresql-common][postgresql-common]] debian packaging, which made it into version
+=110=: welcome [[http://packages.debian.org/sid/postgresql-server-dev-all][pg_buildext]]. An exemple of how to use it can be found in the
+git branch for [[http://github.com/dimitri/prefix][prefix]], it shows up in [[http://github.com/dimitri/prefix/blob/master/debian/pgversions][debian/pgversions]] and [[http://github.com/dimitri/prefix/blob/master/debian/rules][debian/rules]]
+files. 
+
+As you can see, the =pg_buildext= tool allows you to list the PostgreSQL major
+versions the extension you're packaging supports, and only those that are
+both in your list and in the current debian supported major version list
+will get built. =pg_buildext= will do a =VPATH= build of your extension, so it's
+capable of building the same extension for multiple major versions of
+PostgreSQL. Here's how it looks:
+
+<src lang="Makefile">
+	# build all supported version
+	pg_buildext build $(SRCDIR) $(TARGET) "$(CFLAGS)"
+
+	# then install each of them
+	for v in `pg_buildext supported-versions $(SRCDIR)`; do \
+		dh_install -ppostgresql-$$v-prefix ;\
+	done
+</src>
+
+And the files are to be found in those places:
+
+<src>
+dim ~/dev/prefix cat debian/postgresql-8.3-prefix.install 
+debian/prefix-8.3/prefix.so usr/lib/postgresql/8.3/lib
+debian/prefix-8.3/prefix.sql usr/share/postgresql/8.3/contrib
+
+dim ~/dev/prefix cat debian/postgresql-8.4-prefix.install                                                                         
+debian/prefix-8.4/prefix.so usr/lib/postgresql/8.4/lib
+debian/prefix-8.4/prefix.sql usr/share/postgresql/8.4/contrib
+</src>
+
+So you still need to maintain [[http://github.com/dimitri/prefix/blob/master/debian/pgversions][debian/pgversions]] and the
+=postgresql-X.Y-extension.*= files, but then a change in debian support for
+PostgreSQL major versions will be handled automatically (there's a facility
+to trigger automatic rebuild when necessary).
+
+All this ranting to explain that pretty soon, the extenion's packages that I
+maintain will no longer have to be patched when dropping a previously
+supported major version of PostgreSQL. I'm breathing a little better, so
+thanks a lot [[http://www.piware.de/category/debian/][Martin]]!

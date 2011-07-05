@@ -1,0 +1,35 @@
+#author Dimitri Fontaine
+#title  prefix 1.1.0
+#date   20091130-12:10
+#tags   PostgreSQL Extensions prefix 9.1
+
+* prefix 1.1.0
+
+So I had two [[http://archives.postgresql.org/pgsql-general/2009-11/msg01042.php][bug]] [[http://lists.pgfoundry.org/pipermail/prefix-users/2009-November/000005.html][reports]] about [[prefix.html][prefix]] in less than a week. It means several
+things, one of them is that my code is getting used in the wild, which is
+nice. The other side of the coin is that people do find bugs in there. This
+one is about the behavior of the =btree opclass= of the type =prefix range=. We
+cheat a lot there by simply having written one, because a range does not
+have a strict ordering: is =[1-3]= before of after =[2-4]=? But when you know
+you have no overlapping intervals in your =prefix_range= column, being able to
+have it part of a *primary key* is damn useful.
+
+Note: in =8.5= we should have a way to express *contraint exclusion* and have
+PostgreSQL forbids overlapping entries for us. Not being there yet, you
+could write a *constraint trigger* and use the *GiST index* to have nice speed
+there, which is exactly what this *constraint exclusion* support is about.
+
+It turns out the code change required is pretty simple:
+
+<src lang="c">
+-    return (a->first == b->first) ? (a->last - b->last) : (a->first - b->first);
++    /*
++     * we are comparing e.g. '1' and '12' (the shorter contains the
++     * smaller), so let's pretend '12' < '1' as it contains less elements.
++     */
++    return (alen == mlen) ? 1 : -1;
+</src>
+
+This happens in the *compare support function* (see
+[[http://www.postgresql.org/docs/8.4/interactive/xindex.html][Interfacing Extensions To Indexes]]) so that means you now have to rebuild
+your =prefix_range= btree indexes, hence the version number bump.

@@ -1,0 +1,3842 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0">
+  <channel>
+    <title>tail -f /dev/dim</title>
+    <link>http://tapoueh.org/index.html</link>
+    <description>Dimitri Fontaine's blog</description>
+    <language>en-us</language>
+    <generator>Emacs Muse</generator>
+<item>
+  <title>Multi-Version support for Extensions</title>
+  <link>http://tapoueh.org/blog/2011/06/29-multi-version-support-for-extensions.html</link>
+  <description><![CDATA[<h2>Multi-Version support for Extensions</h2>
+<div class="date">Wednesday, June 29 2011, 09:50</div>
+
+
+<p class="first">We still have this problem to solve with extensions and their packaging.
+How to best organize things so that your extension is compatible with before
+<code>9.1</code> and <code>9.1</code> and following releases of <a href="http://www.postgresql.org/">PostgreSQL</a>?</p>
+
+<p>Well, I had to do it for the <a href="http://pgfoundry.org/projects/ip4r/">ip4r</a> contribution, and I wanted the following
+to happen:</p>
+
+<pre class="src">
+dpkg-deb: building package `postgresql-8.3-ip4r' ...
+dpkg-deb: building package `postgresql-8.4-ip4r' ...
+dpkg-deb: building package `postgresql-9.0-ip4r' ...
+dpkg-deb: building package `postgresql-9.1-ip4r' ...
+</pre>
+
+<p>And here's a simple enough way to achieve that.  First, you have to get your
+packaging ready the usual way, and to install the build dependencies.  Then
+realizing that <code>/usr/share/postgresql-common/supported-versions</code> from the
+latest <code>postgresql-common</code> package will only return <code>8.3</code> in <code>lenny</code> (yes, I'm
+doing some <em>backporting</em> here), we have to tweak it.</p>
+
+<pre class="src">
+$ dpkg -l postgresql-server-dev-* | awk '/^ii/ {print $2}'
+postgresql-server-dev-8.3
+postgresql-server-dev-8.4
+postgresql-server-dev-9.0
+postgresql-server-dev-9.1
+postgresql-server-dev-all
+
+$ sudo dpkg-divert \
+--divert /usr/share/postgresql-common/supported-versions.distrib \
+--rename /usr/share/postgresql-common/supported-versions
+
+$ cat /usr/share/postgresql-common/supported-versions
+#! /bin/bash
+
+dpkg -l postgresql-server-dev-* \
+| awk -F '[ -]' '/^ii/ &amp;&amp; ! /server-dev-all/ {print $6}'
+</pre>
+
+<p>Now we are allowed to build our extension for all those versions, so we add
+<code>9.1</code> to the <code>debian/pgversions</code> file.  And <code>debuild</code> will do the right thing now,
+thanks to <a href="http://manpages.debian.net/cgi-bin/man.cgi?query=pg_buildext">pg_buildext</a> from <a href="http://packages.debian.org/sid/postgresql-server-dev-all">postgresql-server-dev-all</a>.</p>
+
+<p>The problem we face is that the built is not an <a href="http://www.postgresql.org/docs/9.1/static/extend-extensions.html">extension</a> as in <code>9.1</code>, so
+things like <code>\dx</code> in <code>psql</code> and <a href="http://www.postgresql.org/docs/9.1/static/sql-createextension.html">CREATE EXTENSION</a> will not work out of the box.
+First, we need a control file.  Then we need to remove the transaction
+control from the install script (here, <code>ip4r.sql</code>), and finally, this script
+needs to be called <code>ip4r--1.05.sql</code>.  Here's how I did it:</p>
+
+<pre class="src">
+$ cat ip4r.control
+comment = 'IPv4 and IPv4 range index types'
+default_version = '1.05'
+relocatable = yes
+
+$ cat debian/postgresql-9.1-ip4r.install
+debian/ip4r-9.1/ip4r.so usr/lib/postgresql/9.1/lib
+ip4r.control usr/share/postgresql/9.1/extension
+debian/ip4r-9.1/ip4r.sql usr/share/postgresql/9.1/extension
+
+$ cat debian/postgresql-9.1-ip4r.links
+usr/share/postgresql/9.1/extension/ip4r.sql usr/share/postgresql/9.1/extension/ip4r--1.05.sql
+</pre>
+
+<p>Be careful not to forget to remove any and all <code>BEGIN;</code> and <code>COMMIT;</code> lines from
+the <code>ip4r.sql</code> file, which meant that I also removed support for <em>Rtree</em>, which
+is not relevant for modern versions of PostgreSQL saith the script (post
+<code>8.2</code>).  That means I'm not publishing this very work yet, but I wanted to
+share the <code>debian/postgresql-9.1-extension.links</code> idea.</p>
+
+<p>Notice that I didn't change anything about the <code>.sql.in</code> make rule, so I
+didn't have to use the support for <code>module_pathname</code> in the control file.</p>
+
+<p>Now, after the usual <code>debuild</code> step, I can just <code>sudo debi</code> to install all the
+just build packages and <code>CREATE EXTENSION</code> will run fine.  And in <code>9.0</code> you get
+the old way to install it, but it still works:</p>
+
+<pre class="src">
+$ psql -U postgres --cluster 9.0/main -1 \
+-f /usr/share/postgresql/9.0/contrib/ip4r.sql
+&lt;lots of chatter&gt;
+
+$ psql -U postgres --cluster 9.1/main -c 'create extension ip4r;'
+CREATE EXTENSION
+</pre>
+
+<p>That's it :)</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Wed, 29 Jun 2011 09:50:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2011/06/29-multi-version-support-for-extensions.html</guid>
+</item>
+
+
+<item>
+  <title>Back from Ottawa, preparing for Cambridge</title>
+  <link>http://tapoueh.org/blog/2011/05/30-back-from-ottawa-preparing-for-cambridge.html</link>
+  <description><![CDATA[<h2>Back from Ottawa, preparing for Cambridge</h2>
+<div class="date">Monday, May 30 2011, 11:00</div>
+
+
+<p class="first">While <a href="http://blog.hagander.net/">Magnus</a> is all about <a href="http://2011.pgconf.eu/">PG Conf EU</a> already, you have to realize we're just
+landed back from <a href="http://www.pgcon.org/2011/">PG Con</a> in Ottawa.  My next stop in the annual conferences
+is <a href="http://char11.org/">CHAR 11</a>, the <em>Clustering, High Availability and Replication</em> conference in
+Cambridge, 11-12 July.  Yes, on the old continent this time.</p>
+
+<p>This year's <em>pgcon</em> hot topics, for me, have been centered around a better
+grasp at <a href="http://www.postgresql.org/docs/9.1/static/transaction-iso.html#XACT-SERIALIZABLE">SSI</a> and <em>DDL Triggers</em>.  Having those beasts in <a href="http://www.postgresql.org/">PostgreSQL</a> would
+allow for auditing, finer privileges management and some more automated
+replication facilities.  Imagine that <code>ALTER TABLE</code> is able to fire a <em>trigger</em>,
+provided by <em>Londiste</em> or <em>Slony</em>, that will do what's needed on the cluster by
+itself.  That would be awesome, wouldn't it?</p>
+
+<p>At <em>CHAR 11</em> I'll be talking about <a href="http://wiki.postgresql.org/wiki/SkyTools">Skytools 3</a>.  You know I've been working on
+its <em>debian</em> packaging, now is the time to review the documentation and make
+there something as good looking as the monitoring system are...</p>
+
+<p>Well, expect some news and a nice big picture diagram overview soon, if work
+schedule leaves me anytime that's what I want to be working on now.</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Mon, 30 May 2011 11:00:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2011/05/30-back-from-ottawa-preparing-for-cambridge.html</guid>
+</item>
+
+
+<item>
+  <title>Preparing for PGCON</title>
+  <link>http://tapoueh.org/blog/2011/05/12-preparing-for-pgcon.html</link>
+  <description><![CDATA[<h2>Preparing for PGCON</h2>
+<div class="date">Thursday, May 12 2011, 10:30</div>
+
+
+<p class="first">It's this time of the year again, the main international
+<a href="http://www.pgcon.org/2011/">PostgreSQL Conference</a> is next week in Ottawa, Canada.  If previous years are
+any indication, this will be great event where to meet with a lot of the
+members of your community.  The core team will be there, developers will be
+there, and we will meet with users and their challenging use cases.</p>
+
+<p>This is a very good time to review both what you did in the project those
+last 12 months, and what you plan to do next year.  To help with that,
+several <em>meeting</em> events are organized.  They're like a whole-day round table
+with a kind of an agenda, with a limited number of invited people in, and
+very intense on-topic discussions about how to organize ourselves for
+another great year of innovation in PostgreSQL.</p>
+
+<p>Then we have two days full of talks where I usually learn some new aspect of
+the project or of the product, and where ideas tend to just pop-up in a
+continuous race.  Being away from home and with people you see only once a
+year (some of them more than that of course, hi European fellows!) seems to
+allow for some broader thinking.</p>
+
+<p>The talks I want to go to include
+<a href="http://www.pgcon.org/2011/schedule/events/361.en.html">Database Scalability Patterns: Sharding for Unlimited Growth</a> by
+<a href="http://www.pgcon.org/2011/schedule/speakers/20.en.html">Robert Treat</a>, <a href="http://www.pgcon.org/2011/schedule/events/366.en.html">Maintaining Terabytes</a> by <a href="http://www.pgcon.org/2011/schedule/speakers/112.en.html">Selena Deckelmann</a>, <a href="http://www.pgcon.org/2011/schedule/events/307.en.html">NTT’s Case Report</a>
+by <a href="http://www.pgcon.org/2011/schedule/speakers/192.en.html">Tetsuo Sakata</a>, <a href="http://www.pgcon.org/2011/schedule/events/350.en.html">Hacking the Query Planner</a> by <a href="http://www.pgcon.org/2011/schedule/speakers/202.en.html">Tom Lane</a>.  That's for a first
+day, right?</p>
+
+<p>Then, on the second day, I notice <a href="http://www.pgcon.org/2011/schedule/events/311.en.html">Range Types</a> by <a href="http://www.pgcon.org/2011/schedule/speakers/83.en.html">Jeff Davis</a>,
+<a href="http://www.pgcon.org/2011/schedule/events/309.en.html">SP-GiST - a new indexing infrastructure for PostgreSQL</a> by <a href="http://www.pgcon.org/2011/schedule/speakers/29.en.html">Oleg</a> and <a href="http://www.pgcon.org/2011/schedule/speakers/33.en.html">Teodor</a>,
+<a href="http://www.pgcon.org/2011/schedule/events/337.en.html">The Write Stuff</a> by <a href="http://www.pgcon.org/2011/schedule/speakers/110.en.html">Greg Smith</a> (a colleague at <a href="http://www.2ndquadrant.fr/">2ndQuadrant</a>).</p>
+
+<p>I will miss <a href="http://www.pgcon.org/2011/schedule/events/333.en.html">Serializable Snapshot Isolation in Postgres</a> by <a href="http://www.pgcon.org/2011/schedule/speakers/113.en.html">Kevin Grittner</a>
+and <a href="http://www.pgcon.org/2011/schedule/speakers/197.en.html">Dan Ports</a>, unfortunately, because I'll be talking about
+<a href="http://www.pgcon.org/2011/schedule/events/280.en.html">Extensions Development</a> at the same time.</p>
+
+<p>Well of course this list is just a first selection, hallway tracks are often
+what guides me through talks or make me skip some.</p>
+
+<p>See you there!</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Thu, 12 May 2011 10:30:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2011/05/12-preparing-for-pgcon.html</guid>
+</item>
+
+
+<item>
+  <title>Tables and Views dependencies</title>
+  <link>http://tapoueh.org/blog/2011/05/04-tables-and-views-dependencies.html</link>
+  <description><![CDATA[<h2>Tables and Views dependencies</h2>
+<div class="date">Wednesday, May 04 2011, 11:45</div>
+
+
+<p class="first">Let's say you need to <code>ALTER TABLE foo ALTER COLUMN bar TYPE bigint;</code>, and
+<a href="http://postgresql.org">PostgreSQL</a> is helpfully telling you that no you can't because such and such
+<em>views</em> depend on the column.  The basic way to deal with that is to copy
+paste from the error message the names of the views involved, then prepare a
+script wherein you first <code>DROP VIEW ...;</code> then <code>ALTER TABLE</code> and finally <code>CREATE
+VIEW</code> again, all in the same transaction.</p>
+
+<p>So you have to copy paste also the view definitions.  With large view
+definitions, it quickly gets cumbersome to do so.  Well when you're working
+on operations, you have to bear in mind that cumbersome is a synonym for
+<em>error prone</em>, in fact — so you want another solution if possible.</p>
+
+<p>Oh, and the other drawback of this solution is that <code>ALTER TABLE</code> will first
+take a <code>LOCK</code> on the table, locking out any activity.  And more than that, the
+lock acquisition will queue behind current activity on the table, which
+means waiting for a fairly long time and damaging the service quality on a
+moderately loaded server.</p>
+
+<p>It's possible to abuse the <a href="http://www.postgresql.org/docs/current/static/catalogs.html">system catalogs</a> in order to find all <em>views</em> that
+depend on a given table, too.  For that, you have to play with <code>pg_depend</code> and
+you have to know that internally, a <em>view</em> is in fact a <em>rewrite rule</em>.  Then
+here's how to produce the two scripts that we need:</p>
+
+<pre class="src">
+=# \t
+Showing only tuples.
+
+=# \o /tmp/drop.sql
+=# select <span style="color: #bc8f8f;">'DROP VIEW '</span> || views || <span style="color: #bc8f8f;">';'</span>
+     from (select distinct(r.ev_class::regclass) as views
+            from pg_depend d join pg_rewrite r on r.oid = d.objid
+           where refclassid = <span style="color: #bc8f8f;">'pg_class'</span>::regclass
+             and refobjid = <span style="color: #bc8f8f;">'SCHEMA.TABLENAME'</span>::regclass
+             and classid = <span style="color: #bc8f8f;">'pg_rewrite'</span>::regclass
+             and pg_get_viewdef(r.ev_class, true) ~ <span style="color: #bc8f8f;">'COLUMN_NAME'</span>) as x;
+
+=# \o /tmp/create.sql
+=# select <span style="color: #bc8f8f;">'CREATE VIEW '</span> || views || E<span style="color: #bc8f8f;">' AS \n'</span>
+       || pg_get_viewdef(views, true) || <span style="color: #bc8f8f;">';'</span>
+     from (select distinct(r.ev_class::regclass) as views
+          from pg_depend d join pg_rewrite r on r.oid = d.objid
+         where refclassid = <span style="color: #bc8f8f;">'pg_class'</span>::regclass
+           and refobjid = <span style="color: #bc8f8f;">'SCHEMA.TABLENAME'</span>::regclass
+           and classid = <span style="color: #bc8f8f;">'pg_rewrite'</span>::regclass
+           and pg_get_viewdef(r.ev_class, true) ~ <span style="color: #bc8f8f;">'COLUMN_NAME'</span>) as x;
+
+=# \o
+</pre>
+
+<p>Replace <code>SCHEMA.TABLENAME</code> and <code>COLUMN_NAME</code> with your targets here and the
+first query should give you one row per candidate view.  Well if you're not
+using the <code>\o</code> trick, that is — if you do, check out the generated file
+instead, with <code>\! cat /tmp/drop.sql</code> for example.</p>
+
+<p>Please note that this catalog query is not accurate, as it will select as a
+candidate any view that will by chance both depend on the target table and
+contain the <code>column_name</code> in its text definition.  So either filter out the
+candidates properly (by proper proof reading then another <code>WHERE</code> clause), or
+just accept that you might <code>DROP</code> then <code>CREATE</code> again more <em>views</em> than need be.</p>
+
+<p>If you need some more details about the <code>\t \o</code> sequence you might be
+interested in this older article about <a href="http://tapoueh.org/articles/blog/_Resetting_sequences._All_of_them&#44;_please&#33;.html">resetting sequences</a>.</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Wed, 04 May 2011 11:45:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2011/05/04-tables-and-views-dependencies.html</guid>
+</item>
+
+
+<item>
+  <title>Extension module_pathname and .sql.in</title>
+  <link>http://tapoueh.org/blog/2011/05/02-extension-module_pathname-and-sqlin.html</link>
+  <description><![CDATA[<h2>Extension <code>module_pathname</code> and <code>.sql.in</code></h2>
+<div class="date">Monday, May 02 2011, 17:30</div>
+
+
+<p class="first">While currently too busy at work to deliver much Open Source contributions,
+let's debunk an old habit of <a href="http://www.postgresql.org/">PostgreSQL</a> extension authors.  It's all down to
+copy pasting from <em>contrib</em>, and there's no reason to continue doing <code>$libdir</code>
+this way ever since <code>7.4</code> days.</p>
+
+<p>Let's take an example here, with the <a href="https://github.com/dimitri/prefix">prefix</a> extension.  This one too will
+need some love, but is still behind on my spare time todo list, sorry about
+that.  So, in the <code>prefix.sql.in</code> we read</p>
+
+<pre class="src">
+  CREATE OR REPLACE FUNCTION prefix_range_in(cstring)
+  RETURNS prefix_range
+  AS <span style="color: #bc8f8f;">'MODULE_PATHNAME'</span>
+  LANGUAGE <span style="color: #bc8f8f;">'C'</span> IMMUTABLE STRICT;
+</pre>
+
+<p>Two things are to change here.  First, the PostgreSQL <em>backend</em> will
+understand just fine if you just say <code>AS '$libdir/prefix'</code>.  So you have to
+know in the <code>sql</code> script the name of the shared object library, but if you do,
+you can maintain directly a <code>prefix.sql</code> script instead.</p>
+
+<p>The advantage is that you now can avoid a compatibility problem when you
+want to support PostgreSQL from <code>8.2</code> to <code>9.1</code> in your extension (older than
+that and it's <a href="http://wiki.postgresql.org/wiki/PostgreSQL_Release_Support_Policy">no longer supported</a>).  You directly ship your script.</p>
+
+<p>For compatibility, you could also use the <a href="http://developer.postgresql.org/pgdocs/postgres/extend-extensions.html">control file</a> <code>module_pathname</code>
+property.  But for <code>9.1</code> you then have to add a implicit <code>Make</code> rule so that the
+script is derived from your <code>.sql.in</code>. And as you are managing several scripts
+— so that you can handle <em>versioning</em> and <em>upgrades</em> — it can get hairy (<em>hint</em>,
+you need to copy <code>prefix.sql</code> as <code>prefix--1.1.1.sql</code>, then change its name at
+next revision, and think about <em>upgrade</em> scripts too).  The <code>module_pathname</code>
+facility is better to keep for when managing more than a single extension in
+the same directory, like the <a href="http://git.postgresql.org/gitweb?p=postgresql.git;a=blob;f=contrib/spi/Makefile;h=0c11bfcbbd47b0c3ed002874bfefd9e2022cf5ac;hb=HEAD">SPI contrib</a> is doing.</p>
+
+<p>Sure, maintaining an extension that targets both antique releases of
+PostgreSQL and <a href="http://developer.postgresql.org/pgdocs/postgres/sql-createextension.html">CREATE EXTENSION</a> super-powered one(s) (not yet released) is a
+little more involved than that.  We'll get back to that, as some people are
+still pioneering the movement.</p>
+
+<p>On my side, I'm working with some <a href="http://www.debian.org/">debian</a> <a href="http://qa.debian.org/developer.php?login=myon">developer</a> on how to best manage the
+packaging of those extensions, and this work could end up as a specialized
+<em>policy</em> document and a coordinated <em>team</em> of maintainers for all things
+PostgreSQL in <code>debian</code>.  This will also give some more steam to the PostgreSQL
+effort for debian packages: the idea is to maintain packages for all
+supported version (from <code>8.2</code> up to soon <code>9.1</code>), something <code>debian</code> itself can not
+commit to.</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Mon, 02 May 2011 17:30:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2011/05/02-extension-module_pathname-and-sqlin.html</guid>
+</item>
+
+
+<item>
+  <title>Some notes about Skytools3</title>
+  <link>http://tapoueh.org/blog/2011/04/11-some-notes-about-skytools3.html</link>
+  <description><![CDATA[<h2>Some notes about Skytools3</h2>
+<div class="date">Monday, April 11 2011, 11:30</div>
+
+
+<p class="first">I've been working on <a href="http://github.com/markokr/skytools">skytools3</a> packaging lately.  I've been pushing quite a
+lot of work into it, in order to have exactly what I needed out of the box,
+after some 3 years of production and experiences with the products.  Plural,
+yes, because even if <a href="http://wiki.postgresql.org/wiki/PgBouncer">pgbouncer</a> and <a href="http://wiki.postgresql.org/wiki/PL/Proxy">plproxy</a> are siblings to the projets (same
+developers team, separate life cycle and releases), then <code>skytools</code> still
+includes several sub-projects.</p>
+
+<p>Here's what the <code>skytools3</code> packaging is going to look like:</p>
+
+<pre class="src">
+skytools3              Skytool's replication and queuing
+python-pgq3            Skytool's PGQ python library
+python-skytools3       python scripts framework for skytools
+skytools-ticker3       PGQ ticker daemon service
+skytools-walmgr3       high-availability archive and restore commands
+postgresql-8.4-pgq3    PGQ server-side code (C module for PostgreSQL)
+postgresql-9.0-pgq3    PGQ server-side code (C module for PostgreSQL)
+</pre>
+
+<p>This split is needed so that you can install your <em>daemons</em> (we call them
+<em>consumers</em>) on separate machines than where you run <a href="http://postgresql.org">PostgreSQL</a>.  But for the
+<code>walmgr</code> part, it makes no sense to install it if you don't have a local
+PostgreSQL service, as it's providing <code>archive</code> and <code>restore</code> commands.  Then
+the <em>ticker</em>, you're free to run it on any machine really, so just package it
+this way (in <code>skytools3</code> the <em>ticker</em> is written in <code>C</code> and does not depend on the
+python framework any more).</p>
+
+<p>What you can't see here yet is the new goodies that wraps it as a quality
+<code>debian</code> package.  A new <code>skytools</code> user is created for you when you install the
+<code>skytools3</code> package (which contains the services), along with a skeleton file
+<code>/etc/skytools.ini</code> and a user directory <code>/etc/skytools/</code>.  Put in there your
+services configuration file, and register those service in the
+<code>/etc/skytools.ini</code> file itself.  Then they will get cared about in the <code>init</code>
+sequence at startup and shutdown of your server.</p>
+
+<p>The services will run under the <code>skytools</code> system user, and will default to
+put their log into <code>/var/log/skytools/</code>.  The <code>pidfile</code> will get into
+<code>/var/run/skytools/</code>.  All integrated, automated.</p>
+
+<p>Next big <em>TODO</em> is about documentation, reviewing it and polishing it, and I
+think that <code>skytools3</code> will then get ready for public release.  Yes, you read
+it right, it's happening this very year!  I'm very excited about it, and
+have several architectures that will greatly benefit from the switch to
+<code>skytools3</code>.  More on that later, though!  (Yes, my <em>to blog later</em> list is
+getting quite long now).</p>
+
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Mon, 11 Apr 2011 11:30:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2011/04/11-some-notes-about-skytools3.html</guid>
+</item>
+
+
+<item>
+  <title>towards pg_staging 1.0</title>
+  <link>http://tapoueh.org/blog/2011/03/29-towards-pg_staging-10.html</link>
+  <description><![CDATA[<h2>towards pg_staging 1.0</h2>
+<div class="date">Tuesday, March 29 2011, 15:30</div>
+
+
+<p class="first">If you don't remember about what <a href="pgstaging.html">pg_staging</a> is all about, it's a central
+console from where to control all your <a href="http://www.postgresql.org/">PostgreSQL</a> databases.  Typically you
+use it to manage your development and pre-production setup, where developers
+ask you pretty often to install them some newer dump from the production,
+and you want that operation streamlined and easy.</p>
+
+<center>
+<p><img src="../../../images//pg_staging.png" alt=""></p>
+</center>
+
+
+<h3>Usage</h3>
+
+<p class="first">The typical session would be something like this:</p>
+
+<pre class="src">
+pg_staging&gt; databases foodb.dev
+                    foodb      foodb_20100824 :5432
+           foodb_20100209      foodb_20100209 :5432
+           foodb_20100824      foodb_20100824 :5432
+                pgbouncer           pgbouncer :6432
+                 postgres            postgres :5432
+
+pg_staging&gt; dbsizes foodb.dev
+foodb.dev
+           foodb_20100209: -1
+           foodb_20100824: 104 GB
+Total                    = 104 GB
+
+pg_staging&gt; restore foodb.dev
+...
+pg_staging&gt; switch foodb.dev today
+</pre>
+
+<p>The list of supported commands is quite long now, and documented too (it
+comes with two man pages).  The <code>restore</code> one is the most important and will
+create the database, add it to the <code>pgbouncer</code> setup, fetch the backup named
+<code>dbname.`date -I`.dump</code>, prepare a filtered object list (more on that), load
+<em>pre</em> <code>SQL</code> scripts, launch <code>pg_restore</code>, <code>VACUUM ANALYZE</code> the database when
+configured to do so, load the <em>post</em> <code>SQL</code> scripts then optionaly <em>switch</em> the
+<code>pgbouncer</code> setup to default to this new database.</p>
+
+
+<h3>Filtering</h3>
+
+<p class="first">The newer option is called <code>tablename_nodata_regexp</code>, and here's its documentation in full:</p>
+
+<blockquote>
+<p class="quoted">
+List of table names regexp (comma separated) to restore without
+content. The <code>pg_restore</code> catalog <code>TABLE DATA</code> sections will get
+filtered out.  The regexp is applied against <code>schemaname.tablename</code>
+and non-anchored by default.</p>
+
+</blockquote>
+
+<p>This comes to supplement the <code>schemas</code> and <code>schemas_nodata</code> options, that allows
+to only restore objects from a given set of <em>schemas</em> (filtering out triggers
+that will calls function that are in the excluded schemas, like
+e.g. <a href="http://wiki.postgresql.org/wiki/Skytools">Londiste</a> ones) or to restore only the <code>TABLE</code> definitions while skipping
+the <code>TABLE DATA</code> entries.</p>
+
+
+<h3>Setup</h3>
+
+<p class="first">To setup your environment for <em>pg_staging</em>, you need to take some steps.  It's
+not complex but it's fairly involved.  The benefit is this amazingly useful
+central unique console to control as many databases as you need.</p>
+
+<p>You need a <code>pg_staging.ini</code> file where to describe your environment.  I
+typically name the sessions in there by the name of the database to restore
+followed by a <code>dev</code> or <code>preprod</code> extension.</p>
+
+<p>You need to have all your backups available through <code>HTTP</code>, and as of now,
+served by the famous <em>apache</em> <code>mod_dir</code> directory listing.  It's easy to add
+support to other methods, but is has not been done yet.  You also need to
+have a cluster wide <code>--globals-only</code> backup available somewhere so that you
+can easily create the users etc you need from <code>pg_staging</code>.</p>
+
+<p>You also need to run a <code>pgbouncer</code> daemon on each database server, allowing
+you to bypass editing connection strings when you <code>switch</code> a new database
+version live.</p>
+
+<p>You also need to install the <em>client</em> script, have a local <code>pgstaging</code> system
+user and allow it to run the client script as root, so that it's able to
+control some services and edit <code>pgbouncer.ini</code> for you.</p>
+
+
+<h3>Status</h3>
+
+<p class="first">I'm still using it a lot (several times a week) to manage a whole
+development and pre-production environment set, so the very low
+<a href="https://github.com/dimitri/pg_staging">code activity</a> of the project is telling that it's pretty stable (last series
+of <em>commits</em> are all bug fixes and round corners).</p>
+
+<p>Given that, I'm thinking in terms of <code>pg_staging 1.0</code> soon!  Now is a pretty
+good time to try it and see how it can help you.</p>
+
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Tue, 29 Mar 2011 15:30:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2011/03/29-towards-pg_staging-10.html</guid>
+</item>
+
+
+<item>
+  <title>Extensions in 9.1</title>
+  <link>http://tapoueh.org/blog/2011/03/01-extensions-in-91.html</link>
+  <description><![CDATA[<h2>Extensions in 9.1</h2>
+<div class="date">Tuesday, March 01 2011, 16:30</div>
+
+
+<p class="first">If you've not been following closely you might have missed out on extensions
+integration.  Well, <a href="http://en.wikipedia.org/wiki/Tom_Lane_(computer_scientist)">Tom</a> spent some time on the patches I've been preparing
+for the last 4 months.  And not only did he commit most of the work but he
+also enhanced some parts of the code (better factoring) and basically
+finished it.</p>
+
+<p>At the <a href="http://wiki.postgresql.org/wiki/PgCon_2010_Developer_Meeting">previous developer meeting</a> his advice was to avoid putting too much
+into the very first version of the patch for it to stand its chances of
+being integrated, and while in the review process more than one major
+<a href="http://www.postgresql.org/">PostgreSQL</a> contributor expressed worries about the size of the patch and the
+number of features proposed.  Which is the usual process.</p>
+
+<p>Then what happened is that <strong><em>Tom</em></strong> finally took a similar reasoning as mine
+while working on the feature.  To maximize the benefits, once you have the
+infrastructure in place, it's not that much more work to provide the really
+interesting features.  What's complex is agreeing on what exactly are their
+specifications.  And in the <em>little</em> time window we got on this commit fest
+(well, we hijacked about 2 full weeks there), we managed to get there.</p>
+
+<p>So in the end the result is quite amazing, and you can see that on the
+documentation chapter about it:
+<a href="http://developer.postgresql.org/pgdocs/postgres/extend-extensions.html">35.15. Packaging Related Objects into an Extension</a>.</p>
+
+<p>All the <em>contrib</em> modules that are installing <code>SQL</code> objects into databases for
+you to use them are now converted to <strong><em>Extensions</em></strong> too, and will get released
+in <code>9.1</code> with an upgrade script that allows you to <em>upgrade from unpackaged</em>.
+That means that once you've upgraded from a past PostgreSQL release up to
+<code>9.1</code>, it will be a command away for you to register <em>extensions</em> as such.  I
+expect third party <em>extension</em> authors (from <a href="http://pgfoundry.org/projects/ip4r/">ip4r</a> to <a href="http://pgfoundry.org/projects/temporal">temporal</a>) to release a
+<em>upgrade-from-unpackaged</em> version of their work too.</p>
+
+<p>Of course, a big use case of the <em>extensions</em> is also in-house <code>PL</code> code, and
+having version number and multi-stage upgrade scripts there will be
+fantastic too, I can't wait to work with such a tool set myself.  Some later
+blog post will detail the benefits and usage.  I'm already trying to think
+how much of this version and upgrade facility could be expanded to classic
+<code>DDL</code> objects…</p>
+
+<p>So expect some more blog posts from me on this subject, I will have to talk
+about <em>debian packaging</em> an extension (it's getting damn easy with
+<a href="http://packages.debian.org/squeeze/postgresql-server-dev-all">postgresql-server-dev-all</a> — yes it has received some planing ahead), and
+about how to package your own extension, manage upgrades, turn your current
+<code>pre-9.1</code> extension into a <em>full blown extension</em>, and maybe how to stop
+worrying about extension when you're a DBA.</p>
+
+<p>If you have some features you would want to discuss for next releases,
+please do contact me!</p>
+
+<p>Meanwhile, I'm very happy that this project of mine finally made it to <em>core</em>,
+it's been long in the making.  Some years to talk about it and then finally
+4 months of coding that I'll remember as a marathon.  Many Thanks go to all
+who helped here, from <a href="http://www.2ndquadrant.com/">2ndQuadrant</a> to early reviewers to people I talked to
+over beers at conferences… lots of people really.</p>
+
+<p>To an extended PostgreSQL (and beyond) :)</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Tue, 01 Mar 2011 16:30:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2011/03/01-extensions-in-91.html</guid>
+</item>
+
+
+<item>
+  <title>Back from FOSDEM</title>
+  <link>http://tapoueh.org/blog/2011/02/07-back-from-fosdem.html</link>
+  <description><![CDATA[<h2>Back from FOSDEM</h2>
+<div class="date">Monday, February 07 2011, 11:10</div>
+
+
+<p class="first">This year we were in the main building of the conference, and apparently the
+booth went very well, solding lots of <a href="http://postgresqleu.spreadshirt.net/">PostgreSQL merchandise</a> etc.  I had the
+pleasure to once again meet with the community, but being there only 1 day I
+didn't spend as much time as I would have liked with some of the people there.</p>
+
+<p>In case you're wondering, my <a href="http://fosdem.org/2011/schedule/event/pg_extension1">extension's talk</a> went quite well, and several
+people were kind enough to tell me they appreciated it!  There was video
+recording of it, so we will soon have proofs showing how bad it really was
+and how <em>polite</em> those people really are :)</p>
+
+<p>I will soon be able to write an article series detailing what's an Extension
+and how you deal with them, either as a user or an author.  Well in fact the
+goal is for any user to easily become an extension author, as I think lots
+of people are already maintaining server side code but missing tools to
+manage it properly.  But that will begin once the patch is in, so that I
+present <em>the real stuff</em> rather than what I proposed to the community… Stay
+tuned!</p>
+
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Mon, 07 Feb 2011 11:10:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2011/02/07-back-from-fosdem.html</guid>
+</item>
+
+
+<item>
+  <title>pg_basebackup</title>
+  <link>http://tapoueh.org/blog/2010/11/07-pg_basebackup.html</link>
+  <description><![CDATA[<h2>pg_basebackup</h2>
+<div class="date">Sunday, November 07 2010, 13:45</div>
+
+
+<p class="first">whole duration of the <em>base backup</em>. That's now done in the aforementioned
+tool, whose options got a little more useful now:</p>
+
+<pre class="src">
+Usage: pg_basebackup.py [-v] [-f] [-j jobs] <span style="color: #bc8f8f;">"dsn"</span> dest
+
+Options:
+  -h, --help            show this help message and exit
+  --version             show version and quit
+  -x, --pg_xlog         backup the pg_xlog files
+  -v, --verbose         be verbose and about processing progress
+  -d, --debug           show debug information, including SQL queries
+  -f, --force           remove destination directory if it exists
+  -j JOBS, --jobs=JOBS  how many helper jobs to launch
+  -D DELAY, --delay=DELAY
+                        pg_xlog subprocess loop delay, see -x
+  -S, --slave           auxilliary process
+  --stdin               get list of files to backup from stdin
+</pre>
+
+<p>Yeah, as implementing the <code>xlog</code> idea required having some kind of
+parallelism, I built on it and the script now has a <code>--jobs</code> option for you to
+setup how many processes to launch in parallel, all fetching some <code>base
+backup</code> files in its own standard (<code>libpq</code>) <a href="http://www.postgresql.org/">PostgreSQL</a> connection, in
+compressed chunks of <code>8 MB</code> (so that's not <code>8 MB</code> chunks sent over).</p>
+
+<p>The <code>xlog</code> loop will fetch any <code>WAL</code> file whose <code>ctime</code> changed again,
+wholesale. It's easier this way, and tools to get optimized behavior already
+do exist, either <a href="http://skytools.projects.postgresql.org/doc/walmgr.html">walmgr</a> or <a href="http://www.postgresql.org/docs/9.0/interactive/warm-standby.html#STREAMING-REPLICATION">walreceiver</a>.</p>
+
+<p>The script is still a little <a href="http://python.org/">python</a> self-contained short file, it just went
+from about <code>100</code> lines of code to about <code>400</code> lines. There's no external
+dependency, all it needs is provided by a standard python installation. The
+problem with that is that it's using <code>select.poll()</code> that I think is not
+available on windows. Supporting every system or adding to the dependencies,
+I've been choosing what's easier for me.</p>
+
+<pre class="src">
+    <span style="color: #7f007f;">import</span> select
+    <span style="color: #b8860b;">p</span> = select.poll()
+    p.register(sys.stdin, select.POLLIN)
+</pre>
+
+<p>If you get to try it, please report about it, you should know or easily
+discover my <em>email</em>!</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Sun, 07 Nov 2010 13:45:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/11/07-pg_basebackup.html</guid>
+</item>
+
+
+<item>
+  <title>Introducing Extensions</title>
+  <link>http://tapoueh.org/blog/2010/10/21-introducing-extensions.html</link>
+  <description><![CDATA[<h2>Introducing Extensions</h2>
+<div class="date">Thursday, October 21 2010, 13:45</div>
+
+
+<p class="first">After reading <a href="http://database-explorer.blogspot.com/2010/10/extensions-in-91.html">Simon's blog post</a>, I can't help but try to give some details
+about what it is exactly that I'm working on. As he said, there are several
+aspects to <em>extensions</em> in <a href="http://www.postgresql.org/">PostgreSQL</a>, it all begins here:
+<a href="http://www.postgresql.org/docs/9.0/interactive/extend.html">Chapter 35. Extending SQL</a>.</p>
+
+<p>It's possible, and mostly simple enough, to add your own code or behavior to
+PostgreSQL, so that it will use your code and your semantics while solving
+user queries. That's highly useful and it's easy to understand how so when
+you look at some projects like <a href="http://postgis.refractions.net/">PostGIS</a>, <a href="http://pgfoundry.org/projects/ip4r/">ip4r</a> (index searches of <code>ip</code> in a
+<code>range</code>, not limited to <code>CIDR</code> notation), or our own <em>Key Value Store</em>, <a href="http://www.postgresql.org/docs/9.0/interactive/hstore.html">hstore</a>.</p>
+
+<h3>So, what's in an <em>Extension</em>?</h3>
+
+<p class="first">An <em>extension</em> in its simple form is a <code>SQL</code> <em>script</em> that you load on your
+database, but manage separately. Meaning you don't want the script to be
+part of your backups. Often, that kind of script will create new datatypes
+and operators, support functions, user functions and index support, and then
+it would include some <code>C</code> code that ships in a <em>shared library object</em>.</p>
+
+<p>As far as PostgreSQL is concerned, at least in the current version of my
+patch, the extension is first a <em>meta</em> information file that allows to
+register it. We currently call that the <code>control</code> file. Then, it's an <code>SQL</code>
+script that is <em>executed</em> by the server when you <code>create</code> the <em>extension</em>.</p>
+
+<p>If it so happens that the <code>SQL</code> script depends on some <em>shared library objects</em>
+file, this has to be present at the right place (<code>MODULE_PATHNAME</code>) for the
+<em>extension</em> to be successfully created, but that's always been the case.</p>
+
+<p>The problem with current releases of PostgreSQL, that the <em>extension</em> patch is
+solving, is the <code>pg_dump</code> and <code>pg_restore</code> support. We said it, you don't want
+the <code>SQL</code> script to be part of your dump, because it's not maintained in your
+database, but in some code repository out there. What you want is to be able
+to install the <em>extension</em> again at the file system level then <code>pg_restore</code> your
+database — that depends on it being there.</p>
+
+<p>And that's exactly what the <em>extension</em> patch provides. By now having a <code>SQL</code>
+object called an <code>extension</code>, and maintained in the new <code>pg_extension</code> catalog,
+we have an <code>Oid</code> to refer to. Which we do by recording a dependency between
+any object created by the script and the <em>extension</em> <code>Oid</code>, so that <code>pg_dump</code> can
+be instructed to skip those.</p>
+
+
+<h3>Examples?</h3>
+
+<p class="first">So, let's have a look at what you can do if you play with a patched
+development server version, or if you play directly from the <code>git</code> repository
+at
+<a href="http://git.postgresql.org/gitweb?p=postgresql-extension.git;a=shortlog;h=refs/heads/extension">http://git.postgresql.org/gitweb?p=postgresql-extension.git;a=shortlog;h=refs/heads/extension</a></p>
+
+<pre class="src">
+dim ~ createdb exts
+dim ~ psql exts
+psql (9.1devel)
+Type <span style="color: #bc8f8f;">"help"</span> for help.
+
+dim=# \dx+
+                                                        List of extensions
+        Name        | | |                               Description
+--------------------+-+-+-------------------------------------------------------------------------
+ adminpack          | | | Administrative functions for PostgreSQL
+ auto_username      | | | functions for tracking who changed a table
+ autoinc            | | | functions for autoincrementing fields
+ btree_gin          | | | GIN support for common types BTree operators
+ btree_gist         | | | GiST support for common types BTree operators
+ chkpass            | | | Store crypt()ed passwords
+ citext             | | | case-insensitive character string type
+ cube               | | | data type for representing multidimensional cubes
+ dblink             | | | connect to other PostgreSQL databases from within a database
+ dict_int           | | | example of an add-on dictionary template for full-text search
+ dict_xsyn          | | | example of an add-on dictionary template for full-text search
+ earthdistance      | | | calculating great circle distances on the surface of the Earth
+ fuzzystrmatch      | | | determine similarities and distance between strings
+ hstore             | | | storing sets of key/value pairs
+ int_aggregate      | | | integer aggregator and an enumerator (obsolete)
+ intarray           | | | one-dimensional arrays of integers: functions, operators, index support
+ isn                | | | data types for the international product numbering standards
+ lo                 | | | managing Large Objects
+ ltree              | | | data type for hierarchical tree-like structure
+ moddatetime        | | | functions for tracking last modification time
+ pageinspect        | | | inspect the contents of database pages at a low level
+ pg_buffercache     | | | examine the shared buffer cache in real time
+ pg_freespacemap    | | | examine the free space map (FSM)
+ pg_stat_statements | | | tracking execution statistics of all SQL statements executed
+ pg_trgm            | | | determine the similarity of text, with indexing support
+ pgcrypto           | | | cryptographic functions
+ pgrowlocks         | | | show row locking information for a specified table
+ pgstattuple        | | | obtain tuple-level statistics
+ prefix             | | | Prefix Match Indexing
+ refint             | | | functions for implementing referential integrity
+ seg                | | | data type for representing line segments, or floating point intervals
+ tablefunc          | | | various functions that return tables, including crosstab(text sql)
+ test_parser        | | | example of a custom parser for full-text search
+ timetravel         | | | functions for implementing time travel
+ tsearch2           | | | backwards-compatible text search functionality (pre-8.3)
+ unaccent           | | | text search dictionary that removes accents
+(36 rows)
+</pre>
+
+<p>Ok I've edited the output in a visible way, to leave the <em>Version</em> and <em>Custom
+Variable Classes</em> column out. It's taking lots of screen place and it's not
+that useful here. Maybe the <em>classes</em> one will even get dropped out of the
+patch before reaching <code>9.1</code>, we'll see.</p>
+
+<p>Let's pick an extension there and install it in our new database:</p>
+
+<pre class="src">
+exts=# create extension pg_trgm;
+NOTICE:  Installing extension 'pg_trgm' from '/Users/dim/pgsql/exts/share/contrib/pg_trgm.sql', with user data
+CREATE EXTENSION
+exts=# \dx
+                                           List of extensions
+  Name   |  |  |                       Description
+---------+--+--+---------------------------------------------------------
+ pg_trgm |  |  | determine the similarity of text, with indexing support
+(1 row)
+</pre>
+
+<p>See, that was easy enough. Same thing, the extra columns have been
+removed. So, what's in this extension, will you ask me, what are those
+objects that you would normally (that is, before the patch) find in your
+<code>pg_dump</code> backup script?</p>
+
+<pre class="src">
+exts=# select * from pg_extension_objects('pg_trgm');
+    class     | classid | objid |                                                                objdesc
+--------------+---------+-------+----------------------------------------------------------------------------------------------------------------------------------------
+ pg_extension |    3996 | 18498 | extension pg_trgm
+ pg_proc      |    1255 | 18499 | function set_limit(real)
+ pg_proc      |    1255 | 18500 | function show_limit()
+ pg_proc      |    1255 | 18501 | function show_trgm(text)
+ pg_proc      |    1255 | 18502 | function similarity(text,text)
+ pg_proc      |    1255 | 18503 | function similarity_op(text,text)
+ pg_operator  |    2617 | 18504 | operator %(text,text)
+ pg_type      |    1247 | 18505 | type gtrgm
+ pg_proc      |    1255 | 18506 | function gtrgm_in(cstring)
+ pg_proc      |    1255 | 18507 | function gtrgm_out(gtrgm)
+ pg_type      |    1247 | 18508 | type gtrgm[]
+ pg_proc      |    1255 | 18509 | function gtrgm_consistent(internal,text,integer,oid,internal)
+ pg_proc      |    1255 | 18510 | function gtrgm_compress(internal)
+ pg_proc      |    1255 | 18511 | function gtrgm_decompress(internal)
+ pg_proc      |    1255 | 18512 | function gtrgm_penalty(internal,internal,internal)
+ pg_proc      |    1255 | 18513 | function gtrgm_picksplit(internal,internal)
+ pg_proc      |    1255 | 18514 | function gtrgm_union(bytea,internal)
+ pg_proc      |    1255 | 18515 | function gtrgm_same(gtrgm,gtrgm,internal)
+ pg_opfamily  |    2753 | 18516 | operator family gist_trgm_ops for access method gist
+ pg_opclass   |    2616 | 18517 | operator class gist_trgm_ops for access method gist
+ pg_amop      |    2602 | 18518 | operator 1 %(text,text) of operator family gist_trgm_ops for access method gist
+ pg_amproc    |    2603 | 18519 | function 1 gtrgm_consistent(internal,text,integer,oid,internal) of operator family gist_trgm_ops for access method gist
+ pg_amproc    |    2603 | 18520 | function 2 gtrgm_union(bytea,internal) of operator family gist_trgm_ops for access method gist
+ pg_amproc    |    2603 | 18521 | function 3 gtrgm_compress(internal) of operator family gist_trgm_ops for access method gist
+ pg_amproc    |    2603 | 18522 | function 4 gtrgm_decompress(internal) of operator family gist_trgm_ops for access method gist
+ pg_amproc    |    2603 | 18523 | function 5 gtrgm_penalty(internal,internal,internal) of operator family gist_trgm_ops for access method gist
+ pg_amproc    |    2603 | 18524 | function 6 gtrgm_picksplit(internal,internal) of operator family gist_trgm_ops for access method gist
+ pg_amproc    |    2603 | 18525 | function 7 gtrgm_same(gtrgm,gtrgm,internal) of operator family gist_trgm_ops for access method gist
+ pg_proc      |    1255 | 18526 | function gin_extract_trgm(text,internal)
+ pg_proc      |    1255 | 18527 | function gin_extract_trgm(text,internal,smallint,internal,internal)
+ pg_proc      |    1255 | 18528 | function gin_trgm_consistent(internal,smallint,text,integer,internal,internal)
+ pg_opfamily  |    2753 | 18529 | operator family gin_trgm_ops for access method gin
+ pg_opclass   |    2616 | 18530 | operator class gin_trgm_ops for access method gin
+ pg_amop      |    2602 | 18531 | operator 1 %(text,text) of operator family gin_trgm_ops for access method gin
+ pg_amproc    |    2603 | 18532 | function 1 btint4cmp(integer,integer) of operator family gin_trgm_ops for access method gin
+ pg_amproc    |    2603 | 18533 | function 2 gin_extract_trgm(text,internal) of operator family gin_trgm_ops for access method gin
+ pg_amproc    |    2603 | 18534 | function 3 gin_extract_trgm(text,internal,smallint,internal,internal) of operator family gin_trgm_ops for access method gin
+ pg_amproc    |    2603 | 18535 | function 4 gin_trgm_consistent(internal,smallint,text,integer,internal,internal) of operator family gin_trgm_ops for access method gin
+(38 rows)
+</pre>
+
+<p>This function main intended users are the <em>extension</em> authors themselves, so
+that it's easy for them to figure out which system identifier (the <code>objid</code>
+column) has been attributed to some <code>SQL</code> objects from their install
+script. With this knowledge, you can prepare some <em>upgrade</em> scripts. But
+that's for another patch altogether, so we'll get back to the matter in
+another blog entry.</p>
+
+<p>So we chose <a href="http://www.postgresql.org/docs/9.0/interactive/pgtrgm.html">trgm</a> as an example, let's follow the documentation and create a
+test table and a custom index in there, just so that the extension is put to
+good use. Then let's try to <code>DROP</code> our extension, because we're testing the
+infrastructure, right?</p>
+
+<pre class="src">
+exts=# create table test(id bigint, name text);
+CREATE TABLE
+exts=# CREATE INDEX idx_test_name ON test USING gist (name gist_trgm_ops);
+CREATE INDEX
+exts=# drop extension pg_trgm;
+ERROR:  cannot drop extension pg_trgm because other objects depend on it
+DETAIL:  index idx_test_name depends on operator class gist_trgm_ops for access method gist
+HINT:  Use DROP ... CASCADE to drop the dependent objects too.
+</pre>
+
+<p>Of course PostgreSQL is smart enough here — the <em>extension</em> patch had nothing
+special to do to achieve that, apart from recording the dependencies. Next,
+as we didn't <code>drop extension pg_trgm cascade;</code>, it's still in the database. So
+let's see what a <code>pg_dump</code> will look like. As it's quite a lot of text to
+paste, let's see the <code>pg_restore</code> catalog instead. And that's a feature that
+needs to be known some more, too.</p>
+
+<pre class="src">
+dim ~ pg_dump -Fc exts | pg_restore -l | grep -v '^;'
+1812; 1262 18497 DATABASE - exts dim
+1; 3996 18498 EXTENSION - pg_trgm
+1813; 0 0 COMMENT - EXTENSION pg_trgm
+6; 2615 2200 SCHEMA - public dim
+1814; 0 0 COMMENT - SCHEMA public dim
+1815; 0 0 ACL - public dim
+320; 2612 11602 PROCEDURAL LANGUAGE - plpgsql dim
+1521; 1259 18543 TABLE public test dim
+1809; 0 18543 TABLE DATA public test dim
+1808; 1259 18549 INDEX public idx_test_name dim
+</pre>
+
+<p>As you see, the only SQL object that got into the backup are an <code>EXTENSION</code>
+and its <code>COMMENT</code>. Nothing like the types or the functions that the <code>pg_trgm</code>
+script creates.</p>
+
+
+<h3>What does it means to extension authors?</h3>
+
+<p class="first">In order to be an <em>extension</em>, you have to prepare a <em>control</em> file where to
+give the necessary information to register your script. This file must be
+named <code>extension.control</code> if the script is named <code>extension.sql</code>, at least at
+the moment. This file can benefit from some variable expansion too, like
+does the current <code>extension.sql.in</code>, in that if you provide an
+<code>extension.control.in</code> file the term <code>VERSION</code> will be expanded to whatever
+<code>$(VERSION)</code> is set to in your <code>Makefile</code>.</p>
+
+<p>If you never wrote a <code>C</code> coded <em>extension</em> for PostgreSQL, this might look
+complex and irrelevant. Baseline is that you need a <code>Makefile</code> so that you can
+benefit easily from the PostgreSQL infrastructure work and have the <code>make
+install</code> operation place your files at the right place, including the new
+<code>control</code> file.</p>
+
+
+<h3>That's it for today, folks</h3>
+
+<p class="first">A next blog entry will detail what happens with extensions providing <em>user
+data</em>, and the <code>CREATE EXTENSION name WITH NO DATA;</code> variant. Stay tuned!</p>
+
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Thu, 21 Oct 2010 13:45:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/10/21-introducing-extensions.html</guid>
+</item>
+
+
+<item>
+  <title>Extensions: writing a patch for PostgreSQL</title>
+  <link>http://tapoueh.org/blog/2010/10/15-extensions-writing-a-patch-for-postgresql.html</link>
+  <description><![CDATA[<h2>Extensions: writing a patch for PostgreSQL</h2>
+<div class="date">Friday, October 15 2010, 11:30</div>
+
+
+<p class="first">These days, thanks to my <a href="http://2ndquadrant.com/">community oriented job</a>, I'm working full time on a
+<a href="http://www.postgresql.org/">PostgreSQL</a> patch to terminate basic support for <a href="http://www.postgresql.org/docs/9/static/extend.html">extending SQL</a>. First thing I
+want to share is that patching the <em>backend code</em> is not as hard as one would
+think. Second one is that <a href="http://git-scm.com/">git</a> really is helping.</p>
+
+<p><em>“Not as hard as one would think</em>, are you kidding me?”, I hear some
+say. Well, that's true. It's <code>C</code> code in there, but with a very good layer of
+abstractions so that you're not dealing with subtle problems that much. Of
+course it happens that you have to, and managing the memory isn't an
+option. That said, <code>palloc()</code> and the <em>memory contexts</em> implementation makes
+that as easy as <em>in lots of cases, you don't have to think about it</em>.</p>
+
+<p>PostgreSQL is very well known for its reliability, and that's not something
+that just happened. All the source code is organized in a way that makes it
+possible, so your main task is to write code that looks as much as possible
+like the existing surrounding code. And we all know how to <em>copy paste</em>,
+right?</p>
+
+<p>So, my current work on the <em>extensions</em> is to make it so that if you install
+<a href="http://www.postgresql.org/docs/9.0/interactive/hstore.html">hstore</a> in your database (to pick an example), your backup won't contain any
+<em>hstore</em> specific objects (types, functions, operators, index support objects,
+etc) but rather a single line that tells PostgreSQL to install <em>hstore</em> again.</p>
+
+<pre class="src">
+CREATE EXTENSION hstore;
+</pre>
+
+<p>The feature already works in <a href="http://git.postgresql.org/gitweb?p=postgresql-extension.git;a=shortlog;h=refs/heads/extension">my git branch</a> and I'm extracting infrastructure
+work in there to ease review. That's when <code>git</code> helps a lot. What I've done is
+create a new branch from the master one, then <a href="http://www.kernel.org/pub/software/scm/git/docs/git-cherry-pick.html">cherry pick</a> the patches of
+interest. Well sometime you have to resort to helper tools. I've been told
+after the fact that using <code>git cherry-pick -n</code> would have allowed the
+following to be much simpler:</p>
+
+<pre class="src">
+dim ~/dev/PostgreSQL/postgresql-extension git cherry-pick 3f291b4f82598309368610431cf2a18d7b7a7950
+error: could not apply 3f291b4... Implement dependency tracking for CREATE EXTENSION, and DROP EXTENSION ... CASCADE.
+hint: after resolving the conflicts, mark the corrected paths
+hint: with 'git add &lt;paths&gt;' or 'git rm &lt;paths&gt;'
+hint: and commit the result with 'git commit -c 3f291b4'
+dim ~/dev/PostgreSQL/postgresql-extension git status \
+| awk '/modified/ &amp;&amp; ! /both/ &amp;&amp; ! /genfile/ {print $3}
+       /deleted/ {print $5}
+       /both/    {print $4}' \
+| xargs echo git reset -- \
+| sh
+Unstaged changes after reset:
+M       src/backend/catalog/dependency.c
+M       src/backend/catalog/heap.c
+M       src/backend/catalog/pg_aggregate.c
+M       src/backend/catalog/pg_conversion.c
+M       src/backend/catalog/pg_namespace.c
+M       src/backend/catalog/pg_operator.c
+M       src/backend/catalog/pg_proc.c
+M       src/backend/catalog/pg_type.c
+M       src/backend/commands/extension.c
+M       src/backend/commands/foreigncmds.c
+M       src/backend/commands/opclasscmds.c
+M       src/backend/commands/proclang.c
+M       src/backend/commands/tsearchcmds.c
+M       src/backend/nodes/copyfuncs.c
+M       src/backend/nodes/equalfuncs.c
+M       src/backend/parser/gram.y
+M       src/include/catalog/dependency.h
+M       src/include/commands/extension.h
+M       src/include/nodes/parsenodes.h
+</pre>
+
+<p>That's what I did to prepare a side branch containing only changes to a part
+of my current work. I had to filter the diff so much only because I'm
+commiting in rather big steps, rather than very little chunks at a time. In
+this case that means I had a single patch with several <em>units</em> of changes and
+I wanted to extract only one. Well, it happens that even in such a case, <code>git</code>
+is helping!</p>
+
+<p>There's more to say about the <em>extension</em> related feature of course, but
+that'll do it for this article. I'd just end up with the following nice
+<em>diffstat</em> of 4 days of work:</p>
+
+<pre class="src">
+dim ~/dev/PostgreSQL/postgresql-extension git --no-pager diff master..|wc -l
+    3897
+dim ~/dev/PostgreSQL/postgresql-extension git --no-pager diff master..|diffstat
+ doc/src/sgml/extend.sgml               |   46 ++
+ doc/src/sgml/ref/allfiles.sgml         |    2
+ doc/src/sgml/ref/create_extension.sgml |   95 ++++
+ doc/src/sgml/ref/drop_extension.sgml   |  115 +++++
+ doc/src/sgml/reference.sgml            |    2
+ src/backend/access/transam/xlog.c      |   95 ----
+ src/backend/catalog/Makefile           |    1
+ src/backend/catalog/dependency.c       |   25 +
+ src/backend/catalog/heap.c             |    9
+ src/backend/catalog/objectaddress.c    |   14
+ src/backend/catalog/pg_aggregate.c     |    7
+ src/backend/catalog/pg_conversion.c    |    7
+ src/backend/catalog/pg_namespace.c     |   13
+ src/backend/catalog/pg_operator.c      |    7
+ src/backend/catalog/pg_proc.c          |    7
+ src/backend/catalog/pg_type.c          |    8
+ src/backend/commands/Makefile          |    3
+ src/backend/commands/comment.c         |    6
+ src/backend/commands/extension.c       |  688 +++++++++++++++++++++++++++++++++
+ src/backend/commands/foreigncmds.c     |   19
+ src/backend/commands/functioncmds.c    |    7
+ src/backend/commands/opclasscmds.c     |   13
+ src/backend/commands/proclang.c        |    7
+ src/backend/commands/tsearchcmds.c     |   25 +
+ src/backend/nodes/copyfuncs.c          |   22 +
+ src/backend/nodes/equalfuncs.c         |   18
+ src/backend/parser/gram.y              |   51 ++
+ src/backend/tcop/utility.c             |   27 +
+ src/backend/utils/adt/genfile.c        |  193 +++++++++
+ src/backend/utils/init/postinit.c      |    3
+ src/backend/utils/misc/Makefile        |    2
+ src/backend/utils/misc/cfparser.c      |  113 +++++
+ src/backend/utils/misc/guc-file.l      |   26 -
+ src/backend/utils/misc/guc.c           |  160 ++++++-
+ src/bin/pg_dump/common.c               |    6
+ src/bin/pg_dump/pg_dump.c              |  520 ++++++++++++++++++++++--
+ src/bin/pg_dump/pg_dump.h              |   10
+ src/bin/pg_dump/pg_dump_sort.c         |    7
+ src/bin/psql/command.c                 |    3
+ src/bin/psql/describe.c                |   45 ++
+ src/bin/psql/describe.h                |    3
+ src/bin/psql/help.c                    |    1
+ src/include/catalog/dependency.h       |    1
+ src/include/catalog/indexing.h         |    6
+ src/include/catalog/pg_extension.h     |   61 ++
+ src/include/catalog/pg_proc.h          |   13
+ src/include/catalog/toasting.h         |    1
+ src/include/commands/extension.h       |   54 ++
+ src/include/nodes/nodes.h              |    2
+ src/include/nodes/parsenodes.h         |   20
+ src/include/parser/kwlist.h            |    1
+ src/include/utils/builtins.h           |    4
+ src/include/utils/cfparser.h           |   18
+ src/include/utils/guc.h                |   11
+ src/makefiles/pgxs.mk                  |   21 -
+ 55 files changed, 2456 insertions(+), 188 deletions(-)
+</pre>
+
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Fri, 15 Oct 2010 11:30:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/10/15-extensions-writing-a-patch-for-postgresql.html</guid>
+</item>
+
+
+<item>
+  <title>Date puzzle for starters</title>
+  <link>http://tapoueh.org/blog/2010/10/08-date-puzzle-for-starters.html</link>
+  <description><![CDATA[<h2>Date puzzle for starters</h2>
+<div class="date">Friday, October 08 2010, 10:00</div>
+
+
+<p class="first">The <a href="http://www.postgresql.org/">PostgreSQL</a> <code>IRC</code> channel is a good place to be, for all the very good help
+you can get there, because people are always wanting to remain helpful,
+because of the off-topics discussions sometime, or to get to talk with
+community core members. And to start up your day too.</p>
+
+<p>This morning's question started simple : “how can I check if today is the
+&quot;first sunday fo the month&quot;. or &quot;the second tuesday of the month&quot; etc?”</p>
+
+<p>And the first version of the answer, quite simple it is too:</p>
+
+<pre class="src">
+dim=#   with begin(d) as (select date_trunc(<span style="color: #bc8f8f;">'month'</span>, <span style="color: #bc8f8f;">'today'</span>::date)::date)
+dim-# select d + 7 - extract(dow from d)::int as sunday from begin;
+   sunday
+<span style="color: #b22222;">------------
+</span> 2010-10-03
+(1 row)
+</pre>
+
+<p>So you just have to compare the result of the function with <code>'today'::date</code>
+and there you go. The problem is that the question could be read in the
+other way round, like, what is today in <em>first</em> or <em>second</em> <em>day name</em> of this
+month <em>format</em>? Once more, <a href="http://blog.rhodiumtoad.org.uk/">RhodiumToad</a> to the rescue:</p>
+
+<pre class="src">
+select to_char(current_date,
+               <span style="color: #bc8f8f;">'"'</span> || ((ARRAY[<span style="color: #bc8f8f;">'First'</span>,<span style="color: #bc8f8f;">'Second'</span>,<span style="color: #bc8f8f;">'Third'</span>,<span style="color: #bc8f8f;">'Fourth'</span>,<span style="color: #bc8f8f;">'Fifth'</span>])
+                             [(extract(day from current_date)::integer - 1)/7 + 1]
+                      )
+                   || <span style="color: #bc8f8f;">'" Day'</span>);
+     to_char
+<span style="color: #b22222;">------------------
+</span> Second Friday
+(1 row)
+</pre>
+
+<p>That's a straight answer to the question, read that way!</p>
+
+<p>But the part that I found nice to play with was my first reading of the
+question, as I don't get to lose my ideas that easily, you see… so what
+about writing a function to return the date of any <em>nth</em> occurrence of a given
+<em>day of week</em> in a <em>given month</em>, defaulting to this very month?</p>
+
+<pre class="src">
+create or replace function get_nth_dow_of_month
+ (
+  nth int,
+  dow int,
+  begin date default current_date
+ )
+ returns date
+ language sql
+ strict
+ as
+$$
+with month(d) as (
+  select generate_series(date_trunc(<span style="color: #bc8f8f;">'month'</span>, $3),
+                         date_trunc(<span style="color: #bc8f8f;">'month'</span>, $3) + interval <span style="color: #bc8f8f;">'1 month - 1 day'</span>,
+                         interval <span style="color: #bc8f8f;">'1 day'</span>)::date
+),
+     repeat as (
+  select d, extract(dow from d) as dow, (d - date_trunc(<span style="color: #bc8f8f;">'month'</span>, $3)::date) / 7 as repeat
+    from month
+)
+select d
+  from repeat
+ where dow = $2 and repeat = $1;
+$$;
+
+dim=# select get_nth_dow_of_month(0, 0);
+ get_nth_dow_of_month
+<span style="color: #b22222;">----------------------
+</span> 2010-10-03
+(1 row)
+
+dim=# select get_nth_dow_of_month(1, 4, <span style="color: #bc8f8f;">'2010-09-12'</span>);
+ get_nth_dow_of_month
+<span style="color: #b22222;">----------------------
+</span> 2010-09-09
+(1 row)
+</pre>
+
+<p>So you see we just got the first Sunday of this month <code>(0, 0)</code> and the second
+Thursday <code>(1, 4)</code> of the previous one. Any date within a month is a good way
+to tell which month you want to work in, as the function's written, abusing
+<code>date_trunc</code> like it does.</p>
+
+<p>Now the way the function is written is unfinished. You want to fix it in one
+of two ways. Either stop using <code>generate_series</code> to only output one row at a
+time, or fix the <code>API</code> so that you can ask for more than a <em>nth dow</em> at a
+time. Of course, that was a starter for me, not a problem I need to solve
+directly, and that was a good excuse for a blog entry, so I won't fix
+it. That's left as an exercise to our interested readers!</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Fri, 08 Oct 2010 10:00:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/10/08-date-puzzle-for-starters.html</guid>
+</item>
+
+
+<item>
+  <title>Resuming work on Extensions, first little step</title>
+  <link>http://tapoueh.org/blog/2010/10/07-resuming-work-on-extensions-first-little-step.html</link>
+  <description><![CDATA[<h2>Resuming work on Extensions, first little step</h2>
+<div class="date">Thursday, October 07 2010, 17:15</div>
+
+
+<p class="first">Yeah I'm back on working on my part of the extension thing in <a href="http://www.postgresql.org/">PostgreSQL</a>.</p>
+
+<p>First step is a little one, but as it has public consequences, I figured I'd
+talk about it already. I've just refreshed my <code>git</code> repository to follow the
+new <code>master</code> one, and you can see that here
+<a href="http://git.postgresql.org/gitweb?p=postgresql-extension.git;a=commitdiff;h=9a88e9de246218e93c04b6b97e1ef61d97925430">http://git.postgresql.org/gitweb?p=postgresql-extension.git;a=commitdiff;h=9a88e9de246218e93c04b6b97e1ef61d97925430</a>.</p>
+
+<p>It's been easier than I feared, mainly:</p>
+
+<pre class="src">
+$ git --no-pager diff master..extension
+$ git --no-pager format-patch master..extension
+$ cp 0001-First-stab-at-writing-pg_execute_from_file-function.patch ..
+$ git checkout master
+$ git pull -f pgmaster
+$ git reset --hard pgmaster/master
+$ git checkout extension
+$ git reset --hard master
+$ git am -s ../0001-First-stab-at-writing-pg_execute_from_file-function.edit.patch
+$ git status
+$ git log --short | head
+$ git log -n2 --oneline
+$ git push -f
+</pre>
+
+<p>So that's still more steps that one want to call dead simple, but still. The
+<code>format-patch</code> command is to save my work away (all patches that are in the
+<em>extension</em> branch but not in the <em>master</em> — well that was only one of them
+here). Then, as the master repository <code>URL</code> didn't change, I can simply <code>pull</code>
+the changes in. Of course I had a nice message <em>warning: no common commits</em>.</p>
+
+<p>Once pulled, I trashed my local copy and replaced it with the new official
+one, that's <code>git reset --hard pgmaster/master</code>, then in the <em>extension</em> branch I
+could trash it and have it linked to the local <code>master</code> again.</p>
+
+<p>Of course, the <code>git am</code> method wouldn't apply my patch as-is, there was some
+underlying changes in the source files, the identification tag changed from
+<code>$PostgreSQL$</code> to, e.g., <code>src/backend/utils/adt/genfile.c</code>, and I had to cope
+with that. Maybe there's some tool (<code>git am -3</code> ?) to do it automatically, I
+just copy edited the <code>.patch</code> file.</p>
+
+<p>Lastly, it's all about checking the result and publishing the result. This
+last line is <code>git push -f</code> and is when I just trashed and replaced my
+<a href="http://git.postgresql.org/gitweb?p=postgresql-extension.git;a=summary">postgresql-extension</a> community repository. I don't think anybody was
+following it, but should it be the case, you will have to <em>reinit</em> your copy.</p>
+
+<p>More blog posts to come about extensions, as I arranged to have some real
+time to devote on the topic. At least I was able to arrange things so that I
+can work on the subject for real, and the first thing I did, the very night
+before it was meant to begin, is catch a <em>tonsillitis</em>. Lost about a week, not
+the project! Stay tuned!</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Thu, 07 Oct 2010 17:15:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/10/07-resuming-work-on-extensions-first-little-step.html</guid>
+</item>
+
+
+<item>
+  <title>Regexp performances and Finite Automata</title>
+  <link>http://tapoueh.org/blog/2010/09/26-regexp-performances-and-finite-automata.html</link>
+  <description><![CDATA[<h2>Regexp performances and Finite Automata</h2>
+<div class="date">Sunday, September 26 2010, 21:00</div>
+
+
+<p class="first">The major reason why I dislike <a href="http://www.perl.org/">perl</a> so much, and <a href="http://www.ruby-lang.org">ruby</a> too, and the thing I'd
+want different in the <a href="http://www.gnu.org/software/emacs/manual/elisp.html">Emacs Lisp</a> <code>API</code> so far is how they set developers mind
+into using <a href="http://www.regular-expressions.info/">regexp</a>. You know the quote, don't you?</p>
+
+<blockquote>
+<p class="quoted">
+Some people, when confronted with a problem, think “I know, I'll use regular
+expressions.” Now they have two problems.</p>
+
+</blockquote>
+
+<p>That said, some situations require the use of <em>regexp</em> — or are so much
+simpler to solve using them than the maintenance hell you're building here
+ain't that big a drag. The given expressiveness is hard to match with any
+other solution, to the point I sometime use them in my code (well I use <a href="http://www.emacswiki.org/emacs/rx">rx</a>
+to lower the burden sometime, just see this example).</p>
+
+<pre class="src">
+(rx bol (zero-or-more blank) (one-or-more digit) <span style="color: #bc8f8f;">":"</span>)
+<span style="color: #bc8f8f;">"^[[:blank:]]*[[:digit:]]+:"</span>
+</pre>
+
+<p>The thing you might want to know about <em>regexp</em> is that computing them is an
+heavy task usually involving <em>parsing</em> their representation, <em>compiling</em> it to
+some executable code, and then <em>executing</em> generated code. It's been showed in
+the past (as soon as 1968) that a <em>regexp</em> is just another way to write a
+finite automata, at least as soon as you don't need <em>backtracking</em>. The
+writing of this article is my reaction to reading
+<a href="http://swtch.com/~rsc/regexp/regexp1.html">Regular Expression Matching Can Be Simple And Fast</a> (but is slow in Java,
+Perl, PHP, Python, Ruby, ...), a very interesting article — see the
+benchmarks in there.</p>
+
+<p>The bulk of it is that we find mainly two categories of <em>regexp</em> engine in the
+wild, those that are using <a href="http://en.wikipedia.org/wiki/Nondeterministic_finite_state_machine">NFA</a> and <a href="http://en.wikipedia.org/wiki/Deterministic_finite_automaton">DFA</a> intermediate representation
+techniques, and the others. Our beloved <a href="http://www.postgresql.org/">PostgreSQL</a> sure offers the feature,
+it's the <code>~</code> and <code>~*</code> <a href="http://www.postgresql.org/docs/9.0/interactive/functions-matching.html">operators</a>. The implementation here is based on
+<a href="http://www.arglist.com/regex/">Henry Spencer</a>'s work, which the aforementioned article says</p>
+
+<blockquote>
+<p class="quoted">
+became very widely used, eventually serving as the basis for the slow
+regular expression implementations mentioned earlier: Perl, PCRE, Python,
+and so on.</p>
+
+</blockquote>
+
+<p>Having a look at the actual implementation shows that indeed, current
+PostgreSQL code for <em>regexp</em> matching uses intermediate representations of
+them as <code>NFA</code> and <code>DFA</code>. The code is quite complex, even more than I though it
+would be, and I didn't have the time it would take to check it against the
+proposed one from the <em>simple and fast</em> article.</p>
+
+<pre class="src">
+postgresql/src/backend/regex
+  -rw-r--r--   1 dim  staff   4362 Sep 25 20:59 COPYRIGHT
+  -rw-r--r--   1 dim  staff    614 Sep 25 20:59 Makefile
+  -rw-r--r--   1 dim  staff  28217 Sep 25 20:59 re_syntax.n
+  -rw-r--r--   1 dim  staff  16589 Sep 25 20:59 regc_color.c
+  -rw-r--r--   1 dim  staff   3464 Sep 25 20:59 regc_cvec.c
+  -rw-r--r--   1 dim  staff  25036 Sep 25 20:59 regc_lex.c
+  -rw-r--r--   1 dim  staff  16845 Sep 25 20:59 regc_locale.c
+  -rw-r--r--   1 dim  staff  35917 Sep 25 20:59 regc_nfa.c
+  -rw-r--r--   1 dim  staff  50714 Sep 25 20:59 regcomp.c
+  -rw-r--r--   1 dim  staff  17368 Sep 25 20:59 rege_dfa.c
+  -rw-r--r--   1 dim  staff   3627 Sep 25 20:59 regerror.c
+  -rw-r--r--   1 dim  staff  27664 Sep 25 20:59 regexec.c
+  -rw-r--r--   1 dim  staff   2122 Sep 25 20:59 regfree.c
+</pre>
+
+<p>So all in all, I'll continue avoiding <em>regexp</em> as much as I currently do, and
+will maintain my tendency to using <a href="http://www.gnu.org/manual/gawk/gawk.html">awk</a> when I need them on files (it allows
+to refine the searching without resorting to more and more pipes in the
+command line). And as far as resorting to using <em>regexp</em> in PostgreSQL is
+concerned, it seems that the code here is already about topnotch. Once more.</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Sun, 26 Sep 2010 21:00:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/09/26-regexp-performances-and-finite-automata.html</guid>
+</item>
+
+
+<item>
+  <title>Window Functions example remix</title>
+  <link>http://tapoueh.org/blog/2010/09/12-window-functions-example-remix.html</link>
+  <description><![CDATA[<h2>Window Functions example remix</h2>
+<div class="date">Sunday, September 12 2010, 21:35</div>
+
+
+<p class="first">The drawback of hosting a static only website is, obviously, the lack of
+comments. What happens actually, though, is that I receive very few comments
+by direct mail. As I don't get another <em>spam</em> source to cleanup, I'm left
+unconvinced that's such a drawback. I still miss the low probability of
+seeing blog readers exchange directly, but I think a <code>tapoueh.org</code> mailing
+list would be my answer, here...</p>
+
+<p>Anyway, <a href="http://people.planetpostgresql.org/dfetter/">David Fetter</a> took the time to send me a comment by mail with a
+cleaned up rewrite of the previous entry <code>SQL</code>, here's it for your pleasure!</p>
+
+<pre class="src">
+WITH t AS (
+    SELECT
+        o, w,
+        CASE WHEN
+            LAG(w) OVER(w) IS DISTINCT FROM w AND
+            ROW_NUMBER() OVER (w) &gt; 1 <span style="color: #b22222;">/* Eliminate first change */</span>
+        THEN 1
+        END AS change
+    FROM (
+        VALUES
+            (1, 5),
+            (2, 10),
+            (3, 7),
+            (4, 7),
+            (5, 7)
+    ) AS data(o, w)
+    WINDOW w AS (ORDER BY o) <span style="color: #b22222;">/* Factor out WINDOW */</span>
+)
+SELECT SUM(change) FROM t;
+</pre>
+
+<p>As you can see <strong><em>David</em></strong> chose to filter the first change in the subquery rather
+than hacking it away with a simple <code>-1</code> at the outer level. I'm still
+wondering which way is cleaner (that depends on how you look at the
+problem), but I think I know which one is simpler! Thanks <strong><em>David</em></strong> for this
+blog entry!</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Sun, 12 Sep 2010 21:35:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/09/12-window-functions-example-remix.html</guid>
+</item>
+
+
+<item>
+  <title>Window Functions example</title>
+  <link>http://tapoueh.org/blog/2010/09/09-window-functions-example.html</link>
+  <description><![CDATA[<h2>Window Functions example</h2>
+<div class="date">Thursday, September 09 2010, 16:35</div>
+
+
+<p class="first">So, when <code>8.4</code> came out there was all those comments about how getting
+<a href="http://www.postgresql.org/docs/8.4/interactive/tutorial-window.html">window functions</a> was an awesome addition. Now, it seems that a lot of people
+seeking for help in <a href="http://wiki.postgresql.org/index.php?title=IRC">#postgresql</a> just don't know what kind of problem this
+feature helps solving. I've already been using them in some cases here in
+this blog, for getting some nice overview about
+<a href="http://tapoueh.org/articles/blog/_Partitioning:_relation_size_per_%E2%80%9Cgroup%E2%80%9D.html">Partitioning: relation size per “group”</a>.</p>
+
+<p>Now, another example use case rose on <code>IRC</code> today. I'll quote directly our user here:</p>
+
+<blockquote>
+<p class="quoted">
+hey there, how can i count the number of (value) changes in one column?</p>
+<p class="quoted">  example: a table with a column <em>weight</em>. let's say we have 5 rows, having
+the following values for weight: <code>5, 10, 7, 7, 7</code>. the number of changes of
+weight would be 2 here (from 5 to 10 and 10 to 7). any idea how I could do
+that in SQL using PGSQL 8.4.4? GROUP BY or count(distinct weight)
+obviously does not work. thx in advance</p>
+
+</blockquote>
+
+<p>Now, several of us began talking about <em>window functions</em> and about the fact
+that you need some other column to identify the ordering of those weights,
+obviously, because that's the only way to define what a change is in this
+context. Let's have a first try at it.</p>
+
+<pre class="src">
+=# select o, w,
+          case when lag(w) over(order by o) is distinct from w then 1 end as change
+     from (values (1, 5), (2, 10), (3, 7), (4, 7), (5, 7)) as data(o, w);
+ o | w  | change
+<span style="color: #b22222;">---+----+--------
+</span> 1 |  5 |      1
+ 2 | 10 |      1
+ 3 |  7 |      1
+ 4 |  7 |
+ 5 |  7 |
+(5 rows)
+</pre>
+
+<p>Not too bad, but of course we are seeing a false change on the first line,
+as for any <em>window</em> of rows you define the previous one, given by <code>lag()
+over()</code>, will be <code>NULL</code>. The easiest way to accommodate is the following:</p>
+
+<pre class="src">
+=# select sum(change) -1 as changes
+     from (select case when lag(w) over(order by o) is distinct from w
+                       then 1
+                   end as change
+             from (values (1, 5),
+                          (2, 10),
+                          (3, 7),
+                          (4, 7),
+                          (5, 7)) as t(o, w)) as x;
+ changes
+<span style="color: #b22222;">---------
+</span>       2
+(1 row)
+</pre>
+
+<p>So don't be shy and go read about <a href="http://www.postgresql.org/docs/8.4/interactive/sql-expressions.html#SYNTAX-WINDOW-FUNCTIONS">window functions in SQL expressions</a> and
+<a href="http://www.postgresql.org/docs/8.4/interactive/queries-table-expressions.html#QUERIES-WINDOW">window function processing</a> in the query table expressions. That's a very
+nice tool to have and my guess is that you will soon enough realize the only
+reason why you could think you don't have a need for them is that you didn't
+know it existed, and what you can do with it. <em>Sharpen your saw!</em> :)</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Thu, 09 Sep 2010 16:35:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/09/09-window-functions-example.html</guid>
+</item>
+
+
+<item>
+  <title>Synchronous Replication</title>
+  <link>http://tapoueh.org/blog/2010/09/06-synchronous-replication.html</link>
+  <description><![CDATA[<h2>Synchronous Replication</h2>
+<div class="date">Monday, September 06 2010, 18:05</div>
+
+
+<p class="first">Although the new asynchronous replication facility that ships with 9.0 ain't
+released to the wide public yet, our hackers hero are already working on the
+synchronous version of it. A part of the facility is rather easy to design,
+we want something comparable to <a href="http://www.drbd.org/">DRBD</a> flexibility, but specific to our
+database world.  So <em>synchronous</em> would either mean <em>recv</em>, <em>fsync</em> or <em>apply</em>,
+depending on what you need the <em>standby</em> to have already done when the master
+acknowledges the <code>COMMIT</code>. Let's call that the <em>service level</em>.</p>
+
+<p>The part of the design that's not so easy is more interesting. Do we need to
+register standbys and have the <em>service level</em> setup per standby? Can we get
+some more flexibility and have the <em>service level</em> set on a per-transaction
+basis? The idea here would be that the application knows which transactions
+are meant to be extra-safe and which are not, the same way that you can set
+<code>synchronous_commit to off</code> when dealing with web sessions, for example.</p>
+
+<p><em>Why choosing?</em> I hear you ask. Well, it's all about having more data safety,
+and a typical setup would contain an asynchronous reporting server and a
+local <em>failover</em> synchronous server. Then add a remote one, too. So even if we
+pick the transaction based facility, we still want to be able to choose at
+setup time which server to failover to. Than means we don't want that much
+flexibility now, we want to know where the data is safe, we don't want to
+have to guess.</p>
+
+<p>Some way to solve that is to be able to setup a slave as being the failover
+one, or say, the <code>sync</code> one. Now, the detail that ruins it all is that we need
+a <em>timeout</em> to handle worst cases when a given slave loses its connectivity
+(or power, say). Now, the slave ain't in <em>sync</em> any more and some people will
+require that the service is still available (<em>timeout</em> but <code>COMMIT</code>) and some
+will require that the service is down: don't accept a new transaction if you
+can't make its data safe to the slave too.</p>
+
+<p>The answer would be to have the master arbitrate between what the
+transaction wants and what the slave is setup to provide, and what it's able
+to provide at the time of the transaction. Given a transaction with a
+<em>service level</em> of <em>apply</em> and a slave setup for being <em>async</em>, the <code>COMMIT</code> does
+not have to wait, because there's no known slave able to offer the needed
+level. Or the <code>COMMIT</code> can not happen, for the very same reason.</p>
+
+<p>Then I think it all flows quite naturally from there, and while arbitrating
+the master could record which slave is currently offering what <em>service
+level</em>. And offering the information in a system view too, of course.</p>
+
+<p>The big question that's not answered in this proposal is how to setup that
+being unable to reach the wanted <em>service level</em> is an error or a
+warning?</p>
+
+<p>That too would need to be for the master to arbitrate based on a per standby
+and a per transaction setting, and in the general case it could be a <em>quorum</em>
+setup: each slave is given a <em>weight</em> and each transaction a <em>quorum</em> to
+reach. The master sums up the weights of the standby that ack the
+transaction at the needed <em>service level</em> and the <code>COMMIT</code> happens as soon as
+the quorum is reached, or is canceled as soon as the <em>timeout</em> is reached,
+whichever comes first.</p>
+
+<p>Such a model allows for very flexible setups, where each standby has a
+<em>weight</em> and offers a given <em>service level</em>, and each transaction waits until a
+<em>quorum</em> is reached. Giving the right weights to your standbys (like, powers
+of two) allow you to set the quorum in a way that only one given standby is
+able to acknowledge the most important transactions. But that's flexible
+enough you can change it at any time, it's just a <em>weight</em> that allows a <em>sum</em>
+to be made, so my guess would be it ends up in the <em>feedback loop</em> between the
+standby and its master.</p>
+
+<p>The most appealing part of this proposal is that it doesn't look complex to
+implement, and should allow for highly flexible setups. Of course, the devil
+is in the details, and we're talking about latencies in the distributed
+system here. That's also being discussed on the <a href="http://archives.postgresql.org/pgsql-hackers/">mailing list</a>.</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Mon, 06 Sep 2010 18:05:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/09/06-synchronous-replication.html</guid>
+</item>
+
+
+<item>
+  <title>Happy Numbers</title>
+  <link>http://tapoueh.org/blog/2010/08/30-happy-numbers.html</link>
+  <description><![CDATA[<h2>Happy Numbers</h2>
+<div class="date">Monday, August 30 2010, 11:00</div>
+
+
+<p class="first">After discovering the excellent <a href="http://gwene.org/">Gwene</a> service, which allows you to subscribe
+to <em>newsgroups</em> to read <code>RSS</code> content (<em>blogs</em>, <em>planets</em>, <em>commits</em>, etc), I came to
+read this nice article about <a href="http://programmingpraxis.com/2010/07/23/happy-numbers/">Happy Numbers</a>. That's a little problem that
+fits well an interview style question, so I first solved it yesterday
+evening in <a href="static/happy-numbers.el">Emacs Lisp</a> as that's the language I use the most those days.</p>
+
+<blockquote>
+<p class="quoted">
+A happy number is defined by the following process. Starting with any
+positive integer, replace the number by the sum of the squares of its
+digits, and repeat the process until the number equals 1 (where it will
+stay), or it loops endlessly in a cycle which does not include 1. Those
+numbers for which this process ends in 1 are happy numbers, while those
+that do not end in 1 are unhappy numbers (or sad numbers).</p>
+
+</blockquote>
+
+<p>Now, what about implementing the same in pure <code>SQL</code>, for more fun? Now that's
+interesting! After all, we didn't get <code>WITH RECURSIVE</code> for tree traversal
+only, <a href="http://archives.postgresql.org/message-id/e08cc0400911042333o5361b21cu2c9438f82b1e55ce@mail.gmail.com">did we</a>?</p>
+
+<p>Unfortunately, we need a little helper function first, if only to ease the
+reading of the recursive query. I didn't try to inline it, but here it goes:</p>
+
+<pre class="src">
+create or replace function digits(x bigint)
+  returns setof int
+  language sql
+as $$
+  select substring($1::text from i for 1)::int
+    from generate_series(1, length($1::text)) as t(i)
+$$;
+</pre>
+
+<p>That was easy: it will output one row per digit of the input number — and
+rather than resorting to powers of ten and divisions and remainders, we do
+use plain old text representation and <code>substring</code>. Now, to the real
+problem. If you're read what is an happy number and already did read the
+fine manual about <a href="http://www.postgresql.org/docs/8.4/interactive/queries-with.html">Recursive Query Evaluation</a>, it should be quite easy to
+read the following:</p>
+
+<pre class="src">
+with recursive happy(n, seen) as (
+    select 7::bigint, <span style="color: #bc8f8f;">'{}'</span>::bigint[]
+  union all
+    select sum(d*d), h.seen || sum(d*d)
+      from (select n, digits(n) as d, seen
+              from happy
+           ) as h
+  group by h.n, h.seen
+    having not seen @&gt; array[sum(d*d)]
+)
+  select * from happy;
+  n  |       seen
+<span style="color: #b22222;">-----+------------------
+</span>   7 | {}
+  49 | {49}
+  97 | {49,97}
+ 130 | {49,97,130}
+  10 | {49,97,130,10}
+   1 | {49,97,130,10,1}
+(6 rows)
+
+Time: 1.238 ms
+</pre>
+
+<p>That shows how it works for some <em>happy</em> number, and it's easy to test for a
+non-happy one, like for example <code>17</code>. The query won't cycle thanks to the <code>seen</code>
+array and the <code>having</code> filter, so the only difference between an <em>happy</em> and a
+<em>sad</em> number will be that in the former case the last line output by the
+recursive query will have <code>n = 1</code>. Let's expand this knowledge
+into a proper function (because we want to be able to have the number we
+test for happiness as an argument):</p>
+
+<pre class="src">
+create or replace function happy(x bigint)
+  returns boolean
+  language sql
+as $$
+with recursive happy(n, seen) as (
+    select $1, <span style="color: #bc8f8f;">'{}'</span>::bigint[]
+  union all
+    select sum(d*d), h.seen || sum(d*d)
+      from (select n, digits(n) as d, seen
+              from happy
+           ) as h
+  group by h.n, h.seen
+    having not seen @&gt; array[sum(d*d)]
+)
+  select n = 1 as happy
+    from happy
+order by array_length(seen, 1) desc nulls last
+   limit 1
+$$;
+</pre>
+
+<p>We need the <code>desc nulls last</code> trick in the <code>order by</code> because the <code>array_length()</code>
+of any dimension of an empty array is <code>NULL</code>, and we certainly don't want to
+return all and any number as unhappy on the grounds that the query result
+contains a line <code>input, {}</code>. Let's now play the same tricks as in the puzzle
+article:</p>
+
+<pre class="src">
+=# select array_agg(x) as happy from generate_series(1, 50) as t(x) where happy(x);
+              happy
+<span style="color: #b22222;">----------------------------------
+</span> {1,7,10,13,19,23,28,31,32,44,49}
+(1 row)
+
+Time: 24.527 ms
+
+=# explain analyze select x from generate_series(1, 10000) as t(x) where happy(x);
+                      QUERY PLAN
+<span style="color: #b22222;">----------------------------------------------------------------------------------------
+</span> Function Scan on generate_series t  (cost=0.00..265.00 rows=333 width=4)
+                          (actual time=2.938..3651.019 rows=1442 loops=1)
+   Filter: happy((x)::bigint)
+ Total runtime: 3651.534 ms
+(3 rows)
+
+Time: 3652.178 ms
+</pre>
+
+<p>(Yes, I tricked the <code>EXPLAIN ANALYZE</code> output so that it fits on the page width
+here). For what it's worth, finding the first <code>10000</code> happy numbers in <em>Emacs
+Lisp</em> on the same laptop takes <code>2830 ms</code>, also running a recursive version of
+the code.</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Mon, 30 Aug 2010 11:00:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/08/30-happy-numbers.html</guid>
+</item>
+
+
+<item>
+  <title>Playing with bit strings</title>
+  <link>http://tapoueh.org/blog/2010/08/26-playing-with-bit-strings.html</link>
+  <description><![CDATA[<h2>Playing with bit strings</h2>
+<div class="date">Thursday, August 26 2010, 17:45</div>
+
+
+<p class="first">The idea of the day ain't directly from me, I'm just helping with a very
+thin subpart of the problem. The problem, I can't say much about, let's just
+assume you want to reduce the storage of <code>MD5</code> in your database, so you want
+to abuse <a href="http://www.postgresql.org/docs/8.4/interactive/datatype-bit.html">bit strings</a>. A solution to use them works fine, but the datatype is
+still missing some facilities, for example going from and to hexadecimal
+representation in text.</p>
+
+<pre class="src">
+create or replace function hex_to_varbit(h text)
+ returns varbit
+ language sql
+as $$
+  select (<span style="color: #bc8f8f;">'X'</span> || $1)::varbit;
+$$;
+
+create or replace function varbit_to_hex(b varbit)
+ returns text
+ language sql
+as $$
+  select array_to_string(array_agg(to_hex((b &lt;&lt; (32*o))::bit(32)::bigint)), <span style="color: #bc8f8f;">''</span>)
+    from (select b, generate_series(0, n-1) as o
+            from (select $1, octet_length($1)/4) as t(b, n)) as x
+$$;
+</pre>
+
+<p>To understand the magic in the second function, let's walk through the tests
+one could do when wanting to grasp how things work in the <code>bitstring</code> world
+(using also some reading of the fine documentation, too).</p>
+
+<pre class="src">
+=# select ('101011001011100110010110'::varbit &lt;&lt; 0)::bit(8);
+   bit
+----------
+ 10101100
+(1 row)
+
+=# select ('101011001011100110010110'::varbit &lt;&lt; 8)::bit(8);
+   bit
+----------
+ 10111001
+(1 row)
+
+=# select ('101011001011100110010110'::varbit &lt;&lt; 16)::bit(8);
+   bit
+----------
+ 10010110
+(1 row)
+
+=# select * from *TEMP VERSION OF THE FUNCTION FOR TESTING*
+ o |                b                 |    x
+---+----------------------------------+----------
+ 0 | 10101100101111010001100011011011 | acbd18db
+ 1 | 01001100110000101111100001011100 | 4cc2f85c
+ 2 | 11101101111011110110010101001111 | edef654f
+ 3 | 11001100110001001010010011011000 | ccc4a4d8
+(4 rows)
+</pre>
+
+<p>What do we get from that, will you ask? Let's see a little example:</p>
+
+<pre class="src">
+=# select hex_to_varbit(md5('foo'));
+                                                          hex_to_varbit
+----------------------------------------------------------------------------------------------------------------------------------
+ 10101100101111010001100011011011010011001100001011111000010111001110110111101111011001010100111111001100110001001010010011011000
+(1 row)
+
+=# select md5('foo'), varbit_to_hex(hex_to_varbit(md5('foo')));
+               md5                |          varbit_to_hex
+----------------------------------+----------------------------------
+ acbd18db4cc2f85cedef654fccc4a4d8 | acbd18db4cc2f85cedef654fccc4a4d8
+(1 row)
+</pre>
+
+<p>Storing <code>varbits</code> rather than the <code>text</code> form of the <code>MD5</code> allows us to go from
+<code>6510 MB</code> down to <code>4976 MB</code> on a sample table containing 100 millions
+rows. We're targeting more that that, so that's a great win down here!</p>
+
+<p>In case you wonder, querying the main index on <code>varbit</code> rather than the one on
+<code>text</code> for a single result row, the cost of doing the conversion with
+<code>varbit_to_hex</code> seems to be around <code>28 µs</code>. We can afford it.</p>
+
+<p>Hope this helps!</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Thu, 26 Aug 2010 17:45:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/08/26-playing-with-bit-strings.html</guid>
+</item>
+
+
+<item>
+  <title>Editing constants in constraints</title>
+  <link>http://tapoueh.org/blog/2010/08/09-editing-constants-in-constraints.html</link>
+  <description><![CDATA[<h2>Editing constants in constraints</h2>
+<div class="date">Monday, August 09 2010, 14:45</div>
+
+
+<p class="first">We're using constants in some constraints here, for example in cases where
+several servers are replicating to the same <em>federating</em> one: each origin
+server has his own schema, and all is replicated nicely on the central host,
+thanks to <a href="http://wiki.postgresql.org/wiki/Londiste_Tutorial#Federated_database">Londiste</a>, as you might have guessed already.</p>
+
+<p>For bare-metal recovery scripts, I'm working on how to change those
+constants in the constraints, so that <code>pg_dump -s</code> plus some schema tweaking
+would kick-start a server. Here's a <code>PLpgSQL</code> snippet to do just that:</p>
+
+<pre class="src">
+  FOR rec IN EXECUTE
+$s$
+SELECT schemaname, tablename, conname, attnames, def
+  FROM (
+   SELECT n.nspname, c.relname, r.conname,
+          (select array_accum(attname)
+             from pg_attribute
+            where attrelid = c.oid and r.conkey @&gt; array[attnum]) as attnames,
+          pg_catalog.pg_get_constraintdef(r.oid, true)
+   FROM pg_catalog.pg_constraint r
+        JOIN pg_class c on c.oid = r.conrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+   WHERE r.contype = <span style="color: #bc8f8f;">'c'</span>
+ORDER BY 1, 2, 3
+       ) as cons(schemaname, tablename, conname, attnames, def)
+WHERE attnames @&gt; array[<span style="color: #bc8f8f;">'server'</span>]::name[]
+$s$
+  LOOP
+    rec.def := replace(rec.def, <span style="color: #bc8f8f;">'server = '</span> || old_id,
+                                <span style="color: #bc8f8f;">'server = '</span> || new_id);
+
+    sql := <span style="color: #bc8f8f;">'ALTER TABLE '</span> || rec.schemaname || <span style="color: #bc8f8f;">'.'</span> || rec.tablename
+        || <span style="color: #bc8f8f;">' DROP CONSTRAINT '</span> || rec.conname;
+    RAISE NOTICE <span style="color: #bc8f8f;">'%'</span>, sql;
+    RETURN NEXT;
+    EXECUTE sql;
+
+    sql := <span style="color: #bc8f8f;">'ALTER TABLE '</span> || rec.schemaname || <span style="color: #bc8f8f;">'.'</span> || rec.tablename
+        || <span style="color: #bc8f8f;">' ADD '</span> || rec.def;
+    RAISE NOTICE <span style="color: #bc8f8f;">'%'</span>, sql;
+    RETURN NEXT;
+    EXECUTE sql;
+
+  END LOOP;
+</pre>
+
+<p>This relies on the fact that our constraints are on the column <code>server</code>. Why
+would this be any better than a <code>sed</code> one-liner, would you ask me? I'm fed up
+with having pseudo-parsing scripts and taking the risk that the simple
+command will change data I didn't want to edit. I want context aware tools,
+pretty please, to <em>feel</em> safe.</p>
+
+<p>Otherwise I'd might have gone with <code>pg_dump -s| sed -e 's:\(server =\)
+17:\1 18:'</code> but this one-liner already contains too much useless magic
+for my taste (the space before <code>17</code> ain't in the group match to allow for
+having <code>\1 18</code> in the right hand side. And this isn't yet parametrized, and
+there I'll need to talk to the database, as that's were I store the servers
+name and their id (a <code>bigserial</code> — yes, the constraints are all generated from
+scripts). I don't want to write an <em>SQL parser</em> and I don't want to play
+loose, so the <code>PLpgSQL</code> approach is what I'm thinking as the best tool
+here. Opinionated answers get to my mailbox!</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Mon, 09 Aug 2010 14:45:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/08/09-editing-constants-in-constraints.html</guid>
+</item>
+
+
+<item>
+  <title>debian packaging PostgreSQL extensions</title>
+  <link>http://tapoueh.org/blog/2010/08/06-debian-packaging-postgresql-extensions.html</link>
+  <description><![CDATA[<h2>debian packaging PostgreSQL extensions</h2>
+<div class="date">Friday, August 06 2010, 13:00</div>
+
+
+<p class="first">In trying to help an extension <em>debian packaging</em> effort, I've once again
+proposed to handle it. That's because I now begin to know how to do it, as
+you can see in my <a href="http://qa.debian.org/developer.php?login=dim%40tapoueh.org">package overview</a> page at <em>debian QA</em> facility. There's a
+reason why I proposed myself here, it's that yet another tool of mine is now
+to be found in <em>debian</em>, and should greatly help <em>extension packaging</em>
+there. You can already check for the <a href="http://packages.debian.org/sid/postgresql-server-dev-all">postgresql-server-dev-all</a> package page
+if you're that impatient!</p>
+
+<p>Back? Ok, so I used to have two main gripes against debian support for
+<a href="http://www.postgresql.org/">PostgreSQL</a>. The first one, which is now feeling alone, is that both project
+<a href="http://wiki.postgresql.org/wiki/PostgreSQL_Release_Support_Policy">release support policy</a> aren't compatible enough for debian stable to include
+all currently supported stable PostgreSQL major version. That's very bad
+that debian stable will only propose one major version, knowing that the
+support for several of them is in there.</p>
+
+<p>The problem is two fold: first, debian stable has to maintain any
+distributed package. There's no <em>deprecation policy</em> allowing for droping the
+ball. So the other side of this coin is that debian developers must take on
+themselves maintaining included software for as long as stable is not
+renamed <code>oldstable</code>. And it so happens that there's no debian developer that
+feels like maintaining <em>end of lined</em> PostgreSQL releases without help from
+<a href="http://www.postgresql.org/community/contributors/">PostgreSQL Core Team</a>. Or, say, without official statement that they would
+help.</p>
+
+<p>Now, why I don't like this situation is because I'm pretty sure there's very
+few software development group offering as long and reliable maintenance
+policy as PostgreSQL is doing, but debian will still happily distribute
+<em>unknown-maintenance-policy</em> pieces of code in its stable repositories. So the
+<em>uncertainty</em> excuse is rather poor. And highly frustrating.</p>
+
+<blockquote>
+<p class="quoted">
+<strong><em>Note:</em></strong> you have to admit that the debian stable management model copes very
+well with all the debian included software. You can't release stable with
+a new PostgreSQL major version unless each and every package depending on
+PostgreSQL will actually work with the newer version, and the debian
+scripts will care for upgrading the cluster. Where it's not working good
+is when you're using debian for a PostgreSQL server for a proprietary
+application, which happens quite frequently too.</p>
+
+</blockquote>
+
+<p>The consequence of this fact leads to my second main gripe against debian
+support for PostgreSQL: the extensions. It so happens that the PostgreSQL
+extensions are developped for supporting several major versions from the
+same source code. So typically, all you need to do is recompile the
+extension against the new major version, and there you go.</p>
+
+<p>Now, say debian new stable is coming with <a href="http://packages.debian.org/squeeze/postgresql-8.4">8.4</a> rather than <a href="http://packages.debian.org/lenny/postgresql-8.3">8.3</a> as it used
+to. You should be able to just build the extensions (like <a href="http://packages.debian.org/squeeze/postgresql-8.4-prefix">prefix</a>), without
+changing the source package, nor droping <code>postgresql-8.3-prefix</code> from the
+distribution on the grounds that <code>8.3</code> ain't in debian stable anymore.</p>
+
+<p>I've been ranting a lot about this state of facts, and I finally provided a
+patch to the <a href="http://packages.debian.org/sid/postgresql-common">postgresql-common</a> debian packaging, which made it into version
+<code>110</code>: welcome <a href="http://packages.debian.org/sid/postgresql-server-dev-all">pg_buildext</a>. An exemple of how to use it can be found in the
+git branch for <a href="http://github.com/dimitri/prefix">prefix</a>, it shows up in <a href="http://github.com/dimitri/prefix/blob/master/debian/pgversions">debian/pgversions</a> and <a href="http://github.com/dimitri/prefix/blob/master/debian/rules">debian/rules</a>
+files.</p>
+
+<p>As you can see, the <code>pg_buildext</code> tool allows you to list the PostgreSQL major
+versions the extension you're packaging supports, and only those that are
+both in your list and in the current debian supported major version list
+will get built. <code>pg_buildext</code> will do a <code>VPATH</code> build of your extension, so it's
+capable of building the same extension for multiple major versions of
+PostgreSQL. Here's how it looks:</p>
+
+<pre class="src">
+        # build all supported version
+        pg_buildext build $(SRCDIR) $(TARGET) <span style="color: #bc8f8f;">"$(CFLAGS)"</span>
+
+        # then install each of them
+        for v in `pg_buildext supported-versions $(SRCDIR)`; do \
+                dh_install -ppostgresql-$$v-prefix ;\
+        done
+</pre>
+
+<p>And the files are to be found in those places:</p>
+
+<pre class="src">
+dim ~/dev/prefix cat debian/postgresql-8.3-prefix.install
+debian/prefix-8.3/prefix.so usr/lib/postgresql/8.3/lib
+debian/prefix-8.3/prefix.sql usr/share/postgresql/8.3/contrib
+
+dim ~/dev/prefix cat debian/postgresql-8.4-prefix.install
+debian/prefix-8.4/prefix.so usr/lib/postgresql/8.4/lib
+debian/prefix-8.4/prefix.sql usr/share/postgresql/8.4/contrib
+</pre>
+
+<p>So you still need to maintain <a href="http://github.com/dimitri/prefix/blob/master/debian/pgversions">debian/pgversions</a> and the
+<code>postgresql-X.Y-extension.*</code> files, but then a change in debian support for
+PostgreSQL major versions will be handled automatically (there's a facility
+to trigger automatic rebuild when necessary).</p>
+
+<p>All this ranting to explain that pretty soon, the extenion's packages that I
+maintain will no longer have to be patched when dropping a previously
+supported major version of PostgreSQL. I'm breathing a little better, so
+thanks a lot <a href="http://www.piware.de/category/debian/">Martin</a>!</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Fri, 06 Aug 2010 13:00:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/08/06-debian-packaging-postgresql-extensions.html</guid>
+</item>
+
+
+<item>
+  <title>Querying the Catalog to plan an upgrade</title>
+  <link>http://tapoueh.org/blog/2010/08/05-querying-the-catalog-to-plan-an-upgrade.html</link>
+  <description><![CDATA[<h2>Querying the Catalog to plan an upgrade</h2>
+<div class="date">Thursday, August 05 2010, 11:00</div>
+
+
+<p class="first">Some user on <code>IRC</code> was reading the releases notes in order to plan for a minor
+upgrade of his <code>8.3.3</code> installation, and was puzzled about potential needs for
+rebuilding <code>GIST</code> indexes. That's from the <a href="http://www.postgresql.org/docs/8.3/static/release-8-3-5.html">8.3.5 release notes</a>, and from the
+<a href="http://www.postgresql.org/docs/8.3/static/release-8-3-8.html">8.3.8 notes</a> you see that you need to consider <em>hash</em> indexes on <em>interval</em>
+columns too. Now the question is, how to find out if any such beasts are in
+use in your database?</p>
+
+<p>It happens that <a href="http://www.postgresql.org/">PostgreSQL</a> is letting you know those things by querying its
+<a href="http://www.postgresql.org/docs/8.4/static/catalogs.html">system catalogs</a>. That might look hairy at first, but it's very worth getting
+used to those system tables. You could compare that to introspection and
+reflexive facilities of some programming languages, except much more useful,
+because you're reaching all the system at once. But, well, here it goes:</p>
+
+<pre class="src">
+SELECT schemaname, tablename, relname, amname, indexdef
+  FROM pg_indexes i
+       JOIN pg_class c ON i.indexname = c.relname and c.relkind = <span style="color: #bc8f8f;">'i'</span>
+       JOIN pg_am am ON c.relam = am.oid
+ WHERE amname = <span style="color: #bc8f8f;">'gist'</span>;
+</pre>
+
+<p>Now you could replace the <code>WHERE</code> clause with <code>WHERE amname IN ('gist', 'hash')</code>
+to check both conditions at once. What about pursuing the restriction on the
+<em>hash</em> indexes rebuild to schedule, as they should only get done to indexes on
+<code>interval</code> columns. Well let's try it:</p>
+
+<pre class="src">
+SELECT schemaname, tablename, relname as indexname, amname, indclass
+  FROM pg_indexes i
+       JOIN pg_class c on i.indexname = c.relname and c.relkind = <span style="color: #bc8f8f;">'i'</span>
+       JOIN pg_am am on c.relam = am.oid
+       JOIN pg_index x on x.indexrelid = c.oid
+ WHERE amname in (<span style="color: #bc8f8f;">'btree'</span>, <span style="color: #bc8f8f;">'gist'</span>)
+       and schemaname not in (<span style="color: #bc8f8f;">'pg_catalog'</span>, <span style="color: #bc8f8f;">'information_schema'</span>);
+</pre>
+
+<p>We're not there yet, because as you notice, the catalogs are somewhat
+optimized and not always in a normal form. That's good for the system's
+performance, but it makes querying a bit uneasy. What we want is to get from
+the <code>indclass</code> column if there's any of them (it's an <code>oidvector</code>) that applies
+to an <code>interval</code> data type. There's a subtlety here as the index could store
+<code>interval</code> data even if the column is not of an <code>interval</code> type itself, so we
+have to find both cases.</p>
+
+<p>Well the <em>subtlety</em> applies after you know what an <a href="http://www.postgresql.org/docs/8.4/static/xindex.html">operator class</a> is: <em>“An
+operator class defines how a particular data type can be used with an
+index”</em> is what the <a href="http://www.postgresql.org/docs/8.4/static/sql-createopclass.html">CREATE OPERATOR CLASS</a> manual page teaches us. What we
+need to know here is that an index will talk to an operator class to get to
+the data type, either the <em>column</em> data type or the index <em>storage</em> one.</p>
+
+<pre class="src">
+SELECT schemaname, tablename, relname as indexname, amname, indclass, opcname, typname
+  FROM pg_indexes i
+       JOIN pg_class c on i.indexname = c.relname and c.relkind = <span style="color: #bc8f8f;">'i'</span>
+       JOIN pg_am am on c.relam = am.oid
+       JOIN pg_index x on x.indexrelid = c.oid
+       JOIN pg_opclass o
+         on string_to_array(x.indclass::text, <span style="color: #bc8f8f;">' '</span>)::oid[] @&gt; array[o.oid]::oid[]
+       JOIN pg_type t on o.opckeytype = t.oid
+WHERE amname = <span style="color: #bc8f8f;">'hash'</span> and t.typname = <span style="color: #bc8f8f;">'interval'</span>
+
+UNION ALL
+
+SELECT schemaname, tablename, relname as indexname, amname, indclass, opcname, typname
+  FROM pg_indexes i
+       JOIN pg_class c on i.indexname = c.relname and c.relkind = <span style="color: #bc8f8f;">'i'</span>
+       JOIN pg_am am on c.relam = am.oid
+       JOIN pg_index x on x.indexrelid = c.oid
+       JOIN pg_opclass o
+         on string_to_array(x.indclass::text, <span style="color: #bc8f8f;">' '</span>)::oid[] @&gt; array[o.oid]::oid[]
+       JOIN pg_type t on o.opcintype = t.oid
+WHERE amname = <span style="color: #bc8f8f;">'hash'</span> and t.typname = <span style="color: #bc8f8f;">'interval'</span>;
+</pre>
+
+<p>Most certainly this query will return no row for you, as <em>hash</em> indexes are
+not widely used, mainly because they are not crash tolerant. For seeing some
+results you could remove the <code>amname</code> restriction of course, that would show
+the query is working, but don't forget to add the restriction back to plan
+for the upgrade!</p>
+
+<p>But hey, why walking the extra mile here, would you ask me? After all, in
+the second query we would already have had the information we needed should
+we added the <code>indexdef</code> column, albeit in a human reader friendly way: the
+<em>resultset</em> would then contain the <code>CREATE INDEX</code> command you need to issue to
+build the index from scratch. That would be enough for checking only the
+catalog, but the extra mile allows you to produce a <code>SQL</code> script to build the
+indexes that need your attention post upgrade. That last step is left as an
+exercise for the reader, though.</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Thu, 05 Aug 2010 11:00:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/08/05-querying-the-catalog-to-plan-an-upgrade.html</guid>
+</item>
+
+
+<item>
+  <title>Database Virtual Machines</title>
+  <link>http://tapoueh.org/blog/2010/08/03-database-virtual-machines.html</link>
+  <description><![CDATA[<h2>Database Virtual Machines</h2>
+<div class="date">Tuesday, August 03 2010, 13:30</div>
+
+
+<p class="first">Today I'm being told once again about <a href="http://www.sqlite.org/">SQLite</a> as an embedded database
+software. That one ain't a <em>database server</em> but a <em>software library</em> that you
+can use straight into your main program. I'm yet to use it, but it looks
+like <a href="http://www.sqlite.org/lang.html">its SQL support</a> is good enough for simple things — and that covers
+<em>loads</em> of things. I guess read-only cache and configuration storage would be
+the obvious ones, because it seems that <a href="http://www.sqlite.org/whentouse.html">SQLite use cases</a> aren't including
+<a href="http://www.sqlite.org/lockingv3.html">mixed concurrency</a>, that is workloads with concurrent readers and writers.</p>
+
+<p>The part that got my full attention is
+<a href="http://www.sqlite.org/vdbe.html">The Virtual Database Engine of SQLite</a>, as this blog title would imply. It
+seems to be the same idea as what <a href="http://monetdb.cwi.nl/">MonetDB</a> calls their
+<a href="http://monetdb.cwi.nl/MonetDB/Documentation/MAL-Synopsis.html">MonetDB Assembly Language</a>, and I've been trying to summarize some idea about
+it in my <a href="http://tapoueh.org/char10.html#sec11">Next Generation PostgreSQL</a> article.</p>
+
+<p>The main thing is how to further optimize <a href="http://www.postgresql.org/">PostgreSQL</a> given what we have. It
+seems that among the major road blocks in the performance work is how we get
+the data from disk and to the client. We're still spending so many time in
+the <code>CPU</code> that the disk bandwidth are not always saturated, and that's a
+problem. Further thoughts on the <a href="http://tapoueh.org/char10.html#sec11">full length article</a>, but that's just about
+a one page section now!</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Tue, 03 Aug 2010 13:30:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/08/03-database-virtual-machines.html</guid>
+</item>
+
+
+<item>
+  <title>Partitioning: relation size per “group”</title>
+  <link>http://tapoueh.org/blog/2010/07/26-partitioning-relation-size-per-“group”.html</link>
+  <description><![CDATA[<h2>Partitioning: relation size per “group”</h2>
+<div class="date">Monday, July 26 2010, 17:00</div>
+
+
+<p class="first">This time, we are trying to figure out where is the bulk of the data on
+disk. The trick is that we're using <a href="http://www.postgresql.org/docs/current/static/ddl-partitioning.html">DDL partitioning</a>, but we want a “nice”
+view of size per <em>partition set</em>. Meaning that if you have for example a
+parent table <code>foo</code> with partitions <code>foo_201006</code> and <code>foo_201007</code>, you would want
+to see a single category <code>foo</code> containing the accumulated size of all the
+partitions underneath <code>foo</code>.</p>
+
+<p>Here we go:</p>
+
+<pre class="src">
+select groupe, pg_size_pretty(sum(bytes)::bigint) as size, sum(bytes)
+  from (
+select relkind as k, nspname, relname, tablename, bytes,
+         case when relkind = <span style="color: #bc8f8f;">'r'</span> and relname ~ <span style="color: #bc8f8f;">'[0-9]{6}$'</span>
+              then substring(relname from 1 for length(relname)-7)
+
+              when relkind = <span style="color: #bc8f8f;">'i'</span> and  tablename ~ <span style="color: #bc8f8f;">'[0-9]{6}$'</span>
+              then substring(tablename from 1 for length(tablename)-7)
+
+              else <span style="color: #bc8f8f;">'core'</span>
+          end as groupe
+  from (
+  select nspname, relname,
+         case when relkind = <span style="color: #bc8f8f;">'i'</span>
+              then (select relname
+                      from pg_index x
+                           join pg_class xc on x.indrelid = xc.oid
+                           join pg_namespace xn on xc.relnamespace = xn.oid
+                     where x.indexrelid = c.oid
+                    )
+              else null
+           end as tablename,
+         pg_size_pretty(pg_relation_size(c.oid)) as relation,
+         pg_total_relation_size(c.oid) as bytes,
+         relkind
+    from pg_class c join pg_namespace n on c.relnamespace = n.oid
+   where c.relkind in (<span style="color: #bc8f8f;">'r'</span>, <span style="color: #bc8f8f;">'i'</span>)
+         and nspname in (<span style="color: #bc8f8f;">'public'</span>, <span style="color: #bc8f8f;">'archive'</span>)
+         and pg_total_relation_size(c.oid) &gt; 32 * 1024
+order by 5 desc
+       ) as s
+       ) as t
+group by 1
+order by 3 desc;
+</pre>
+
+<p>Note that by simply removing those last two lines here, you will get a
+detailed view of the <em>indexes</em> and <em>tables</em> that are taking the most volume on
+disk at your place.</p>
+
+<p>Now, what about using <a href="http://www.postgresql.org/docs/8.4/static/functions-window.html">window functions</a> here so that we get some better
+detailed view of historic changes on each partition? With some evolution
+figure in percentage from the previous partition of the same year,
+accumulated size per partition and per year, yearly sum, you name it. Here's
+another one you might want to try, ready for some tuning (schema name, table
+name, etc):</p>
+
+<pre class="src">
+WITH s AS (
+  select relname,
+         pg_relation_size(c.oid) as size,
+         pg_total_relation_size(c.oid) as tsize,
+         substring(substring(relname from <span style="color: #bc8f8f;">'[0-9]{6}$'</span>) for 4)::bigint as year
+    from pg_class c
+         join pg_namespace n on n.oid = c.relnamespace
+   where c.relkind = <span style="color: #bc8f8f;">'r'</span>
+     <span style="color: #b22222;">-- and n.nspname = 'public'
+</span>     <span style="color: #b22222;">-- and c.relname ~ 'stats'
+</span>     and substring(substring(relname from <span style="color: #bc8f8f;">'[0-9]{6}$'</span>) for 4)::bigint &gt;= 2008
+order by relname
+),
+     sy AS (
+  select relname,
+         size,
+         tsize,
+         year,
+         (sum(size) over w_year)::bigint as ysize,
+         (sum(size) over w_month)::bigint as cumul,
+         (lag(size) over (order by relname))::bigint as previous
+    from s
+  window w_year  as (partition by year),
+         w_month as (partition by year order by relname)
+),
+     syp AS (
+  select relname,
+         size,
+         tsize,
+         rank() over (partition by year order by size desc) as rank,
+         case when ysize = 0 then ysize
+              else round(size / ysize::numeric * 100, 2) end as yp,
+         case when previous = 0 then previous
+              else round((size / previous::numeric - 1.0) * 100, 2) end as evol,
+         cumul,
+         year,
+         ysize
+    from sy
+)
+  SELECT relname,
+         pg_size_pretty(size) as size,
+         pg_size_pretty(tsize) as "+indexes",
+         evol, yp as "% annuel", rank,
+         pg_size_pretty(cumul) as cumul, year,
+         pg_size_pretty(ysize) as "yearly sum",
+         pg_size_pretty((sum(size) over())::bigint) as total
+    FROM syp
+ORDER BY relname;
+</pre>
+
+<p>Hope you'll find it useful, I certainly do!</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Mon, 26 Jul 2010 17:00:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/07/26-partitioning-relation-size-per-“group”.html</guid>
+</item>
+
+
+<item>
+  <title>Emacs and PostgreSQL</title>
+  <link>http://tapoueh.org/blog/2010/07/22-emacs-and-postgresql.html</link>
+  <description><![CDATA[<h2>Emacs and PostgreSQL</h2>
+<div class="date">Thursday, July 22 2010, 09:30</div>
+
+
+<p class="first">Those are my two all times favorite Open Source Software. Or <a href="http://www.gnu.org/philosophy/free-sw.html">Free Software</a>
+in the <a href="http://www.gnu.org/">GNU</a> sense of the world, as both the <em>BSD</em> and the <em>GPL</em> are labeled free
+there. Even if I prefer the <a href="http://www.debian.org/social_contract">The Debian Free Software Guidelines</a> as a global
+definition and the <a href="http://sam.zoy.org/wtfpl/">WTFPL</a> license. But that's a digression.</p>
+
+<p>I think that <a href="http://www.gnu.org/software/emacs/">Emacs</a> and <a href="http://www.postgresql.org/">PostgreSQL</a> do share a lot in common. I'd begin with
+the documentation, which quality is amazing for both projects. Then of
+course the extensibility with <a href="http://www.gnu.org/software/emacs/emacs-lisp-intro/html_node/Preface.html#Preface">Emacs Lisp</a> on the one hand and
+<a href="http://www.postgresql.org/docs/8.4/static/extend.html">catalog-driven operations</a> on the other hand. Whether you're extending Emacs
+or PostgreSQL you'll find that it's pretty easy to tweak the system <em>while
+it's running</em>. The other comparison points are less important, like the fact
+the both the systems get about the same uptime on my laptop (currently <em>13
+days, 23 hours, 57 minutes, 10 seconds</em>).</p>
+
+<p>So of course I'm using <em>Emacs</em> to edit <em>PostgreSQL</em> <code>.sql</code> files, including stored
+procedures. And it so happens that <a href="http://archives.postgresql.org/pgsql-hackers/2010-07/msg01067.php">line numbering in plpgsql</a> is not as
+straightforward as one would naively think, to the point that we'd like to
+have better tool support there. So I've extended Emacs <a href="http://www.gnu.org/software/emacs/manual/html_node/emacs/Minor-Modes.html">linum-mode minor mode</a>
+to also display the line numbers as computed per PostgreSQL, and here's what
+it looks like:</p>
+
+<center>
+<p><img src="../../../images//emacs-pgsql-line-numbers.png" alt=""></p>
+</center>
+
+<p>Now, here's also the source code, <a href="static/dim-pgsql.el">dim-pgsql.el</a>. Hope you'll enjoy!</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Thu, 22 Jul 2010 09:30:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/07/22-emacs-and-postgresql.html</guid>
+</item>
+
+
+<item>
+  <title>Background writers</title>
+  <link>http://tapoueh.org/blog/2010/07/19-background-writers.html</link>
+  <description><![CDATA[<h2>Background writers</h2>
+<div class="date">Monday, July 19 2010, 16:30</div>
+
+
+<p class="first">There's currently a thread on <a href="http://archives.postgresql.org/pgsql-hackers/">hackers</a> about <a href="http://archives.postgresql.org/pgsql-hackers/2010-07/msg00493.php">bg worker: overview</a> and a series
+of 6 patches. Thanks a lot <strong><em>Markus</em></strong>! This is all about generalizing a concept
+already in use in the <em>autovacuum</em> process, where you have an independent
+subsystem that require having an autonomous <em>daemon</em> running and able to start
+its own <em>workers</em>.</p>
+
+<p>I've been advocating about generalizing this concept for awhile already, in
+order to have <em>postmaster</em> able to communicate to subsystems when to shut down
+and start and reload, etc. Some external processes are only external because
+there's no need to include them <em>by default</em> in to the database engine, not
+because there's no sense to having them in there.</p>
+
+<p>So even if <strong><em>Markus</em></strong> work is mainly about generalizing <em>autovacuum</em> so that he
+has a <em>coordinator</em> to ask for helper backends to handle broadcasting of
+<em>writesets</em> for <a href="http://postgres-r.org/">Postgres-R</a>, it still could be a very good first step towards
+something more general. What I'd like to see the generalization handle are
+things like <a href="http://wiki.postgresql.org/wiki/PGQ_Tutorial">PGQ</a>, or the <em>pgagent scheduler</em>. In some cases, <a href="http://pgbouncer.projects.postgresql.org/doc/usage.html">pgbouncer</a> too.</p>
+
+<p>What we're missing there is an <em>API</em> for everybody to be able to extend
+PostgreSQL with its own background processes and workers. What would such a
+beast look like? I have some preliminary thoughts about this in my
+<a href="char10.html#sec16">Next Generation PostgreSQL</a> article, but that's still early thoughts. The
+main idea is to steal as much as sensible from
+<a href="http://www.erlang.org/doc/man/supervisor.html">Erlang Generic Supervisor Behaviour</a>, and maybe up to its
+<a href="http://www.erlang.org/doc/design_principles/fsm.html">Generic Finite State Machines</a> <em>behavior</em>. In the <em>Erlang</em> world, a <em>behavior</em> is a
+generic process.</p>
+
+<p>The <em>FSM</em> approach would allow for any user daemon to provide an initial state
+and register functions that would do some processing then change the
+state. My feeling is that if those functions are exposed at the SQL level,
+then you can <em>talk</em> to the daemon from anywhere (the Erlang ideas include a
+globally —cluster wide— unique name). Of course the goal would be to
+provide an easy way for the <em>FSM</em> functions to have a backend connected to the
+target database handle the work for it, or be able to connect itself. Then
+we'd need something else here, a way to produce events based on the clock. I
+guess relying on <code>SIGALRM</code> is a possibility.</p>
+
+<p>I'm not sure about how yet, but I think getting back in consultancy after
+having opened <a href="http://2ndQuadrant.com">2ndQuadrant</a> <a href="http://2ndQuadrant.fr">France</a> has some influence on how I think about all
+that. My guess is that those blog posts are a first step on a nice journey!</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Mon, 19 Jul 2010 16:30:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/07/19-background-writers.html</guid>
+</item>
+
+
+<item>
+  <title>Logs analysis</title>
+  <link>http://tapoueh.org/blog/2010/07/13-logs-analysis.html</link>
+  <description><![CDATA[<h2>Logs analysis</h2>
+<div class="date">Tuesday, July 13 2010, 14:15</div>
+
+
+<p class="first">Nowadays to analyze logs and provide insights, the more common tool to use
+is <a href="http://pgfouine.projects.postgresql.org/">pgfouine</a>, which does an excellent job. But there has been some
+improvements in logs capabilities that we're not benefiting from yet, and
+I'm thinking about the <code>CSV</code> log format.</p>
+
+<p>So the idea would be to turn <em>pgfouine</em> into a set of <code>SQL</code> queries against the
+logs themselves once imported into the database. Wait. What about having our
+next PostgreSQL version, which is meant (I believe) to include CSV support
+in <em>SQL/MED</em>, to directly expose its logs as a system view?</p>
+
+<p>A good thing would be to expose that as a ddl-partitioned table following
+the log rotation scheme as setup in <code>postgresql.conf</code>, or maybe given in some
+sort of a setup, in order to support <code>logrotate</code> users. At least some
+facilities to do that would be welcome, and I'm not sure plain <em>SQL/MED</em> is
+that when it comes to <em>source</em> partitioning.</p>
+
+<p>Then all that remains to be done is a set of <code>SQL</code> queries and some static or
+dynamic application to derive reports from there.</p>
+
+<p>This is yet again an idea I have in mind but don't have currently time to
+explore myself, so I talk about it here in the hope that others will share
+the interest. Of course, now that I work at <a href="http://2ndQuadrant.com">2ndQuadrant</a>, you can make it so
+that we consider the idea in more details, up to implementing and
+contributing it!</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Tue, 13 Jul 2010 14:15:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/07/13-logs-analysis.html</guid>
+</item>
+
+
+<item>
+  <title>Using indexes as column store?</title>
+  <link>http://tapoueh.org/blog/2010/07/08-using-indexes-as-column-store.html</link>
+  <description><![CDATA[<h2>Using indexes as column store?</h2>
+<div class="date">Thursday, July 08 2010, 11:15</div>
+
+
+<p class="first">There's a big trend nowadays about using column storage as opposed to what
+PostgreSQL is doing, which would be row storage. The difference is that if
+you have the same column value in a lot of rows, you could get to a point
+where you have this value only once in the underlying storage file. That
+means high compression. Then you tweak the <em>executor</em> to be able to load this
+value only once, not once per row, and you win another huge source of data
+traffic (often enough, from disk).</p>
+
+<p>Well, it occurs to me that maybe we could have column oriented storage
+support without adding any new storage facility into PostgreSQL itself, just
+using in new ways what we already have now. Column oriented storage looks
+somewhat like an index, where any given value is meant to appear only
+once. And you have <em>links</em> to know where to find the full row associated in
+the main storage.</p>
+
+<p>There's a work in progress to allow for PostgreSQL to use indexes on their
+own, without having to get to the main storage for checking the
+visibility. That's known as the <a href="http://www.postgresql.org/docs/8.4/static/storage-vm.html">Visibility Map</a>, which is still only a hint
+in released versions. The goal is to turn that into a crash-safe trustworthy
+source in the future, so that we get <em>covering indexes</em>. That means we can use
+an index and skip getting to the full row in main storage and get the
+visibility information there.</p>
+
+<p>Now, once we have that, we could consider using the indexes in more
+queries. It could be a win to get the column values from the index when
+possible and if you don't <em>output</em> more columns from the <em>heap</em>, return the
+values from there. Scanning the index only once per value, not once per row.</p>
+
+<p>There's a little more though on the point in the <a href="char10.html#sec10">Next Generation PostgreSQL</a>
+article I've been referencing already, should you be interested.</p>
+
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Thu, 08 Jul 2010 11:15:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/07/08-using-indexes-as-column-store.html</guid>
+</item>
+
+
+<item>
+  <title>MVCC in the Cloud</title>
+  <link>http://tapoueh.org/blog/2010/07/06-mvcc-in-the-cloud.html</link>
+  <description><![CDATA[<h2>MVCC in the Cloud</h2>
+<div class="date">Tuesday, July 06 2010, 10:50</div>
+
+
+<p class="first">At <a href="http://char10.org/">CHAR(10)</a> <strong><em>Markus</em></strong> had a talk about
+<a href="http://char10.org/talk-schedule-details#talk13">Using MVCC for Clustered Database Systems</a> and explained how <a href="http://postgres-r.org/">Postgres-R</a> does
+it. The scope of his project is to maintain a set of database servers in the
+same state, eventually.</p>
+
+<p>Now, what does it mean to get &quot;In the Cloud&quot;? Well there are more than one
+answer I'm sure, mine would insist on including this &quot;Elasticity&quot; bit. What
+I mean here is that it'd be great to be able to add or lose nodes and stay
+<em>online</em>. Granted, that what's <em>Postgres-R</em> is providing. Does that make it
+ready for the &quot;Cloud&quot;? Well it happens so that I don't think so.</p>
+
+<p>Once you have elasticity, you also want <em>scalability</em>. That could mean lots of
+thing, and <em>Postgres-R</em> already provides a great deal of it, at the connect
+and reads level: you can do your business <em>unlimited</em> on any node, the others
+will eventually (<em>eagerly</em>) catch-up, and you can do your <code>select</code> on any node
+too, reading from the same data set. Eventually.</p>
+
+<p>What's still missing here is the hard sell, <em>write scalability</em>. This is the
+idea that you don't want to sustain the same <em>write load</em> on all the members
+of the &quot;Cloud cluster&quot;. It happens that I have some idea about how to go on
+this, and this time I've been trying to write them down. You might be
+interested into the <a href="http://tapoueh.org/char10.html#sec3">MVCC in the Cloud</a> part of my <a href="http://tapoueh.org/char10.html">Next Generation PostgreSQL</a>
+notes.</p>
+
+<p>My opinion is that if you want to distribute the data, this is a problem
+that falls in the category of finding the data on disk. This problem is
+already solved in the executor, it knows which operating system level file
+to open and where to seek inside that in order to find a row value for a
+given relation. So it should be possible to teach it that some relation's
+storage ain't local, to get the data it needs to communicate to another
+PostgreSQL instance.</p>
+
+<p>I would call that a <em>remote tablespace</em>. It allows for distributing both the
+data and their processing, which could happen in parallel. Of course that
+means there's now some latency concerns, and that some <em>JOIN</em> will get slow if
+you need to retrieve the data from the network each time. For that what I'm
+thinking about is the possibility to manage a local copy of a remote
+tablespace, which would be a <em>mirror tablespace</em>. But that's for another blog
+post.</p>
+
+<p>Oh, if that makes you think a lot of <a href="http://wiki.postgresql.org/wiki/SQL/MED">SQL/MED</a>, that would mean I did a good
+enough job at explaining the idea. The main difference though would be to
+ensure transaction boundaries over the local and remote data: it's one
+single distributed database we're talking about here.</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Tue, 06 Jul 2010 10:50:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/07/06-mvcc-in-the-cloud.html</guid>
+</item>
+
+
+<item>
+  <title>Back from CHAR(10)</title>
+  <link>http://tapoueh.org/blog/2010/07/05-back-from-char10.html</link>
+  <description><![CDATA[<h2>Back from CHAR(10)</h2>
+<div class="date">Monday, July 05 2010, 09:30</div>
+
+
+<p class="first">It surely does not feel like a full month and some more went by since we
+were enjoying <a href="http://www.pgcon.org/2010/">PGCon 2010</a>, but in fact it was already the time for
+<a href="http://char10.org/talk-schedule">CHAR(10)</a>. The venue was most excellent, as Oxford is a very beautiful
+city. Also, the college was like a city in the city, and having the
+accomodation all in there really smoothed it all.</p>
+
+<p>On a more technical viewpoint, the <a href="http://char10.org/talk-schedule">range of topics</a> we talked about and the
+even broader one in the <em>&quot;Hall Track&quot;</em> make my mind full of ideas, again. So
+I'm preparing a quite lengthy article to summarise or present all those
+ideas, and I think a post series should cover the points in there. When
+trying to label things, it appears that my current obsessions are mainly
+about <em>PostgreSQL in the Cloud</em> and <em>Further Optimising PostgreSQL</em>, so that's
+what I'll be talking about those next days.</p>
+
+<p>Meanwhile I'm going to search for existing solutions on how to use the
+<a href="http://en.wikipedia.org/wiki/Paxos_algorithm">Paxos algorithm</a> to generate a reliable distributed sequence, using <a href="http://libpaxos.sourceforge.net/">libpaxos</a>
+for example. The goal would be to see if it's feasible to have a way to
+offer some global <code>XID</code> from a network of servers in a distributed fashion,
+ideally in such a way that new members can join in at any point, and of
+course that losing a member does not cause downtime for the online ones. It
+sounds like this problem has been extensively researched and is solved,
+either by the <em>Global Communication Systems</em> or the underlying
+algorithms. Given the current buy-in lack of our community for <code>GCS</code> my guess
+is that bypassing them would be a pretty good move, even if that mean
+implementing a limited form of <code>GCS</code> ourselves.</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Mon, 05 Jul 2010 09:30:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/07/05-back-from-char10.html</guid>
+</item>
+
+
+<item>
+  <title>Back from PgCon2010</title>
+  <link>http://tapoueh.org/blog/2010/05/27-back-from-pgcon2010.html</link>
+  <description><![CDATA[<h2>Back from PgCon2010</h2>
+<div class="date">Thursday, May 27 2010, 14:26</div>
+
+
+<p class="first">This year's edition has been the <a href="http://www.pgcon.org/2010/">best pgcon</a> ever for me. Granted, it's only
+my third time, but still :) As <a href="http://blog.endpoint.com/2010/05/pgcon-hall-track.html">Josh said</a> the <em>&quot;Hall Track&quot;</em> in particular was
+very good, and the <a href="http://wiki.postgresql.org/wiki/PgCon_2010_Developer_Meeting">Dev Meeting</a> has been very effective!</p>
+
+<h3>Extensions</h3>
+
+<p class="first">This time I prepared some <a href="http://wiki.postgresql.org/wiki/Image:Pgcon2010-dev-extensions.pdf">slides to present the extension design</a> and I tried
+hard to make it so that we get to agree on a plan, even recognizing it's not
+solving all of our problems from the get go. I had been talking about the
+concept and design with lots of people already, and continued to do so while in
+Ottawa on Monday evening and through all Tuesday. So Wednesday, I felt
+prepared. It proved to be a good thing, as I edited the slides with ideas from
+several people I had the chance to expose my ideas to! Thanks <em>Greg Stark</em> and
+<em>Heikki Linnakangas</em> for the part we talked about at the meeting, and a lot more
+people for the things we'll have to solve later (Hi <em>Stefan</em>!).</p>
+
+<p>So the current idea for <strong>extensions</strong> is for the <em>backend</em> support to start with a
+file in <code>`pg_config --sharedir`/extensions/foo/control</code> containing
+the <em>foo</em> extension's <em>metadata</em>. From that we know if we can install an extension
+and how. Here's an example:</p>
+
+<pre class="src">
+name = foo
+version = 1.0
+custom_variable_classes = 'foo'
+depends  = bar (&gt;= 1.1), baz
+conflicts = bla (&lt; 0.8)
+</pre>
+
+<p>The other files should be <code>install.sql</code>, <code>uninstall.sql</code> and <code>foo.conf</code>. The only
+command the user will have to type in order for using the extension in his
+database will then be:</p>
+
+<pre class="src">
+  INSTALL EXTENSION foo;
+</pre>
+
+<p>For that to work all that needs to happen is for me to write the code. I'll
+keep you informed as soon as I get a change to resume my activities on the
+<a href="http://git.postgresql.org/gitweb?p=postgresql-extension.git;a=shortlog;h=refs/heads/extension">git branch</a> I'm using. You can already find my first attempt at a
+<code>pg_execute_from_file()</code> function <a href="http://git.postgresql.org/gitweb?p=postgresql-extension.git;a=commitdiff;h=6eed4eca0179cbdeb737b9783084e9f03fcb7470">there</a>.</p>
+
+<p>Building atop that backend support we already have two gentlemen competing on
+features to offer to <a href="http://justatheory.com/computers/databases/postgresql/pgan-bikeshedding.html">distribute</a> and <a href="http://petereisentraut.blogspot.com/2010/05/postgresql-package-management.html">package</a> extensions! That will complete the
+work just fine, thanks guys.</p>
+
+
+<h3>Hot Standby</h3>
+
+<p class="first">Heikki's talk about <a href="http://www.pgcon.org/2010/schedule/events/264.en.html">Built-in replication in PostgreSQL 9.0</a> left me with lots of
+thinking. In particular it seems we need two projects out of core to complete
+what <code>9.0</code> has to offer, namely something very simple to prepare a base backup
+and something more involved to manage a pool of standbys.</p>
+
+<h4>pg_basebackup</h4>
+
+<p class="first">The idea I had listening to the talk was that it might be possible to ask the
+server, in a single SQL query, for the list of all the files it's using. After
+all, there's those <code>pg_ls_files()</code> and <code>pg_read_file()</code> functions, we could put
+them to good use. I couldn't get the idea out of my head, so I had to write
+some code and see it running: <a href="http://github.com/dimitri/pg_basebackup">pg_basebackup</a> is there at <code>github</code>, grab a copy!</p>
+
+<p>What it does is very simple, in about 100 lines of self-contained python code
+it get all the files from a running server through a normal PostgreSQL
+connection. That was my first <a href="http://www.postgresql.org/docs/8.4/interactive/queries-with.html">recursive query</a>. I had to create a new function
+to get the file contents as the existing one returns text, and I want <code>bytea</code>
+here, of course.</p>
+
+<p>Note that the code depends on the <code>bytea</code> representation in use, so it's only
+working with <code>9.0</code> as of now. Can be changed easily though, send a patch or just
+ask me to do it!</p>
+
+<p>Lastly, note that even if <code>pg_basebackup</code> will compress each chunk it sends over
+the <code>libpq</code> connection, it won't be your fastest option around. Its only
+advantage there is its simplicity. Get the code, run it with 2 arguments: a
+connection string and a destination directory. There you are.</p>
+
+
+<h4>wal proxy, wal relay</h4>
+
+<p class="first">The other thing that we'll miss in <code>9.0</code> is the ability to both manage more than
+a couple of <em>standby</em> servers and to manage failover gracefully. Here the idea
+would be to have a proxy server acting as both a <em>walreceiver</em> and a
+<em>walsender</em>. Its role would be to both <em>archive</em> the WAL and <em>relay</em> them to the real
+standbys.</p>
+
+<p>Then in case of master's failure, we could instruct this <em>proxy</em> to be fed from
+the elected new master (manual procedure), the other standbys not being
+affected. Well apart than apparently changing the <em>timeline</em> (which will happen
+as soon as you promote a standby to master) while streaming is not meant to be
+supported. So the <em>proxy</em> would also disconnect all the <em>slaves</em> and have them
+reconnect.</p>
+
+<p>If we need such a finesse, we could have the <code>restore_command</code> on the <em>standbys</em>
+prepared so that it'll connect to the <em>proxy's archive</em>. Now on failover, the
+<em>standbys</em> are disconnected from the stream, get a <code>WAL</code> file with a new <em>timeline</em>
+from the <em>archive</em>, replay it, and reconnect.</p>
+
+<p>That means that for a full <code>HA</code> scenario you could get on with three
+servers. You're back to two servers at failover time and need to rebuild the
+crashed master as a standby, running a base backup again.</p>
+
+<p>If you've followed the idea, I hope you liked it! I still have to motivate some
+volunteers so that some work gets done here, as I'm probably not the one to ask
+to as far as coding this is concerned, if you want it out before <code>9.1</code> kicks in!</p>
+
+
+
+<h3>Queuing</h3>
+
+<p class="first">We also had a nice <em>Hall Tack</em> session with <em>Jan Wieck</em>, <em>Marko Kreen</em> and <em>Jim Nasby</em>
+about how to get a single general (enough) queueing solution for PostgreSQL. It
+happens that the Slony queueing ideas made their way into <code>PGQ</code> and that we'd
+want to add some more capabilities to this one.</p>
+
+<p>What we talked about was adding more interfaces (event producers, event format
+translating at both ends of the pipe) and optimising how many events from the
+past we keep in the queue for the subscribers, in a cascading environment.</p>
+
+<p>It seems that the basic architecture of the queue is what <code>PGQ 3</code> provides
+already, so it could even be not that much of a hassle to get something working
+out of the ideas exchanged.</p>
+
+<p>Of course, one of those ideas has been discussed at the <a href="http://wiki.postgresql.org/wiki/PgCon_2010_Developer_Meeting">Dev Meeting</a>, it's about
+deriving the transaction commit order from the place which already has the
+information rather than <em>reconstructing</em> it after the fact. We'll see how it
+goes, but it started pretty well with a design mail thread.</p>
+
+
+<h3>Other talks</h3>
+
+<p class="first">I went to some other talks too, of course, unfortunately with an attention span
+far from constant. Between the social events (you should read that as <em>beer
+drinking evenings</em>) and the hall tracks, more than once my brain were less
+present than my body in the talks. I won't risk into commenting them here, but
+overall it was very good: in about each talk, new ideas popped into my
+head. And I love that.</p>
+
+
+<h3>Conclusion: I'm addicted.</h3>
+
+<p class="first">The social aspect of the conference has been very good too. Once more, a warm
+welcome from the people that are central to the project, and who are so easily
+available for a chat about any aspect of it! Or just for sharing a drink.</p>
+
+<p>Meeting our users is very important too, and <a href="http://www.pgcon.org/2010/">pgcon</a> allows for that also. I've
+met some people I'm used to talk to via <code>IRC</code>, and it was good fun sharing a beer
+over there.</p>
+
+<p>All in all, I'm very happy I made it to Ottawa despite the volcano activity,
+there's so much happening over there! Thanks to all the people who made it
+possible by either organizing the conference or attending to it! See you next
+year, I'm addicted...</p>
+
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Thu, 27 May 2010 14:26:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/05/27-back-from-pgcon2010.html</guid>
+</item>
+
+
+<item>
+  <title>Import fixed width data with pgloader</title>
+  <link>http://tapoueh.org/blog/2010/04/27-import-fixed-width-data-with-pgloader.html</link>
+  <description><![CDATA[<h2>Import fixed width data with pgloader</h2>
+<div class="date">Tuesday, April 27 2010, 12:01</div>
+
+
+<p class="first">So, following previous blog entries about importing <em>fixed width</em> data, from
+<a href="http://www.postgresonline.com/journal/index.php?/archives/157-Import-fixed-width-data-into-PostgreSQL-with-just-PSQL.html">Postgres Online Journal</a> and <a href="http://people.planetpostgresql.org/dfetter/index.php?/archives/58-psql&#44;-Paste&#44;-Perl-Pefficiency&#33;.html">David (perl) Fetter</a>, I couldn't resist following
+the meme and showing how to achieve the same thing with <a href="http://pgloader.projects.postgresql.org/#toc9">pgloader</a>.</p>
+
+<p>I can't say how much I dislike such things as the following, and I can't
+help thinking that non IT people are right looking at us like this when
+encountering such prose.</p>
+
+<pre class="src">
+  map {s<span style="color: #bc8f8f;">/\D*(\d+)-(\d+).*/$a.="A".(1+$2-$1). " "/</span>e} split(<span style="color: #bc8f8f;">/\n/</span>,&lt;&lt;<span style="color: #bc8f8f;">'EOT'</span>);
+</pre>
+
+<p>So, the <em>pgloader</em> way. First you need to have setup a database, I called it
+<code>pgloader</code> here. Then you need the same <code>CREATE TABLE</code> as on the original
+article, here is it for completeness:</p>
+
+<pre class="src">
+CREATE TABLE places(usps char(2) NOT NULL,
+    fips char(2) NOT NULL,
+    fips_code char(5),
+    loc_name varchar(64));
+</pre>
+
+<p>Now the data file I've taken here:
+<a href="http://www.census.gov/tiger/tms/gazetteer/places2k.txt">http://www.census.gov/tiger/tms/gazetteer/places2k.txt</a>.</p>
+
+<p>Then we translate the file description into <em>pgloader</em> setup:</p>
+
+<pre class="src">
+[<span style="color: #228b22;">pgsql</span>]
+<span style="color: #b8860b;">host</span> = localhost
+<span style="color: #b8860b;">port</span> = 5432
+<span style="color: #b8860b;">base</span> = pgloader
+<span style="color: #b8860b;">user</span> = dim
+<span style="color: #b8860b;">pass</span> = None
+
+<span style="color: #b8860b;">log_file</span>            = /tmp/pgloader.log
+<span style="color: #b8860b;">log_min_messages</span>    = DEBUG
+<span style="color: #b8860b;">client_min_messages</span> = WARNING
+
+<span style="color: #b8860b;">client_encoding</span> = <span style="color: #bc8f8f;">'latin1'</span>
+<span style="color: #b8860b;">lc_messages</span>         = C
+<span style="color: #b8860b;">pg_option_standard_conforming_strings</span> = on
+
+[<span style="color: #228b22;">fixed</span>]
+<span style="color: #b8860b;">table</span>           = places
+<span style="color: #b8860b;">format</span>          = fixed
+<span style="color: #b8860b;">filename</span>        = places2k.txt
+<span style="color: #b8860b;">columns</span>         = *
+<span style="color: #b8860b;">fixed_specs</span>     = usps:0:2, fips:2:2, fips_code:4:5, loc_name:9:64, p:73:9, h:82:9, land:91:14, water:105:14, ldm:119:14, wtm:131:14, lat:143:10, long:153:11
+</pre>
+
+<p>We're ready to import the data now:</p>
+
+<pre class="src">
+dim ~/PostgreSQL/examples pgloader -vsTc pgloader.conf
+pgloader     INFO     Logger initialized
+pgloader     WARNING  path entry '/usr/share/python-support/pgloader/reformat' does not exists, ignored
+pgloader     INFO     Reformat path is []
+pgloader     INFO     Will consider following sections:
+pgloader     INFO       fixed
+pgloader     INFO     Will load 1 section at a time
+fixed        INFO     columns = *, got [('usps', 1), ('fips', 2), ('fips_code', 3), ('loc_name', 4)]
+fixed        INFO     Loading threads: 1
+fixed        INFO     closing current database connection
+fixed        INFO     fixed processing
+fixed        INFO     TRUNCATE TABLE places;
+pgloader     INFO     All threads are started, wait for them to terminate
+fixed        INFO     COPY 1: 10000 rows copied in 5.769s
+fixed        INFO     COPY 2: 10000 rows copied in 5.904s
+fixed        INFO     COPY 3: 5375 rows copied in 3.187s
+fixed        INFO     No data were rejected
+fixed        INFO      25375 rows copied in 3 commits took 14.907 seconds
+fixed        INFO     No database error occured
+fixed        INFO     closing current database connection
+fixed        INFO     releasing fixed semaphore
+fixed        INFO     Announce it's over
+
+Table name        |    duration |    size |  copy rows |     errors
+====================================================================
+fixed             |     14.901s |       - |      25375 |          0
+</pre>
+
+<p>Note the <code>-T</code> option is for <code>TRUNCATE</code>, which you only need when you want to
+redo the loading, I've come to always mention it in interactive usage. The
+<code>-v</code> option is for some more <em>verbosity</em> and the <code>-s</code> for the <em>summary</em> at end of
+operations.</p>
+
+<p>With the <code>pgloader.conf</code> and <code>places2k.txt</code> in the current directory, and an
+empty table, just typing in <code>pgloader</code> at the prompt would have done the job.</p>
+
+<p>Oh, the <code>pg_option_standard_conforming_strings</code> bit is from the <a href="http://github.com/dimitri/pgloader">git HEAD</a>, the
+current released version has no support for setting any PostgreSQL knob
+yet. Still, it's not necessary here, so you can forget about it.</p>
+
+<p>You will also notice that <em>pgloader</em> didn't trim the data for you, which ain't
+funny for the <em>places</em> column. That's a drawback of the fixed width format
+that you can work on two ways here, either by means of </p>
+
+<pre class="src">
+UPDATE places SET loc_name = trim(loc_name)&#160;;
+</pre> or a custom
+reformat module for <em>pgloader</em>. I guess the latter solution is overkill, but
+it allows for <em>pipe</em> style processing of the data and a single database write.
+
+<p>Send me a mail if you want me to show here how to setup such a reformatting
+module in a next blog entry!</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Tue, 27 Apr 2010 12:01:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/04/27-import-fixed-width-data-with-pgloader.html</guid>
+</item>
+
+
+<item>
+  <title>pgloader activity report</title>
+  <link>http://tapoueh.org/blog/2010/04/06-pgloader-activity-report.html</link>
+  <description><![CDATA[<h2>pgloader activity report</h2>
+<div class="date">Tuesday, April 06 2010, 09:10</div>
+
+
+<p class="first">Yes. This <a href="http://pgloader.projects.postgresql.org/">pgloader</a> project is still maintained and somewhat
+active. Development happens when I receive a complaint, either about a bug
+in existing code or a feature in yet-to-write code. If you have a bug to
+report, just send me an email!</p>
+
+<p>If you're following the development of it, the sources just moved from <code>CVS</code>
+at <a href="http://cvs.pgfoundry.org/cgi-bin/cvsweb.cgi/pgloader/pgloader/">pgfoundry</a> to <a href="http://github.com/dimitri/pgloader">http://github.com/dimitri/pgloader</a>. I will still put the
+releases at <a href="http://pgfoundry.org/projects/pgloader">pgfoundry</a>, and the existing binary packages maintenance should
+continue. See also the <a href="http://pgloader.projects.postgresql.org/dev/pgloader.1.html">development version documentation</a>, which contains not
+yet released stuff.</p>
+
+<p>This time it's about new features, the goal being to open <em>pgloader</em> usage
+without describing all the file format related details into the
+<code>pgloader.conf</code> file. This time around, <a href="http://database-explorer.blogspot.com/">Simon</a> is giving feedback and told me
+he would appreciate that pgloader would work more like the competition.</p>
+
+<p>We're getting there with some new options. The first one is that rather than
+only <code>Sections</code>, now your can give a <code>filename</code> as an argument. <em>pgloader</em> will
+then create a configuration section for you, considering the file format to
+be <code>CSV</code>, setting <code>columns = *</code>. The default <em>field separator</em> is <code>|</code>,
+so you have also the <code>-f, --field-separator</code> option to set that from the
+command line.</p>
+
+<p>As if that wasn't enough, <em>pgloader</em> now supports any <a href="http://www.postgresql.org/">PostgreSQL</a> option either
+in the configuration file (prefix the real name with <code>pg_option_</code>) or on the
+command line, via the <code>-o, --pg-options</code> switch, that you can use more than
+once. Command line setting will take precedence over any other setup, of
+course. Consider for example <code>-o standard_conforming_strings=on</code>.</p>
+
+<p>While at it, some more options can now be set on the command line, including
+<code>-t, --section-threads</code> and <code>-m, --max-parallel-sections</code> on the one hand and
+<code>-r, --reject-log</code> and <code>-j, --reject-data</code> on the other hand. Those two last
+must contain a <code>%s</code> place holder which will get replaced by the <em>section</em> name,
+or the <code>filename</code> if you skipped setting up a <em>section</em> for it.</p>
+
+<p>Your <em>pgloader</em> usage is now more command line friendly than ever!</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Tue, 06 Apr 2010 09:10:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/04/06-pgloader-activity-report.html</guid>
+</item>
+
+
+<item>
+  <title>Getting out of SQL_ASCII, part 2</title>
+  <link>http://tapoueh.org/blog/2010/02/23-getting-out-of-sql_ascii-part-2.html</link>
+  <description><![CDATA[<h2>Getting out of SQL_ASCII, part 2</h2>
+<div class="date">Tuesday, February 23 2010, 17:30</div>
+
+
+<p class="first">So, if you followed the previous blog entry, now you have a new database
+containing all the <em>static</em> tables encoded in <code>UTF-8</code> rather than
+<code>SQL_ASCII</code>. Because if it was not yet the case, you now severely distrust
+this non-encoding.</p>
+
+<p>Now is the time to have a look at properly encoding the <em>live</em> data, those
+stored in tables that continue to receive write traffic. The idea is to use
+the <code>UPDATE</code> facilities of PostgreSQL to tweak the data, and too fix the
+applications so as not to continue inserting badly encoded strings in there.</p>
+
+<h3>Finding non UTF-8 data</h3>
+
+<p class="first">First you want to find out the badly encoded data. You can do that with this
+helper function that <a href="http://blog.rhodiumtoad.org.uk/">RhodiumToad</a> gave me on IRC. I had a version from the
+archives before that, but the <em>regexp</em> was hard to maintain and quote into a
+<code>PL</code> function. This is avoided by two means, first one is to have a separate
+pure <code>SQL</code> function for the <em>regexp</em> checking (so that you can index it should
+you need to) and the other one is to apply the regexp to <code>hex</code> encoded
+data. Here we go:</p>
+
+<pre class="src">
+create or replace function public.utf8hex_valid(str text)
+ returns boolean
+ language sql immutable
+as $f$
+   select $1 ~ $r$(?x)
+                  ^(?:(?:[0-7][0-9a-f])
+                     |(?:(?:c[2-9a-f]|d[0-9a-f])
+                        |e0[ab][0-9a-f]
+                        |ed[89][0-9a-f]
+                        |(?:(?:e[1-9abcef])
+                           |f0[9ab][0-9a-f]
+                           |f[1-3][89ab][0-9a-f]
+                           |f48[0-9a-f]
+                          )[89ab][0-9a-f]
+                       )[89ab][0-9a-f]
+                    )*$
+                $r$;
+$f$;
+</pre>
+
+<p>Now some little scripting around it in order to skip intense manual and
+boring work (and see, some more catalog queries). Don't forget we will have
+to work on a per-column basis here...</p>
+
+<pre class="src">
+create or replace function public.check_encoding_utf8
+ (
+   IN schemaname text,
+   IN tablename  text,
+  OUT relname    text,
+  OUT attname    text,
+  OUT count      bigint
+ )
+ returns setof record
+ language plpgsql
+as $f$
+DECLARE
+  v_sql text;
+BEGIN
+  FOR relname, attname
+   IN SELECT c.relname, a.attname
+        FROM pg_attribute a
+             JOIN pg_class c on a.attrelid = c.oid
+             JOIN pg_namespace s on s.oid = c.relnamespace
+             JOIN pg_roles r on r.oid = c.relowner
+       WHERE s.nspname = schemaname
+         AND atttypid IN (25, 1043) <span style="color: #b22222;">-- text, varchar
+</span>         AND relkind = <span style="color: #bc8f8f;">'r'</span>          <span style="color: #b22222;">-- ordinary table
+</span>         AND r.rolname = <span style="color: #bc8f8f;">'some_specific_role'</span>
+         AND CASE WHEN tablename IS NOT NULL
+                  THEN c.relname ~ tablename
+                  ELSE true
+              END
+  LOOP
+    v_sql := <span style="color: #bc8f8f;">'SELECT count(*) '</span>
+          || <span style="color: #bc8f8f;">'  FROM ONLY '</span>|| schemaname || <span style="color: #bc8f8f;">'.'</span> || relname
+          || <span style="color: #bc8f8f;">' WHERE NOT public.utf8hex_valid(encode(textsend('</span>
+          || attname
+          || <span style="color: #bc8f8f;">'), ''hex''))'</span>;
+
+    <span style="color: #b22222;">-- RAISE NOTICE 'Checking: %.%', relname, attname;
+</span>    <span style="color: #b22222;">-- RAISE NOTICE 'SQL: %', v_sql;
+</span>    EXECUTE v_sql INTO count;
+    RETURN NEXT;
+  END LOOP;
+END;
+$f$;
+</pre>
+
+<p>Note that the <code>tablename</code> is compared using the <code>~</code> operator, so that's <em>regexp</em>
+matching there too. Also note that I wanted only to check those tables that
+are owned by a specific role, your case may vary.</p>
+
+<p>The way I used this function was like this:</p>
+
+<pre class="src">
+create table leon.check_utf8 as
+ select *
+   from public.check_encoding_utf8();
+</pre>
+
+<p>Then you need to take action on those lines in <code>leon.check_utf8</code> table which
+have a <code>count &gt; 0</code>. Rince and repeat, but you may soon realise building the
+table over and over again is costly.</p>
+
+
+<h3>Cleaning up the data</h3>
+
+<p class="first">Up for some more helper tools? Unless you really want to manually fix this
+huge amount of columns where some data ain't <code>UTF-8</code> compatible... here's some
+more:</p>
+
+<pre class="src">
+create or replace function leon.nettoyeur
+ (
+  IN  action      text,
+  IN  encoding    text,
+  IN  tablename   text,
+  IN  columname   text,
+
+  OUT orig        text,
+  OUT utf8        text
+ )
+ returns setof record
+ language plpgsql
+as $f$
+DECLARE
+  p_convert text;
+BEGIN
+  IF encoding IS NULL
+  THEN
+    p_convert := <span style="color: #bc8f8f;">'translate('</span>
+              || columname || <span style="color: #bc8f8f;">', '</span>
+              || $$<span style="color: #bc8f8f;">'\211\203\202'</span>$$
+              || <span style="color: #bc8f8f;">', '</span>
+              || $$<span style="color: #bc8f8f;">'   '</span>$$
+              || <span style="color: #bc8f8f;">') '</span>;
+  ELSE
+    <span style="color: #b22222;">-- in 8.2, write convert using, in 8.3, the other expression
+</span>    <span style="color: #b22222;">-- p_convert := 'convert(' || columname || ' using ' || conversion || ') ';
+</span>    p_convert := <span style="color: #bc8f8f;">'convert(textsend('</span> || columname || <span style="color: #bc8f8f;">'), '''</span>|| encoding ||<span style="color: #bc8f8f;">''', ''utf-8'' ) '</span>;
+  END IF;
+
+  IF action = <span style="color: #bc8f8f;">'select'</span>
+  THEN
+    FOR orig, utf8
+     IN EXECUTE <span style="color: #bc8f8f;">'SELECT '</span> || columname || <span style="color: #bc8f8f;">', '</span>
+         || p_convert
+         || <span style="color: #bc8f8f;">'  FROM ONLY '</span> || tablename
+         || <span style="color: #bc8f8f;">' WHERE not public.utf8hex_valid('</span>
+         || <span style="color: #bc8f8f;">'encode(textsend('</span>|| columname ||<span style="color: #bc8f8f;">'), ''hex''))'</span>
+    LOOP
+      RETURN NEXT;
+    END LOOP;
+
+  ELSIF action = <span style="color: #bc8f8f;">'update'</span>
+  THEN
+    EXECUTE <span style="color: #bc8f8f;">'UPDATE ONLY '</span> || tablename
+         || <span style="color: #bc8f8f;">' SET '</span> || columname || <span style="color: #bc8f8f;">' = '</span> || p_convert
+         || <span style="color: #bc8f8f;">' WHERE not public.utf8hex_valid('</span>
+         || <span style="color: #bc8f8f;">'encode(textsend('</span>|| columname ||<span style="color: #bc8f8f;">'), ''hex''))'</span>;
+
+    FOR orig, utf8
+     IN SELECT *
+          FROM leon.nettoyeur(<span style="color: #bc8f8f;">'select'</span>, encoding, tablename, columname)
+    LOOP
+      RETURN NEXT;
+    END LOOP;
+
+  ELSE
+    RAISE EXCEPTION <span style="color: #bc8f8f;">'L&#233;on, Nettoyeur, veut de l''action.'</span>;
+
+  END IF;
+END;
+$f$;
+</pre>
+
+<p>As you can see, this function allows to check the conversion process from a
+given supposed encoding before to actually convert the data in place. This
+is very useful as even when you're pretty sure the non-utf8 data is <code>latin1</code>,
+sometime you find it's <code>windows-1252</code> or such. So double check before telling
+<code>leon.nettoyeur()</code> to update your precious data!</p>
+
+<p>Also, there's a facility to use <code>translate()</code> when none of the encoding match
+your expectations. This is a skeleton just replacing invalid characters with
+a <code>space</code>, tweak it at will!</p>
+
+
+<h3>Conclusion</h3>
+
+<p class="first">Enjoy your clean database now, even if it still accepts new data that will
+probably not pass the checks, so we still have to be careful about that and
+re-clean every day until the migration is effective. Or maybe add a <code>CHECK</code>
+clause that will reject badly encoded data...</p>
+
+<p>In fact here we're using <a href="http://wiki.postgresql.org/wiki/Londiste_Tutorial">Londiste</a> to replicate the <em>live</em> data from the old to
+the new server, and that means the replication will break each time there's
+new data written in non-utf8, as the new server is running <code>8.4</code>, which by
+design ain't very forgiving. Our plan is to clean-up as we go (remove table
+from the <em>subscriber</em>, fix it, add it again) and migrate as soon as possible!</p>
+
+<p>Bonus points to those of you getting the convoluted reference :)</p>
+
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Tue, 23 Feb 2010 17:30:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/02/23-getting-out-of-sql_ascii-part-2.html</guid>
+</item>
+
+
+<item>
+  <title>Getting out of SQL_ASCII, part 1</title>
+  <link>http://tapoueh.org/blog/2010/02/18-getting-out-of-sql_ascii-part-1.html</link>
+  <description><![CDATA[<h2>Getting out of SQL_ASCII, part 1</h2>
+<div class="date">Thursday, February 18 2010, 11:37</div>
+
+
+<p class="first">It happens that you have to manage databases <em>designed</em> by your predecessor,
+and it even happens that the team used to not have a <em>DBA</em>. Those <em>histerical
+raisins</em> can lead to having a <code>SQL_ASCII</code> database. The horror!</p>
+
+<p>What <code>SQL_ASCII</code> means, if you're not already familiar with the consequences
+of such a choice, is that all the <code>text</code> and <code>varchar</code> data that you put in the
+database is accepted as-is. No checks. At all. It's pretty nice when you're
+lazy enough to not dealing with <em>strange</em> errors in your application, but if
+you think that t's a smart move, please go read
+<a href="http://www.joelonsoftware.com/articles/Unicode.html">The Absolute Minimum Every Software Developer Absolutely, Positively Must Know About Unicode and Character Sets (No Excuses!)</a>
+by <a href="http://www.joelonsoftware.com/">Joel Spolsky</a> now. I said now, I'm waiting for you to get back here. Yes,
+I'll wait.</p>
+
+<p>The problem of course is not being able to read the data you just stored,
+which is seldom the use case anywhere you use a database solution such as
+<a href="http://www.postgresql.org/">PostgreSQL</a>.</p>
+
+<p>Now, it happens too that it's high time to get off of <code>SQL_ASCII</code>, the
+infamous. In our case we're lucky enough in that the data are all in fact
+<code>latin1</code> or about that, and this comes from the fact that all the applications
+connecting to the database are sharing some common code and setup. Then we
+have some tables that can be tagged <em>archives</em> and some other <em>live</em>. This blog
+post will only deal with the former category.</p>
+
+<p>For those tables that are not receiving changes anymore, we will migrate
+them by using a simple but time hungry method: <code>COPY OUT|recode|COPY IN</code>. I've
+tried to use <code>iconv</code> for recoding our data, but it failed to do so in lots of
+cases, so I've switched to using the <a href="http://www.gnu.org/software/recode/recode.html">GNU recode</a> tool, which works just fine.</p>
+
+<p>The fact that it takes so much time doing the conversion is not really a
+problem here, as you can do it <em>offline</em>, while the applications are still
+using the <code>SQL_ASCII</code> database. So, here's the program's help:</p>
+
+<pre class="src">
+recode.sh [-npdf0TI] [-U user ] -s schema [-m mintable] pattern
+        -d    debug
+        -n    dry run, only print table names and expected files
+        -s    schema
+        -m    mintable, to skip already processed once
+        -U    connect to PostgreSQL as user
+        -f    force table loading even when export files do exist
+        -0    only (re)load tables with zero-sized copy files
+        -T    Truncate the tables before COPYing recoded data
+        -I    Temporarily drop the indexes of the table while COPYing
+   pattern    ^table_name_, e.g.
+</pre>
+
+<p>The <code>-I</code> option is neat enough to create the indexes in parallel, but with no
+upper limit on the number of index creation launched. In our case it worked
+well, so I didn't have to bother.</p>
+
+<p>Take a look at the <a href="static/recode.sh">recode.sh</a> script, and don't hesitate editing it for your
+purpose. It's missing some obvious options to get useful in the large, such
+as the <code>recode</code> <em>request</em> which is currently hardcoded to <code>l1..utf8</code>. If there's
+any demand about it, I'll setup a <a href="http://github.com/dimitri">GitHub</a> project for the little script.</p>
+
+<p>We'll get back to the subject of this entry in <em>part 2</em>, dealing with how to
+recode your data in the database itself, thanks to some insane regexp based
+queries and helper functions. And thanks to a great deal of IRC based
+helping, too.</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Thu, 18 Feb 2010 11:37:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/02/18-getting-out-of-sql_ascii-part-1.html</guid>
+</item>
+
+
+<item>
+  <title>prefix 1.1.0</title>
+  <link>http://tapoueh.org/blog/2009/11/30-prefix-110.html</link>
+  <description><![CDATA[<h2>prefix 1.1.0</h2>
+<div class="date">Monday, November 30 2009, 12:10</div>
+
+
+<p class="first">So I had two <a href="http://archives.postgresql.org/pgsql-general/2009-11/msg01042.php">bug</a> <a href="http://lists.pgfoundry.org/pipermail/prefix-users/2009-November/000005.html">reports</a> about <a href="prefix.html">prefix</a> in less than a week. It means several
+things, one of them is that my code is getting used in the wild, which is
+nice. The other side of the coin is that people do find bugs in there. This
+one is about the behavior of the <code>btree opclass</code> of the type <code>prefix range</code>. We
+cheat a lot there by simply having written one, because a range does not
+have a strict ordering: is <code>[1-3]</code> before of after <code>[2-4]</code>? But when you know
+you have no overlapping intervals in your <code>prefix_range</code> column, being able to
+have it part of a <em>primary key</em> is damn useful.</p>
+
+<p>Note: in <code>8.5</code> we should have a way to express <em>contraint exclusion</em> and have
+PostgreSQL forbids overlapping entries for us. Not being there yet, you
+could write a <em>constraint trigger</em> and use the <em>GiST index</em> to have nice speed
+there, which is exactly what this <em>constraint exclusion</em> support is about.</p>
+
+<p>It turns out the code change required is pretty simple:</p>
+
+<pre class="src">
+-    <span style="color: #7f007f;">return</span> (a-&gt;first == b-&gt;first) ? (a-&gt;last - b-&gt;last) : (a-&gt;first - b-&gt;first)<span style="color: #ffff00; background-color: #ff0000; font-weight: bold;">;</span>
++    <span style="color: #b22222;">/*</span><span style="color: #b22222;">
++     * we are comparing e.g. '1' and '12' (the shorter contains the
++     * smaller), so let's pretend '12' &lt; '1' as it contains less elements.
++     </span><span style="color: #b22222;">*/</span>
++    <span style="color: #7f007f;">return</span> (alen == mlen) ? 1 : -1;
+</pre>
+
+<p>This happens in the <em>compare support function</em> (see
+<a href="http://www.postgresql.org/docs/8.4/interactive/xindex.html">Interfacing Extensions To Indexes</a>) so that means you now have to rebuild
+your <code>prefix_range</code> btree indexes, hence the version number bump.</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Mon, 30 Nov 2009 12:10:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2009/11/30-prefix-110.html</guid>
+</item>
+
+
+<item>
+  <title>PGDay.eu, Paris: it was awesome!</title>
+  <link>http://tapoueh.org/blog/2009/11/09-pgdayeu-paris-it-was-awesome.html</link>
+  <description><![CDATA[<h2>PGDay.eu, Paris: it was awesome!</h2>
+<div class="date">Monday, November 09 2009, 09:50</div>
+
+
+<p class="first">moment. Lots of <a href="http://2009.pgday.eu/_media/group_2009_1.jpg?cache=">attendees</a>, lots of quality talks (<a href="http://wiki.postgresql.org/wiki/PGDay.EU%2C_Paris_2009">slides</a> are online), good
+food, great party: all the ingredients were there!</p>
+
+<p>It also was for me the occasion to first talk about this tool I've been
+working on for months, called <a href="pgstaging.html">pg_staging</a>, which aims to empower those boring
+production backups to help maintaining <em>staging</em> environments (for your
+developers and testers).</p>
+
+<p>All in all such events keep reminding me what it means exactly when we way
+that one of the greatest things about <a href="http://www.postgresql.org/">PostgreSQL</a> is its community. If you
+don't know what I'm talking about, consider <a href="http://www.postgresql.org/community/">joining</a>!</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Mon, 09 Nov 2009 09:50:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2009/11/09-pgdayeu-paris-it-was-awesome.html</guid>
+</item>
+
+
+<item>
+  <title>prefix 1.0.0</title>
+  <link>http://tapoueh.org/blog/2009/10/06-prefix-100.html</link>
+  <description><![CDATA[<h2>prefix 1.0.0</h2>
+<div class="date">Tuesday, October 06 2009, 15:56</div>
+
+
+<p class="first">So there it is, at long last, the final <code>1.0.0</code> release of prefix! It's on its
+way into the debian repository (targetting sid, in testing in 10 days) and
+available on <a href="http://pgfoundry.org/frs/?group_id=1000352">pgfoundry</a> to.</p>
+
+<p>In order to make it clear that I intend to maintain this version, the number
+has 3 digits rather than 2... which is also what <a href="http://www.postgresql.org/support/versioning">PostgreSQL</a> users will
+expect.</p>
+
+<p>The only last minute change is that you can now use the first version of the
+two following rather than the second one:</p>
+
+<pre class="src">
+-  create index idx_prefix on prefixes using gist(prefix gist_prefix_range_ops);
++  create index idx_prefix on prefixes using gist(prefix);
+</pre>
+
+<p>For you information, I'm thinking about leaving <code>pgfoundry</code> as far as the
+source code management goes, because I'd like to be done with <code>CVS</code>. I'd still
+use the release file hosting though at least for now. It's a burden but it's
+easier for the users to find them, when they are not using plain <code>apt-get
+install</code>. That move would lead to host <a href="http://pgfoundry.org/projects/prefix/">prefix</a> and <a href="http://pgfoundry.org/projects/pgloader">pgloader</a> and the <a href="http://cvs.pgfoundry.org/cgi-bin/cvsweb.cgi/backports/">backports</a>
+over there at <a href="http://github.com/dimitri">github</a>, where my next pet project, <code>pg_staging</code>, will be hosted
+too.</p>
+
+<p>The way to see this <em>pgfoundry</em> leaving is that if everybody does the same,
+then migrating the facility to some better or more recent hosting software
+will be easier. Maybe some other parts of the system are harder than the
+sources to migrate, though. If that's the case I'll consider moving them out
+too, maybe getting listed on the <a href="http://www.postgresql.org/download/product-categories">PostgreSQL Software Catalogue</a> will prove
+enough as far as web presence goes?</p>
+
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Tue, 06 Oct 2009 15:56:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2009/10/06-prefix-100.html</guid>
+</item>
+
+
+<item>
+  <title>prefix 1.0~rc2-1</title>
+  <link>http://tapoueh.org/blog/2009/07/09-prefix-10rc2-1.html</link>
+  <description><![CDATA[<h2>prefix 1.0~rc2-1</h2>
+<div class="date">Thursday, July 09 2009, 12:48</div>
+
+
+<p class="first">I've been having problem with building both <code>postgresql-8.3-prefix</code> and
+<code>postgresql-8.4-prefix</code> debian packages from the same source package, and
+fixing the packaging issue forced me into modifying the main <code>prefix</code>
+<code>Makefile</code>. So while reaching <code>rc2</code>, I tried to think about missing pieces easy
+to add this late in the game: and there's one, that's a function
+<code>length(prefix_range)</code>, so that you don't have to cast to text no more in the
+following wildspread query:</p>
+
+<pre class="src">
+  SELECT foo, bar
+    FROM prefixes
+   WHERE prefix @&gt; <span style="color: #bc8f8f;">'012345678'</span>
+ORDER BY length(prefix) DESC
+   LIMIT 1;
+</pre>
+
+<p>And here's a simple stupid benchmark of the new function, here in
+<a href="http://prefix.projects.postgresql.org/prefix-1.0~rc2.tar.gz">prefix-1.0~rc2.tar.gz</a>. And it'll soon reach debian, if my QA dept agrees (my
+<a href="http://julien.danjou.info/blog/">sponsor</a> is a QA dept all by himself!).</p>
+
+<p>First some preparation:</p>
+
+<pre class="src">
+dim=#   create table prefixes (
+dim(#          prefix    prefix_range primary key,
+dim(#          name      text not null,
+dim(#          shortname text,
+dim(#          status    char default <span style="color: #bc8f8f;">'S'</span>,
+dim(#
+dim(#          check( status in (<span style="color: #bc8f8f;">'S'</span>, <span style="color: #bc8f8f;">'R'</span>) )
+dim(#   );
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "prefixes_pkey" for
+ table "prefixes"
+CREATE TABLE
+Time: 74,357 ms
+dim=#   \copy prefixes from <span style="color: #bc8f8f;">'prefixes.fr.csv'</span> with delimiter ; csv quote <span style="color: #bc8f8f;">'"'</span>
+Time: 200,982 ms
+dim=# select count(*) from prefixes ;
+ count
+<span style="color: #b22222;">-------
+</span> 11966
+(1 row)
+Time: 3,047 ms
+</pre>
+
+<p>And now for the micro-benchmark:</p>
+
+<pre class="src">
+dim=# \o /dev/null
+dim=# select length(prefix) from prefixes;
+Time: 16,040 ms
+dim=# select length(prefix::text) from prefixes;
+Time: 23,364 ms
+dim=# \o
+</pre>
+
+<p>Hope you enjoy!</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Thu, 09 Jul 2009 12:48:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2009/07/09-prefix-10rc2-1.html</guid>
+</item>
+
+
+<item>
+  <title>prefix extension reaches 1.0 (rc1)</title>
+  <link>http://tapoueh.org/blog/2009/06/23-prefix-extension-reaches-10-rc1.html</link>
+  <description><![CDATA[<h2>prefix extension reaches 1.0 (rc1)</h2>
+<div class="date">Tuesday, June 23 2009, 10:53</div>
+
+
+<p class="first">At long last, after millions and millions of queries just here at work and
+some more in other places, the <a href="prefix.html">prefix</a> project is reaching <code>1.0</code> milestone. The
+release candidate is getting uploaded into debian at the moment of this
+writing, and available at the following place: <a href="http://prefix.projects.postgresql.org/prefix-1.0~rc1.tar.gz">prefix-1.0~rc1.tar.gz</a>.</p>
+
+<p>If you have any use for it (as some <em>VoIP</em> companies have already), please
+consider testing it, in order for me to release a shiny <code>1.0</code> next week! :)</p>
+
+<p>Recent changes include getting rid of those square brackets output when it's
+not neccesary, fixing btree operators, adding support for more operators in
+the <code>GiST</code> support code (now supported: <code>@&gt;</code>, <code>&lt;@</code>, <code>=</code>, <code>&amp;&amp;</code>). Enjoy!</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Tue, 23 Jun 2009 10:53:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2009/06/23-prefix-extension-reaches-10-rc1.html</guid>
+</item>
+
+
+<item>
+  <title>PgCon 2009</title>
+  <link>http://tapoueh.org/blog/2009/05/27-pgcon-2009.html</link>
+  <description><![CDATA[<h2>PgCon 2009</h2>
+<div class="date">Wednesday, May 27 2009, 14:30</div>
+
+
+<p class="first">I can't really compare <a href="http://www.pgcon.org/2009/">PgCon 2009</a> with previous years versions, last time I
+enjoyed the event it was in 2006, in Toronto. But still I found the
+experience to be a great one, and I hope I'll be there next year too!</p>
+
+<p>I've met a lot of known people in the community, some of them I already had
+the chance to run into at Toronto or <a href="http://2008.pgday.org/en/">Prato</a>, but this was the first time I
+got to talk to many of them about interresting projects and ideas. That only
+was awesome already, and we also had a lot of talks to listen to: as others
+have said, it was really hard to get to choose to go to only one place out
+of three.</p>
+
+<p>I'm now back home and seems to be recovering quite fine from jet lag, and I
+even begun to move on the todo list from the conference. It includes mainly
+<code>Skytools 3</code> testing and contributions (code and documentation),
+<a href="http://wiki.postgresql.org/wiki/ExtensionPackaging">Extension Packaging</a> work (Stephen Frost seems to be willing to help, which I
+highly appreciate) begining with <a href="http://archives.postgresql.org/pgsql-hackers/2009-05/msg00912.php">search_path issues</a>, and posting some
+backtrace to help fix some <a href="http://archives.postgresql.org/pgsql-hackers/2009-05/msg00923.php">SPI_connect()</a> bug at <code>_PG_init()</code> time in an
+extension.</p>
+
+<p>The excellent <a href="http://wiki.postgresql.org/wiki/PgCon_2009_Lightning_talks">lightning talk</a> about <u>How not to Review a Patch</u> by Joshua
+Tolley took me out of the <em>dim</em>, I'll try to be <em>bright</em> enough and participate
+as a reviewer in later commit fests (well maybe not the first next ones as
+some personal events on the agenda will take all my <em>&quot;free&quot;</em> time)...</p>
+
+<p>Oh and the <a href="http://code.google.com/p/golconde/">Golconde</a> presentation gave some insights too: this queueing based
+solution is to compare to the <code>listen/notify</code> mechanisms we already have in
+<a href="http://www.postgresql.org/docs/current/static/sql-listen.html">PostgreSQL</a>, in the sense that's it's not transactional, and the events are
+kept in memory only to achieve very high distribution rates. So it's a very
+fine solution to manage a distributed caching system, for example, but not
+so much for asynchronous replication (you need not to replicate events tied
+to rollbacked transactions).</p>
+
+<p>So all in all, spending last week in Ottawa was a splendid way to get more
+involved in the PostgreSQL community, which is a very fine place to be
+spending ones free time, should you ask me. See you soon!</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Wed, 27 May 2009 14:30:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2009/05/27-pgcon-2009.html</guid>
+</item>
+
+
+<item>
+  <title>Prepared Statements and pgbouncer</title>
+  <link>http://tapoueh.org/blog/2009/05/14-prepared-statements-and-pgbouncer.html</link>
+  <description><![CDATA[<h2>Prepared Statements and pgbouncer</h2>
+<div class="date">Thursday, May 14 2009</div>
+
+
+<p class="first">On the performance mailing list, a recent <a href="http://archives.postgresql.org/pgsql-performance/2009-05/msg00026.php">thread</a> drew my attention. It
+devired to be about using a connection pool software and prepared statements
+in order to increase scalability of PostgreSQL when confronted to a lot of
+concurrent clients all doing simple <code>select</code> queries. The advantage of the
+<em>pooler</em> is to reduce the number of <em>backends</em> needed to serve the queries, thus
+reducing PostgreSQL internal bookkeeping. Of course, my choice of software
+here is clear: <a href="https://developer.skype.com/SkypeGarage/DbProjects/PgBouncer">PgBouncer</a> is an excellent top grade solution, performs real
+well (it won't parse queries), reliable, flexible.</p>
+
+<p>The problem is that while conbining <code>pgbouncer</code> and <a href="http://www.postgresql.org/docs/current/static/sql-prepare.html">prepared statements</a> is
+possible, it requires the application to check at connection time if the
+statements it's interrested in are already prepared. This can be done by a
+simple catalog query of this kind:</p>
+
+<pre class="src">
+  SELECT name
+    FROM pg_prepared_statements
+   WHERE name IN (<span style="color: #bc8f8f;">'my'</span>, <span style="color: #bc8f8f;">'prepared'</span>, <span style="color: #bc8f8f;">'statements'</span>);
+</pre>
+
+<p>Well, this is simple but requires to add some application logic. What would
+be great would be to only have to <code>EXECUTE my_statement(x, y, z)</code> and never
+bother if the <code>backend</code> connection is a fresh new one or an existing one, as
+to avoid having to check if the application should <code>prepare</code>.</p>
+
+<p>The <a href="http://preprepare.projects.postgresql.org/">preprepare</a> pgfoundry project is all about this: it comes with a
+<code>prepare_all()</code> function which will take all statements present in a given
+table (<code>SET preprepare.relation TO 'schema.the_table';</code>) and prepare them for
+you. If you now tell <code>pgbouncer</code> to please call the function at <code>backend</code>
+creation time, you're done (see <code>connect_query</code>).</p>
+
+<p>There's even a detailed <a href="http://preprepare.projects.postgresql.org/README.html">README</a> file, but no release yet (check out the code
+in the <a href="http://cvs.pgfoundry.org/cgi-bin/cvsweb.cgi/preprepare/preprepare/">CVS</a>, <code>pgfoundry</code> project page has <a href="http://pgfoundry.org/scm/?group_id=1000442">clear instruction</a> about how to do so.</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Thu, 14 May 2009 00:00:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2009/05/14-prepared-statements-and-pgbouncer.html</guid>
+</item>
+
+
+<item>
+  <title>Skytools 3.0 reaches alpha1</title>
+  <link>http://tapoueh.org/blog/2009/04/14-skytools-30-reaches-alpha1.html</link>
+  <description><![CDATA[<h2>Skytools 3.0 reaches alpha1</h2>
+<div class="date">Tuesday, April 14 2009</div>
+
+
+<p class="first">It's time for <a href="http://wiki.postgresql.org/wiki/Skytools">Skytools</a> news again! First, we did improve documentation of
+current stable branch with hosting high level presentations and <a href="http://wiki.postgresql.org/wiki/Londiste_Tutorial">tutorials</a> on
+the <a href="http://wiki.postgresql.org/">PostgreSQL wiki</a>. Do check out the <a href="http://wiki.postgresql.org/wiki/Londiste_Tutorial">Londiste Tutorial</a>, it seems that's
+what people hesitating to try out londiste were missing the most.</p>
+
+<p>The other things people miss out a lot in current stable Skytools (version
+<code>2.1.9</code> currently) are cascading replication (which allows for <em>switchover</em> and
+<em>failover</em>) and <code>DDL</code> support. The new incarnation of skytools, version <code>3.0</code>
+<a href="http://lists.pgfoundry.org/pipermail/skytools-users/2009-April/001029.html">reaches alpha1</a> today. It comes with full support for <em>cascading</em> and <em>DDL</em>, so
+you might want to give it a try.</p>
+
+<p>It's a rough release, documentation is still to get written for a large part
+of it, and bugs are still to get fixed. But it's all in the Skytools spirit:
+simple and efficient concepts, easy to use and maintain. Think about this
+release as a <em>developer preview</em> and join us :)</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Tue, 14 Apr 2009 00:00:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2009/04/14-skytools-30-reaches-alpha1.html</guid>
+</item>
+
+
+<item>
+  <title>Prefix GiST index now in 8.1</title>
+  <link>http://tapoueh.org/blog/2009/02/10-prefix-gist-index-now-in-81.html</link>
+  <description><![CDATA[<h2>Prefix GiST index now in 8.1</h2>
+<div class="date">Tuesday, February 10 2009</div>
+
+
+<p class="first">The <a href="http://blog.tapoueh.org/prefix.html">prefix</a> project is about matching a <em>literal</em> against <em>prefixes</em> in your
+table, the typical example being a telecom routing table. Thanks to the
+excellent work around <em>generic</em> indexes in PostgreSQL with <a href="http://www.postgresql.org/docs/current/static/gist-intro.html">GiST</a>, indexing
+prefix matches is easy to support in an external module. Which is what
+the <a href="http://prefix.projects.postgresql.org/">prefix</a> extension is all about.</p>
+
+<p>Maybe you didn't come across this project before, so here's the typical
+query you want to run to benefit from the special indexing, where the <code>@&gt;</code>
+operator is read <em>contains</em> or <em>is a prefix of</em>:</p>
+
+<pre class="src">
+  SELECT * FROM prefixes WHERE prefix @&gt; <span style="color: #bc8f8f;">'0123456789'</span>;
+</pre>
+
+<p>Now, a user asked about an <code>8.1</code> version of the module, as it's what some
+distributions ship (here, Red Hat Enterprise Linux 5.2). It turned out it
+was easy to support <code>8.1</code> when you already support <code>8.2</code>, so the <code>CVS</code> now hosts
+<a href="http://cvs.pgfoundry.org/cgi-bin/cvsweb.cgi/prefix/prefix/">8.1 support code</a>. And here's what the user asking about the feature has to
+say:</p>
+
+<blockquote>
+<p class="quoted">
+It's works like a charm now with 3ms queries over 200,000+ rows.  The speed
+also stays less than 4ms when doing complex queries designed for fallback,
+priority shuffling, and having multiple carriers.</p>
+
+</blockquote>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Tue, 10 Feb 2009 00:00:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2009/02/10-prefix-gist-index-now-in-81.html</guid>
+</item>
+
+
+<item>
+  <title>Importing XML content from file</title>
+  <link>http://tapoueh.org/blog/2009/02/05-importing-xml-content-from-file.html</link>
+  <description><![CDATA[<h2>Importing XML content from file</h2>
+<div class="date">Thursday, February 05 2009</div>
+
+
+<p class="first">The problem was raised this week on <a href="http://www.postgresql.org/community/irc">IRC</a> and this time again I felt it would
+be a good occasion for a blog entry: how to load an <code>XML</code> file content into a
+single field?</p>
+
+<p>The usual tool used to import files is <a href="http://www.postgresql.org/docs/current/interactive/sql-copy.html">COPY</a>, but it'll want each line of the
+file to host a text representation of a database tuple, so it doesn't apply
+to the case at hand. <a href="http://blog.rhodiumtoad.org.uk/">RhodiumToad</a> was online and offered the following code
+to solve the problem:</p>
+
+<pre class="src">
+create or replace function xml_import(filename text)
+  returns xml
+  volatile
+  language plpgsql as
+$f$
+    declare
+        content bytea;
+        loid oid;
+        lfd integer;
+        lsize integer;
+    begin
+        loid := lo_import(filename);
+        lfd := lo_open(loid,262144);
+        lsize := lo_lseek(lfd,0,2);
+        perform lo_lseek(lfd,0,0);
+        content := loread(lfd,lsize);
+        perform lo_close(lfd);
+        perform lo_unlink(loid);
+
+        return xmlparse(document convert_from(content,<span style="color: #bc8f8f;">'UTF8'</span>));
+    end;
+$f$;
+</pre>
+
+<p>As you can see, the trick here is to use the <a href="http://www.postgresql.org/docs/current/interactive/largeobjects.html">large objects</a> API to load the
+file content into memory (<code>content</code> variable), then to parse it knowing it's
+an <code>UTF8</code> encoded <code>XML</code> file and return an <a href="http://www.postgresql.org/docs/current/interactive/datatype-xml.html">XML</a> datatype object.</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Thu, 05 Feb 2009 00:00:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2009/02/05-importing-xml-content-from-file.html</guid>
+</item>
+
+
+<item>
+  <title>Asko Oja talks about Skype architecture</title>
+  <link>http://tapoueh.org/blog/2009/02/04-asko-oja-talks-about-skype-architecture.html</link>
+  <description><![CDATA[<h2>Asko Oja talks about Skype architecture</h2>
+<div class="date">Wednesday, February 04 2009</div>
+
+
+<p class="first">In this <a href="http://postgresqlrussia.org/articles/view/131">russian page</a> you'll see a nice presentation of Skype databases
+architectures by Asko Oja himself. It's the talk at Russian PostgreSQL
+Community meeting, October 2008, Moscow, and it's a good read.</p>
+
+<center>
+<p><a class="image-link" href="http://postgresqlrussia.org/articles/view/131">
+<img src="../images/Moskva_DB_Tools.v3.png"></a></p>
+</center>
+
+<p>The presentation page is in russian but the slides are in English, so have a
+nice read!</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Wed, 04 Feb 2009 00:00:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2009/02/04-asko-oja-talks-about-skype-architecture.html</guid>
+</item>
+
+
+<item>
+  <title>Comparing Londiste and Slony</title>
+  <link>http://tapoueh.org/blog/2009/01/31-comparing-londiste-and-slony.html</link>
+  <description><![CDATA[<h2>Comparing Londiste and Slony</h2>
+<div class="date">Saturday, January 31 2009</div>
+
+
+<p class="first">In the page about <a href="skytools.html">Skytools</a> I've encouraged people to ask some more questions
+in order for me to be able to try and answer them. That just happened, as
+usual on the <code>#postgresql</code> IRC, and the question is
+<a href="skytools.html#slony">What does londiste lack that slony has?</a></p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Sat, 31 Jan 2009 00:00:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2009/01/31-comparing-londiste-and-slony.html</guid>
+</item>
+
+
+<item>
+  <title>Controling HOT usage in 8.3</title>
+  <link>http://tapoueh.org/blog/2009/01/28-controling-hot-usage-in-83.html</link>
+  <description><![CDATA[<h2>Controling HOT usage in 8.3</h2>
+<div class="date">Wednesday, January 28 2009</div>
+
+
+<p class="first">As it happens, I've got some environments where I want to make sure <code>HOT</code> (<em>aka
+Heap Only Tuples</em>) is in use. Because we're doing so much updates a second
+that I want to get sure it's not killing my database server. I not only
+wrote some checking view to see about it, but also made a <a href="http://www.postgresql.fr/support:trucs_et_astuces:controler_l_utilisation_de_hot_a_partir_de_la_8.3">quick article</a>
+about it in the <a href="http://postgresql.fr/">French PostgreSQL website</a>. Handling around in <code>#postgresql</code>
+means that I'm now bound to write about it in English too!</p>
+
+<p>So <code>HOT</code> will get used each time you update a row without changing an indexed
+value of it, and the benefit is skipping index maintenance, and as far as I
+understand it, easying <code>vacuum</code> hard work too. To get the benefit, <code>HOT</code> will
+need some place where to put new version of the <code>UPDATEd</code> tuple in the same
+disk page, which means you'll probably want to set your table <a href="http://www.postgresql.org/docs/8.3/static/sql-createtable.html#SQL-CREATETABLE-STORAGE-PARAMETERS">fillfactor</a> to
+something much less than <code>100</code>.</p>
+
+<p>Now, here's how to check you're benefitting from <code>HOT</code>:</p>
+
+<pre class="src">
+SELECT schemaname, relname,
+       n_tup_upd,n_tup_hot_upd,
+       case when n_tup_upd &gt; 0
+            then ((n_tup_hot_upd::numeric/n_tup_upd::numeric)*100.0)::numeric(5,2)
+            else NULL
+       end AS hot_ratio
+
+ FROM pg_stat_all_tables;
+
+ schemaname | relname | n_tup_upd | n_tup_hot_upd | hot_ratio
+<span style="color: #b22222;">------------+---------+-----------+---------------+-----------
+</span> public     | table1  |         6 |             6 |    100.00
+ public     | table2  |   2551200 |       2549474 |     99.93
+</pre>
+
+<p>Here's even an extended version of the same request, displaying the
+<code>fillfactor</code> option value for the tables you're inquiring about. This comes
+separated from the first example because you get the <code>fillfactor</code> of a
+relation into the <code>pg_class</code> catalog <code>reloptions</code> field, and to filter against a
+schema qualified table name, you want to join against <code>pg_namespace</code> too.</p>
+
+<pre class="src">
+SELECT t.schemaname, t.relname, c.reloptions,
+       t.n_tup_upd, t.n_tup_hot_upd,
+       case when n_tup_upd &gt; 0
+            then ((n_tup_hot_upd::numeric/n_tup_upd::numeric)*100.0)::numeric(5,2)
+            else NULL
+        end AS hot_ratio
+FROM pg_stat_all_tables t
+      JOIN (pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid)
+        ON n.nspname = t.schemaname AND c.relname = t.relname
+
+ schemaname | relname |   reloptions    | n_tup_upd | n_tup_hot_upd | hot_ratio
+<span style="color: #b22222;">------------+---------+-----------------+-----------+---------------+-----------
+</span> public     | table1  | {fillfactor=50} |   1585920 |       1585246 |     99.96
+ public     | table2  | {fillfactor=50} |   2504880 |       2503154 |     99.93
+</pre>
+
+<p>Don't let the <code>HOT</code> question affect your sleeping no more!</p>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Wed, 28 Jan 2009 00:00:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2009/01/28-controling-hot-usage-in-83.html</guid>
+</item>
+
+
+<item>
+  <title>Fake entry</title>
+  <link>http://tapoueh.org/blog/2008/12/04-fake-entry.html</link>
+  <description><![CDATA[<h2>Fake entry</h2>
+<div class="date">Thursday, December 04 2008</div>
+
+
+<p class="first">This is a test of a fake entry to see how muse will manage this.</p>
+
+<p>With some <code>SQL</code> inside:</p>
+
+<blockquote>
+<p class="quoted"></p>
+
+<pre class="src">
+SELECT * FROM planet.postgresql.org WHERE author = "dim";
+
+</pre></p>
+
+</blockquote>
+
+
+
+]]</description>
+  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <pubDate>Thu, 04 Dec 2008 00:00:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2008/12/04-fake-entry.html</guid>
+</item>
+
+
+  </channel>
+</rss>
