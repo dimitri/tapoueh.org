@@ -495,7 +495,7 @@ in fact, from the current buffer."
       (insert "<item>\n"
 	      (format "  <title>%s</title>\n" title)
 	      (format "  <link>%s</link>\n" link)
-	      (format "  <description><![CDATA[%s\n]]</description>\n" desc)
+	      (format "  <description><![CDATA[%s\n]]></description>\n" desc)
 	      (format "  <author>%s</author>\n" author)
 	      (format "  <pubDate>%s</pubDate>\n" pubdate)
 	      (format "  <guid isPermaLink=\"true\">%s</guid>\n" link)
