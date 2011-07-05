@@ -495,7 +495,8 @@ in fact, from the current buffer."
       (while (time-less-p date (tapoueh-goto-next-rss-item)))
       (open-line 2)
       (insert "<item>\n"
-	      (format "  <title>%s</title>\n" title)
+	      (format "  <title>%s</title>\n"
+		      (replace-regexp-in-string "&" "&amp;" title))
 	      (format "  <link>%s</link>\n" link)
 	      (format "  <description><![CDATA[%s\n]]></description>\n" desc)
 	      (format "  <author>%s</author>\n" author)
