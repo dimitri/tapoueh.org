@@ -2937,6 +2937,63 @@ or the <code>filename</code> if you skipped setting up a <em>section</em> for it
 </item>
 
 
+
+
+<item>
+  <title>Finding orphaned sequences</title>
+  <link>http://tapoueh.org/blog/2010/03/17-finding-orphaned-sequences.html</link>
+  <description><![CDATA[
+<h2>Finding orphaned sequences</h2>
+<div class="date">Wednesday, March 17 2010, 13:35</div>
+
+
+<p class="first">This time we're having a database where <em>sequences</em> were used, but not
+systematically as a <em>default value</em> of a given column. It's mainly an historic
+bad idea, but you know the usual excuse with bad ideas and bad code: the
+first 6 months it's experimental, after that it's historic.</p>
+
+<p>Still, here's a query for <code>8.4</code> that will allow you to list those <em>sequences</em>
+you have that are not used as a default value in any of your tables:</p>
+
+<pre class="src">
+WITH seqs AS (
+  SELECT n.nspname, relname as seqname
+    FROM pg_class c
+         JOIN pg_namespace n on n.oid = c.relnamespace
+   WHERE relkind = <span style="color: #ad7fa8; font-style: italic;">'S'</span>
+),
+     attached_seqs AS (
+  SELECT n.nspname,
+         c.relname as tablename,
+         (regexp_matches(pg_get_expr(d.adbin, d.adrelid),
+                         <span style="color: #ad7fa8; font-style: italic;">'''([^'']+)'''</span>))[1] as seqname
+    FROM pg_class c
+         JOIN pg_namespace n on n.oid = c.relnamespace
+         JOIN pg_attribute a on a.attrelid = c.oid
+         JOIN pg_attrdef d on d.adrelid = a.attrelid
+                            and d.adnum = a.attnum
+                            and a.atthasdef
+  WHERE relkind = <span style="color: #ad7fa8; font-style: italic;">'r'</span> and a.attnum &gt; 0
+        and pg_get_expr(d.adbin, d.adrelid) ~ <span style="color: #ad7fa8; font-style: italic;">'^nextval'</span>
+)
+
+ SELECT nspname, seqname, tablename
+   FROM seqs s
+        LEFT JOIN attached_seqs a USING(nspname, seqname)
+  WHERE a.tablename IS NULL;
+</pre>
+
+<p>I hope you don't need the query...</p>
+
+
+
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Wed, 17 Mar 2010 13:35:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/03/17-finding-orphaned-sequences.html</guid>
+</item>
+
+
 <item>
   <title>Getting out of SQL_ASCII, part 2</title>
   <link>http://tapoueh.org/blog/2010/02/23-getting-out-of-sql_ascii-part-2.html</link>
@@ -3232,6 +3289,83 @@ helping, too.</p>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 18 Feb 2010 11:37:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/02/18-getting-out-of-sql_ascii-part-1.html</guid>
+</item>
+
+
+<item>
+  <title>Resetting sequences. All of them, please!</title>
+  <link>http://tapoueh.org/blog/2010/02/16-resetting-sequences-all-of-them-please.html</link>
+  <description><![CDATA[
+<h2>Resetting sequences. All of them, please!</h2>
+<div class="date">Tuesday, February 16 2010, 16:23</div>
+
+
+<p class="first">So, after restoring a production dump with intermediate filtering, none of
+our sequences were set to the right value. I could have tried to review the
+process of filtering the dump here, but it's a <em>one-shot</em> action and you know
+what that sometimes mean. With some pressure you don't script enough of it
+and you just crawl more and more.</p>
+
+<p>Still, I think how I solved it is worthy of a blog entry. Not that it's
+about a super unusual <em>clever</em> trick, quite the contrary, because questions
+involving this trick are often encountered on the support <code>IRC</code>.</p>
+
+<p>The idea is to query the catalog for all sequences, and produce from there
+the <code>SQL</code> command you will have to issue for each of them. Once you have this
+query, it's quite easy to arrange from the <code>psql</code> prompt as if you had dynamic
+scripting capabilities. Of course in <code>9.0</code> you will have <em>inline anonymous</em> <code>DO</code>
+blocks.</p>
+
+<pre class="src">
+#&gt; \o /tmp/sequences.sql
+#&gt; \t
+Showing only tuples.
+#&gt; YOUR QUERY HERE
+#&gt; \o
+#&gt; \t
+Tuples only is off.
+</pre>
+
+<p>Once you have the <code>/tmp/sequences.sql</code> file, you can ask <code>psql</code> to execute its
+command as you're used to, that's using <code>\i</code> in an explicit transaction block.</p>
+
+<p>Now, the interresting part if you got here attracted by the blog entry title
+is in fact the query itself. A nice way to start is to <code>\set ECHO_HIDDEN</code> then
+describe some table, you now have a catalog example query to work with. Then
+you tweak it somehow and get this:</p>
+
+<pre class="src">
+  SELECT <span style="color: #ad7fa8; font-style: italic;">'select '</span>
+          || trim(trailing <span style="color: #ad7fa8; font-style: italic;">')'</span>
+             from replace(pg_get_expr(d.adbin, d.adrelid),
+                          <span style="color: #ad7fa8; font-style: italic;">'nextval'</span>, <span style="color: #ad7fa8; font-style: italic;">'setval'</span>))
+          || <span style="color: #ad7fa8; font-style: italic;">', (select max( '</span> || a.attname || <span style="color: #ad7fa8; font-style: italic;">') from only '</span>
+          || nspname || <span style="color: #ad7fa8; font-style: italic;">'.'</span> || relname || <span style="color: #ad7fa8; font-style: italic;">'));'</span>
+    FROM pg_class c
+         JOIN pg_namespace n on n.oid = c.relnamespace
+         JOIN pg_attribute a on a.attrelid = c.oid
+         JOIN pg_attrdef d on d.adrelid = a.attrelid
+                            and d.adnum = a.attnum
+                            and a.atthasdef
+  WHERE relkind = <span style="color: #ad7fa8; font-style: italic;">'r'</span> and a.attnum &gt; 0
+        and pg_get_expr(d.adbin, d.adrelid) ~ <span style="color: #ad7fa8; font-style: italic;">'^nextval'</span>;
+</pre>
+
+<p>Coming next, a <code>recode</code> based script in order to get from <code>SQL_ASCII</code> to <code>UTF-8</code>,
+and some strange looking queries too.</p>
+
+<pre class="src">
+recode.sh [-npdf0TI] [-U user ] -s schema [-m mintable] pattern
+</pre>
+
+<p>Stay tuned!</p>
+
+
+
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Tue, 16 Feb 2010 16:23:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/02/16-resetting-sequences-all-of-them-please.html</guid>
 </item>
 
 
