@@ -495,7 +495,7 @@ in fact, from the current buffer."
       ;; now add the link entry
       (beginning-of-buffer)
       (while (time-less-p date (tapoueh-goto-next-rss-item)))
-      (open-line 2)
+      ;; (open-line 2)
       (insert "<item>\n"
 	      (format "  <title>%s</title>\n"
 		      (replace-regexp-in-string "&" "&amp;" title))
