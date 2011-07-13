@@ -525,6 +525,28 @@ file to be the relevant information."
 		(concat root "/" rss) source output link)))))
 
 ;;;
+;;; Facilities
+;;;
+(defun tapoueh-insert-muse-headers ()
+  "insert headers in a new Muse file"
+  (interactive)
+  (let* ((project (muse-project-of-file (muse-current-file)))
+	 (pname   (car project)))
+    (when (string= pname "tapoueh.org")
+	(beginning-of-buffer)
+	(unless (looking-at "#")
+	  (let ((title (read-string "Article Title: ")))
+	    (insert "#author Dimitri Fontaine\n"
+		    (format "#title  %s\n" title)
+		    (format "#date   %s\n" (format-time-string "%Y%m%d-%R"))
+		    "#tags   \n"
+		    "\n"
+		    (format "* %s\n" title)
+		    "\n"))))))
+
+(add-hook 'muse-mode-hook 'tapoueh-insert-muse-headers)
+
+;;;
 ;;; C-c C-r to rsync the static website to the hosting server
 ;;;
 (defvar dim:muse-rsync-options "-avz"
