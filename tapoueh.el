@@ -347,7 +347,9 @@ Returns a list of (SOURCE LINK TITLE DATE FORMATED-DATE (TAG TAG))"
 (defun tapoueh-list-blog-articles (&optional subdirs-only no-index root)
   "Run through all subdirs from current page and list pages"
   (loop for (src link title date fdate tags) in (tapoueh-walk-articles root subdirs-only)
-	unless (and no-index (string= (file-name-nondirectory src) "index.muse"))
+	unless (or (string-match ".git" src)
+		   (and no-index
+			(string= (file-name-nondirectory src) "index.muse")))
 	do (tapoueh-insert-article-link-li src link title date fdate tags)))
 
 ;;;
