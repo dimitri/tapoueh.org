@@ -17,13 +17,68 @@
 
 
 <item>
+  <title>Elisp Breadcrumbs</title>
+  <link>http://tapoueh.org/blog/2011/07/14-elisp-breadcrumbs.html</link>
+  <description><![CDATA[<p class="first">A <a href="http://en.wikipedia.org/wiki/Breadcrumb_(navigation)">breadcrumb</a> is a navigation aid.  I just added one to this website, so that
+it gets easier to browse from any article to its local and parents indexes
+and back to <a href="../../../index.html">/dev/dim</a>, the root webpage of this site.</p>
+
+<p>As it was not that much work to implement, here's the whole of it:</p>
+
+<pre class="src">
+<span style="color: #b22222;">;;;</span><span style="color: #b22222;">
+</span><span style="color: #b22222;">;;; </span><span style="color: #b22222;">Breadcrumb support
+</span><span style="color: #b22222;">;;;</span><span style="color: #b22222;">
+</span>(<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">tapoueh-breadcrumb-to-current-page</span> ()
+  <span style="color: #bc8f8f;">"Return a list of (name . link) from the index root page to current one"</span>
+  (<span style="color: #7f007f;">let*</span> ((current (muse-current-file))
+         (cwd     (file-name-directory current))
+         (project (muse-project-of-file current))
+         (root    (muse-style-element <span style="color: #da70d6;">:path</span> (caddr project)))
+         (path    (tapoueh-path-to-root))
+         (dirs    (split-string (file-relative-name current root) <span style="color: #bc8f8f;">"/"</span>)))
+    <span style="color: #b22222;">;; </span><span style="color: #b22222;">("blog" "2011" "07" "13-back-from-char11.muse")
+</span>    (append
+     (list (cons <span style="color: #bc8f8f;">"/dev/dim"</span> (concat path <span style="color: #bc8f8f;">"index.html"</span>)))
+     (<span style="color: #7f007f;">loop</span> for p in (butlast dirs)
+           collect (cons p (format <span style="color: #bc8f8f;">"%s%s/index.html"</span> path p))
+           do (setq path (concat path p <span style="color: #bc8f8f;">"/"</span>))))))
+
+(<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">tapoueh-insert-breadcrumb-div</span> ()
+  <span style="color: #bc8f8f;">"The real HTML inserting"</span>
+  (insert <span style="color: #bc8f8f;">"&lt;div id=\"breadcrumb\"&gt;"</span>)
+  (<span style="color: #7f007f;">loop</span> for (name . link) in (tapoueh-breadcrumb-to-current-page)
+        do (insert (format <span style="color: #bc8f8f;">"&lt;a href=%s&gt;%s&lt;/a&gt;"</span> link name) <span style="color: #bc8f8f;">" / "</span>))
+  (insert <span style="color: #bc8f8f;">"&lt;/div&gt;\n"</span>))
+
+(<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">tapoueh-insert-breadcrumb</span> ()
+  <span style="color: #bc8f8f;">"Must run with current buffer being a muse article"</span>
+  (<span style="color: #7f007f;">save-excursion</span>
+    (beginning-of-buffer)
+    (<span style="color: #7f007f;">when</span> (tapoueh-extract-directive <span style="color: #bc8f8f;">"author"</span> (muse-current-file))
+      (re-search-forward <span style="color: #bc8f8f;">"&lt;body&gt;"</span> nil t) <span style="color: #b22222;">; </span><span style="color: #b22222;">find where the article content is
+</span>      (re-search-forward <span style="color: #bc8f8f;">"&lt;h2&gt;"</span> nil t)   <span style="color: #b22222;">; </span><span style="color: #b22222;">that's the title line
+</span>      (beginning-of-line)
+      (open-line 1)
+      (tapoueh-insert-breadcrumb-div)
+
+      (re-search-forward <span style="color: #bc8f8f;">"&lt;h2&gt;"</span> nil t 2) <span style="color: #b22222;">; </span><span style="color: #b22222;">that's the TAG line
+</span>      (beginning-of-line)
+      (open-line 1)
+      (tapoueh-insert-breadcrumb-div))))
+</pre>
+
+<p>This code is now called in the <code>:after</code> function of my <a href="http://www.emacswiki.org/emacs/EmacsMuse">Muse</a> project style, and
+it gets the work done.</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Thu, 14 Jul 2011 18:44:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2011/07/14-elisp-breadcrumbs.html</guid>
+</item>
+<item>
   <title>Muse setup revised</title>
   <link>http://tapoueh.org/blog/2011/07/05-muse-setup-revised.html</link>
-  <description><![CDATA[<h2>Muse setup revised</h2>
-<div class="date">Tuesday, July 05 2011, 19:55</div>
-
-
-<p class="first">Most of you are probably reading my posts directly in their <code>RSS</code> reader tools
+  <description><![CDATA[<p class="first">Most of you are probably reading my posts directly in their <code>RSS</code> reader tools
 (mine is <a href="http://www.gnus.org/">gnus</a> thanks to the <a href="http://gwene.org/">Gwene</a> service), so you probably missed it, but I
 just <em>pushed</em> a whole new version of <a href="http://tapoueh.org">my website</a>, still using <a href="https://github.com/alexott/muse">Emacs Muse</a> as the
 engine.</p>
@@ -61,24 +116,40 @@ document.location.href=document.getElementById(anchor).href;
 debugging to do.  That's the price to pay for doing it yourself I guess.
 But I still don't know of a ready to use solution (as in <em>off the shelf</em>) that
 meet my criteria for web publishing.  More on that topic another time.</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Tue, 05 Jul 2011 19:55:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2011/07/05-muse-setup-revised.html</guid>
+</item>
+<item>
+  <title><span style="font-size: 140%; font-weight: bold;"> Muse setup revised</span></title>
+  <link>http://tapoueh.org/rss/index.xml.html</link>
+  <description><![CDATA[div id="breadcrumb"><a href=../index.html>/dev/dim</a> / <a href=../rss/index.html>rss</a> / </div>
+<div id="breadcrumb"><a href=../index.html>/dev/dim</a> / <a href=../rss/index.html>rss</a> / </div>
+
+
+<h2>Tags</h2>
+<div class="date">Tuesday, July 05 2011, 19:55</div>
 
 
 
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 05 Jul 2011 19:55:00 +0200</pubDate>
-  <guid isPermaLink="true">http://tapoueh.org/blog/2011/07/05-muse-setup-revised.html</guid>
+  <guid isPermaLink="true">http://tapoueh.org/rss/index.xml.html</guid>
 </item>
+
+
+
+
+
+
 
 
 <item>
   <title>Don't be afraid of 'cl</title>
   <link>http://tapoueh.org/blog/2011/06/20-dont-be-afraid-of-cl.html</link>
-  <description><![CDATA[<h2>Don't be afraid of 'cl</h2>
-<div class="date">Monday, June 20 2011, 00:15</div>
-
-
-<p class="first">In this <a href="http://tsengf.blogspot.com/2011/06/confirm-to-quit-when-editing-files-from.html">blog article</a>, you're shown a quite long function that loop through
+  <description><![CDATA[<p class="first">In this <a href="http://tsengf.blogspot.com/2011/06/confirm-to-quit-when-editing-files-from.html">blog article</a>, you're shown a quite long function that loop through
 your buffers to find out if any of them is associated with a file whose full
 name includes <code>&quot;projects&quot;</code>.  Well, you should not be afraid of using <code>cl</code>:</p>
 
@@ -92,24 +163,33 @@ name includes <code>&quot;projects&quot;</code>.  Well, you should not be afraid
 <p>If you want to collect the list of buffers whose name matches your test,
 then replace <code>return t</code> by <code>collect b</code> and you're done.  Really, this <code>loop</code> thing
 is worth learning.</p>
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 20 Jun 2011 00:15:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2011/06/20-dont-be-afraid-of-cl.html</guid>
 </item>
 
 
+
+
+<item>
+  <title>el-get 2.2</title>
+  <link>http://tapoueh.org/blog/2011/05/26-el-get-22.html</link>
+  <description><![CDATA[<p class="first">We've spotted a little too late for our own taste a discrepancy in the
+source tree: a work in progress patch landed in git just before to release
+<a href="https://github.com/dimitri/el-get">el-get</a> stable.  So we cleaned the tree (thanks again <a href="http://julien.danjou.info/">Julien</a>), branched a
+stable maintenance tree, and released <code>2.2</code> from there.</p>
+
+<p>You're back to enjoying <code>el-get</code> :)</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Thu, 26 May 2011 12:00:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2011/05/26-el-get-22.html</guid>
+</item>
 <item>
   <title>el-get 2.1</title>
   <link>http://tapoueh.org/blog/2011/05/26-el-get-21.html</link>
-  <description><![CDATA[<h2>el-get 2.1</h2>
-<div class="date">Thursday, May 26 2011, 10:00</div>
-
-
-<p class="first">Current <a href="https://github.com/dimitri/el-get">el-get</a> status is stable, ready for daily use and packed with extra
+  <description><![CDATA[<p class="first">Current <a href="https://github.com/dimitri/el-get">el-get</a> status is stable, ready for daily use and packed with extra
 features that make life easier.  There are some more things we could do, as
 always, but they will be about smoothing things further.</p>
 
@@ -131,26 +211,15 @@ release.</p>
 
 <p>Please note that this versioning policy has been picked while backing
 <code>1.2~dev</code>, so <code>1.0</code> was a <em>stable</em> release in fact.  Ah, history.</p>
-
-
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 26 May 2011 10:00:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2011/05/26-el-get-21.html</guid>
 </item>
-
-
 <item>
   <title>Mailq modeline display</title>
   <link>http://tapoueh.org/blog/2011/05/05-mailq-modeline-display.html</link>
-  <description><![CDATA[<h2>Mailq modeline display</h2>
-<div class="date">Thursday, May 05 2011, 14:10</div>
-
-
-<p class="first">If you've not been following along, you might have missed it: it appears to
+  <description><![CDATA[<p class="first">If you've not been following along, you might have missed it: it appears to
 me that even today, in 2011, mail systems work much better when setup the
 old way.  Meaning with a local <a href="http://en.wikipedia.org/wiki/Mail_Transfer_Agent">MTA</a> for outgoing mail.  With some niceties,
 such as <a href="http://tapoueh.org/articles/news/_Postfix_sender_dependent_relayhost_maps.html">sender dependent relayhost maps</a>.</p>
@@ -186,11 +255,8 @@ and here's as an example how I did setup <code>mailq</code> in my <a href="https
 <p>I'm not sure how many of you dear readers are using a local MTA to deliver
 your mails, but well, the ones who do (or consider doing so) might even find
 this article useful!</p>
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 05 May 2011 14:10:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2011/05/05-mailq-modeline-display.html</guid>
 </item>
@@ -199,11 +265,7 @@ this article useful!</p>
 <item>
   <title>Emacs and PostgreSQL, PL line numbering</title>
   <link>http://tapoueh.org/blog/2011/04/23-emacs-and-postgresql-pl-line-numbering.html</link>
-  <description><![CDATA[<h2>Emacs and PostgreSQL, PL line numbering</h2>
-<div class="date">Saturday, April 23 2011, 10:30</div>
-
-
-<p class="first">A while ago I've been fixing and publishing <a href="https://github.com/dimitri/pgsql-linum-format">pgsql-linum-format</a> separately.
+  <description><![CDATA[<p class="first">A while ago I've been fixing and publishing <a href="https://github.com/dimitri/pgsql-linum-format">pgsql-linum-format</a> separately.
 That allows to number <code>PL/whatever</code> code lines when editing from <a href="http://www.gnu.org/software/emacs/">Emacs</a>, and
 it's something very useful to turn on when debugging.</p>
 
@@ -218,25 +280,15 @@ just overloading the image somehow.  But the idea is to just <code>M-x linum-mod
 when you need it, at least that's my usage of it.</p>
 
 <p>You can use <a href="https://github.com/dimitri/el-get">el-get</a> to easily get (then update) this little <code>Emacs</code> extension.</p>
-
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Sat, 23 Apr 2011 10:30:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2011/04/23-emacs-and-postgresql-pl-line-numbering.html</guid>
 </item>
-
-
 <item>
   <title>Emacs Kicker</title>
   <link>http://tapoueh.org/blog/2011/04/15-emacs-kicker.html</link>
-  <description><![CDATA[<h2>Emacs Kicker</h2>
-<div class="date">Friday, April 15 2011, 21:30</div>
-
-
-<p class="first">Following up on the very popular <a href="https://github.com/technomancy/emacs-starter-kit">emacs-starter-kit</a>, I'm now proposing the
+  <description><![CDATA[<p class="first">Following up on the very popular <a href="https://github.com/technomancy/emacs-starter-kit">emacs-starter-kit</a>, I'm now proposing the
 <a href="https://github.com/dimitri/emacs-kicker">emacs-kicker</a>.  It's about the <code>.emacs</code> file you've seen in older posts here,
 which I maintain for some colleagues.  After all, if they find it useful,
 some more people might to, so I've decided to publish it.</p>
@@ -305,24 +357,50 @@ example that could be, using the excellent <a href="http://emacsformacosx.com/">
 </pre>
 
 <p>I hope some readers will find it useful! :)</p>
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Fri, 15 Apr 2011 21:30:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2011/04/15-emacs-kicker.html</guid>
 </item>
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 <item>
   <title>desktop-mode and readahead</title>
   <link>http://tapoueh.org/blog/2011/02/23-desktop-mode-and-readahead.html</link>
-  <description><![CDATA[<h2>desktop-mode and readahead</h2>
-<div class="date">Wednesday, February 23 2011, 16:45</div>
-
-
-<p class="first">I'm using <a href="http://www.gnu.org/software/emacs/manual/html_node/elisp/Desktop-Save-Mode.html#Desktop-Save-Mode">Desktop Save Mode</a> so that <a href="http://www.gnu.org/software/emacs/">Emacs</a> knows to open again all the
+  <description><![CDATA[<p class="first">I'm using <a href="http://www.gnu.org/software/emacs/manual/html_node/elisp/Desktop-Save-Mode.html#Desktop-Save-Mode">Desktop Save Mode</a> so that <a href="http://www.gnu.org/software/emacs/">Emacs</a> knows to open again all the
 buffers I've been using.  That goes quite well with how often I start <code>Emacs</code>,
 that is once a week or once a month.  Now, <code>M-x ibuffer</code> last line is as
 following:</p>
@@ -402,24 +480,21 @@ readahead ~/.emacs.desktop.readahead
 time the desktop really gets to them, I see no more disk activity (laptops
 have a led to see that happening).  But the desktop loading time has not
 changed...</p>
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Wed, 23 Feb 2011 16:45:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2011/02/23-desktop-mode-and-readahead.html</guid>
 </item>
 
 
+
+
+
+
 <item>
   <title>Starting afresh with el-get</title>
   <link>http://tapoueh.org/blog/2011/01/11-starting-afresh-with-el-get.html</link>
-  <description><![CDATA[<h2>Starting afresh with el-get</h2>
-<div class="date">Tuesday, January 11 2011, 16:20</div>
-
-
-<p class="first">It so happens that a colleague of mine wanted to start using <a href="http://www.gnu.org/software/emacs/">Emacs</a> but
+  <description><![CDATA[<p class="first">It so happens that a colleague of mine wanted to start using <a href="http://www.gnu.org/software/emacs/">Emacs</a> but
 couldn't get to it. He insists on having proper color themes in all
 applications and some sensible defaults full of nifty add-ons everywhere,
 and didn't want to have to learn that much about <em>Emacs</em> and <em>Emacs Lisp</em> to get
@@ -522,24 +597,15 @@ users. Well, here's what I did:</p>
 very happy to switch to using <a href="http://www.gnu.org/software/emacs/">our favorite editor</a>. And he's not even afraid
 (yet) of his <code>~/.emacs</code>. I say that's a very good sign of where we are with
 <a href="https://github.com/dimitri/el-get">el-get</a>!</p>
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 11 Jan 2011 16:20:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2011/01/11-starting-afresh-with-el-get.html</guid>
 </item>
-
-
 <item>
   <title>el-get 1.1, with 174 recipes</title>
   <link>http://tapoueh.org/blog/2010/12/20-el-get-11-with-174-recipes.html</link>
-  <description><![CDATA[<h2>el-get 1.1, with 174 recipes</h2>
-<div class="date">Monday, December 20 2010, 16:45</div>
-
-
-<p class="first">Yes, you read it well, <a href="https://github.com/dimitri/el-get">el-get</a> currently <em>features</em> <code>174</code> <a href="https://github.com/dimitri/el-get/tree/master/recipes">recipes</a>, and is now
+  <description><![CDATA[<p class="first">Yes, you read it well, <a href="https://github.com/dimitri/el-get">el-get</a> currently <em>features</em> <code>174</code> <a href="https://github.com/dimitri/el-get/tree/master/recipes">recipes</a>, and is now
 reaching the <code>1.1</code> release. The reason for this release is mainly that I have
 two big chunks of code to review and the current code has been very stable
 for awhile. It seems better to do a release with the stable code that exists
@@ -627,12 +693,8 @@ right? :)</p>
 <p class="first">All in all, if you're already using <a href="https://github.com/dimitri/el-get">el-get</a> you should consider switching to
 <code>1.1</code> (by issuing <code>M-x el-get-update</code> of course), and if you're hesitating, just
 join the fun now!</p>
-
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 20 Dec 2010 16:45:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/12/20-el-get-11-with-174-recipes.html</guid>
 </item>
@@ -641,11 +703,7 @@ join the fun now!</p>
 <item>
   <title>el-get reaches 1.0</title>
   <link>http://tapoueh.org/blog/2010/10/07-el-get-reaches-10.html</link>
-  <description><![CDATA[<h2>el-get reaches 1.0</h2>
-<div class="date">Thursday, October 07 2010, 13:30</div>
-
-
-<p class="first">It's been a week since the last commits in the <a href="http://github.com/dimitri/el-get">el-get repository</a>, and those
+  <description><![CDATA[<p class="first">It's been a week since the last commits in the <a href="http://github.com/dimitri/el-get">el-get repository</a>, and those
 were all about fixing and adding recipes, and about notifications. Nothing
 like <em>core plumbing</em> you see. Also, <code>0.9</code> was released on <em>2010-08-24</em> and felt
 pretty complete already, then received lots of improvements. It's high time
@@ -909,25 +967,21 @@ will refrain from removing your package automatically, though.</li>
 happy with your current <code>el-get-sources</code>, so that I recommend using the
 <em>scratch installer</em> too. Don't forget to add <code>el-get</code> itself into your
 <code>el-get-sources</code> list, of course!</p>
-
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 07 Oct 2010 13:30:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/10/07-el-get-reaches-10.html</guid>
 </item>
 
 
+
+
+
+
 <item>
   <title>Regexp performances and Finite Automata</title>
   <link>http://tapoueh.org/blog/2010/09/26-regexp-performances-and-finite-automata.html</link>
-  <description><![CDATA[<h2>Regexp performances and Finite Automata</h2>
-<div class="date">Sunday, September 26 2010, 21:00</div>
-
-
-<p class="first">The major reason why I dislike <a href="http://www.perl.org/">perl</a> so much, and <a href="http://www.ruby-lang.org">ruby</a> too, and the thing I'd
+  <description><![CDATA[<p class="first">The major reason why I dislike <a href="http://www.perl.org/">perl</a> so much, and <a href="http://www.ruby-lang.org">ruby</a> too, and the thing I'd
 want different in the <a href="http://www.gnu.org/software/emacs/manual/elisp.html">Emacs Lisp</a> <code>API</code> so far is how they set developers mind
 into using <a href="http://www.regular-expressions.info/">regexp</a>. You know the quote, don't you?</p>
 
@@ -1001,33 +1055,24 @@ will maintain my tendency to using <a href="http://www.gnu.org/manual/gawk/gawk.
 to refine the searching without resorting to more and more pipes in the
 command line). And as far as resorting to using <em>regexp</em> in PostgreSQL is
 concerned, it seems that the code here is already about topnotch. Once more.</p>
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Sun, 26 Sep 2010 21:00:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/09/26-regexp-performances-and-finite-automata.html</guid>
 </item>
-
-
 <item>
   <title>switch-window reaches 0.8</title>
   <link>http://tapoueh.org/blog/2010/09/13-switch-window-reaches-08.html</link>
-  <description><![CDATA[<h2>switch-window reaches 0.8</h2>
-<div class="date">Monday, September 13 2010, 17:45</div>
-
-
-<p class="first">I wanted to play with the idea of using the whole keyboard for my
+  <description><![CDATA[<p class="first">I wanted to play with the idea of using the whole keyboard for my
 <a href="http://github.com/dimitri/switch-window">switch-window</a> utility, but wondered how to get those keys in the right order
 and all. Finally found <code>quail-keyboard-layout</code> which seems to exists for such
 uses, as you can see:</p>
 
 <pre class="src">
-ELISP&gt; (<span style="color: #7f007f;">loop</span> with layout = (split-string quail-keyboard-layout <span style="color: #bc8f8f;">""</span>)
-         for row from 1 to 4
-         collect (<span style="color: #7f007f;">loop</span> for col from 1 to 12
-                       collect (nth (+ 1 (* 2 col) (* 30 row)) layout)))
+(<span style="color: #7f007f;">loop</span> with layout = (split-string quail-keyboard-layout <span style="color: #bc8f8f;">""</span>)
+  for row from 1 to 4
+  collect (<span style="color: #7f007f;">loop</span> for col from 1 to 12
+                collect (nth (+ 1 (* 2 col) (* 30 row)) layout)))
 ((<span style="color: #bc8f8f;">"1"</span> <span style="color: #bc8f8f;">"2"</span> <span style="color: #bc8f8f;">"3"</span> <span style="color: #bc8f8f;">"4"</span> <span style="color: #bc8f8f;">"5"</span> <span style="color: #bc8f8f;">"6"</span> <span style="color: #bc8f8f;">"7"</span> <span style="color: #bc8f8f;">"8"</span> <span style="color: #bc8f8f;">"9"</span> <span style="color: #bc8f8f;">"0"</span> <span style="color: #bc8f8f;">"-"</span> <span style="color: #bc8f8f;">"="</span>)
  (<span style="color: #bc8f8f;">"q"</span> <span style="color: #bc8f8f;">"w"</span> <span style="color: #bc8f8f;">"e"</span> <span style="color: #bc8f8f;">"r"</span> <span style="color: #bc8f8f;">"t"</span> <span style="color: #bc8f8f;">"y"</span> <span style="color: #bc8f8f;">"u"</span> <span style="color: #bc8f8f;">"i"</span> <span style="color: #bc8f8f;">"o"</span> <span style="color: #bc8f8f;">"p"</span> <span style="color: #bc8f8f;">"["</span> <span style="color: #bc8f8f;">"]"</span>)
  (<span style="color: #bc8f8f;">"a"</span> <span style="color: #bc8f8f;">"s"</span> <span style="color: #bc8f8f;">"d"</span> <span style="color: #bc8f8f;">"f"</span> <span style="color: #bc8f8f;">"g"</span> <span style="color: #bc8f8f;">"h"</span> <span style="color: #bc8f8f;">"j"</span> <span style="color: #bc8f8f;">"k"</span> <span style="color: #bc8f8f;">"l"</span> <span style="color: #bc8f8f;">";"</span> <span style="color: #bc8f8f;">"'"</span> <span style="color: #bc8f8f;">"\\"</span>)
@@ -1040,11 +1085,8 @@ it more suitable to <a href="http://github.com/dimitri/cssh">cssh</a> users too,
 
 <p>In other news, I think <a href="http://github.com/dimitri/el-get">el-get</a> is about ready for its <code>1.0</code> release. Please
 test it and report any problem very soon before the release!</p>
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 13 Sep 2010 17:45:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/09/13-switch-window-reaches-08.html</guid>
 </item>
@@ -1053,11 +1095,7 @@ test it and report any problem very soon before the release!</p>
 <item>
   <title>Want to share your recipes?</title>
   <link>http://tapoueh.org/blog/2010/08/31-want-to-share-your-recipes.html</link>
-  <description><![CDATA[<h2>Want to share your recipes?</h2>
-<div class="date">Tuesday, August 31 2010, 14:15</div>
-
-
-<p class="first">Yes, that's another <a href="http://github.com/dimitri/el-get/">el-get</a> related entry. It seems to take a lot of my
+  <description><![CDATA[<p class="first">Yes, that's another <a href="http://github.com/dimitri/el-get/">el-get</a> related entry. It seems to take a lot of my
 attention these days. After having setup the <code>git</code> repository so that you can
 update <code>el-get</code> from within itself (so that it's <em>self-contained</em>), the next
 logical step is providing <em>recipes</em>.</p>
@@ -1097,28 +1135,19 @@ overrides atop the default one.</p>
 <p>Finally, the way to share your recipes is by sending me an email with the
 file, or to do the same over the <code>github</code> interface, I guess I'll still
 receive a mail then.</p>
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 31 Aug 2010 14:15:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/08/31-want-to-share-your-recipes.html</guid>
 </item>
-
-
 <item>
   <title>Happy Numbers</title>
   <link>http://tapoueh.org/blog/2010/08/30-happy-numbers.html</link>
-  <description><![CDATA[<h2>Happy Numbers</h2>
-<div class="date">Monday, August 30 2010, 11:00</div>
-
-
-<p class="first">After discovering the excellent <a href="http://gwene.org/">Gwene</a> service, which allows you to subscribe
+  <description><![CDATA[<p class="first">After discovering the excellent <a href="http://gwene.org/">Gwene</a> service, which allows you to subscribe
 to <em>newsgroups</em> to read <code>RSS</code> content (<em>blogs</em>, <em>planets</em>, <em>commits</em>, etc), I came to
 read this nice article about <a href="http://programmingpraxis.com/2010/07/23/happy-numbers/">Happy Numbers</a>. That's a little problem that
 fits well an interview style question, so I first solved it yesterday
-evening in <a href="static/happy-numbers.el">Emacs Lisp</a> as that's the language I use the most those days.</p>
+evening in <a href="http://www.gnu.org/software/emacs/emacs-lisp-intro/html_node/List-Processing.html#List-Processing">Emacs Lisp</a> as that's the language I use the most those days.</p>
 
 <blockquote>
 <p class="quoted">
@@ -1217,7 +1246,9 @@ contains a line <code>input, {}</code>. Let's now play the same tricks as in the
 article:</p>
 
 <pre class="src">
-=# select array_agg(x) as happy from generate_series(1, 50) as t(x) where happy(x);
+=# select array_agg(x) as happy
+     from generate_series(1, 50) as t(x)
+    where happy(x);
               happy
 <span style="color: #b22222;">----------------------------------
 </span> {1,7,10,13,19,23,28,31,32,44,49}
@@ -1225,11 +1256,14 @@ article:</p>
 
 Time: 24.527 ms
 
-=# explain analyze select x from generate_series(1, 10000) as t(x) where happy(x);
+=# explain analyze select x
+                     from generate_series(1, 10000) as t(x)
+                    where happy(x);
                       QUERY PLAN
-<span style="color: #b22222;">----------------------------------------------------------------------------------------
-</span> Function Scan on generate_series t  (cost=0.00..265.00 rows=333 width=4)
-                          (actual time=2.938..3651.019 rows=1442 loops=1)
+<span style="color: #b22222;">------------------------------------------------------------
+</span> Function Scan on generate_series t
+     (cost=0.00..265.00 rows=333 width=4)
+     (actual time=2.938..3651.019 rows=1442 loops=1)
    Filter: happy((x)::bigint)
  Total runtime: 3651.534 ms
 (3 rows)
@@ -1242,23 +1276,48 @@ here). For what it's worth, finding the first <code>10000</code> happy numbers i
 Lisp</em> on the same laptop takes <code>2830 ms</code>, also running a recursive version of
 the code.</p>
 
+<h3>Update, the Emacs Lisp version, inline</h3>
 
+<p class="first">For your pleasure:</p>
 
+<pre class="src">
+(<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">happy?</span> (<span style="color: #228b22;">&amp;optional</span> n seen)
+  <span style="color: #bc8f8f;">"return true when n is a happy number"</span>
+  (interactive)
+  (<span style="color: #7f007f;">let*</span> ((number    (or n (read-from-minibuffer
+                           <span style="color: #bc8f8f;">"Is this number happy: "</span>)))
+         (digits    (mapcar
+                     'string-to-int
+                     (subseq (split-string number <span style="color: #bc8f8f;">""</span>) 1 -1)))
+         (squares   (mapcar (<span style="color: #7f007f;">lambda</span> (x) (* x x)) digits))
+         (happiness (apply '+ squares)))
+    (<span style="color: #7f007f;">cond</span> ((eq 1 happiness)      t)
+          ((memq happiness seen) nil)
+          (t
+           (happy? (number-to-string happiness)
+                   (push happiness seen))))))
+
+(<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">find-happy-numbers</span> (<span style="color: #228b22;">&amp;optional</span> limit)
+  <span style="color: #bc8f8f;">"find all happy numbers from 1 to limit"</span>
+  (interactive)
+  (<span style="color: #7f007f;">let</span> ((count (or limit
+                   (read-from-minibuffer
+                    <span style="color: #bc8f8f;">"List of happy numbers from 1 to: "</span>)))
+        happy)
+    (<span style="color: #7f007f;">dotimes</span> (n (string-to-int count))
+      (<span style="color: #7f007f;">when</span> (happy? (number-to-string (1+ n)))
+        (push (1+ n) happy)))
+    (nreverse happy)))
+</pre>
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 30 Aug 2010 11:00:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/08/30-happy-numbers.html</guid>
 </item>
-
-
 <item>
   <title>welcome el-get scratch installer</title>
   <link>http://tapoueh.org/blog/2010/08/27-welcome-el-get-scratch-installer.html</link>
-  <description><![CDATA[<h2>welcome el-get scratch installer</h2>
-<div class="date">Friday, August 27 2010, 14:15</div>
-
-
-<p class="first">A very good remark from some users: installing and managing <code>el-get</code> should be
+  <description><![CDATA[<p class="first">A very good remark from some users: installing and managing <code>el-get</code> should be
 simpler. They wanted both an easy install of the thing, and a way to be able
 to manage it afterwards (like, update the local copy against the
 authoritative source). So I decided it was high time for getting the code
@@ -1276,25 +1335,15 @@ though, that's the drawback of the lack of magic. So you will have to still
 add an explicit <code>(require 'el-get)</code> before to go and define you own
 <code>el-get-sources</code> then finally <code>(el-get)</code>. I don't think that's a problem I need
 to solve, though.</p>
-
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Fri, 27 Aug 2010 14:15:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/08/27-welcome-el-get-scratch-installer.html</guid>
 </item>
-
-
 <item>
   <title>el-get news</title>
   <link>http://tapoueh.org/blog/2010/08/26-el-get-news.html</link>
-  <description><![CDATA[<h2>el-get news</h2>
-<div class="date">Thursday, August 26 2010, 16:30</div>
-
-
-<p class="first">I've been receiving some requests for <a href="http://www.emacswiki.org/emacs/el-get.el">el-get</a>, some of them even included a
+  <description><![CDATA[<p class="first">I've been receiving some requests for <a href="http://www.emacswiki.org/emacs/el-get.el">el-get</a>, some of them even included a
 patch. So now there's support for <code>bzr</code>, <code>CSV</code> and <code>http-tar</code>, augmenting the
 existing support for <code>git</code>, <code>git-svn</code>, <code>apt-get</code>, <code>fink</code> and <code>ELPA</code> formats.</p>
 
@@ -1349,24 +1398,15 @@ if needed at all.</p>
 code, and the next steps include proposing it to <a href="http://tromey.com/elpa/">ELPA</a> so that getting to use
 it is easier than ever. You'd just have to choose whether to install <code>ELPA</code>
 from <code>el-get</code> or the other way around.</p>
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 26 Aug 2010 16:30:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/08/26-el-get-news.html</guid>
 </item>
-
-
 <item>
   <title>el-get and dim-switch-window status update</title>
   <link>http://tapoueh.org/blog/2010/08/09-el-get-and-dim-switch-window-status-update.html</link>
-  <description><![CDATA[<h2>el-get and dim-switch-window status update</h2>
-<div class="date">Monday, August 09 2010, 15:35</div>
-
-
-<p class="first">Thanks to you readers of <a href="http://planet.emacsen.org/">Planet Emacsen</a> taking the time to try those pieces
+  <description><![CDATA[<p class="first">Thanks to you readers of <a href="http://planet.emacsen.org/">Planet Emacsen</a> taking the time to try those pieces
 of emacs lisp found in my blog, and also the time to comment on them, some
 bugs have been fixed, and new releases appeared.</p>
 
@@ -1426,24 +1466,15 @@ local version of them!</p>
 
 <p>Note: I also fixed a but in <a href="http://github.com/dimitri/rcirc-groups">rcirc-groups</a> this week-end, but I'll talk about
 it in another entry, if I may.</p>
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 09 Aug 2010 15:35:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/08/09-el-get-and-dim-switch-window-status-update.html</guid>
 </item>
-
-
 <item>
   <title>el-get</title>
   <link>http://tapoueh.org/blog/2010/08/04-el-get.html</link>
-  <description><![CDATA[<h2>el-get</h2>
-<div class="date">Wednesday, August 04 2010, 22:30</div>
-
-
-<p class="first">I've been using emacs for a long time, and a long time it took me to
+  <description><![CDATA[<p class="first">I've been using emacs for a long time, and a long time it took me to
 consider learning <a href="http://www.gnu.org/software/emacs/emacs-lisp-intro/html_node/index.html">Emacs Lisp</a>. Before that, I didn't trust my level of
 understanding enough to be comfortable in managing my setup efficiently.</p>
 
@@ -1530,25 +1561,23 @@ ELISP&gt; (el-get)
 <p>All the packages being already installed, it's running fast enough that I
 won't bother measuring the run time, that seems to be somewhere around one
 second.</p>
-
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Wed, 04 Aug 2010 22:30:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/08/04-el-get.html</guid>
 </item>
 
 
+
+
+
+
+
+
 <item>
   <title>dim-switch-window.el: fixes</title>
   <link>http://tapoueh.org/blog/2010/07/26-dim-switch-windowel-fixes.html</link>
-  <description><![CDATA[<h2>dim-switch-window.el: fixes</h2>
-<div class="date">Monday, July 26 2010, 11:55</div>
-
-
-<p class="first">Thanks to amazing readers of <a href="http://planet.emacsen.org/">planet emacsen</a>, two annoyances of
+  <description><![CDATA[<p class="first">Thanks to amazing readers of <a href="http://planet.emacsen.org/">planet emacsen</a>, two annoyances of
 <a href="http://www.emacswiki.org/emacs/switch-window.el">switch-window.el</a> have already been fixed! The first is that handling of <code>C-g</code>
 isn't exactly an option after all, and the other is that you want to avoid
 the buffer creation in the simple cases (1 or 2 windows only), because it's
@@ -1556,24 +1585,15 @@ the usual case.</p>
 
 <p>I've received code to handle the second case, that I mostly merged. Thanks a
 lot guys, the new version is on <a href="http://wwww.emacswiki.org">emacswiki</a> already!</p>
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 26 Jul 2010 11:55:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/07/26-dim-switch-windowel-fixes.html</guid>
 </item>
-
-
 <item>
   <title>dim-switch-window.el</title>
   <link>http://tapoueh.org/blog/2010/07/25-dim-switch-windowel.html</link>
-  <description><![CDATA[<h2>dim-switch-window.el</h2>
-<div class="date">Sunday, July 25 2010, 13:25</div>
-
-
-<p class="first">So it's Sunday and I'm thinking I'll get into <code>el-get</code> sometime later. Now is
+  <description><![CDATA[<p class="first">So it's Sunday and I'm thinking I'll get into <code>el-get</code> sometime later. Now is
 the time to present <code>dim-switch-window.el</code> which implements a <em>visual</em> <code>C-x o</code>. I
 know of only one way to present a <em>visual effect</em>, and that's with a screenshot:</p>
 
@@ -1590,30 +1610,15 @@ focus moves to the other window).</p>
 
 <p>The code for that can be found on <a href="http://www.emacswiki.org/">emacswiki</a> under the name
 <a href="http://www.emacswiki.org/emacs/switch-window.el">switch-window.el</a>. Hope you'll find it useful!</p>
-
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Sun, 25 Jul 2010 13:25:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/07/25-dim-switch-windowel.html</guid>
 </item>
-
-
-
-
-
-
-
 <item>
   <title>ClusterSSH gets dsh support</title>
   <link>http://tapoueh.org/blog/2010/07/23-clusterssh-gets-dsh-support.html</link>
-  <description><![CDATA[<h2>ClusterSSH gets `dsh' support</h2>
-<div class="date">Friday, July 23 2010, 22:20</div>
-
-
-<p class="first">If you don't know about <a href="cssh.html">ClusterSSH</a>, it's a project that builds on <code>M-x term</code>
+  <description><![CDATA[<p class="first">If you don't know about <a href="cssh.html">ClusterSSH</a>, it's a project that builds on <code>M-x term</code>
 and <code>ssh</code> to offer a nice and simple way to open remote terminals. It's
 available in <a href="http://tromey.com/elpa/index.html">ELPA</a> and developed at <a href="http://github.com/dimitri/cssh">github cssh</a> repository.</p>
 
@@ -1644,24 +1649,15 @@ per remote host you have in the <code>dsh</code> group you just picked. With a <
 controler window, too.</p>
 
 <p>Coming next, how I solved my <code>init.el</code> dependancies burden thanks to <code>el-get</code>!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Fri, 23 Jul 2010 22:20:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/07/23-clusterssh-gets-dsh-support.html</guid>
 </item>
-
-
 <item>
   <title>Emacs and PostgreSQL</title>
   <link>http://tapoueh.org/blog/2010/07/22-emacs-and-postgresql.html</link>
-  <description><![CDATA[<h2>Emacs and PostgreSQL</h2>
-<div class="date">Thursday, July 22 2010, 09:30</div>
-
-
-<p class="first">Those are my two all times favorite Open Source Software. Or <a href="http://www.gnu.org/philosophy/free-sw.html">Free Software</a>
+  <description><![CDATA[<p class="first">Those are my two all times favorite Open Source Software. Or <a href="http://www.gnu.org/philosophy/free-sw.html">Free Software</a>
 in the <a href="http://www.gnu.org/">GNU</a> sense of the world, as both the <em>BSD</em> and the <em>GPL</em> are labeled free
 there. Even if I prefer the <a href="http://www.debian.org/social_contract">The Debian Free Software Guidelines</a> as a global
 definition and the <a href="http://sam.zoy.org/wtfpl/">WTFPL</a> license. But that's a digression.</p>
@@ -1686,25 +1682,16 @@ it looks like:</p>
 <p><img src="../../../images//emacs-pgsql-line-numbers.png" alt=""></p>
 </center>
 
-<p>Now, here's also the source code, <a href="static/dim-pgsql.el">dim-pgsql.el</a>. Hope you'll enjoy!</p>
-
-
-
+<p>Now, here's also the source code, <a href="https://github.com/dimitri/pgsql-linum-format">pgsql-linum-format</a>. Hope you'll enjoy!</p>
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 22 Jul 2010 09:30:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/07/22-emacs-and-postgresql.html</guid>
 </item>
-
-
 <item>
   <title>Emacs Muse hacking</title>
   <link>http://tapoueh.org/blog/2010/03/04-emacs-muse-hacking.html</link>
-  <description><![CDATA[<h2>Emacs Muse hacking</h2>
-<div class="date">Thursday, March 04 2010, 13:33</div>
-
-
-<p class="first">Now you know what piece of software is used to publish this blog. I really
+  <description><![CDATA[<p class="first">Now you know what piece of software is used to publish this blog. I really
 like it, the major mode makes it a great experience to be using this tool,
 and the fact that you produce the <code>HTML</code> and <code>rsync</code> it all from within Emacs
 (<code>C-c C-p</code> then <code>C-c C-r</code> with some easy <a href="http://git.tapoueh.org/?p=tapoueh.org.git;a=blob;f=dim-muse.el;hb=HEAD">elisp code</a>) is a big advantage as far
@@ -1727,24 +1714,15 @@ and write a new file per article you find in there.</p>
 customisation in mind, so to use it you will have to edit some places rather
 than just <code>setq</code> some <code>defcustom</code>. Well, if I have demand, I'll generalize the
 code and share it on <a href="http://www.emacswiki.org/">Emacs Wiki</a> and <a href="http://tromey.com/elpa/">ELPA</a>. Meanwhile, happy hacking!</p>
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 04 Mar 2010 13:33:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/03/04-emacs-muse-hacking.html</guid>
 </item>
-
-
 <item>
   <title>pg_staging's bird view</title>
   <link>http://tapoueh.org/blog/2009/12/08-pg_stagings-bird-view.html</link>
-  <description><![CDATA[<h2>pg_staging's bird view</h2>
-<div class="date">Tuesday, December 08 2009, 12:04</div>
-
-
-<p class="first">One of the most important feedback I got about the presentation of <a href="pgstaging.html">pgstaging</a>
+  <description><![CDATA[<p class="first">One of the most important feedback I got about the presentation of <a href="pgstaging.html">pgstaging</a>
 were the lack of pictures, something like a bird-view of how you operate
 it. Well, thanks to <a href="http://ditaa.sourceforge.net/">ditaa</a> and Emacs <code>picture-mode</code> here it is:</p>
 
@@ -1767,24 +1745,15 @@ mv bird-view-0.png pg_staging.png
 </pre>
 
 <p>Quicker than learning to properly use a mouse, at least for me :)</p>
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 08 Dec 2009 12:04:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2009/12/08-pg_stagings-bird-view.html</guid>
 </item>
-
-
 <item>
   <title>PGday.eu feedback</title>
   <link>http://tapoueh.org/blog/2009/12/01-pgdayeu-feedback.html</link>
-  <description><![CDATA[<h2>PGday.eu feedback</h2>
-<div class="date">Tuesday, December 01 2009, 16:45</div>
-
-
-<p class="first">At <a href="http://2009.pgday.eu/">pgday</a> there was this form you could fill to give speakers some <em>feedback</em>
+  <description><![CDATA[<p class="first">At <a href="http://2009.pgday.eu/">pgday</a> there was this form you could fill to give speakers some <em>feedback</em>
 about their talks. And that's a really nice way as a speaker to know what to
 improve. And as <a href="http://blog.hagander.net/archives/157-Feedback-from-pgday.eu.html">Magnus</a> was searching a nice looking chart facility in python
 and I spoke about <a href="http://matplotlib.sourceforge.net/gallery.html">matplotlib</a>, it felt like having to publish something.</p>
@@ -1794,10 +1763,10 @@ result is:</p>
 
 <center>
 <p><a class="image-link" href="../../../images//feedback.png">
-<img src="../images/feedback.png"></a></p>
+<img src="../../../images/feedback.png"></a></p>
 </center>
 
-<p>If you want to see the little python script I used, here it is: <a href="http://pgsql.tapoueh.org/confs/pgday_2009/feedback.py">feedback.py</a>,
+<p>If you want to see the little python script I used, here it is: <a href="http://git.tapoueh.org/?p=pgconfs.git;a=blob;f=pgday_2009/feedback.py;hb=master">feedback.py</a>,
 with the data embedded and all...</p>
 
 <p>Now, how to read it? Well, the darker the color the better the score. For
@@ -1815,25 +1784,85 @@ Through Ascii Art</em> tool. I already used it and together with <a href="news.d
 
 <p>Oh yes the baseline of this post is that there will be later talks. I seem
 to be liking those and the audience feedback this time is saying that it's
-not too bad for them. See you soon :)</p>
+not too bad for them. See you soon :)</p>
 
+<h3>Update</h3>
 
+<p class="first">I have added the <code>feedback.py</code> script now that each page here is published
+separately.</p>
 
+<pre class="src">
+<span style="color: #b22222;">#</span><span style="color: #b22222;">! /usr/bin/env python
+</span><span style="color: #b22222;">#</span><span style="color: #b22222;">
+</span><span style="color: #b22222;"># </span><span style="color: #b22222;">http://matplotlib.sourceforge.net/examples/pylab_examples/bar_stacked.html
+</span>
+<span style="color: #7f007f;">from</span> pylab <span style="color: #7f007f;">import</span> *
+<span style="color: #7f007f;">import</span> numpy <span style="color: #7f007f;">as</span> np
+
+clf()
+subplot(111)
+
+<span style="color: #b8860b;">N</span> = 4
+
+<span style="color: #b22222;"># </span><span style="color: #b22222;">http://html-color-codes.info/ for inspiration
+</span><span style="color: #b8860b;">scoreColors</span>   = ((<span style="color: #bc8f8f;">'#F5D0A9'</span>, <span style="color: #bc8f8f;">'#F7BE81'</span>,
+                  <span style="color: #bc8f8f;">'#FAAC58'</span>, <span style="color: #bc8f8f;">'#FF8000'</span>, <span style="color: #bc8f8f;">'#DF7401'</span>),
+                 (<span style="color: #bc8f8f;">'#A9F5A9'</span>, <span style="color: #bc8f8f;">'#81F781'</span>,
+                  <span style="color: #bc8f8f;">'#58FA58'</span>, <span style="color: #bc8f8f;">'#2EFE2E'</span>, <span style="color: #bc8f8f;">'#01DF01'</span>))
+
+<span style="color: #b22222;"># </span><span style="color: #b22222;">data from the mail
+</span><span style="color: #b8860b;">expHMScores</span>   = ((0, 0, 1, 2, 5),
+                 (0, 0, 1, 3, 4),
+                 (0, 0, 0, 0, 8),
+                 (0, 0, 0, 3, 5))
+
+<span style="color: #b8860b;">stagingScores</span> = ((0, 0, 0, 3, 3),
+                 (0, 1, 1, 1, 3),
+                 (0, 0, 1, 1, 4),
+                 (0, 0, 0, 4, 2))
+
+<span style="color: #b8860b;">ind</span> = np.arange(N)    <span style="color: #b22222;"># </span><span style="color: #b22222;">the x locations for the groups
+</span><span style="color: #b8860b;">width</span> = 0.4       <span style="color: #b22222;"># </span><span style="color: #b22222;">the width of the bars: can also be len(x) sequence
+</span>
+<span style="color: #b8860b;">hd</span> = array([expHMScores[x][0] <span style="color: #7f007f;">for</span> x <span style="color: #7f007f;">in</span> <span style="color: #da70d6;">range</span>(0, 4)])
+<span style="color: #b8860b;">hp</span> = bar(ind, hd, width, color = scoreColors[0][0])
+
+<span style="color: #b8860b;">sd</span> = array([stagingScores[x][0] <span style="color: #7f007f;">for</span> x <span style="color: #7f007f;">in</span> <span style="color: #da70d6;">range</span>(0, 4)])
+<span style="color: #b8860b;">sp</span> = bar(ind+width, sd, width, color = scoreColors[1][0])
+
+<span style="color: #7f007f;">for</span> s <span style="color: #7f007f;">in</span> <span style="color: #da70d6;">range</span>(1, 5):
+    <span style="color: #b8860b;">d</span> = array([expHMScores[x][s] <span style="color: #7f007f;">for</span> x <span style="color: #7f007f;">in</span> <span style="color: #da70d6;">range</span>(0, 4)])
+    bar(ind, d, width,
+        color = scoreColors[0][s], bottom = hd)
+    <span style="color: #b8860b;">hd</span> += d
+
+    <span style="color: #b8860b;">d</span> = array([stagingScores[x][s] <span style="color: #7f007f;">for</span> x <span style="color: #7f007f;">in</span> <span style="color: #da70d6;">range</span>(0, 4)])
+    bar(ind+width, d, width,
+        color = scoreColors[1][s], bottom = sd)
+    <span style="color: #b8860b;">sd</span> += d
+
+ylabel(<span style="color: #bc8f8f;">'Scores'</span>)
+title(<span style="color: #bc8f8f;">'PGday 2009 feedback'</span>)
+xticks(ind+width,
+       (<span style="color: #bc8f8f;">'Topic Importance'</span>,
+        <span style="color: #bc8f8f;">'Content Quality'</span>,
+        <span style="color: #bc8f8f;">'Speaker knowledge'</span>,
+        <span style="color: #bc8f8f;">'Speaker Quality'</span>) )
+
+legend([hp[0], sp[0]], [<span style="color: #bc8f8f;">"Hi-Media"</span>, <span style="color: #bc8f8f;">"pg_staging"</span>])
+
+grid(<span style="color: #da70d6;">True</span>)
+savefig(<span style="color: #bc8f8f;">'feedback.png'</span>, dpi=75, orientation=<span style="color: #bc8f8f;">'portrait'</span>)
+</pre>
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 01 Dec 2009 16:45:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2009/12/01-pgdayeu-feedback.html</guid>
 </item>
-
-
 <item>
   <title>Emacs Muse based publishing</title>
   <link>http://tapoueh.org/blog/2009/10/06-emacs-muse-based-publishing.html</link>
-  <description><![CDATA[<h2>Emacs Muse based publishing</h2>
-<div class="date">Tuesday, October 06 2009, 17:23</div>
-
-
-<p class="first">As you might have noticed, this little blog of mine is not compromising much
+  <description><![CDATA[<p class="first">As you might have noticed, this little blog of mine is not compromising much
 and entirely maintained from Emacs. Until today, I had to resort to <code>term</code> to
 upload my publications, though, as I've been too lazy to hack up the tools
 integration for simply doing a single <code>rsync</code> command line. That was one time
@@ -1883,24 +1912,15 @@ to many:</p>
 </pre>
 
 <p>So now to publish this blog, it's just a <code>C-c R</code> away! :)</p>
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 06 Oct 2009 17:23:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2009/10/06-emacs-muse-based-publishing.html</guid>
 </item>
-
-
 <item>
   <title>Emacs is Twinkling here</title>
   <link>http://tapoueh.org/blog/2009/09/24-emacs-is-twinkling-here.html</link>
-  <description><![CDATA[<h2>Emacs is Twinkling here</h2>
-<div class="date">Thursday, September 24 2009, 18:08</div>
-
-
-<p class="first">So you have a <em>rolodex</em> like database in your Emacs, or you have this phone
+  <description><![CDATA[<p class="first">So you have a <em>rolodex</em> like database in your Emacs, or you have this phone
 number in a mail and you want to call it. It happens you have <code>VoIP</code> setup and
 you're using <a href="http://www.twinklephone.com/">Twinkle</a> to make your calls. Maybe you'll then find this
 function useful:</p>
@@ -1922,24 +1942,15 @@ function useful:</p>
 begin with <code>+</code>. And some contains <code>/</code> or <code>.</code> as separators, or some other
 variations (spaces) so as the number is easy to read for human eyes. <em>Twinkle</em>
 will not like this.</p>
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 24 Sep 2009 18:08:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2009/09/24-emacs-is-twinkling-here.html</guid>
 </item>
-
-
 <item>
   <title>Escreen integration</title>
   <link>http://tapoueh.org/blog/2009/09/22-escreen-integration.html</link>
-  <description><![CDATA[<h2>Escreen integration</h2>
-<div class="date">Tuesday, September 22 2009, 23:04</div>
-
-
-<p class="first">After having used <a href="http://www.morishima.net/~naoto/software/elscreen/">elscreen</a> for a long time, I'm now a very happy user of
+  <description><![CDATA[<p class="first">After having used <a href="http://www.morishima.net/~naoto/software/elscreen/">elscreen</a> for a long time, I'm now a very happy user of
 <a href="http://www.splode.com/~friedman/software/emacs-lisp/#ui">escreen</a>, which feels much better integrated and allows to have one ring of
 recently visited buffers per screen. Which is what you need when using a
 <em>screen</em> like feature, really.</p>
@@ -2021,25 +2032,15 @@ and emacs selection), I had to add this too:</p>
 (define-key term-raw-map (kbd <span style="color: #bc8f8f;">"M-["</span>) 'dim:escreen-goto-prev-screen)
 (define-key term-raw-map (kbd <span style="color: #bc8f8f;">"M-]"</span>) 'dim:escreen-goto-next-screen)
 </pre>
-
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 22 Sep 2009 23:04:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2009/09/22-escreen-integration.html</guid>
 </item>
-
-
 <item>
   <title>Follow-up on dim:mailrc-add-entry</title>
   <link>http://tapoueh.org/blog/2009/09/07-follow-up-on-dimmailrc-add-entry.html</link>
-  <description><![CDATA[<h2>Follow-up on dim:mailrc-add-entry</h2>
-<div class="date">Monday, September 07 2009, 12:50</div>
-
-
-<p class="first">The function didn't allow for using more than one <code>mailrc</code> file, which isn't a
+  <description><![CDATA[<p class="first">The function didn't allow for using more than one <code>mailrc</code> file, which isn't a
 good idea, so I've just added that. Oh and for <code>gnus</code> integration what I need
 is <code>(add-hook 'message-mode-hook 'mail-abbrevs-setup)</code> it seems... so that if
 I type the alias it'll get automatically expanded. And to be real lazy and
@@ -2077,24 +2078,15 @@ rescue, assigned to some easy to reach keys.</p>
             (goto-char (point-max))
             (insert (format <span style="color: #bc8f8f;">"\nalias %s \"%s &lt;%s&gt;\""</span> alias (cdr address) (car ad<span style="color: #ffff00; background-color: #ff0000; font-weight: bold;">dress)))))))))</span>
 </pre>
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 07 Sep 2009 12:50:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2009/09/07-follow-up-on-dimmailrc-add-entry.html</guid>
 </item>
-
-
 <item>
   <title>Improving ~/.mailrc usage</title>
   <link>http://tapoueh.org/blog/2009/09/07-improving-mailrc-usage.html</link>
-  <description><![CDATA[<h2>Improving ~/.mailrc usage</h2>
-<div class="date">Monday, September 07 2009, 01:29</div>
-
-
-<p class="first">So I've been adviced to use <code>~/.mailrc</code> for keeping a basic address book in
+  <description><![CDATA[<p class="first">So I've been adviced to use <code>~/.mailrc</code> for keeping a basic address book in
 Emacs, for use within <code>gnus</code> for example. I had to resort to the manual to
 find out how to use the file aliases when I need them, that is when
 composing a mail. For the record, here's what I had to do:</p>
@@ -2186,24 +2178,15 @@ uptodate.</p>
 
 <p>Hope it'll be useful for someone else, but at least I'm keeping annotated
 history of the files :)</p>
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 07 Sep 2009 01:29:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2009/09/07-improving-mailrc-usage.html</guid>
 </item>
-
-
 <item>
   <title>Some emacs nifties</title>
   <link>http://tapoueh.org/blog/2009/08/03-some-emacs-nifties.html</link>
-  <description><![CDATA[<h2>Some emacs nifties</h2>
-<div class="date">Monday, August 03 2009, 15:15</div>
-
-
-<p class="first">First, here's a way to insert at current position the last message printed
+  <description><![CDATA[<p class="first">First, here's a way to insert at current position the last message printed
 into the minibuffer... well not exactly, in <code>*Messages*</code> buffer in fact. I was
 tired of doing it myself after invoking, e.g., <code>M-x emacs-version</code>.</p>
 
@@ -2275,24 +2258,25 @@ a need:</p>
 
 <p>Next time I'll try to talk about <code>rcirc-groups</code> or <code>cssh</code> which have managed to
 take some of my free time recently.</p>
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 03 Aug 2009 15:15:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2009/08/03-some-emacs-nifties.html</guid>
 </item>
-
-
+<item>
+  <title>Useful emacs trick</title>
+  <link>http://tapoueh.org/blog/2008/12/09-useful-emacs-trick.html</link>
+  <description><![CDATA[<p class="first">Watch <a href="http://www.ted.com/index.php/talks/kevin_kelly_on_the_next_5_000_days_of_the_web.html">Kevin Kelly's Talk</a> here, it's about trying to predict what the
+Internet will look like 5 thousands days from now.</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Tue, 09 Dec 2008 00:00:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2008/12/09-useful-emacs-trick.html</guid>
+</item>
 <item>
   <title>emacs-snapshot</title>
   <link>http://tapoueh.org/blog/2008/12/08-emacs-snapshot.html</link>
-  <description><![CDATA[<h2>emacs-snapshot</h2>
-<div class="date">Monday, December 08 2008, 16:10</div>
-
-
-<p class="first">If you want to live on the bleeding edge, it's easy enough to get a non
+  <description><![CDATA[<p class="first">If you want to live on the bleeding edge, it's easy enough to get a non
 existing release of <a href="http://www.gnu.org/software/emacs/">GNU Emacs</a> under <a href="http://www.debian.org/releases/unstable/">debian sid</a>, thanks to
 <a href="http://emacs.orebokech.com/">http://emacs.orebokech.com/</a>.</p>
 
@@ -2312,59 +2296,36 @@ hunk ./dim-muse.el 22
 editing, while using <a href="http://www.emacswiki.org/emacs/?action=browse;oldid=EmacsCVS;id=EmacsFromCVS">EmacsCVS</a> for other activities.</p>
 
 <p>And I'm using the patched <code>Htmlize</code> on both the versions, by the way.</p>
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 08 Dec 2008 16:10:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2008/12/08-emacs-snapshot.html</guid>
 </item>
-
-
 <item>
   <title>new site, using new software</title>
   <link>http://tapoueh.org/blog/2008/12/06-new-site.html</link>
-  <description><![CDATA[<h2>new site, using new software.</h2>
-<div class="date">Saturday, December 06 2008</div>
-
-
-<p class="first">Oh and check out the <a href="skytools.html">skytools</a> page too. <a href="http://mwolson.org/projects/EmacsMuse.html">Emacs Muse</a> is so great a project
+  <description><![CDATA[<p class="first">Oh and check out the <a href="skytools.html">skytools</a> page too. <a href="http://mwolson.org/projects/EmacsMuse.html">Emacs Muse</a> is so great a project
 that instead of just working on how to publish a website with this tool, I
 found myself editing a rather large document about <code>londite.py</code>.</p>
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Sat, 06 Dec 2008 00:00:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2008/12/06-new-site.html</guid>
 </item>
-
-
 <item>
   <title>Emacs Muse powered blog</title>
   <link>http://tapoueh.org/blog/2008/12/05-emacs-muse-powered-blog.html</link>
-  <description><![CDATA[<h2>Emacs Muse powered blog</h2>
-<div class="date">Friday, December 05 2008</div>
-
-
-<p class="first">So finaly a blogging software for <em>geeks</em> exists?</p>
+  <description><![CDATA[<p class="first">So finaly a blogging software for <em>geeks</em> exists?</p>
 
 <blockquote>
 <p class="quoted">
 The problem with communication is that you think it happened.</p>
 
 </blockquote>
-
-
-
 ]]></description>
-  <author>Dimitri Fontaine (dim@tapoueh.org)</author>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Fri, 05 Dec 2008 00:00:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2008/12/05-emacs-muse-powered-blog.html</guid>
 </item>
-
-
   </channel>
 </rss>

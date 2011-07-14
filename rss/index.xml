@@ -17,6 +17,65 @@
 
 
 <item>
+  <title>Elisp Breadcrumbs</title>
+  <link>http://tapoueh.org/blog/2011/07/14-elisp-breadcrumbs.html</link>
+  <description><![CDATA[<p class="first">A <a href="http://en.wikipedia.org/wiki/Breadcrumb_(navigation)">breadcrumb</a> is a navigation aid.  I just added one to this website, so that
+it gets easier to browse from any article to its local and parents indexes
+and back to <a href="../../../index.html">/dev/dim</a>, the root webpage of this site.</p>
+
+<p>As it was not that much work to implement, here's the whole of it:</p>
+
+<pre class="src">
+<span style="color: #b22222;">;;;</span><span style="color: #b22222;">
+</span><span style="color: #b22222;">;;; </span><span style="color: #b22222;">Breadcrumb support
+</span><span style="color: #b22222;">;;;</span><span style="color: #b22222;">
+</span>(<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">tapoueh-breadcrumb-to-current-page</span> ()
+  <span style="color: #bc8f8f;">"Return a list of (name . link) from the index root page to current one"</span>
+  (<span style="color: #7f007f;">let*</span> ((current (muse-current-file))
+         (cwd     (file-name-directory current))
+         (project (muse-project-of-file current))
+         (root    (muse-style-element <span style="color: #da70d6;">:path</span> (caddr project)))
+         (path    (tapoueh-path-to-root))
+         (dirs    (split-string (file-relative-name current root) <span style="color: #bc8f8f;">"/"</span>)))
+    <span style="color: #b22222;">;; </span><span style="color: #b22222;">("blog" "2011" "07" "13-back-from-char11.muse")
+</span>    (append
+     (list (cons <span style="color: #bc8f8f;">"/dev/dim"</span> (concat path <span style="color: #bc8f8f;">"index.html"</span>)))
+     (<span style="color: #7f007f;">loop</span> for p in (butlast dirs)
+           collect (cons p (format <span style="color: #bc8f8f;">"%s%s/index.html"</span> path p))
+           do (setq path (concat path p <span style="color: #bc8f8f;">"/"</span>))))))
+
+(<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">tapoueh-insert-breadcrumb-div</span> ()
+  <span style="color: #bc8f8f;">"The real HTML inserting"</span>
+  (insert <span style="color: #bc8f8f;">"&lt;div id=\"breadcrumb\"&gt;"</span>)
+  (<span style="color: #7f007f;">loop</span> for (name . link) in (tapoueh-breadcrumb-to-current-page)
+        do (insert (format <span style="color: #bc8f8f;">"&lt;a href=%s&gt;%s&lt;/a&gt;"</span> link name) <span style="color: #bc8f8f;">" / "</span>))
+  (insert <span style="color: #bc8f8f;">"&lt;/div&gt;\n"</span>))
+
+(<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">tapoueh-insert-breadcrumb</span> ()
+  <span style="color: #bc8f8f;">"Must run with current buffer being a muse article"</span>
+  (<span style="color: #7f007f;">save-excursion</span>
+    (beginning-of-buffer)
+    (<span style="color: #7f007f;">when</span> (tapoueh-extract-directive <span style="color: #bc8f8f;">"author"</span> (muse-current-file))
+      (re-search-forward <span style="color: #bc8f8f;">"&lt;body&gt;"</span> nil t) <span style="color: #b22222;">; </span><span style="color: #b22222;">find where the article content is
+</span>      (re-search-forward <span style="color: #bc8f8f;">"&lt;h2&gt;"</span> nil t)   <span style="color: #b22222;">; </span><span style="color: #b22222;">that's the title line
+</span>      (beginning-of-line)
+      (open-line 1)
+      (tapoueh-insert-breadcrumb-div)
+
+      (re-search-forward <span style="color: #bc8f8f;">"&lt;h2&gt;"</span> nil t 2) <span style="color: #b22222;">; </span><span style="color: #b22222;">that's the TAG line
+</span>      (beginning-of-line)
+      (open-line 1)
+      (tapoueh-insert-breadcrumb-div))))
+</pre>
+
+<p>This code is now called in the <code>:after</code> function of my <a href="http://www.emacswiki.org/emacs/EmacsMuse">Muse</a> project style, and
+it gets the work done.</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Thu, 14 Jul 2011 18:44:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2011/07/14-elisp-breadcrumbs.html</guid>
+</item>
+<item>
   <title>De retour de CHAR(11)</title>
   <link>http://tapoueh.org/blog/2011/07/13-de-retour-de-char11.html</link>
   <description><![CDATA[<p class="first">Quelle meilleure occupation dans le train du retour de <a href="http://char11.org/schedule">CHAR(11)</a> que de se
@@ -88,9 +147,6 @@ les pics de trafic, créer des instances de développement d'un clic, etc.</p>
 <p>Cet article ne couvre qu'une petite sélection des sujets abordés à la
 conférence, je compte sur <a href="http://blog.guillaume.lelarge.info/">Guillaume</a> pour lui aussi vous parler de <a href="http://char11.org/schedule">CHAR(11)</a>,
 mais il faudra peut être attendre son retour des <a href="http://2011.rmll.info/">RMLL</a> (quelle énergie !).</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Wed, 13 Jul 2011 17:30:00 +0200</pubDate>
@@ -152,32 +208,15 @@ loss</strong>).  The <em>cloud elasticity</em> is reaching out from the stateles
 and <em>those guys</em> are making it happen now.</p>
 
 <p>May you live in interresting times!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Wed, 13 Jul 2011 17:15:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2011/07/13-back-from-char11.html</guid>
 </item>
 <item>
-  <title><span style="font-size: 140%; font-weight: bold;"> Muse setup revised</span></title>
-  <link>http://tapoueh.org/rss/index.xml.html</link>
-  <description><![CDATA[
-
-]]></description>
-  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
-  <pubDate>Tue, 05 Jul 2011 19:55:00 +0200</pubDate>
-  <guid isPermaLink="true">http://tapoueh.org/rss/index.xml.html</guid>
-</item>
-<item>
   <title>Muse setup revised</title>
   <link>http://tapoueh.org/blog/2011/07/05-muse-setup-revised.html</link>
-  <description><![CDATA[<h2>Muse setup revised</h2>
-<div class="date">Tuesday, July 05 2011, 19:55</div>
-
-
-<p class="first">Most of you are probably reading my posts directly in their <code>RSS</code> reader tools
+  <description><![CDATA[<p class="first">Most of you are probably reading my posts directly in their <code>RSS</code> reader tools
 (mine is <a href="http://www.gnus.org/">gnus</a> thanks to the <a href="http://gwene.org/">Gwene</a> service), so you probably missed it, but I
 just <em>pushed</em> a whole new version of <a href="http://tapoueh.org">my website</a>, still using <a href="https://github.com/alexott/muse">Emacs Muse</a> as the
 engine.</p>
@@ -215,14 +254,32 @@ document.location.href=document.getElementById(anchor).href;
 debugging to do.  That's the price to pay for doing it yourself I guess.
 But I still don't know of a ready to use solution (as in <em>off the shelf</em>) that
 meet my criteria for web publishing.  More on that topic another time.</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Tue, 05 Jul 2011 19:55:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2011/07/05-muse-setup-revised.html</guid>
+</item>
+<item>
+  <title><span style="font-size: 140%; font-weight: bold;"> Muse setup revised</span></title>
+  <link>http://tapoueh.org/rss/index.xml.html</link>
+  <description><![CDATA[div id="breadcrumb"><a href=../index.html>/dev/dim</a> / <a href=../rss/index.html>rss</a> / </div>
+<div id="breadcrumb"><a href=../index.html>/dev/dim</a> / <a href=../rss/index.html>rss</a> / </div>
+
+
+<h2>Tags</h2>
+<div class="date">Tuesday, July 05 2011, 19:55</div>
 
 
 
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 05 Jul 2011 19:55:00 +0200</pubDate>
-  <guid isPermaLink="true">http://tapoueh.org/blog/2011/07/05-muse-setup-revised.html</guid>
+  <guid isPermaLink="true">http://tapoueh.org/rss/index.xml.html</guid>
 </item>
+
+
+
+
 
 
 
@@ -286,22 +343,29 @@ maintenir en production, <a href="http://projects.2ndquadrant.com/repmgr">repmgr
 intéressants. Bref, si <em>réplication</em> et <em>cluster</em> sont des thèmes que vous
 voulez conjuguer avec PostgreSQL, c'est l'endroit où passer le début de la
 semaine prochaine !</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 04 Jul 2011 20:15:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2011/07/04-pret-pour-char11.html</guid>
 </item>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 <item>
   <title>Multi-Version support for Extensions</title>
   <link>http://tapoueh.org/blog/2011/06/29-multi-version-support-for-extensions.html</link>
-  <description><![CDATA[<h2>Multi-Version support for Extensions</h2>
-<div class="date">Wednesday, June 29 2011, 09:50</div>
-
-
-<p class="first">We still have this problem to solve with extensions and their packaging.
+  <description><![CDATA[<p class="first">We still have this problem to solve with extensions and their packaging.
 How to best organize things so that your extension is compatible with before
 <code>9.1</code> and <code>9.1</code> and following releases of <a href="http://www.postgresql.org/">PostgreSQL</a>?</p>
 
@@ -388,24 +452,15 @@ CREATE EXTENSION
 </pre>
 
 <p>That's it :)</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Wed, 29 Jun 2011 09:50:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2011/06/29-multi-version-support-for-extensions.html</guid>
 </item>
-
-
 <item>
   <title>Don't be afraid of 'cl</title>
   <link>http://tapoueh.org/blog/2011/06/20-dont-be-afraid-of-cl.html</link>
-  <description><![CDATA[<h2>Don't be afraid of 'cl</h2>
-<div class="date">Monday, June 20 2011, 00:15</div>
-
-
-<p class="first">In this <a href="http://tsengf.blogspot.com/2011/06/confirm-to-quit-when-editing-files-from.html">blog article</a>, you're shown a quite long function that loop through
+  <description><![CDATA[<p class="first">In this <a href="http://tsengf.blogspot.com/2011/06/confirm-to-quit-when-editing-files-from.html">blog article</a>, you're shown a quite long function that loop through
 your buffers to find out if any of them is associated with a file whose full
 name includes <code>&quot;projects&quot;</code>.  Well, you should not be afraid of using <code>cl</code>:</p>
 
@@ -419,9 +474,6 @@ name includes <code>&quot;projects&quot;</code>.  Well, you should not be afraid
 <p>If you want to collect the list of buffers whose name matches your test,
 then replace <code>return t</code> by <code>collect b</code> and you're done.  Really, this <code>loop</code> thing
 is worth learning.</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 20 Jun 2011 00:15:00 +0200</pubDate>
@@ -429,14 +481,14 @@ is worth learning.</p>
 </item>
 
 
+
+
+
+
 <item>
   <title>Back from Ottawa, preparing for Cambridge</title>
   <link>http://tapoueh.org/blog/2011/05/30-back-from-ottawa-preparing-for-cambridge.html</link>
-  <description><![CDATA[<h2>Back from Ottawa, preparing for Cambridge</h2>
-<div class="date">Monday, May 30 2011, 11:00</div>
-
-
-<p class="first">While <a href="http://blog.hagander.net/">Magnus</a> is all about <a href="http://2011.pgconf.eu/">PG Conf EU</a> already, you have to realize we're just
+  <description><![CDATA[<p class="first">While <a href="http://blog.hagander.net/">Magnus</a> is all about <a href="http://2011.pgconf.eu/">PG Conf EU</a> already, you have to realize we're just
 landed back from <a href="http://www.pgcon.org/2011/">PG Con</a> in Ottawa.  My next stop in the annual conferences
 is <a href="http://char11.org/">CHAR 11</a>, the <em>Clustering, High Availability and Replication</em> conference in
 Cambridge, 11-12 July.  Yes, on the old continent this time.</p>
@@ -454,47 +506,29 @@ there something as good looking as the monitoring system are...</p>
 
 <p>Well, expect some news and a nice big picture diagram overview soon, if work
 schedule leaves me anytime that's what I want to be working on now.</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 30 May 2011 11:00:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2011/05/30-back-from-ottawa-preparing-for-cambridge.html</guid>
 </item>
-
-
 <item>
   <title>el-get 2.2</title>
   <link>http://tapoueh.org/blog/2011/05/26-el-get-22.html</link>
-  <description><![CDATA[<h2>el-get 2.2</h2>
-<div class="date">Thursday, May 26 2011, 12:00</div>
-
-
-<p class="first">We've spotted a little too late for our own taste a discrepancy in the
+  <description><![CDATA[<p class="first">We've spotted a little too late for our own taste a discrepancy in the
 source tree: a work in progress patch landed in git just before to release
 <a href="https://github.com/dimitri/el-get">el-get</a> stable.  So we cleaned the tree (thanks again <a href="http://julien.danjou.info/">Julien</a>), branched a
 stable maintenance tree, and released <code>2.2</code> from there.</p>
 
 <p>You're back to enjoying <code>el-get</code> :)</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 26 May 2011 12:00:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2011/05/26-el-get-22.html</guid>
 </item>
-
-
 <item>
   <title>el-get 2.1</title>
   <link>http://tapoueh.org/blog/2011/05/26-el-get-21.html</link>
-  <description><![CDATA[<h2>el-get 2.1</h2>
-<div class="date">Thursday, May 26 2011, 10:00</div>
-
-
-<p class="first">Current <a href="https://github.com/dimitri/el-get">el-get</a> status is stable, ready for daily use and packed with extra
+  <description><![CDATA[<p class="first">Current <a href="https://github.com/dimitri/el-get">el-get</a> status is stable, ready for daily use and packed with extra
 features that make life easier.  There are some more things we could do, as
 always, but they will be about smoothing things further.</p>
 
@@ -516,26 +550,15 @@ release.</p>
 
 <p>Please note that this versioning policy has been picked while backing
 <code>1.2~dev</code>, so <code>1.0</code> was a <em>stable</em> release in fact.  Ah, history.</p>
-
-
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 26 May 2011 10:00:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2011/05/26-el-get-21.html</guid>
 </item>
-
-
 <item>
   <title>Preparing for PGCON</title>
   <link>http://tapoueh.org/blog/2011/05/12-preparing-for-pgcon.html</link>
-  <description><![CDATA[<h2>Preparing for PGCON</h2>
-<div class="date">Thursday, May 12 2011, 10:30</div>
-
-
-<p class="first">It's this time of the year again, the main international
+  <description><![CDATA[<p class="first">It's this time of the year again, the main international
 <a href="http://www.pgcon.org/2011/">PostgreSQL Conference</a> is next week in Ottawa, Canada.  If previous years are
 any indication, this will be great event where to meet with a lot of the
 members of your community.  The core team will be there, developers will be
@@ -572,24 +595,15 @@ and <a href="http://www.pgcon.org/2011/schedule/speakers/197.en.html">Dan Ports<
 what guides me through talks or make me skip some.</p>
 
 <p>See you there!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 12 May 2011 10:30:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2011/05/12-preparing-for-pgcon.html</guid>
 </item>
-
-
 <item>
   <title>Mailq modeline display</title>
   <link>http://tapoueh.org/blog/2011/05/05-mailq-modeline-display.html</link>
-  <description><![CDATA[<h2>Mailq modeline display</h2>
-<div class="date">Thursday, May 05 2011, 14:10</div>
-
-
-<p class="first">If you've not been following along, you might have missed it: it appears to
+  <description><![CDATA[<p class="first">If you've not been following along, you might have missed it: it appears to
 me that even today, in 2011, mail systems work much better when setup the
 old way.  Meaning with a local <a href="http://en.wikipedia.org/wiki/Mail_Transfer_Agent">MTA</a> for outgoing mail.  With some niceties,
 such as <a href="http://tapoueh.org/articles/news/_Postfix_sender_dependent_relayhost_maps.html">sender dependent relayhost maps</a>.</p>
@@ -625,24 +639,15 @@ and here's as an example how I did setup <code>mailq</code> in my <a href="https
 <p>I'm not sure how many of you dear readers are using a local MTA to deliver
 your mails, but well, the ones who do (or consider doing so) might even find
 this article useful!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 05 May 2011 14:10:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2011/05/05-mailq-modeline-display.html</guid>
 </item>
-
-
 <item>
   <title>Tables and Views dependencies</title>
   <link>http://tapoueh.org/blog/2011/05/04-tables-and-views-dependencies.html</link>
-  <description><![CDATA[<h2>Tables and Views dependencies</h2>
-<div class="date">Wednesday, May 04 2011, 11:45</div>
-
-
-<p class="first">Let's say you need to <code>ALTER TABLE foo ALTER COLUMN bar TYPE bigint;</code>, and
+  <description><![CDATA[<p class="first">Let's say you need to <code>ALTER TABLE foo ALTER COLUMN bar TYPE bigint;</code>, and
 <a href="http://postgresql.org">PostgreSQL</a> is helpfully telling you that no you can't because such and such
 <em>views</em> depend on the column.  The basic way to deal with that is to copy
 paste from the error message the names of the views involved, then prepare a
@@ -704,24 +709,15 @@ just accept that you might <code>DROP</code> then <code>CREATE</code> again more
 
 <p>If you need some more details about the <code>\t \o</code> sequence you might be
 interested in this older article about <a href="http://tapoueh.org/articles/blog/_Resetting_sequences._All_of_them&#44;_please&#33;.html">resetting sequences</a>.</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Wed, 04 May 2011 11:45:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2011/05/04-tables-and-views-dependencies.html</guid>
 </item>
-
-
 <item>
   <title>Extension module_pathname and .sql.in</title>
   <link>http://tapoueh.org/blog/2011/05/02-extension-module_pathname-and-sqlin.html</link>
-  <description><![CDATA[<h2>Extension <code>module_pathname</code> and <code>.sql.in</code></h2>
-<div class="date">Monday, May 02 2011, 17:30</div>
-
-
-<p class="first">While currently too busy at work to deliver much Open Source contributions,
+  <description><![CDATA[<p class="first">While currently too busy at work to deliver much Open Source contributions,
 let's debunk an old habit of <a href="http://www.postgresql.org/">PostgreSQL</a> extension authors.  It's all down to
 copy pasting from <em>contrib</em>, and there's no reason to continue doing <code>$libdir</code>
 this way ever since <code>7.4</code> days.</p>
@@ -767,9 +763,6 @@ PostgreSQL in <code>debian</code>.  This will also give some more steam to the P
 effort for debian packages: the idea is to maintain packages for all
 supported version (from <code>8.2</code> up to soon <code>9.1</code>), something <code>debian</code> itself can not
 commit to.</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 02 May 2011 17:30:00 +0200</pubDate>
@@ -777,14 +770,12 @@ commit to.</p>
 </item>
 
 
+
+
 <item>
   <title>Emacs and PostgreSQL, PL line numbering</title>
   <link>http://tapoueh.org/blog/2011/04/23-emacs-and-postgresql-pl-line-numbering.html</link>
-  <description><![CDATA[<h2>Emacs and PostgreSQL, PL line numbering</h2>
-<div class="date">Saturday, April 23 2011, 10:30</div>
-
-
-<p class="first">A while ago I've been fixing and publishing <a href="https://github.com/dimitri/pgsql-linum-format">pgsql-linum-format</a> separately.
+  <description><![CDATA[<p class="first">A while ago I've been fixing and publishing <a href="https://github.com/dimitri/pgsql-linum-format">pgsql-linum-format</a> separately.
 That allows to number <code>PL/whatever</code> code lines when editing from <a href="http://www.gnu.org/software/emacs/">Emacs</a>, and
 it's something very useful to turn on when debugging.</p>
 
@@ -799,25 +790,15 @@ just overloading the image somehow.  But the idea is to just <code>M-x linum-mod
 when you need it, at least that's my usage of it.</p>
 
 <p>You can use <a href="https://github.com/dimitri/el-get">el-get</a> to easily get (then update) this little <code>Emacs</code> extension.</p>
-
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Sat, 23 Apr 2011 10:30:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2011/04/23-emacs-and-postgresql-pl-line-numbering.html</guid>
 </item>
-
-
 <item>
   <title>Emacs Kicker</title>
   <link>http://tapoueh.org/blog/2011/04/15-emacs-kicker.html</link>
-  <description><![CDATA[<h2>Emacs Kicker</h2>
-<div class="date">Friday, April 15 2011, 21:30</div>
-
-
-<p class="first">Following up on the very popular <a href="https://github.com/technomancy/emacs-starter-kit">emacs-starter-kit</a>, I'm now proposing the
+  <description><![CDATA[<p class="first">Following up on the very popular <a href="https://github.com/technomancy/emacs-starter-kit">emacs-starter-kit</a>, I'm now proposing the
 <a href="https://github.com/dimitri/emacs-kicker">emacs-kicker</a>.  It's about the <code>.emacs</code> file you've seen in older posts here,
 which I maintain for some colleagues.  After all, if they find it useful,
 some more people might to, so I've decided to publish it.</p>
@@ -886,24 +867,15 @@ example that could be, using the excellent <a href="http://emacsformacosx.com/">
 </pre>
 
 <p>I hope some readers will find it useful! :)</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Fri, 15 Apr 2011 21:30:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2011/04/15-emacs-kicker.html</guid>
 </item>
-
-
 <item>
   <title>Some notes about Skytools3</title>
   <link>http://tapoueh.org/blog/2011/04/11-some-notes-about-skytools3.html</link>
-  <description><![CDATA[<h2>Some notes about Skytools3</h2>
-<div class="date">Monday, April 11 2011, 11:30</div>
-
-
-<p class="first">I've been working on <a href="http://github.com/markokr/skytools">skytools3</a> packaging lately.  I've been pushing quite a
+  <description><![CDATA[<p class="first">I've been working on <a href="http://github.com/markokr/skytools">skytools3</a> packaging lately.  I've been pushing quite a
 lot of work into it, in order to have exactly what I needed out of the box,
 after some 3 years of production and experiences with the products.  Plural,
 yes, because even if <a href="http://wiki.postgresql.org/wiki/PgBouncer">pgbouncer</a> and <a href="http://wiki.postgresql.org/wiki/PL/Proxy">plproxy</a> are siblings to the projets (same
@@ -948,10 +920,6 @@ it right, it's happening this very year!  I'm very excited about it, and
 have several architectures that will greatly benefit from the switch to
 <code>skytools3</code>.  More on that later, though!  (Yes, my <em>to blog later</em> list is
 getting quite long now).</p>
-
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 11 Apr 2011 11:30:00 +0200</pubDate>
@@ -959,14 +927,14 @@ getting quite long now).</p>
 </item>
 
 
+
+
+
+
 <item>
   <title>towards pg_staging 1.0</title>
   <link>http://tapoueh.org/blog/2011/03/29-towards-pg_staging-10.html</link>
-  <description><![CDATA[<h2>towards pg_staging 1.0</h2>
-<div class="date">Tuesday, March 29 2011, 15:30</div>
-
-
-<p class="first">If you don't remember about what <a href="pgstaging.html">pg_staging</a> is all about, it's a central
+  <description><![CDATA[<p class="first">If you don't remember about what <a href="pgstaging.html">pg_staging</a> is all about, it's a central
 console from where to control all your <a href="http://www.postgresql.org/">PostgreSQL</a> databases.  Typically you
 use it to manage your development and pre-production setup, where developers
 ask you pretty often to install them some newer dump from the production,
@@ -1063,25 +1031,15 @@ of <em>commits</em> are all bug fixes and round corners).</p>
 
 <p>Given that, I'm thinking in terms of <code>pg_staging 1.0</code> soon!  Now is a pretty
 good time to try it and see how it can help you.</p>
-
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 29 Mar 2011 15:30:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2011/03/29-towards-pg_staging-10.html</guid>
 </item>
-
-
 <item>
   <title>Extensions in 9.1</title>
   <link>http://tapoueh.org/blog/2011/03/01-extensions-in-91.html</link>
-  <description><![CDATA[<h2>Extensions in 9.1</h2>
-<div class="date">Tuesday, March 01 2011, 16:30</div>
-
-
-<p class="first">If you've not been following closely you might have missed out on extensions
+  <description><![CDATA[<p class="first">If you've not been following closely you might have missed out on extensions
 integration.  Well, <a href="http://en.wikipedia.org/wiki/Tom_Lane_(computer_scientist)">Tom</a> spent some time on the patches I've been preparing
 for the last 4 months.  And not only did he commit most of the work but he
 also enhanced some parts of the code (better factoring) and basically
@@ -1136,9 +1094,6 @@ who helped here, from <a href="http://www.2ndquadrant.com/">2ndQuadrant</a> to e
 over beers at conferences… lots of people really.</p>
 
 <p>To an extended PostgreSQL (and beyond) :)</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 01 Mar 2011 16:30:00 +0100</pubDate>
@@ -1146,14 +1101,40 @@ over beers at conferences… lots of people really.</p>
 </item>
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 <item>
   <title>desktop-mode and readahead</title>
   <link>http://tapoueh.org/blog/2011/02/23-desktop-mode-and-readahead.html</link>
-  <description><![CDATA[<h2>desktop-mode and readahead</h2>
-<div class="date">Wednesday, February 23 2011, 16:45</div>
-
-
-<p class="first">I'm using <a href="http://www.gnu.org/software/emacs/manual/html_node/elisp/Desktop-Save-Mode.html#Desktop-Save-Mode">Desktop Save Mode</a> so that <a href="http://www.gnu.org/software/emacs/">Emacs</a> knows to open again all the
+  <description><![CDATA[<p class="first">I'm using <a href="http://www.gnu.org/software/emacs/manual/html_node/elisp/Desktop-Save-Mode.html#Desktop-Save-Mode">Desktop Save Mode</a> so that <a href="http://www.gnu.org/software/emacs/">Emacs</a> knows to open again all the
 buffers I've been using.  That goes quite well with how often I start <code>Emacs</code>,
 that is once a week or once a month.  Now, <code>M-x ibuffer</code> last line is as
 following:</p>
@@ -1233,24 +1214,15 @@ readahead ~/.emacs.desktop.readahead
 time the desktop really gets to them, I see no more disk activity (laptops
 have a led to see that happening).  But the desktop loading time has not
 changed...</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Wed, 23 Feb 2011 16:45:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2011/02/23-desktop-mode-and-readahead.html</guid>
 </item>
-
-
 <item>
   <title>Back from FOSDEM</title>
   <link>http://tapoueh.org/blog/2011/02/07-back-from-fosdem.html</link>
-  <description><![CDATA[<h2>Back from FOSDEM</h2>
-<div class="date">Monday, February 07 2011, 11:10</div>
-
-
-<p class="first">This year we were in the main building of the conference, and apparently the
+  <description><![CDATA[<p class="first">This year we were in the main building of the conference, and apparently the
 booth went very well, solding lots of <a href="http://postgresqleu.spreadshirt.net/">PostgreSQL merchandise</a> etc.  I had the
 pleasure to once again meet with the community, but being there only 1 day I
 didn't spend as much time as I would have liked with some of the people there.</p>
@@ -1267,25 +1239,15 @@ of people are already maintaining server side code but missing tools to
 manage it properly.  But that will begin once the patch is in, so that I
 present <em>the real stuff</em> rather than what I proposed to the community… Stay
 tuned!</p>
-
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 07 Feb 2011 11:10:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2011/02/07-back-from-fosdem.html</guid>
 </item>
-
-
 <item>
   <title>Going to FOSDEM</title>
   <link>http://tapoueh.org/blog/2011/02/01-going-to-fosdem.html</link>
-  <description><![CDATA[<h2>Going to FOSDEM</h2>
-<div class="date">Tuesday, February 01 2011, 13:35</div>
-
-
-<p class="first">A quick blog entry to say that yes:</p>
+  <description><![CDATA[<p class="first">A quick blog entry to say that yes:</p>
 
 <center>
 <p><img src="../../../images//going-to-fosdem-2011.png" alt=""></p>
@@ -1311,9 +1273,6 @@ Meanwhile, we're working on finalizing the main extension's patch, offering
 <code>pg_dump</code> support.</p>
 
 <p>See you at <a href="http://fosdem.org/2011/">FOSDEM</a>!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 01 Feb 2011 13:35:00 +0100</pubDate>
@@ -1321,14 +1280,31 @@ Meanwhile, we're working on finalizing the main extension's patch, offering
 </item>
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 <item>
   <title>Starting afresh with el-get</title>
   <link>http://tapoueh.org/blog/2011/01/11-starting-afresh-with-el-get.html</link>
-  <description><![CDATA[<h2>Starting afresh with el-get</h2>
-<div class="date">Tuesday, January 11 2011, 16:20</div>
-
-
-<p class="first">It so happens that a colleague of mine wanted to start using <a href="http://www.gnu.org/software/emacs/">Emacs</a> but
+  <description><![CDATA[<p class="first">It so happens that a colleague of mine wanted to start using <a href="http://www.gnu.org/software/emacs/">Emacs</a> but
 couldn't get to it. He insists on having proper color themes in all
 applications and some sensible defaults full of nifty add-ons everywhere,
 and didn't want to have to learn that much about <em>Emacs</em> and <em>Emacs Lisp</em> to get
@@ -1431,24 +1407,15 @@ users. Well, here's what I did:</p>
 very happy to switch to using <a href="http://www.gnu.org/software/emacs/">our favorite editor</a>. And he's not even afraid
 (yet) of his <code>~/.emacs</code>. I say that's a very good sign of where we are with
 <a href="https://github.com/dimitri/el-get">el-get</a>!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 11 Jan 2011 16:20:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2011/01/11-starting-afresh-with-el-get.html</guid>
 </item>
-
-
 <item>
   <title>el-get 1.1, with 174 recipes</title>
   <link>http://tapoueh.org/blog/2010/12/20-el-get-11-with-174-recipes.html</link>
-  <description><![CDATA[<h2>el-get 1.1, with 174 recipes</h2>
-<div class="date">Monday, December 20 2010, 16:45</div>
-
-
-<p class="first">Yes, you read it well, <a href="https://github.com/dimitri/el-get">el-get</a> currently <em>features</em> <code>174</code> <a href="https://github.com/dimitri/el-get/tree/master/recipes">recipes</a>, and is now
+  <description><![CDATA[<p class="first">Yes, you read it well, <a href="https://github.com/dimitri/el-get">el-get</a> currently <em>features</em> <code>174</code> <a href="https://github.com/dimitri/el-get/tree/master/recipes">recipes</a>, and is now
 reaching the <code>1.1</code> release. The reason for this release is mainly that I have
 two big chunks of code to review and the current code has been very stable
 for awhile. It seems better to do a release with the stable code that exists
@@ -1536,10 +1503,6 @@ right? :)</p>
 <p class="first">All in all, if you're already using <a href="https://github.com/dimitri/el-get">el-get</a> you should consider switching to
 <code>1.1</code> (by issuing <code>M-x el-get-update</code> of course), and if you're hesitating, just
 join the fun now!</p>
-
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 20 Dec 2010 16:45:00 +0100</pubDate>
@@ -1547,14 +1510,33 @@ join the fun now!</p>
 </item>
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 <item>
   <title>Dynamic Triggers in PLpgSQL</title>
   <link>http://tapoueh.org/blog/2010/11/24-dynamic-triggers-in-plpgsql.html</link>
-  <description><![CDATA[<h2>Dynamic Triggers in PLpgSQL</h2>
-<div class="date">Wednesday, November 24 2010, 16:45</div>
-
-
-<p class="first">You certainly know that implementing <em>dynamic</em> triggers in <code>PLpgSQL</code> is
+  <description><![CDATA[<p class="first">You certainly know that implementing <em>dynamic</em> triggers in <code>PLpgSQL</code> is
 impossible. But I had a very bad night, being up from as soon as 3:30 am
 today, so that when a developer asked me about reusing the same trigger
 function code from more than one table and for a dynamic column name, I
@@ -1623,24 +1605,17 @@ $f$;
 
 <p>It's not pretty, and not fast. It's about <code>2 ms</code> per call on a table with <code>15</code>
 columns, in some preliminary tests. But it sure was a nice challenge!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Wed, 24 Nov 2010 16:45:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/11/24-dynamic-triggers-in-plpgsql.html</guid>
 </item>
-
-
 <item>
   <title>pg_basebackup</title>
   <link>http://tapoueh.org/blog/2010/11/07-pg_basebackup.html</link>
-  <description><![CDATA[<h2>pg_basebackup</h2>
-<div class="date">Sunday, November 07 2010, 13:45</div>
-
-
-<p class="first">whole duration of the <em>base backup</em>. That's now done in the aforementioned
+  <description><![CDATA[<p><a href="http://2ndquadrant.com/about/#krosing">Hannu</a> just gave me a good idea in <a href="http://archives.postgresql.org/pgsql-hackers/2010-11/msg00236.php">this email</a> on <a href="http://archives.postgresql.org/pgsql-hackers/">-hackers</a>, proposing that
+<a href="https://github.com/dimitri/pg_basebackup">pg_basebackup</a> should get the <code>xlog</code> files again and again in a loop for the
+whole duration of the <em>base backup</em>. That's now done in the aforementioned
 tool, whose options got a little more useful now:</p>
 
 <pre class="src">
@@ -1685,9 +1660,6 @@ I've been choosing what's easier for me.</p>
 
 <p>If you get to try it, please report about it, you should know or easily
 discover my <em>email</em>!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Sun, 07 Nov 2010 13:45:00 +0100</pubDate>
@@ -1698,11 +1670,7 @@ discover my <em>email</em>!</p>
 <item>
   <title>Introducing Extensions</title>
   <link>http://tapoueh.org/blog/2010/10/21-introducing-extensions.html</link>
-  <description><![CDATA[<h2>Introducing Extensions</h2>
-<div class="date">Thursday, October 21 2010, 13:45</div>
-
-
-<p class="first">After reading <a href="http://database-explorer.blogspot.com/2010/10/extensions-in-91.html">Simon's blog post</a>, I can't help but try to give some details
+  <description><![CDATA[<p class="first">After reading <a href="http://database-explorer.blogspot.com/2010/10/extensions-in-91.html">Simon's blog post</a>, I can't help but try to give some details
 about what it is exactly that I'm working on. As he said, there are several
 aspects to <em>extensions</em> in <a href="http://www.postgresql.org/">PostgreSQL</a>, it all begins here:
 <a href="http://www.postgresql.org/docs/9.0/interactive/extend.html">Chapter 35. Extending SQL</a>.</p>
@@ -1939,25 +1907,15 @@ install</code> operation place your files at the right place, including the new
 
 <p class="first">A next blog entry will detail what happens with extensions providing <em>user
 data</em>, and the <code>CREATE EXTENSION name WITH NO DATA;</code> variant. Stay tuned!</p>
-
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 21 Oct 2010 13:45:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/10/21-introducing-extensions.html</guid>
 </item>
-
-
 <item>
   <title>Extensions: writing a patch for PostgreSQL</title>
   <link>http://tapoueh.org/blog/2010/10/15-extensions-writing-a-patch-for-postgresql.html</link>
-  <description><![CDATA[<h2>Extensions: writing a patch for PostgreSQL</h2>
-<div class="date">Friday, October 15 2010, 11:30</div>
-
-
-<p class="first">These days, thanks to my <a href="http://2ndquadrant.com/">community oriented job</a>, I'm working full time on a
+  <description><![CDATA[<p class="first">These days, thanks to my <a href="http://2ndquadrant.com/">community oriented job</a>, I'm working full time on a
 <a href="http://www.postgresql.org/">PostgreSQL</a> patch to terminate basic support for <a href="http://www.postgresql.org/docs/9/static/extend.html">extending SQL</a>. First thing I
 want to share is that patching the <em>backend code</em> is not as hard as one would
 think. Second one is that <a href="http://git-scm.com/">git</a> really is helping.</p>
@@ -2097,25 +2055,15 @@ dim ~/dev/PostgreSQL/postgresql-extension git --no-pager diff master..|diffstat
  src/makefiles/pgxs.mk                  |   21 -
  55 files changed, 2456 insertions(+), 188 deletions(-)
 </pre>
-
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Fri, 15 Oct 2010 11:30:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/10/15-extensions-writing-a-patch-for-postgresql.html</guid>
 </item>
-
-
 <item>
   <title>Date puzzle for starters</title>
   <link>http://tapoueh.org/blog/2010/10/08-date-puzzle-for-starters.html</link>
-  <description><![CDATA[<h2>Date puzzle for starters</h2>
-<div class="date">Friday, October 08 2010, 10:00</div>
-
-
-<p class="first">The <a href="http://www.postgresql.org/">PostgreSQL</a> <code>IRC</code> channel is a good place to be, for all the very good help
+  <description><![CDATA[<p class="first">The <a href="http://www.postgresql.org/">PostgreSQL</a> <code>IRC</code> channel is a good place to be, for all the very good help
 you can get there, because people are always wanting to remain helpful,
 because of the off-topics discussions sometime, or to get to talk with
 community core members. And to start up your day too.</p>
@@ -2208,24 +2156,15 @@ time, or fix the <code>API</code> so that you can ask for more than a <em>nth do
 time. Of course, that was a starter for me, not a problem I need to solve
 directly, and that was a good excuse for a blog entry, so I won't fix
 it. That's left as an exercise to our interested readers!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Fri, 08 Oct 2010 10:00:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/10/08-date-puzzle-for-starters.html</guid>
 </item>
-
-
 <item>
   <title>Resuming work on Extensions, first little step</title>
   <link>http://tapoueh.org/blog/2010/10/07-resuming-work-on-extensions-first-little-step.html</link>
-  <description><![CDATA[<h2>Resuming work on Extensions, first little step</h2>
-<div class="date">Thursday, October 07 2010, 17:15</div>
-
-
-<p class="first">Yeah I'm back on working on my part of the extension thing in <a href="http://www.postgresql.org/">PostgreSQL</a>.</p>
+  <description><![CDATA[<p class="first">Yeah I'm back on working on my part of the extension thing in <a href="http://www.postgresql.org/">PostgreSQL</a>.</p>
 
 <p>First step is a little one, but as it has public consequences, I figured I'd
 talk about it already. I've just refreshed my <code>git</code> repository to follow the
@@ -2276,24 +2215,15 @@ time to devote on the topic. At least I was able to arrange things so that I
 can work on the subject for real, and the first thing I did, the very night
 before it was meant to begin, is catch a <em>tonsillitis</em>. Lost about a week, not
 the project! Stay tuned!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 07 Oct 2010 17:15:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/10/07-resuming-work-on-extensions-first-little-step.html</guid>
 </item>
-
-
 <item>
   <title>el-get reaches 1.0</title>
   <link>http://tapoueh.org/blog/2010/10/07-el-get-reaches-10.html</link>
-  <description><![CDATA[<h2>el-get reaches 1.0</h2>
-<div class="date">Thursday, October 07 2010, 13:30</div>
-
-
-<p class="first">It's been a week since the last commits in the <a href="http://github.com/dimitri/el-get">el-get repository</a>, and those
+  <description><![CDATA[<p class="first">It's been a week since the last commits in the <a href="http://github.com/dimitri/el-get">el-get repository</a>, and those
 were all about fixing and adding recipes, and about notifications. Nothing
 like <em>core plumbing</em> you see. Also, <code>0.9</code> was released on <em>2010-08-24</em> and felt
 pretty complete already, then received lots of improvements. It's high time
@@ -2557,10 +2487,6 @@ will refrain from removing your package automatically, though.</li>
 happy with your current <code>el-get-sources</code>, so that I recommend using the
 <em>scratch installer</em> too. Don't forget to add <code>el-get</code> itself into your
 <code>el-get-sources</code> list, of course!</p>
-
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 07 Oct 2010 13:30:00 +0200</pubDate>
@@ -2568,14 +2494,20 @@ happy with your current <code>el-get-sources</code>, so that I recommend using t
 </item>
 
 
+
+
+
+
+
+
+
+
+
+
 <item>
   <title>Regexp performances and Finite Automata</title>
   <link>http://tapoueh.org/blog/2010/09/26-regexp-performances-and-finite-automata.html</link>
-  <description><![CDATA[<h2>Regexp performances and Finite Automata</h2>
-<div class="date">Sunday, September 26 2010, 21:00</div>
-
-
-<p class="first">The major reason why I dislike <a href="http://www.perl.org/">perl</a> so much, and <a href="http://www.ruby-lang.org">ruby</a> too, and the thing I'd
+  <description><![CDATA[<p class="first">The major reason why I dislike <a href="http://www.perl.org/">perl</a> so much, and <a href="http://www.ruby-lang.org">ruby</a> too, and the thing I'd
 want different in the <a href="http://www.gnu.org/software/emacs/manual/elisp.html">Emacs Lisp</a> <code>API</code> so far is how they set developers mind
 into using <a href="http://www.regular-expressions.info/">regexp</a>. You know the quote, don't you?</p>
 
@@ -2649,24 +2581,15 @@ will maintain my tendency to using <a href="http://www.gnu.org/manual/gawk/gawk.
 to refine the searching without resorting to more and more pipes in the
 command line). And as far as resorting to using <em>regexp</em> in PostgreSQL is
 concerned, it seems that the code here is already about topnotch. Once more.</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Sun, 26 Sep 2010 21:00:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/09/26-regexp-performances-and-finite-automata.html</guid>
 </item>
-
-
 <item>
   <title>Postfix sender_dependent_relayhost_maps</title>
   <link>http://tapoueh.org/blog/2010/09/23-postfix-sender_dependent_relayhost_maps.html</link>
-  <description><![CDATA[<h2>Postfix sender_dependent_relayhost_maps</h2>
-<div class="date">Thursday, September 23 2010, 14:30</div>
-
-
-<p class="first">The previous article about <a href="http://tapoueh.org/articles/news/_Scratch_that_itch:_M-x_mailq.html">M-x mailq</a> has raised several mails asking me
+  <description><![CDATA[<p class="first">The previous article about <a href="http://tapoueh.org/articles/news/_Scratch_that_itch:_M-x_mailq.html">M-x mailq</a> has raised several mails asking me
 details about the <a href="http://www.postfix.com/">Postfix</a> setup I'm talking about. The problem we're trying
 to solve is having a local <code>MTA</code> to send mails, so that any old-style Unix
 tool just works, instead of only the <code>MUA</code> you've spent time setting up.</p>
@@ -2731,9 +2654,6 @@ enjoyed reading when I first started to setup my local relaying <code>MTA</code>
 <p>Oh, and now that you have this, I hope you will enjoy my <code>M-x mailq</code> tool for
 occasions when you're wondering why you're not receiving an answer back yet,
 then start the ssh tunnel…</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 23 Sep 2010 14:30:00 +0200</pubDate>
@@ -2744,11 +2664,7 @@ then start the ssh tunnel…</p>
 <item>
   <title>Scratch that itch: M-x mailq</title>
   <link>http://tapoueh.org/blog/2010/09/23-scratch-that-itch-m-x-mailq.html</link>
-  <description><![CDATA[<h2>Scratch that itch: M-x mailq</h2>
-<div class="date">Thursday, September 23 2010, 09:30</div>
-
-
-<p class="first">Nowadays, most people would think that email is something simple, you just
+  <description><![CDATA[<p class="first">Nowadays, most people would think that email is something simple, you just
 setup your preferred client (that's called a <code>MUA</code>) with some information such
 as the <code>smtp</code> host you want it to talk to (that's call a <code>MTA</code> and this one is
 your <code>relayhost</code>). Then there's all the receiving mails part, and that's <code>smtp</code>
@@ -2801,33 +2717,24 @@ sample of the <code>mailq</code> mode, where you see the mail queue in colors an
 <p>So you could even <em>flush</em> only a given <code>queue id</code> or a given <code>site</code>, or just <em>kill</em>
 the current <code>id</code> or the current <code>site</code> so that it's a <code>C-y</code> away. I hope it's
 useful for you too — oh, and it's already in the <a href="http://github.com/dimitri/el-get">el-get</a> recipes, of course!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 23 Sep 2010 09:30:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/09/23-scratch-that-itch-m-x-mailq.html</guid>
 </item>
-
-
 <item>
   <title>switch-window reaches 0.8</title>
   <link>http://tapoueh.org/blog/2010/09/13-switch-window-reaches-08.html</link>
-  <description><![CDATA[<h2>switch-window reaches 0.8</h2>
-<div class="date">Monday, September 13 2010, 17:45</div>
-
-
-<p class="first">I wanted to play with the idea of using the whole keyboard for my
+  <description><![CDATA[<p class="first">I wanted to play with the idea of using the whole keyboard for my
 <a href="http://github.com/dimitri/switch-window">switch-window</a> utility, but wondered how to get those keys in the right order
 and all. Finally found <code>quail-keyboard-layout</code> which seems to exists for such
 uses, as you can see:</p>
 
 <pre class="src">
-ELISP&gt; (<span style="color: #7f007f;">loop</span> with layout = (split-string quail-keyboard-layout <span style="color: #bc8f8f;">""</span>)
-         for row from 1 to 4
-         collect (<span style="color: #7f007f;">loop</span> for col from 1 to 12
-                       collect (nth (+ 1 (* 2 col) (* 30 row)) layout)))
+(<span style="color: #7f007f;">loop</span> with layout = (split-string quail-keyboard-layout <span style="color: #bc8f8f;">""</span>)
+  for row from 1 to 4
+  collect (<span style="color: #7f007f;">loop</span> for col from 1 to 12
+                collect (nth (+ 1 (* 2 col) (* 30 row)) layout)))
 ((<span style="color: #bc8f8f;">"1"</span> <span style="color: #bc8f8f;">"2"</span> <span style="color: #bc8f8f;">"3"</span> <span style="color: #bc8f8f;">"4"</span> <span style="color: #bc8f8f;">"5"</span> <span style="color: #bc8f8f;">"6"</span> <span style="color: #bc8f8f;">"7"</span> <span style="color: #bc8f8f;">"8"</span> <span style="color: #bc8f8f;">"9"</span> <span style="color: #bc8f8f;">"0"</span> <span style="color: #bc8f8f;">"-"</span> <span style="color: #bc8f8f;">"="</span>)
  (<span style="color: #bc8f8f;">"q"</span> <span style="color: #bc8f8f;">"w"</span> <span style="color: #bc8f8f;">"e"</span> <span style="color: #bc8f8f;">"r"</span> <span style="color: #bc8f8f;">"t"</span> <span style="color: #bc8f8f;">"y"</span> <span style="color: #bc8f8f;">"u"</span> <span style="color: #bc8f8f;">"i"</span> <span style="color: #bc8f8f;">"o"</span> <span style="color: #bc8f8f;">"p"</span> <span style="color: #bc8f8f;">"["</span> <span style="color: #bc8f8f;">"]"</span>)
  (<span style="color: #bc8f8f;">"a"</span> <span style="color: #bc8f8f;">"s"</span> <span style="color: #bc8f8f;">"d"</span> <span style="color: #bc8f8f;">"f"</span> <span style="color: #bc8f8f;">"g"</span> <span style="color: #bc8f8f;">"h"</span> <span style="color: #bc8f8f;">"j"</span> <span style="color: #bc8f8f;">"k"</span> <span style="color: #bc8f8f;">"l"</span> <span style="color: #bc8f8f;">";"</span> <span style="color: #bc8f8f;">"'"</span> <span style="color: #bc8f8f;">"\\"</span>)
@@ -2840,24 +2747,15 @@ it more suitable to <a href="http://github.com/dimitri/cssh">cssh</a> users too,
 
 <p>In other news, I think <a href="http://github.com/dimitri/el-get">el-get</a> is about ready for its <code>1.0</code> release. Please
 test it and report any problem very soon before the release!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 13 Sep 2010 17:45:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/09/13-switch-window-reaches-08.html</guid>
 </item>
-
-
 <item>
   <title>Window Functions example remix</title>
   <link>http://tapoueh.org/blog/2010/09/12-window-functions-example-remix.html</link>
-  <description><![CDATA[<h2>Window Functions example remix</h2>
-<div class="date">Sunday, September 12 2010, 21:35</div>
-
-
-<p class="first">The drawback of hosting a static only website is, obviously, the lack of
+  <description><![CDATA[<p class="first">The drawback of hosting a static only website is, obviously, the lack of
 comments. What happens actually, though, is that I receive very few comments
 by direct mail. As I don't get another <em>spam</em> source to cleanup, I'm left
 unconvinced that's such a drawback. I still miss the low probability of
@@ -2873,7 +2771,7 @@ WITH t AS (
         o, w,
         CASE WHEN
             LAG(w) OVER(w) IS DISTINCT FROM w AND
-            ROW_NUMBER() OVER (w) &gt; 1 <span style="color: #b22222;">/* Eliminate first change */</span>
+            ROW_NUMBER() OVER (w) &gt; 1 <span style="color: #b22222;">/* </span><span style="color: #b22222;">Eliminate first change */</span>
         THEN 1
         END AS change
     FROM (
@@ -2884,7 +2782,7 @@ WITH t AS (
             (4, 7),
             (5, 7)
     ) AS data(o, w)
-    WINDOW w AS (ORDER BY o) <span style="color: #b22222;">/* Factor out WINDOW */</span>
+    WINDOW w AS (ORDER BY o) <span style="color: #b22222;">/* </span><span style="color: #b22222;">Factor out WINDOW */</span>
 )
 SELECT SUM(change) FROM t;
 </pre>
@@ -2894,24 +2792,15 @@ than hacking it away with a simple <code>-1</code> at the outer level. I'm still
 wondering which way is cleaner (that depends on how you look at the
 problem), but I think I know which one is simpler! Thanks <strong><em>David</em></strong> for this
 blog entry!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Sun, 12 Sep 2010 21:35:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/09/12-window-functions-example-remix.html</guid>
 </item>
-
-
 <item>
   <title>Window Functions example</title>
   <link>http://tapoueh.org/blog/2010/09/09-window-functions-example.html</link>
-  <description><![CDATA[<h2>Window Functions example</h2>
-<div class="date">Thursday, September 09 2010, 16:35</div>
-
-
-<p class="first">So, when <code>8.4</code> came out there was all those comments about how getting
+  <description><![CDATA[<p class="first">So, when <code>8.4</code> came out there was all those comments about how getting
 <a href="http://www.postgresql.org/docs/8.4/interactive/tutorial-window.html">window functions</a> was an awesome addition. Now, it seems that a lot of people
 seeking for help in <a href="http://wiki.postgresql.org/index.php?title=IRC">#postgresql</a> just don't know what kind of problem this
 feature helps solving. I've already been using them in some cases here in
@@ -2975,24 +2864,15 @@ over()</code>, will be <code>NULL</code>. The easiest way to accommodate is the 
 nice tool to have and my guess is that you will soon enough realize the only
 reason why you could think you don't have a need for them is that you didn't
 know it existed, and what you can do with it. <em>Sharpen your saw!</em> :)</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 09 Sep 2010 16:35:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/09/09-window-functions-example.html</guid>
 </item>
-
-
 <item>
   <title>Synchronous Replication</title>
   <link>http://tapoueh.org/blog/2010/09/06-synchronous-replication.html</link>
-  <description><![CDATA[<h2>Synchronous Replication</h2>
-<div class="date">Monday, September 06 2010, 18:05</div>
-
-
-<p class="first">Although the new asynchronous replication facility that ships with 9.0 ain't
+  <description><![CDATA[<p class="first">Although the new asynchronous replication facility that ships with 9.0 ain't
 released to the wide public yet, our hackers hero are already working on the
 synchronous version of it. A part of the facility is rather easy to design,
 we want something comparable to <a href="http://www.drbd.org/">DRBD</a> flexibility, but specific to our
@@ -3059,9 +2939,6 @@ standby and its master.</p>
 implement, and should allow for highly flexible setups. Of course, the devil
 is in the details, and we're talking about latencies in the distributed
 system here. That's also being discussed on the <a href="http://archives.postgresql.org/pgsql-hackers/">mailing list</a>.</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 06 Sep 2010 18:05:00 +0200</pubDate>
@@ -3069,14 +2946,20 @@ system here. That's also being discussed on the <a href="http://archives.postgre
 </item>
 
 
+
+
+
+
+
+
+
+
+
+
 <item>
   <title>Want to share your recipes?</title>
   <link>http://tapoueh.org/blog/2010/08/31-want-to-share-your-recipes.html</link>
-  <description><![CDATA[<h2>Want to share your recipes?</h2>
-<div class="date">Tuesday, August 31 2010, 14:15</div>
-
-
-<p class="first">Yes, that's another <a href="http://github.com/dimitri/el-get/">el-get</a> related entry. It seems to take a lot of my
+  <description><![CDATA[<p class="first">Yes, that's another <a href="http://github.com/dimitri/el-get/">el-get</a> related entry. It seems to take a lot of my
 attention these days. After having setup the <code>git</code> repository so that you can
 update <code>el-get</code> from within itself (so that it's <em>self-contained</em>), the next
 logical step is providing <em>recipes</em>.</p>
@@ -3116,28 +2999,19 @@ overrides atop the default one.</p>
 <p>Finally, the way to share your recipes is by sending me an email with the
 file, or to do the same over the <code>github</code> interface, I guess I'll still
 receive a mail then.</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 31 Aug 2010 14:15:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/08/31-want-to-share-your-recipes.html</guid>
 </item>
-
-
 <item>
   <title>Happy Numbers</title>
   <link>http://tapoueh.org/blog/2010/08/30-happy-numbers.html</link>
-  <description><![CDATA[<h2>Happy Numbers</h2>
-<div class="date">Monday, August 30 2010, 11:00</div>
-
-
-<p class="first">After discovering the excellent <a href="http://gwene.org/">Gwene</a> service, which allows you to subscribe
+  <description><![CDATA[<p class="first">After discovering the excellent <a href="http://gwene.org/">Gwene</a> service, which allows you to subscribe
 to <em>newsgroups</em> to read <code>RSS</code> content (<em>blogs</em>, <em>planets</em>, <em>commits</em>, etc), I came to
 read this nice article about <a href="http://programmingpraxis.com/2010/07/23/happy-numbers/">Happy Numbers</a>. That's a little problem that
 fits well an interview style question, so I first solved it yesterday
-evening in <a href="static/happy-numbers.el">Emacs Lisp</a> as that's the language I use the most those days.</p>
+evening in <a href="http://www.gnu.org/software/emacs/emacs-lisp-intro/html_node/List-Processing.html#List-Processing">Emacs Lisp</a> as that's the language I use the most those days.</p>
 
 <blockquote>
 <p class="quoted">
@@ -3236,7 +3110,9 @@ contains a line <code>input, {}</code>. Let's now play the same tricks as in the
 article:</p>
 
 <pre class="src">
-=# select array_agg(x) as happy from generate_series(1, 50) as t(x) where happy(x);
+=# select array_agg(x) as happy
+     from generate_series(1, 50) as t(x)
+    where happy(x);
               happy
 <span style="color: #b22222;">----------------------------------
 </span> {1,7,10,13,19,23,28,31,32,44,49}
@@ -3244,11 +3120,14 @@ article:</p>
 
 Time: 24.527 ms
 
-=# explain analyze select x from generate_series(1, 10000) as t(x) where happy(x);
+=# explain analyze select x
+                     from generate_series(1, 10000) as t(x)
+                    where happy(x);
                       QUERY PLAN
-<span style="color: #b22222;">----------------------------------------------------------------------------------------
-</span> Function Scan on generate_series t  (cost=0.00..265.00 rows=333 width=4)
-                          (actual time=2.938..3651.019 rows=1442 loops=1)
+<span style="color: #b22222;">------------------------------------------------------------
+</span> Function Scan on generate_series t
+     (cost=0.00..265.00 rows=333 width=4)
+     (actual time=2.938..3651.019 rows=1442 loops=1)
    Filter: happy((x)::bigint)
  Total runtime: 3651.534 ms
 (3 rows)
@@ -3261,23 +3140,48 @@ here). For what it's worth, finding the first <code>10000</code> happy numbers i
 Lisp</em> on the same laptop takes <code>2830 ms</code>, also running a recursive version of
 the code.</p>
 
+<h3>Update, the Emacs Lisp version, inline</h3>
 
+<p class="first">For your pleasure:</p>
 
+<pre class="src">
+(<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">happy?</span> (<span style="color: #228b22;">&amp;optional</span> n seen)
+  <span style="color: #bc8f8f;">"return true when n is a happy number"</span>
+  (interactive)
+  (<span style="color: #7f007f;">let*</span> ((number    (or n (read-from-minibuffer
+                           <span style="color: #bc8f8f;">"Is this number happy: "</span>)))
+         (digits    (mapcar
+                     'string-to-int
+                     (subseq (split-string number <span style="color: #bc8f8f;">""</span>) 1 -1)))
+         (squares   (mapcar (<span style="color: #7f007f;">lambda</span> (x) (* x x)) digits))
+         (happiness (apply '+ squares)))
+    (<span style="color: #7f007f;">cond</span> ((eq 1 happiness)      t)
+          ((memq happiness seen) nil)
+          (t
+           (happy? (number-to-string happiness)
+                   (push happiness seen))))))
+
+(<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">find-happy-numbers</span> (<span style="color: #228b22;">&amp;optional</span> limit)
+  <span style="color: #bc8f8f;">"find all happy numbers from 1 to limit"</span>
+  (interactive)
+  (<span style="color: #7f007f;">let</span> ((count (or limit
+                   (read-from-minibuffer
+                    <span style="color: #bc8f8f;">"List of happy numbers from 1 to: "</span>)))
+        happy)
+    (<span style="color: #7f007f;">dotimes</span> (n (string-to-int count))
+      (<span style="color: #7f007f;">when</span> (happy? (number-to-string (1+ n)))
+        (push (1+ n) happy)))
+    (nreverse happy)))
+</pre>
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 30 Aug 2010 11:00:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/08/30-happy-numbers.html</guid>
 </item>
-
-
 <item>
   <title>welcome el-get scratch installer</title>
   <link>http://tapoueh.org/blog/2010/08/27-welcome-el-get-scratch-installer.html</link>
-  <description><![CDATA[<h2>welcome el-get scratch installer</h2>
-<div class="date">Friday, August 27 2010, 14:15</div>
-
-
-<p class="first">A very good remark from some users: installing and managing <code>el-get</code> should be
+  <description><![CDATA[<p class="first">A very good remark from some users: installing and managing <code>el-get</code> should be
 simpler. They wanted both an easy install of the thing, and a way to be able
 to manage it afterwards (like, update the local copy against the
 authoritative source). So I decided it was high time for getting the code
@@ -3295,25 +3199,15 @@ though, that's the drawback of the lack of magic. So you will have to still
 add an explicit <code>(require 'el-get)</code> before to go and define you own
 <code>el-get-sources</code> then finally <code>(el-get)</code>. I don't think that's a problem I need
 to solve, though.</p>
-
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Fri, 27 Aug 2010 14:15:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/08/27-welcome-el-get-scratch-installer.html</guid>
 </item>
-
-
 <item>
   <title>Playing with bit strings</title>
   <link>http://tapoueh.org/blog/2010/08/26-playing-with-bit-strings.html</link>
-  <description><![CDATA[<h2>Playing with bit strings</h2>
-<div class="date">Thursday, August 26 2010, 17:45</div>
-
-
-<p class="first">The idea of the day ain't directly from me, I'm just helping with a very
+  <description><![CDATA[<p class="first">The idea of the day ain't directly from me, I'm just helping with a very
 thin subpart of the problem. The problem, I can't say much about, let's just
 assume you want to reduce the storage of <code>MD5</code> in your database, so you want
 to abuse <a href="http://www.postgresql.org/docs/8.4/interactive/datatype-bit.html">bit strings</a>. A solution to use them works fine, but the datatype is
@@ -3396,24 +3290,15 @@ rows. We're targeting more that that, so that's a great win down here!</p>
 <code>varbit_to_hex</code> seems to be around <code>28 µs</code>. We can afford it.</p>
 
 <p>Hope this helps!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 26 Aug 2010 17:45:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/08/26-playing-with-bit-strings.html</guid>
 </item>
-
-
 <item>
   <title>el-get news</title>
   <link>http://tapoueh.org/blog/2010/08/26-el-get-news.html</link>
-  <description><![CDATA[<h2>el-get news</h2>
-<div class="date">Thursday, August 26 2010, 16:30</div>
-
-
-<p class="first">I've been receiving some requests for <a href="http://www.emacswiki.org/emacs/el-get.el">el-get</a>, some of them even included a
+  <description><![CDATA[<p class="first">I've been receiving some requests for <a href="http://www.emacswiki.org/emacs/el-get.el">el-get</a>, some of them even included a
 patch. So now there's support for <code>bzr</code>, <code>CSV</code> and <code>http-tar</code>, augmenting the
 existing support for <code>git</code>, <code>git-svn</code>, <code>apt-get</code>, <code>fink</code> and <code>ELPA</code> formats.</p>
 
@@ -3468,24 +3353,15 @@ if needed at all.</p>
 code, and the next steps include proposing it to <a href="http://tromey.com/elpa/">ELPA</a> so that getting to use
 it is easier than ever. You'd just have to choose whether to install <code>ELPA</code>
 from <code>el-get</code> or the other way around.</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 26 Aug 2010 16:30:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/08/26-el-get-news.html</guid>
 </item>
-
-
 <item>
   <title>el-get and dim-switch-window status update</title>
   <link>http://tapoueh.org/blog/2010/08/09-el-get-and-dim-switch-window-status-update.html</link>
-  <description><![CDATA[<h2>el-get and dim-switch-window status update</h2>
-<div class="date">Monday, August 09 2010, 15:35</div>
-
-
-<p class="first">Thanks to you readers of <a href="http://planet.emacsen.org/">Planet Emacsen</a> taking the time to try those pieces
+  <description><![CDATA[<p class="first">Thanks to you readers of <a href="http://planet.emacsen.org/">Planet Emacsen</a> taking the time to try those pieces
 of emacs lisp found in my blog, and also the time to comment on them, some
 bugs have been fixed, and new releases appeared.</p>
 
@@ -3545,24 +3421,15 @@ local version of them!</p>
 
 <p>Note: I also fixed a but in <a href="http://github.com/dimitri/rcirc-groups">rcirc-groups</a> this week-end, but I'll talk about
 it in another entry, if I may.</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 09 Aug 2010 15:35:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/08/09-el-get-and-dim-switch-window-status-update.html</guid>
 </item>
-
-
 <item>
   <title>Editing constants in constraints</title>
   <link>http://tapoueh.org/blog/2010/08/09-editing-constants-in-constraints.html</link>
-  <description><![CDATA[<h2>Editing constants in constraints</h2>
-<div class="date">Monday, August 09 2010, 14:45</div>
-
-
-<p class="first">We're using constants in some constraints here, for example in cases where
+  <description><![CDATA[<p class="first">We're using constants in some constraints here, for example in cases where
 several servers are replicating to the same <em>federating</em> one: each origin
 server has his own schema, and all is replicated nicely on the central host,
 thanks to <a href="http://wiki.postgresql.org/wiki/Londiste_Tutorial#Federated_database">Londiste</a>, as you might have guessed already.</p>
@@ -3623,24 +3490,15 @@ name and their id (a <code>bigserial</code> — yes, the constraints are all gen
 scripts). I don't want to write an <em>SQL parser</em> and I don't want to play
 loose, so the <code>PLpgSQL</code> approach is what I'm thinking as the best tool
 here. Opinionated answers get to my mailbox!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 09 Aug 2010 14:45:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/08/09-editing-constants-in-constraints.html</guid>
 </item>
-
-
 <item>
   <title>debian packaging PostgreSQL extensions</title>
   <link>http://tapoueh.org/blog/2010/08/06-debian-packaging-postgresql-extensions.html</link>
-  <description><![CDATA[<h2>debian packaging PostgreSQL extensions</h2>
-<div class="date">Friday, August 06 2010, 13:00</div>
-
-
-<p class="first">In trying to help an extension <em>debian packaging</em> effort, I've once again
+  <description><![CDATA[<p class="first">In trying to help an extension <em>debian packaging</em> effort, I've once again
 proposed to handle it. That's because I now begin to know how to do it, as
 you can see in my <a href="http://qa.debian.org/developer.php?login=dim%40tapoueh.org">package overview</a> page at <em>debian QA</em> facility. There's a
 reason why I proposed myself here, it's that yet another tool of mine is now
@@ -3737,24 +3595,15 @@ to trigger automatic rebuild when necessary).</p>
 maintain will no longer have to be patched when dropping a previously
 supported major version of PostgreSQL. I'm breathing a little better, so
 thanks a lot <a href="http://www.piware.de/category/debian/">Martin</a>!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Fri, 06 Aug 2010 13:00:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/08/06-debian-packaging-postgresql-extensions.html</guid>
 </item>
-
-
 <item>
   <title>Querying the Catalog to plan an upgrade</title>
   <link>http://tapoueh.org/blog/2010/08/05-querying-the-catalog-to-plan-an-upgrade.html</link>
-  <description><![CDATA[<h2>Querying the Catalog to plan an upgrade</h2>
-<div class="date">Thursday, August 05 2010, 11:00</div>
-
-
-<p class="first">Some user on <code>IRC</code> was reading the releases notes in order to plan for a minor
+  <description><![CDATA[<p class="first">Some user on <code>IRC</code> was reading the releases notes in order to plan for a minor
 upgrade of his <code>8.3.3</code> installation, and was puzzled about potential needs for
 rebuilding <code>GIST</code> indexes. That's from the <a href="http://www.postgresql.org/docs/8.3/static/release-8-3-5.html">8.3.5 release notes</a>, and from the
 <a href="http://www.postgresql.org/docs/8.3/static/release-8-3-8.html">8.3.8 notes</a> you see that you need to consider <em>hash</em> indexes on <em>interval</em>
@@ -3842,24 +3691,15 @@ build the index from scratch. That would be enough for checking only the
 catalog, but the extra mile allows you to produce a <code>SQL</code> script to build the
 indexes that need your attention post upgrade. That last step is left as an
 exercise for the reader, though.</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 05 Aug 2010 11:00:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/08/05-querying-the-catalog-to-plan-an-upgrade.html</guid>
 </item>
-
-
 <item>
   <title>el-get</title>
   <link>http://tapoueh.org/blog/2010/08/04-el-get.html</link>
-  <description><![CDATA[<h2>el-get</h2>
-<div class="date">Wednesday, August 04 2010, 22:30</div>
-
-
-<p class="first">I've been using emacs for a long time, and a long time it took me to
+  <description><![CDATA[<p class="first">I've been using emacs for a long time, and a long time it took me to
 consider learning <a href="http://www.gnu.org/software/emacs/emacs-lisp-intro/html_node/index.html">Emacs Lisp</a>. Before that, I didn't trust my level of
 understanding enough to be comfortable in managing my setup efficiently.</p>
 
@@ -3946,25 +3786,15 @@ ELISP&gt; (el-get)
 <p>All the packages being already installed, it's running fast enough that I
 won't bother measuring the run time, that seems to be somewhere around one
 second.</p>
-
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Wed, 04 Aug 2010 22:30:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/08/04-el-get.html</guid>
 </item>
-
-
 <item>
   <title>Database Virtual Machines</title>
   <link>http://tapoueh.org/blog/2010/08/03-database-virtual-machines.html</link>
-  <description><![CDATA[<h2>Database Virtual Machines</h2>
-<div class="date">Tuesday, August 03 2010, 13:30</div>
-
-
-<p class="first">Today I'm being told once again about <a href="http://www.sqlite.org/">SQLite</a> as an embedded database
+  <description><![CDATA[<p class="first">Today I'm being told once again about <a href="http://www.sqlite.org/">SQLite</a> as an embedded database
 software. That one ain't a <em>database server</em> but a <em>software library</em> that you
 can use straight into your main program. I'm yet to use it, but it looks
 like <a href="http://www.sqlite.org/lang.html">its SQL support</a> is good enough for simple things — and that covers
@@ -3984,9 +3814,6 @@ the data from disk and to the client. We're still spending so many time in
 the <code>CPU</code> that the disk bandwidth are not always saturated, and that's a
 problem. Further thoughts on the <a href="http://tapoueh.org/char10.html#sec11">full length article</a>, but that's just about
 a one page section now!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 03 Aug 2010 13:30:00 +0200</pubDate>
@@ -3995,14 +3822,13 @@ a one page section now!</p>
 
 
 
+
+
+
 <item>
   <title>Partitioning: relation size per “group”</title>
   <link>http://tapoueh.org/blog/2010/07/26-partitioning-relation-size-per-group.html</link>
-  <description><![CDATA[<h2>Partitioning: relation size per “group”</h2>
-<div class="date">Monday, July 26 2010, 17:00</div>
-
-
-<p class="first">This time, we are trying to figure out where is the bulk of the data on
+  <description><![CDATA[<p class="first">This time, we are trying to figure out where is the bulk of the data on
 disk. The trick is that we're using <a href="http://www.postgresql.org/docs/current/static/ddl-partitioning.html">DDL partitioning</a>, but we want a “nice”
 view of size per <em>partition set</em>. Meaning that if you have for example a
 parent table <code>foo</code> with partitions <code>foo_201006</code> and <code>foo_201007</code>, you would want
@@ -4111,24 +3937,15 @@ ORDER BY relname;
 </pre>
 
 <p>Hope you'll find it useful, I certainly do!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 26 Jul 2010 17:00:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/07/26-partitioning-relation-size-per-group.html</guid>
 </item>
-
-
 <item>
   <title>dim-switch-window.el: fixes</title>
   <link>http://tapoueh.org/blog/2010/07/26-dim-switch-windowel-fixes.html</link>
-  <description><![CDATA[<h2>dim-switch-window.el: fixes</h2>
-<div class="date">Monday, July 26 2010, 11:55</div>
-
-
-<p class="first">Thanks to amazing readers of <a href="http://planet.emacsen.org/">planet emacsen</a>, two annoyances of
+  <description><![CDATA[<p class="first">Thanks to amazing readers of <a href="http://planet.emacsen.org/">planet emacsen</a>, two annoyances of
 <a href="http://www.emacswiki.org/emacs/switch-window.el">switch-window.el</a> have already been fixed! The first is that handling of <code>C-g</code>
 isn't exactly an option after all, and the other is that you want to avoid
 the buffer creation in the simple cases (1 or 2 windows only), because it's
@@ -4136,24 +3953,15 @@ the usual case.</p>
 
 <p>I've received code to handle the second case, that I mostly merged. Thanks a
 lot guys, the new version is on <a href="http://wwww.emacswiki.org">emacswiki</a> already!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 26 Jul 2010 11:55:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/07/26-dim-switch-windowel-fixes.html</guid>
 </item>
-
-
 <item>
   <title>dim-switch-window.el</title>
   <link>http://tapoueh.org/blog/2010/07/25-dim-switch-windowel.html</link>
-  <description><![CDATA[<h2>dim-switch-window.el</h2>
-<div class="date">Sunday, July 25 2010, 13:25</div>
-
-
-<p class="first">So it's Sunday and I'm thinking I'll get into <code>el-get</code> sometime later. Now is
+  <description><![CDATA[<p class="first">So it's Sunday and I'm thinking I'll get into <code>el-get</code> sometime later. Now is
 the time to present <code>dim-switch-window.el</code> which implements a <em>visual</em> <code>C-x o</code>. I
 know of only one way to present a <em>visual effect</em>, and that's with a screenshot:</p>
 
@@ -4170,30 +3978,15 @@ focus moves to the other window).</p>
 
 <p>The code for that can be found on <a href="http://www.emacswiki.org/">emacswiki</a> under the name
 <a href="http://www.emacswiki.org/emacs/switch-window.el">switch-window.el</a>. Hope you'll find it useful!</p>
-
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Sun, 25 Jul 2010 13:25:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/07/25-dim-switch-windowel.html</guid>
 </item>
-
-
-
-
-
-
-
 <item>
   <title>ClusterSSH gets dsh support</title>
   <link>http://tapoueh.org/blog/2010/07/23-clusterssh-gets-dsh-support.html</link>
-  <description><![CDATA[<h2>ClusterSSH gets `dsh' support</h2>
-<div class="date">Friday, July 23 2010, 22:20</div>
-
-
-<p class="first">If you don't know about <a href="cssh.html">ClusterSSH</a>, it's a project that builds on <code>M-x term</code>
+  <description><![CDATA[<p class="first">If you don't know about <a href="cssh.html">ClusterSSH</a>, it's a project that builds on <code>M-x term</code>
 and <code>ssh</code> to offer a nice and simple way to open remote terminals. It's
 available in <a href="http://tromey.com/elpa/index.html">ELPA</a> and developed at <a href="http://github.com/dimitri/cssh">github cssh</a> repository.</p>
 
@@ -4224,24 +4017,15 @@ per remote host you have in the <code>dsh</code> group you just picked. With a <
 controler window, too.</p>
 
 <p>Coming next, how I solved my <code>init.el</code> dependancies burden thanks to <code>el-get</code>!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Fri, 23 Jul 2010 22:20:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/07/23-clusterssh-gets-dsh-support.html</guid>
 </item>
-
-
 <item>
   <title>Emacs and PostgreSQL</title>
   <link>http://tapoueh.org/blog/2010/07/22-emacs-and-postgresql.html</link>
-  <description><![CDATA[<h2>Emacs and PostgreSQL</h2>
-<div class="date">Thursday, July 22 2010, 09:30</div>
-
-
-<p class="first">Those are my two all times favorite Open Source Software. Or <a href="http://www.gnu.org/philosophy/free-sw.html">Free Software</a>
+  <description><![CDATA[<p class="first">Those are my two all times favorite Open Source Software. Or <a href="http://www.gnu.org/philosophy/free-sw.html">Free Software</a>
 in the <a href="http://www.gnu.org/">GNU</a> sense of the world, as both the <em>BSD</em> and the <em>GPL</em> are labeled free
 there. Even if I prefer the <a href="http://www.debian.org/social_contract">The Debian Free Software Guidelines</a> as a global
 definition and the <a href="http://sam.zoy.org/wtfpl/">WTFPL</a> license. But that's a digression.</p>
@@ -4266,25 +4050,16 @@ it looks like:</p>
 <p><img src="../../../images//emacs-pgsql-line-numbers.png" alt=""></p>
 </center>
 
-<p>Now, here's also the source code, <a href="static/dim-pgsql.el">dim-pgsql.el</a>. Hope you'll enjoy!</p>
-
-
-
+<p>Now, here's also the source code, <a href="https://github.com/dimitri/pgsql-linum-format">pgsql-linum-format</a>. Hope you'll enjoy!</p>
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 22 Jul 2010 09:30:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/07/22-emacs-and-postgresql.html</guid>
 </item>
-
-
 <item>
   <title>Background writers</title>
   <link>http://tapoueh.org/blog/2010/07/19-background-writers.html</link>
-  <description><![CDATA[<h2>Background writers</h2>
-<div class="date">Monday, July 19 2010, 16:30</div>
-
-
-<p class="first">There's currently a thread on <a href="http://archives.postgresql.org/pgsql-hackers/">hackers</a> about <a href="http://archives.postgresql.org/pgsql-hackers/2010-07/msg00493.php">bg worker: overview</a> and a series
+  <description><![CDATA[<p class="first">There's currently a thread on <a href="http://archives.postgresql.org/pgsql-hackers/">hackers</a> about <a href="http://archives.postgresql.org/pgsql-hackers/2010-07/msg00493.php">bg worker: overview</a> and a series
 of 6 patches. Thanks a lot <strong><em>Markus</em></strong>! This is all about generalizing a concept
 already in use in the <em>autovacuum</em> process, where you have an independent
 subsystem that require having an autonomous <em>daemon</em> running and able to start
@@ -4324,24 +4099,15 @@ guess relying on <code>SIGALRM</code> is a possibility.</p>
 <p>I'm not sure about how yet, but I think getting back in consultancy after
 having opened <a href="http://2ndQuadrant.com">2ndQuadrant</a> <a href="http://2ndQuadrant.fr">France</a> has some influence on how I think about all
 that. My guess is that those blog posts are a first step on a nice journey!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 19 Jul 2010 16:30:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/07/19-background-writers.html</guid>
 </item>
-
-
 <item>
   <title>Logs analysis</title>
   <link>http://tapoueh.org/blog/2010/07/13-logs-analysis.html</link>
-  <description><![CDATA[<h2>Logs analysis</h2>
-<div class="date">Tuesday, July 13 2010, 14:15</div>
-
-
-<p class="first">Nowadays to analyze logs and provide insights, the more common tool to use
+  <description><![CDATA[<p class="first">Nowadays to analyze logs and provide insights, the more common tool to use
 is <a href="http://pgfouine.projects.postgresql.org/">pgfouine</a>, which does an excellent job. But there has been some
 improvements in logs capabilities that we're not benefiting from yet, and
 I'm thinking about the <code>CSV</code> log format.</p>
@@ -4365,24 +4131,15 @@ explore myself, so I talk about it here in the hope that others will share
 the interest. Of course, now that I work at <a href="http://2ndQuadrant.com">2ndQuadrant</a>, you can make it so
 that we consider the idea in more details, up to implementing and
 contributing it!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 13 Jul 2010 14:15:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/07/13-logs-analysis.html</guid>
 </item>
-
-
 <item>
   <title>Using indexes as column store?</title>
   <link>http://tapoueh.org/blog/2010/07/08-using-indexes-as-column-store.html</link>
-  <description><![CDATA[<h2>Using indexes as column store?</h2>
-<div class="date">Thursday, July 08 2010, 11:15</div>
-
-
-<p class="first">There's a big trend nowadays about using column storage as opposed to what
+  <description><![CDATA[<p class="first">There's a big trend nowadays about using column storage as opposed to what
 PostgreSQL is doing, which would be row storage. The difference is that if
 you have the same column value in a lot of rows, you could get to a point
 where you have this value only once in the underlying storage file. That
@@ -4412,25 +4169,15 @@ values from there. Scanning the index only once per value, not once per row.</p>
 
 <p>There's a little more though on the point in the <a href="char10.html#sec10">Next Generation PostgreSQL</a>
 article I've been referencing already, should you be interested.</p>
-
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 08 Jul 2010 11:15:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/07/08-using-indexes-as-column-store.html</guid>
 </item>
-
-
 <item>
   <title>MVCC in the Cloud</title>
   <link>http://tapoueh.org/blog/2010/07/06-mvcc-in-the-cloud.html</link>
-  <description><![CDATA[<h2>MVCC in the Cloud</h2>
-<div class="date">Tuesday, July 06 2010, 10:50</div>
-
-
-<p class="first">At <a href="http://char10.org/">CHAR(10)</a> <strong><em>Markus</em></strong> had a talk about
+  <description><![CDATA[<p class="first">At <a href="http://char10.org/">CHAR(10)</a> <strong><em>Markus</em></strong> had a talk about
 <a href="http://char10.org/talk-schedule-details#talk13">Using MVCC for Clustered Database Systems</a> and explained how <a href="http://postgres-r.org/">Postgres-R</a> does
 it. The scope of his project is to maintain a set of database servers in the
 same state, eventually.</p>
@@ -4474,24 +4221,15 @@ post.</p>
 enough job at explaining the idea. The main difference though would be to
 ensure transaction boundaries over the local and remote data: it's one
 single distributed database we're talking about here.</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 06 Jul 2010 10:50:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/07/06-mvcc-in-the-cloud.html</guid>
 </item>
-
-
 <item>
   <title>Back from CHAR(10)</title>
   <link>http://tapoueh.org/blog/2010/07/05-back-from-char10.html</link>
-  <description><![CDATA[<h2>Back from CHAR(10)</h2>
-<div class="date">Monday, July 05 2010, 09:30</div>
-
-
-<p class="first">It surely does not feel like a full month and some more went by since we
+  <description><![CDATA[<p class="first">It surely does not feel like a full month and some more went by since we
 were enjoying <a href="http://www.pgcon.org/2010/">PGCon 2010</a>, but in fact it was already the time for
 <a href="http://char10.org/talk-schedule">CHAR(10)</a>. The venue was most excellent, as Oxford is a very beautiful
 city. Also, the college was like a city in the city, and having the
@@ -4516,9 +4254,6 @@ either by the <em>Global Communication Systems</em> or the underlying
 algorithms. Given the current buy-in lack of our community for <code>GCS</code> my guess
 is that bypassing them would be a pretty good move, even if that mean
 implementing a limited form of <code>GCS</code> ourselves.</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 05 Jul 2010 09:30:00 +0200</pubDate>
@@ -4529,11 +4264,7 @@ implementing a limited form of <code>GCS</code> ourselves.</p>
 <item>
   <title>Back from PgCon2010</title>
   <link>http://tapoueh.org/blog/2010/05/27-back-from-pgcon2010.html</link>
-  <description><![CDATA[<h2>Back from PgCon2010</h2>
-<div class="date">Thursday, May 27 2010, 14:26</div>
-
-
-<p class="first">This year's edition has been the <a href="http://www.pgcon.org/2010/">best pgcon</a> ever for me. Granted, it's only
+  <description><![CDATA[<p class="first">This year's edition has been the <a href="http://www.pgcon.org/2010/">best pgcon</a> ever for me. Granted, it's only
 my third time, but still :) As <a href="http://blog.endpoint.com/2010/05/pgcon-hall-track.html">Josh said</a> the <em>&quot;Hall Track&quot;</em> in particular was
 very good, and the <a href="http://wiki.postgresql.org/wiki/PgCon_2010_Developer_Meeting">Dev Meeting</a> has been very effective!</p>
 
@@ -4686,10 +4417,6 @@ over there.</p>
 there's so much happening over there! Thanks to all the people who made it
 possible by either organizing the conference or attending to it! See you next
 year, I'm addicted...</p>
-
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 27 May 2010 14:26:00 +0200</pubDate>
@@ -4700,11 +4427,7 @@ year, I'm addicted...</p>
 <item>
   <title>Import fixed width data with pgloader</title>
   <link>http://tapoueh.org/blog/2010/04/27-import-fixed-width-data-with-pgloader.html</link>
-  <description><![CDATA[<h2>Import fixed width data with pgloader</h2>
-<div class="date">Tuesday, April 27 2010, 12:01</div>
-
-
-<p class="first">So, following previous blog entries about importing <em>fixed width</em> data, from
+  <description><![CDATA[<p class="first">So, following previous blog entries about importing <em>fixed width</em> data, from
 <a href="http://www.postgresonline.com/journal/index.php?/archives/157-Import-fixed-width-data-into-PostgreSQL-with-just-PSQL.html">Postgres Online Journal</a> and <a href="http://people.planetpostgresql.org/dfetter/index.php?/archives/58-psql&#44;-Paste&#44;-Perl-Pefficiency&#33;.html">David (perl) Fetter</a>, I couldn't resist following
 the meme and showing how to achieve the same thing with <a href="http://pgloader.projects.postgresql.org/#toc9">pgloader</a>.</p>
 
@@ -4811,24 +4534,15 @@ it allows for <em>pipe</em> style processing of the data and a single database w
 
 <p>Send me a mail if you want me to show here how to setup such a reformatting
 module in a next blog entry!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 27 Apr 2010 12:01:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/04/27-import-fixed-width-data-with-pgloader.html</guid>
 </item>
-
-
 <item>
   <title>pgloader activity report</title>
   <link>http://tapoueh.org/blog/2010/04/06-pgloader-activity-report.html</link>
-  <description><![CDATA[<h2>pgloader activity report</h2>
-<div class="date">Tuesday, April 06 2010, 09:10</div>
-
-
-<p class="first">Yes. This <a href="http://pgloader.projects.postgresql.org/">pgloader</a> project is still maintained and somewhat
+  <description><![CDATA[<p class="first">Yes. This <a href="http://pgloader.projects.postgresql.org/">pgloader</a> project is still maintained and somewhat
 active. Development happens when I receive a complaint, either about a bug
 in existing code or a feature in yet-to-write code. If you have a bug to
 report, just send me an email!</p>
@@ -4864,18 +4578,11 @@ must contain a <code>%s</code> place holder which will get replaced by the <em>s
 or the <code>filename</code> if you skipped setting up a <em>section</em> for it.</p>
 
 <p>Your <em>pgloader</em> usage is now more command line friendly than ever!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 06 Apr 2010 09:10:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/04/06-pgloader-activity-report.html</guid>
 </item>
-
-
-
-
 
 
 
@@ -4922,9 +4629,6 @@ WITH seqs AS (
 </pre>
 
 <p>I hope you don't need the query...</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Wed, 17 Mar 2010 13:35:00 +0100</pubDate>
@@ -4933,11 +4637,7 @@ WITH seqs AS (
 <item>
   <title>Emacs Muse hacking</title>
   <link>http://tapoueh.org/blog/2010/03/04-emacs-muse-hacking.html</link>
-  <description><![CDATA[<h2>Emacs Muse hacking</h2>
-<div class="date">Thursday, March 04 2010, 13:33</div>
-
-
-<p class="first">Now you know what piece of software is used to publish this blog. I really
+  <description><![CDATA[<p class="first">Now you know what piece of software is used to publish this blog. I really
 like it, the major mode makes it a great experience to be using this tool,
 and the fact that you produce the <code>HTML</code> and <code>rsync</code> it all from within Emacs
 (<code>C-c C-p</code> then <code>C-c C-r</code> with some easy <a href="http://git.tapoueh.org/?p=tapoueh.org.git;a=blob;f=dim-muse.el;hb=HEAD">elisp code</a>) is a big advantage as far
@@ -4960,9 +4660,6 @@ and write a new file per article you find in there.</p>
 customisation in mind, so to use it you will have to edit some places rather
 than just <code>setq</code> some <code>defcustom</code>. Well, if I have demand, I'll generalize the
 code and share it on <a href="http://www.emacswiki.org/">Emacs Wiki</a> and <a href="http://tromey.com/elpa/">ELPA</a>. Meanwhile, happy hacking!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 04 Mar 2010 13:33:00 +0100</pubDate>
@@ -4973,11 +4670,7 @@ code and share it on <a href="http://www.emacswiki.org/">Emacs Wiki</a> and <a h
 <item>
   <title>Getting out of SQL_ASCII, part 2</title>
   <link>http://tapoueh.org/blog/2010/02/23-getting-out-of-sql_ascii-part-2.html</link>
-  <description><![CDATA[<h2>Getting out of SQL_ASCII, part 2</h2>
-<div class="date">Tuesday, February 23 2010, 17:30</div>
-
-
-<p class="first">So, if you followed the previous blog entry, now you have a new database
+  <description><![CDATA[<p class="first">So, if you followed the previous blog entry, now you have a new database
 containing all the <em>static</em> tables encoded in <code>UTF-8</code> rather than
 <code>SQL_ASCII</code>. Because if it was not yet the case, you now severely distrust
 this non-encoding.</p>
@@ -5180,25 +4873,15 @@ design ain't very forgiving. Our plan is to clean-up as we go (remove table
 from the <em>subscriber</em>, fix it, add it again) and migrate as soon as possible!</p>
 
 <p>Bonus points to those of you getting the convoluted reference :)</p>
-
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 23 Feb 2010 17:30:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/02/23-getting-out-of-sql_ascii-part-2.html</guid>
 </item>
-
-
 <item>
   <title>Getting out of SQL_ASCII, part 1</title>
   <link>http://tapoueh.org/blog/2010/02/18-getting-out-of-sql_ascii-part-1.html</link>
-  <description><![CDATA[<h2>Getting out of SQL_ASCII, part 1</h2>
-<div class="date">Thursday, February 18 2010, 11:37</div>
-
-
-<p class="first">It happens that you have to manage databases <em>designed</em> by your predecessor,
+  <description><![CDATA[<p class="first">It happens that you have to manage databases <em>designed</em> by your predecessor,
 and it even happens that the team used to not have a <em>DBA</em>. Those <em>histerical
 raisins</em> can lead to having a <code>SQL_ASCII</code> database. The horror!</p>
 
@@ -5233,16 +4916,16 @@ using the <code>SQL_ASCII</code> database. So, here's the program's help:</p>
 
 <pre class="src">
 recode.sh [-npdf0TI] [-U user ] -s schema [-m mintable] pattern
-        -d    debug
-        -n    dry run, only print table names and expected files
-        -s    schema
-        -m    mintable, to skip already processed once
-        -U    connect to PostgreSQL as user
-        -f    force table loading even when export files do exist
-        -0    only (re)load tables with zero-sized copy files
-        -T    Truncate the tables before COPYing recoded data
-        -I    Temporarily drop the indexes of the table while COPYing
-   pattern    ^table_name_, e.g.
+     -d debug
+     -n dry run, only print table names and expected files
+     -s schema
+     -m mintable, to skip already processed once
+     -U connect to PostgreSQL as user
+     -f force table loading even when export files do exist
+     -0 only (re)load tables with zero-sized copy files
+     -T Truncate the tables before COPYing recoded data
+     -I Temporarily drop the indexes of the table while COPYing
+pattern ^table_name_, e.g.
 </pre>
 
 <p>The <code>-I</code> option is neat enough to create the indexes in parallel, but with no
@@ -5258,20 +4941,11 @@ any demand about it, I'll setup a <a href="http://github.com/dimitri">GitHub</a>
 recode your data in the database itself, thanks to some insane regexp based
 queries and helper functions. And thanks to a great deal of IRC based
 helping, too.</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 18 Feb 2010 11:37:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/02/18-getting-out-of-sql_ascii-part-1.html</guid>
 </item>
-
-
-
-
-
-
 <item>
   <title>Resetting sequences. All of them, please!</title>
   <link>http://tapoueh.org/blog/2010/02/16-resetting-sequences-all-of-them-please.html</link>
@@ -5310,20 +4984,20 @@ describe some table, you now have a catalog example query to work with. Then
 you tweak it somehow and get this:</p>
 
 <pre class="src">
-  SELECT <span style="color: #bc8f8f;">'select '</span>
-          || trim(trailing <span style="color: #bc8f8f;">')'</span>
-             from replace(pg_get_expr(d.adbin, d.adrelid),
-                          <span style="color: #bc8f8f;">'nextval'</span>, <span style="color: #bc8f8f;">'setval'</span>))
-          || <span style="color: #bc8f8f;">', (select max( '</span> || a.attname || <span style="color: #bc8f8f;">') from only '</span>
-          || nspname || <span style="color: #bc8f8f;">'.'</span> || relname || <span style="color: #bc8f8f;">'));'</span>
-    FROM pg_class c
-         JOIN pg_namespace n on n.oid = c.relnamespace
-         JOIN pg_attribute a on a.attrelid = c.oid
-         JOIN pg_attrdef d on d.adrelid = a.attrelid
-                            and d.adnum = a.attnum
-                            and a.atthasdef
-  WHERE relkind = <span style="color: #bc8f8f;">'r'</span> and a.attnum &gt; 0
-        and pg_get_expr(d.adbin, d.adrelid) ~ <span style="color: #bc8f8f;">'^nextval'</span>;
+SELECT <span style="color: #bc8f8f;">'select '</span>
+        || trim(trailing <span style="color: #bc8f8f;">')'</span>
+           from replace(pg_get_expr(d.adbin, d.adrelid),
+                        <span style="color: #bc8f8f;">'nextval'</span>, <span style="color: #bc8f8f;">'setval'</span>))
+        || <span style="color: #bc8f8f;">', (select max( '</span> || a.attname || <span style="color: #bc8f8f;">') from only '</span>
+        || nspname || <span style="color: #bc8f8f;">'.'</span> || relname || <span style="color: #bc8f8f;">'));'</span>
+  FROM pg_class c
+       JOIN pg_namespace n on n.oid = c.relnamespace
+       JOIN pg_attribute a on a.attrelid = c.oid
+       JOIN pg_attrdef d on d.adrelid = a.attrelid
+                          and d.adnum = a.attnum
+                          and a.atthasdef
+ WHERE relkind = <span style="color: #bc8f8f;">'r'</span> and a.attnum &gt; 0
+       and pg_get_expr(d.adbin, d.adrelid) ~ <span style="color: #bc8f8f;">'^nextval'</span>;
 </pre>
 
 <p>Coming next, a <code>recode</code> based script in order to get from <code>SQL_ASCII</code> to <code>UTF-8</code>,
@@ -5334,9 +5008,6 @@ recode.sh [-npdf0TI] [-U user ] -s schema [-m mintable] pattern
 </pre>
 
 <p>Stay tuned!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 16 Feb 2010 16:23:00 +0100</pubDate>
@@ -5345,11 +5016,7 @@ recode.sh [-npdf0TI] [-U user ] -s schema [-m mintable] pattern
 <item>
   <title>pg_staging's bird view</title>
   <link>http://tapoueh.org/blog/2009/12/08-pg_stagings-bird-view.html</link>
-  <description><![CDATA[<h2>pg_staging's bird view</h2>
-<div class="date">Tuesday, December 08 2009, 12:04</div>
-
-
-<p class="first">One of the most important feedback I got about the presentation of <a href="pgstaging.html">pgstaging</a>
+  <description><![CDATA[<p class="first">One of the most important feedback I got about the presentation of <a href="pgstaging.html">pgstaging</a>
 were the lack of pictures, something like a bird-view of how you operate
 it. Well, thanks to <a href="http://ditaa.sourceforge.net/">ditaa</a> and Emacs <code>picture-mode</code> here it is:</p>
 
@@ -5372,24 +5039,15 @@ mv bird-view-0.png pg_staging.png
 </pre>
 
 <p>Quicker than learning to properly use a mouse, at least for me :)</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 08 Dec 2009 12:04:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2009/12/08-pg_stagings-bird-view.html</guid>
 </item>
-
-
 <item>
   <title>PGday.eu feedback</title>
   <link>http://tapoueh.org/blog/2009/12/01-pgdayeu-feedback.html</link>
-  <description><![CDATA[<h2>PGday.eu feedback</h2>
-<div class="date">Tuesday, December 01 2009, 16:45</div>
-
-
-<p class="first">At <a href="http://2009.pgday.eu/">pgday</a> there was this form you could fill to give speakers some <em>feedback</em>
+  <description><![CDATA[<p class="first">At <a href="http://2009.pgday.eu/">pgday</a> there was this form you could fill to give speakers some <em>feedback</em>
 about their talks. And that's a really nice way as a speaker to know what to
 improve. And as <a href="http://blog.hagander.net/archives/157-Feedback-from-pgday.eu.html">Magnus</a> was searching a nice looking chart facility in python
 and I spoke about <a href="http://matplotlib.sourceforge.net/gallery.html">matplotlib</a>, it felt like having to publish something.</p>
@@ -5399,10 +5057,10 @@ result is:</p>
 
 <center>
 <p><a class="image-link" href="../../../images//feedback.png">
-<img src="../images/feedback.png"></a></p>
+<img src="../../../images/feedback.png"></a></p>
 </center>
 
-<p>If you want to see the little python script I used, here it is: <a href="http://pgsql.tapoueh.org/confs/pgday_2009/feedback.py">feedback.py</a>,
+<p>If you want to see the little python script I used, here it is: <a href="http://git.tapoueh.org/?p=pgconfs.git;a=blob;f=pgday_2009/feedback.py;hb=master">feedback.py</a>,
 with the data embedded and all...</p>
 
 <p>Now, how to read it? Well, the darker the color the better the score. For
@@ -5420,10 +5078,76 @@ Through Ascii Art</em> tool. I already used it and together with <a href="news.d
 
 <p>Oh yes the baseline of this post is that there will be later talks. I seem
 to be liking those and the audience feedback this time is saying that it's
-not too bad for them. See you soon :)</p>
+not too bad for them. See you soon :)</p>
 
+<h3>Update</h3>
 
+<p class="first">I have added the <code>feedback.py</code> script now that each page here is published
+separately.</p>
 
+<pre class="src">
+<span style="color: #b22222;">#</span><span style="color: #b22222;">! /usr/bin/env python
+</span><span style="color: #b22222;">#</span><span style="color: #b22222;">
+</span><span style="color: #b22222;"># </span><span style="color: #b22222;">http://matplotlib.sourceforge.net/examples/pylab_examples/bar_stacked.html
+</span>
+<span style="color: #7f007f;">from</span> pylab <span style="color: #7f007f;">import</span> *
+<span style="color: #7f007f;">import</span> numpy <span style="color: #7f007f;">as</span> np
+
+clf()
+subplot(111)
+
+<span style="color: #b8860b;">N</span> = 4
+
+<span style="color: #b22222;"># </span><span style="color: #b22222;">http://html-color-codes.info/ for inspiration
+</span><span style="color: #b8860b;">scoreColors</span>   = ((<span style="color: #bc8f8f;">'#F5D0A9'</span>, <span style="color: #bc8f8f;">'#F7BE81'</span>,
+                  <span style="color: #bc8f8f;">'#FAAC58'</span>, <span style="color: #bc8f8f;">'#FF8000'</span>, <span style="color: #bc8f8f;">'#DF7401'</span>),
+                 (<span style="color: #bc8f8f;">'#A9F5A9'</span>, <span style="color: #bc8f8f;">'#81F781'</span>,
+                  <span style="color: #bc8f8f;">'#58FA58'</span>, <span style="color: #bc8f8f;">'#2EFE2E'</span>, <span style="color: #bc8f8f;">'#01DF01'</span>))
+
+<span style="color: #b22222;"># </span><span style="color: #b22222;">data from the mail
+</span><span style="color: #b8860b;">expHMScores</span>   = ((0, 0, 1, 2, 5),
+                 (0, 0, 1, 3, 4),
+                 (0, 0, 0, 0, 8),
+                 (0, 0, 0, 3, 5))
+
+<span style="color: #b8860b;">stagingScores</span> = ((0, 0, 0, 3, 3),
+                 (0, 1, 1, 1, 3),
+                 (0, 0, 1, 1, 4),
+                 (0, 0, 0, 4, 2))
+
+<span style="color: #b8860b;">ind</span> = np.arange(N)    <span style="color: #b22222;"># </span><span style="color: #b22222;">the x locations for the groups
+</span><span style="color: #b8860b;">width</span> = 0.4       <span style="color: #b22222;"># </span><span style="color: #b22222;">the width of the bars: can also be len(x) sequence
+</span>
+<span style="color: #b8860b;">hd</span> = array([expHMScores[x][0] <span style="color: #7f007f;">for</span> x <span style="color: #7f007f;">in</span> <span style="color: #da70d6;">range</span>(0, 4)])
+<span style="color: #b8860b;">hp</span> = bar(ind, hd, width, color = scoreColors[0][0])
+
+<span style="color: #b8860b;">sd</span> = array([stagingScores[x][0] <span style="color: #7f007f;">for</span> x <span style="color: #7f007f;">in</span> <span style="color: #da70d6;">range</span>(0, 4)])
+<span style="color: #b8860b;">sp</span> = bar(ind+width, sd, width, color = scoreColors[1][0])
+
+<span style="color: #7f007f;">for</span> s <span style="color: #7f007f;">in</span> <span style="color: #da70d6;">range</span>(1, 5):
+    <span style="color: #b8860b;">d</span> = array([expHMScores[x][s] <span style="color: #7f007f;">for</span> x <span style="color: #7f007f;">in</span> <span style="color: #da70d6;">range</span>(0, 4)])
+    bar(ind, d, width,
+        color = scoreColors[0][s], bottom = hd)
+    <span style="color: #b8860b;">hd</span> += d
+
+    <span style="color: #b8860b;">d</span> = array([stagingScores[x][s] <span style="color: #7f007f;">for</span> x <span style="color: #7f007f;">in</span> <span style="color: #da70d6;">range</span>(0, 4)])
+    bar(ind+width, d, width,
+        color = scoreColors[1][s], bottom = sd)
+    <span style="color: #b8860b;">sd</span> += d
+
+ylabel(<span style="color: #bc8f8f;">'Scores'</span>)
+title(<span style="color: #bc8f8f;">'PGday 2009 feedback'</span>)
+xticks(ind+width,
+       (<span style="color: #bc8f8f;">'Topic Importance'</span>,
+        <span style="color: #bc8f8f;">'Content Quality'</span>,
+        <span style="color: #bc8f8f;">'Speaker knowledge'</span>,
+        <span style="color: #bc8f8f;">'Speaker Quality'</span>) )
+
+legend([hp[0], sp[0]], [<span style="color: #bc8f8f;">"Hi-Media"</span>, <span style="color: #bc8f8f;">"pg_staging"</span>])
+
+grid(<span style="color: #da70d6;">True</span>)
+savefig(<span style="color: #bc8f8f;">'feedback.png'</span>, dpi=75, orientation=<span style="color: #bc8f8f;">'portrait'</span>)
+</pre>
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 01 Dec 2009 16:45:00 +0100</pubDate>
@@ -5431,14 +5155,14 @@ not too bad for them. See you soon :)</p>
 </item>
 
 
+
+
+
+
 <item>
   <title>prefix 1.1.0</title>
   <link>http://tapoueh.org/blog/2009/11/30-prefix-110.html</link>
-  <description><![CDATA[<h2>prefix 1.1.0</h2>
-<div class="date">Monday, November 30 2009, 12:10</div>
-
-
-<p class="first">So I had two <a href="http://archives.postgresql.org/pgsql-general/2009-11/msg01042.php">bug</a> <a href="http://lists.pgfoundry.org/pipermail/prefix-users/2009-November/000005.html">reports</a> about <a href="prefix.html">prefix</a> in less than a week. It means several
+  <description><![CDATA[<p class="first">So I had two <a href="http://archives.postgresql.org/pgsql-general/2009-11/msg01042.php">bug</a> <a href="http://lists.pgfoundry.org/pipermail/prefix-users/2009-November/000005.html">reports</a> about <a href="prefix.html">prefix</a> in less than a week. It means several
 things, one of them is that my code is getting used in the wild, which is
 nice. The other side of the coin is that people do find bugs in there. This
 one is about the behavior of the <code>btree opclass</code> of the type <code>prefix range</code>. We
@@ -5466,24 +5190,15 @@ there, which is exactly what this <em>constraint exclusion</em> support is about
 <p>This happens in the <em>compare support function</em> (see
 <a href="http://www.postgresql.org/docs/8.4/interactive/xindex.html">Interfacing Extensions To Indexes</a>) so that means you now have to rebuild
 your <code>prefix_range</code> btree indexes, hence the version number bump.</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 30 Nov 2009 12:10:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2009/11/30-prefix-110.html</guid>
 </item>
-
-
 <item>
   <title>Yet Another PostgreSQL tool hits debian</title>
   <link>http://tapoueh.org/blog/2009/11/25-yet-another-postgresql-tool-hits-debian.html</link>
-  <description><![CDATA[<h2>Yet Another PostgreSQL tool hits debian</h2>
-<div class="date">Wednesday, November 25 2009, 11:49</div>
-
-
-<p class="first">So there it is, this newer contribution of mine that I presented at <a href="http://2009.pgday.eu">PGDay</a> is
+  <description><![CDATA[<p class="first">So there it is, this newer contribution of mine that I presented at <a href="http://2009.pgday.eu">PGDay</a> is
 now in <code>debian NEW</code> queue. <a href="pgstaging.html">pg_staging</a> will empower you with respect to what
 you do about those nightly backups (<code>pg_dump -Fc</code> or something).</p>
 
@@ -5593,25 +5308,15 @@ using it about daily here :)</p>
 
 <p>Consider commenting, you should be able to easily spot my private mail
 address...</p>
-
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Wed, 25 Nov 2009 11:49:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2009/11/25-yet-another-postgresql-tool-hits-debian.html</guid>
 </item>
-
-
 <item>
   <title>PGDay.eu, Paris: it was awesome!</title>
   <link>http://tapoueh.org/blog/2009/11/09-pgdayeu-paris-it-was-awesome.html</link>
-  <description><![CDATA[<h2>PGDay.eu, Paris: it was awesome!</h2>
-<div class="date">Monday, November 09 2009, 09:50</div>
-
-
-<p class="first">moment. Lots of <a href="http://2009.pgday.eu/_media/group_2009_1.jpg?cache=">attendees</a>, lots of quality talks (<a href="http://wiki.postgresql.org/wiki/PGDay.EU%2C_Paris_2009">slides</a> are online), good
+  <description><![CDATA[<p class="first">moment. Lots of <a href="http://2009.pgday.eu/_media/group_2009_1.jpg?cache=">attendees</a>, lots of quality talks (<a href="http://wiki.postgresql.org/wiki/PGDay.EU%2C_Paris_2009">slides</a> are online), good
 food, great party: all the ingredients were there!</p>
 
 <p>It also was for me the occasion to first talk about this tool I've been
@@ -5622,9 +5327,6 @@ developers and testers).</p>
 <p>All in all such events keep reminding me what it means exactly when we way
 that one of the greatest things about <a href="http://www.postgresql.org/">PostgreSQL</a> is its community. If you
 don't know what I'm talking about, consider <a href="http://www.postgresql.org/community/">joining</a>!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 09 Nov 2009 09:50:00 +0100</pubDate>
@@ -5635,11 +5337,7 @@ don't know what I'm talking about, consider <a href="http://www.postgresql.org/c
 <item>
   <title>Emacs Muse based publishing</title>
   <link>http://tapoueh.org/blog/2009/10/06-emacs-muse-based-publishing.html</link>
-  <description><![CDATA[<h2>Emacs Muse based publishing</h2>
-<div class="date">Tuesday, October 06 2009, 17:23</div>
-
-
-<p class="first">As you might have noticed, this little blog of mine is not compromising much
+  <description><![CDATA[<p class="first">As you might have noticed, this little blog of mine is not compromising much
 and entirely maintained from Emacs. Until today, I had to resort to <code>term</code> to
 upload my publications, though, as I've been too lazy to hack up the tools
 integration for simply doing a single <code>rsync</code> command line. That was one time
@@ -5689,9 +5387,6 @@ to many:</p>
 </pre>
 
 <p>So now to publish this blog, it's just a <code>C-c R</code> away! :)</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 06 Oct 2009 17:23:00 +0200</pubDate>
@@ -5702,11 +5397,7 @@ to many:</p>
 <item>
   <title>prefix 1.0.0</title>
   <link>http://tapoueh.org/blog/2009/10/06-prefix-100.html</link>
-  <description><![CDATA[<h2>prefix 1.0.0</h2>
-<div class="date">Tuesday, October 06 2009, 15:56</div>
-
-
-<p class="first">So there it is, at long last, the final <code>1.0.0</code> release of prefix! It's on its
+  <description><![CDATA[<p class="first">So there it is, at long last, the final <code>1.0.0</code> release of prefix! It's on its
 way into the debian repository (targetting sid, in testing in 10 days) and
 available on <a href="http://pgfoundry.org/frs/?group_id=1000352">pgfoundry</a> to.</p>
 
@@ -5736,10 +5427,6 @@ will be easier. Maybe some other parts of the system are harder than the
 sources to migrate, though. If that's the case I'll consider moving them out
 too, maybe getting listed on the <a href="http://www.postgresql.org/download/product-categories">PostgreSQL Software Catalogue</a> will prove
 enough as far as web presence goes?</p>
-
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 06 Oct 2009 15:56:00 +0200</pubDate>
@@ -5747,14 +5434,12 @@ enough as far as web presence goes?</p>
 </item>
 
 
+
+
 <item>
   <title>Emacs is Twinkling here</title>
   <link>http://tapoueh.org/blog/2009/09/24-emacs-is-twinkling-here.html</link>
-  <description><![CDATA[<h2>Emacs is Twinkling here</h2>
-<div class="date">Thursday, September 24 2009, 18:08</div>
-
-
-<p class="first">So you have a <em>rolodex</em> like database in your Emacs, or you have this phone
+  <description><![CDATA[<p class="first">So you have a <em>rolodex</em> like database in your Emacs, or you have this phone
 number in a mail and you want to call it. It happens you have <code>VoIP</code> setup and
 you're using <a href="http://www.twinklephone.com/">Twinkle</a> to make your calls. Maybe you'll then find this
 function useful:</p>
@@ -5776,24 +5461,15 @@ function useful:</p>
 begin with <code>+</code>. And some contains <code>/</code> or <code>.</code> as separators, or some other
 variations (spaces) so as the number is easy to read for human eyes. <em>Twinkle</em>
 will not like this.</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 24 Sep 2009 18:08:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2009/09/24-emacs-is-twinkling-here.html</guid>
 </item>
-
-
 <item>
   <title>Escreen integration</title>
   <link>http://tapoueh.org/blog/2009/09/22-escreen-integration.html</link>
-  <description><![CDATA[<h2>Escreen integration</h2>
-<div class="date">Tuesday, September 22 2009, 23:04</div>
-
-
-<p class="first">After having used <a href="http://www.morishima.net/~naoto/software/elscreen/">elscreen</a> for a long time, I'm now a very happy user of
+  <description><![CDATA[<p class="first">After having used <a href="http://www.morishima.net/~naoto/software/elscreen/">elscreen</a> for a long time, I'm now a very happy user of
 <a href="http://www.splode.com/~friedman/software/emacs-lisp/#ui">escreen</a>, which feels much better integrated and allows to have one ring of
 recently visited buffers per screen. Which is what you need when using a
 <em>screen</em> like feature, really.</p>
@@ -5875,25 +5551,15 @@ and emacs selection), I had to add this too:</p>
 (define-key term-raw-map (kbd <span style="color: #bc8f8f;">"M-["</span>) 'dim:escreen-goto-prev-screen)
 (define-key term-raw-map (kbd <span style="color: #bc8f8f;">"M-]"</span>) 'dim:escreen-goto-next-screen)
 </pre>
-
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 22 Sep 2009 23:04:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2009/09/22-escreen-integration.html</guid>
 </item>
-
-
 <item>
   <title>Follow-up on dim:mailrc-add-entry</title>
   <link>http://tapoueh.org/blog/2009/09/07-follow-up-on-dimmailrc-add-entry.html</link>
-  <description><![CDATA[<h2>Follow-up on dim:mailrc-add-entry</h2>
-<div class="date">Monday, September 07 2009, 12:50</div>
-
-
-<p class="first">The function didn't allow for using more than one <code>mailrc</code> file, which isn't a
+  <description><![CDATA[<p class="first">The function didn't allow for using more than one <code>mailrc</code> file, which isn't a
 good idea, so I've just added that. Oh and for <code>gnus</code> integration what I need
 is <code>(add-hook 'message-mode-hook 'mail-abbrevs-setup)</code> it seems... so that if
 I type the alias it'll get automatically expanded. And to be real lazy and
@@ -5931,9 +5597,6 @@ rescue, assigned to some easy to reach keys.</p>
             (goto-char (point-max))
             (insert (format <span style="color: #bc8f8f;">"\nalias %s \"%s &lt;%s&gt;\""</span> alias (cdr address) (car ad<span style="color: #ffff00; background-color: #ff0000; font-weight: bold;">dress)))))))))</span>
 </pre>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 07 Sep 2009 12:50:00 +0200</pubDate>
@@ -5944,11 +5607,7 @@ rescue, assigned to some easy to reach keys.</p>
 <item>
   <title>Improving ~/.mailrc usage</title>
   <link>http://tapoueh.org/blog/2009/09/07-improving-mailrc-usage.html</link>
-  <description><![CDATA[<h2>Improving ~/.mailrc usage</h2>
-<div class="date">Monday, September 07 2009, 01:29</div>
-
-
-<p class="first">So I've been adviced to use <code>~/.mailrc</code> for keeping a basic address book in
+  <description><![CDATA[<p class="first">So I've been adviced to use <code>~/.mailrc</code> for keeping a basic address book in
 Emacs, for use within <code>gnus</code> for example. I had to resort to the manual to
 find out how to use the file aliases when I need them, that is when
 composing a mail. For the record, here's what I had to do:</p>
@@ -6040,9 +5699,6 @@ uptodate.</p>
 
 <p>Hope it'll be useful for someone else, but at least I'm keeping annotated
 history of the files :)</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 07 Sep 2009 01:29:00 +0200</pubDate>
@@ -6050,14 +5706,16 @@ history of the files :)</p>
 </item>
 
 
+
+
+
+
+
+
 <item>
   <title>hstore-new &amp; preprepare reach debian too</title>
   <link>http://tapoueh.org/blog/2009/08/18-hstore-new--preprepare-reach-debian-too.html</link>
-  <description><![CDATA[<h2>hstore-new &amp; preprepare reach debian too</h2>
-<div class="date">Tuesday, August 18 2009, 09:14</div>
-
-
-<p class="first">It seems like debian developers are back from annual conference and holiday,
+  <description><![CDATA[<p class="first">It seems like debian developers are back from annual conference and holiday,
 so they have had a look at the <code>NEW</code> queue and processed the packages in
 there. Two of them were mines and waiting to get in <code>unstable</code>, <a href="http://packages.debian.org/hstore-new">hstore-new</a> and
 <a href="http://packages.debian.org/preprepare">preprepare</a>.</p>
@@ -6071,24 +5729,15 @@ management, stealing some code from <a href="http://blog.endpoint.com/search/lab
 now it's been in testing long enough and no bug has been reported. Of course
 releasing <code>1.0</code> in august isn't good timing, so maybe I should just wait some
 more weeks.</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 18 Aug 2009 09:14:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2009/08/18-hstore-new--preprepare-reach-debian-too.html</guid>
 </item>
-
-
 <item>
   <title>Some emacs nifties</title>
   <link>http://tapoueh.org/blog/2009/08/03-some-emacs-nifties.html</link>
-  <description><![CDATA[<h2>Some emacs nifties</h2>
-<div class="date">Monday, August 03 2009, 15:15</div>
-
-
-<p class="first">First, here's a way to insert at current position the last message printed
+  <description><![CDATA[<p class="first">First, here's a way to insert at current position the last message printed
 into the minibuffer... well not exactly, in <code>*Messages*</code> buffer in fact. I was
 tired of doing it myself after invoking, e.g., <code>M-x emacs-version</code>.</p>
 
@@ -6160,24 +5809,15 @@ a need:</p>
 
 <p>Next time I'll try to talk about <code>rcirc-groups</code> or <code>cssh</code> which have managed to
 take some of my free time recently.</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 03 Aug 2009 15:15:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2009/08/03-some-emacs-nifties.html</guid>
 </item>
-
-
 <item>
   <title>prefix 1.0~rc2 in debian testing</title>
   <link>http://tapoueh.org/blog/2009/08/03-prefix-10rc2-in-debian-testing.html</link>
-  <description><![CDATA[<h2>prefix 1.0~rc2 in debian testing</h2>
-<div class="date">Monday, August 03 2009, 14:50</div>
-
-
-<p class="first">At long last, <a href="http://packages.debian.org/search?searchon=sourcenames&amp;keywords=prefix">here it is</a>. With binary versions both for <code>postgresal-8.3</code> and
+  <description><![CDATA[<p class="first">At long last, <a href="http://packages.debian.org/search?searchon=sourcenames&amp;keywords=prefix">here it is</a>. With binary versions both for <code>postgresal-8.3</code> and
 <code>postgresal-8.4</code>! Unfortunately my other packaging efforts are still waiting
 on the <code>NEW</code> queue, but I hope to soon see <code>hstore-new</code> and <code>preprepare</code> enter
 debian too.</p>
@@ -6211,9 +5851,6 @@ COMMIT;
 <p>Note: I just added the <code>gist_prefix_range_ops</code> as default for type
 <code>prefix_range</code> so it'll be optional to specify this in final <code>1.0</code>. I got so
 used to typing it I didn't realize we don't have to :)</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 03 Aug 2009 14:50:00 +0200</pubDate>
@@ -6221,14 +5858,24 @@ used to typing it I didn't realize we don't have to :)</p>
 </item>
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 <item>
   <title>prefix 1.0~rc2-1</title>
   <link>http://tapoueh.org/blog/2009/07/09-prefix-10rc2-1.html</link>
-  <description><![CDATA[<h2>prefix 1.0~rc2-1</h2>
-<div class="date">Thursday, July 09 2009, 12:48</div>
-
-
-<p class="first">I've been having problem with building both <code>postgresql-8.3-prefix</code> and
+  <description><![CDATA[<p class="first">I've been having problem with building both <code>postgresql-8.3-prefix</code> and
 <code>postgresql-8.4-prefix</code> debian packages from the same source package, and
 fixing the packaging issue forced me into modifying the main <code>prefix</code>
 <code>Makefile</code>. So while reaching <code>rc2</code>, I tried to think about missing pieces easy
@@ -6285,24 +5932,15 @@ dim=# \o
 </pre>
 
 <p>Hope you enjoy!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 09 Jul 2009 12:48:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2009/07/09-prefix-10rc2-1.html</guid>
 </item>
-
-
 <item>
   <title>prefix extension reaches 1.0 (rc1)</title>
   <link>http://tapoueh.org/blog/2009/06/23-prefix-extension-reaches-10-rc1.html</link>
-  <description><![CDATA[<h2>prefix extension reaches 1.0 (rc1)</h2>
-<div class="date">Tuesday, June 23 2009, 10:53</div>
-
-
-<p class="first">At long last, after millions and millions of queries just here at work and
+  <description><![CDATA[<p class="first">At long last, after millions and millions of queries just here at work and
 some more in other places, the <a href="prefix.html">prefix</a> project is reaching <code>1.0</code> milestone. The
 release candidate is getting uploaded into debian at the moment of this
 writing, and available at the following place: <a href="http://prefix.projects.postgresql.org/prefix-1.0~rc1.tar.gz">prefix-1.0~rc1.tar.gz</a>.</p>
@@ -6313,24 +5951,15 @@ consider testing it, in order for me to release a shiny <code>1.0</code> next we
 <p>Recent changes include getting rid of those square brackets output when it's
 not neccesary, fixing btree operators, adding support for more operators in
 the <code>GiST</code> support code (now supported: <code>@&gt;</code>, <code>&lt;@</code>, <code>=</code>, <code>&amp;&amp;</code>). Enjoy!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 23 Jun 2009 10:53:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2009/06/23-prefix-extension-reaches-10-rc1.html</guid>
 </item>
-
-
 <item>
   <title>PgCon 2009</title>
   <link>http://tapoueh.org/blog/2009/05/27-pgcon-2009.html</link>
-  <description><![CDATA[<h2>PgCon 2009</h2>
-<div class="date">Wednesday, May 27 2009, 14:30</div>
-
-
-<p class="first">I can't really compare <a href="http://www.pgcon.org/2009/">PgCon 2009</a> with previous years versions, last time I
+  <description><![CDATA[<p class="first">I can't really compare <a href="http://www.pgcon.org/2009/">PgCon 2009</a> with previous years versions, last time I
 enjoyed the event it was in 2006, in Toronto. But still I found the
 experience to be a great one, and I hope I'll be there next year too!</p>
 
@@ -6365,24 +5994,15 @@ to rollbacked transactions).</p>
 <p>So all in all, spending last week in Ottawa was a splendid way to get more
 involved in the PostgreSQL community, which is a very fine place to be
 spending ones free time, should you ask me. See you soon!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Wed, 27 May 2009 14:30:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2009/05/27-pgcon-2009.html</guid>
 </item>
-
-
 <item>
   <title>Prepared Statements and pgbouncer</title>
   <link>http://tapoueh.org/blog/2009/05/14-prepared-statements-and-pgbouncer.html</link>
-  <description><![CDATA[<h2>Prepared Statements and pgbouncer</h2>
-<div class="date">Thursday, May 14 2009</div>
-
-
-<p class="first">On the performance mailing list, a recent <a href="http://archives.postgresql.org/pgsql-performance/2009-05/msg00026.php">thread</a> drew my attention. It
+  <description><![CDATA[<p class="first">On the performance mailing list, a recent <a href="http://archives.postgresql.org/pgsql-performance/2009-05/msg00026.php">thread</a> drew my attention. It
 devired to be about using a connection pool software and prepared statements
 in order to increase scalability of PostgreSQL when confronted to a lot of
 concurrent clients all doing simple <code>select</code> queries. The advantage of the
@@ -6415,24 +6035,15 @@ creation time, you're done (see <code>connect_query</code>).</p>
 
 <p>There's even a detailed <a href="http://preprepare.projects.postgresql.org/README.html">README</a> file, but no release yet (check out the code
 in the <a href="http://cvs.pgfoundry.org/cgi-bin/cvsweb.cgi/preprepare/preprepare/">CVS</a>, <code>pgfoundry</code> project page has <a href="http://pgfoundry.org/scm/?group_id=1000442">clear instruction</a> about how to do so.</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 14 May 2009 00:00:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2009/05/14-prepared-statements-and-pgbouncer.html</guid>
 </item>
-
-
 <item>
   <title>Skytools 3.0 reaches alpha1</title>
   <link>http://tapoueh.org/blog/2009/04/14-skytools-30-reaches-alpha1.html</link>
-  <description><![CDATA[<h2>Skytools 3.0 reaches alpha1</h2>
-<div class="date">Tuesday, April 14 2009</div>
-
-
-<p class="first">It's time for <a href="http://wiki.postgresql.org/wiki/Skytools">Skytools</a> news again! First, we did improve documentation of
+  <description><![CDATA[<p class="first">It's time for <a href="http://wiki.postgresql.org/wiki/Skytools">Skytools</a> news again! First, we did improve documentation of
 current stable branch with hosting high level presentations and <a href="http://wiki.postgresql.org/wiki/Londiste_Tutorial">tutorials</a> on
 the <a href="http://wiki.postgresql.org/">PostgreSQL wiki</a>. Do check out the <a href="http://wiki.postgresql.org/wiki/Londiste_Tutorial">Londiste Tutorial</a>, it seems that's
 what people hesitating to try out londiste were missing the most.</p>
@@ -6447,24 +6058,15 @@ you might want to give it a try.</p>
 of it, and bugs are still to get fixed. But it's all in the Skytools spirit:
 simple and efficient concepts, easy to use and maintain. Think about this
 release as a <em>developer preview</em> and join us :)</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 14 Apr 2009 00:00:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2009/04/14-skytools-30-reaches-alpha1.html</guid>
 </item>
-
-
 <item>
   <title>Prefix GiST index now in 8.1</title>
   <link>http://tapoueh.org/blog/2009/02/10-prefix-gist-index-now-in-81.html</link>
-  <description><![CDATA[<h2>Prefix GiST index now in 8.1</h2>
-<div class="date">Tuesday, February 10 2009</div>
-
-
-<p class="first">The <a href="http://blog.tapoueh.org/prefix.html">prefix</a> project is about matching a <em>literal</em> against <em>prefixes</em> in your
+  <description><![CDATA[<p class="first">The <a href="http://blog.tapoueh.org/prefix.html">prefix</a> project is about matching a <em>literal</em> against <em>prefixes</em> in your
 table, the typical example being a telecom routing table. Thanks to the
 excellent work around <em>generic</em> indexes in PostgreSQL with <a href="http://www.postgresql.org/docs/current/static/gist-intro.html">GiST</a>, indexing
 prefix matches is easy to support in an external module. Which is what
@@ -6491,24 +6093,15 @@ also stays less than 4ms when doing complex queries designed for fallback,
 priority shuffling, and having multiple carriers.</p>
 
 </blockquote>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 10 Feb 2009 00:00:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2009/02/10-prefix-gist-index-now-in-81.html</guid>
 </item>
-
-
 <item>
   <title>Importing XML content from file</title>
   <link>http://tapoueh.org/blog/2009/02/05-importing-xml-content-from-file.html</link>
-  <description><![CDATA[<h2>Importing XML content from file</h2>
-<div class="date">Thursday, February 05 2009</div>
-
-
-<p class="first">The problem was raised this week on <a href="http://www.postgresql.org/community/irc">IRC</a> and this time again I felt it would
+  <description><![CDATA[<p class="first">The problem was raised this week on <a href="http://www.postgresql.org/community/irc">IRC</a> and this time again I felt it would
 be a good occasion for a blog entry: how to load an <code>XML</code> file content into a
 single field?</p>
 
@@ -6545,94 +6138,58 @@ $f$;
 <p>As you can see, the trick here is to use the <a href="http://www.postgresql.org/docs/current/interactive/largeobjects.html">large objects</a> API to load the
 file content into memory (<code>content</code> variable), then to parse it knowing it's
 an <code>UTF8</code> encoded <code>XML</code> file and return an <a href="http://www.postgresql.org/docs/current/interactive/datatype-xml.html">XML</a> datatype object.</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 05 Feb 2009 00:00:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2009/02/05-importing-xml-content-from-file.html</guid>
 </item>
-
-
 <item>
   <title>Asko Oja talks about Skype architecture</title>
   <link>http://tapoueh.org/blog/2009/02/04-asko-oja-talks-about-skype-architecture.html</link>
-  <description><![CDATA[<h2>Asko Oja talks about Skype architecture</h2>
-<div class="date">Wednesday, February 04 2009</div>
-
-
-<p class="first">In this <a href="http://postgresqlrussia.org/articles/view/131">russian page</a> you'll see a nice presentation of Skype databases
+  <description><![CDATA[<p class="first">In this <a href="http://postgresqlrussia.org/articles/view/131">russian page</a> you'll see a nice presentation of Skype databases
 architectures by Asko Oja himself. It's the talk at Russian PostgreSQL
 Community meeting, October 2008, Moscow, and it's a good read.</p>
 
 <center>
 <p><a class="image-link" href="http://postgresqlrussia.org/articles/view/131">
-<img src="../images/Moskva_DB_Tools.v3.png"></a></p>
+<img src="../../../images/Moskva_DB_Tools.v3.png"></a></p>
 </center>
 
 <p>The presentation page is in russian but the slides are in English, so have a
 nice read!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Wed, 04 Feb 2009 00:00:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2009/02/04-asko-oja-talks-about-skype-architecture.html</guid>
 </item>
-
-
 <item>
   <title>Skytools ticker daemon and londiste</title>
   <link>http://tapoueh.org/blog/2009/02/03-skytools-ticker-daemon-and-londiste.html</link>
-  <description><![CDATA[<h2>Skytools ticker daemon and londiste</h2>
-<div class="date">Tuesday, February 03 2009</div>
-
-
-<p class="first">One of the difficulties in getting to understand and configure <code>londiste</code>
+  <description><![CDATA[<p class="first">One of the difficulties in getting to understand and configure <code>londiste</code>
 reside in the relation between the <code>ticker</code> and the replication. This question
 was raised once more on IRC yesterday, so I made a new FAQ entry about it:
 <a href="http://blog.tapoueh.org/skytools.html#ticker">How do this ticker thing relates to londiste?</a></p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 03 Feb 2009 00:00:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2009/02/03-skytools-ticker-daemon-and-londiste.html</guid>
 </item>
-
-
 <item>
   <title>Comparing Londiste and Slony</title>
   <link>http://tapoueh.org/blog/2009/01/31-comparing-londiste-and-slony.html</link>
-  <description><![CDATA[<h2>Comparing Londiste and Slony</h2>
-<div class="date">Saturday, January 31 2009</div>
-
-
-<p class="first">In the page about <a href="skytools.html">Skytools</a> I've encouraged people to ask some more questions
+  <description><![CDATA[<p class="first">In the page about <a href="skytools.html">Skytools</a> I've encouraged people to ask some more questions
 in order for me to be able to try and answer them. That just happened, as
 usual on the <code>#postgresql</code> IRC, and the question is
 <a href="skytools.html#slony">What does londiste lack that slony has?</a></p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Sat, 31 Jan 2009 00:00:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2009/01/31-comparing-londiste-and-slony.html</guid>
 </item>
-
-
 <item>
   <title>Controling HOT usage in 8.3</title>
   <link>http://tapoueh.org/blog/2009/01/28-controling-hot-usage-in-83.html</link>
-  <description><![CDATA[<h2>Controling HOT usage in 8.3</h2>
-<div class="date">Wednesday, January 28 2009</div>
-
-
-<p class="first">As it happens, I've got some environments where I want to make sure <code>HOT</code> (<em>aka
+  <description><![CDATA[<p class="first">As it happens, I've got some environments where I want to make sure <code>HOT</code> (<em>aka
 Heap Only Tuples</em>) is in use. Because we're doing so much updates a second
 that I want to get sure it's not killing my database server. I not only
 wrote some checking view to see about it, but also made a <a href="http://www.postgresql.fr/support:trucs_et_astuces:controler_l_utilisation_de_hot_a_partir_de_la_8.3">quick article</a>
@@ -6688,20 +6245,15 @@ FROM pg_stat_all_tables t
 </pre>
 
 <p>Don't let the <code>HOT</code> question affect your sleeping no more!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Wed, 28 Jan 2009 00:00:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2009/01/28-controling-hot-usage-in-83.html</guid>
 </item>
-
-
 <item>
   <title>Londiste Trick</title>
   <link>http://tapoueh.org/blog/2009/01/21-londiste-trick.html</link>
-  <description><![CDATA[<p>So, you're using <code>londiste</code> and the <code>ticker</code> has not been running all night
+  <description><![CDATA[<p class="first">So, you're using <code>londiste</code> and the <code>ticker</code> has not been running all night
 long, due to some restart glitch in your procedures, and the <em>on call</em> admin
 didn't notice the restart failure. If you blindly restart the replication
 daemon, it will load in memory all those events produced during the night,
@@ -6740,38 +6292,25 @@ ticker is not running or when you're producing more <em>events</em> than that in
 single transaction.</p>
 
 <p>Hope you'll find the tip useful!</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Wed, 21 Jan 2009 00:00:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2009/01/21-londiste-trick.html</guid>
 </item>
-
-
 <item>
   <title>Useful emacs trick</title>
   <link>http://tapoueh.org/blog/2008/12/09-useful-emacs-trick.html</link>
-  <description><![CDATA[<p>Watch <a href="http://www.ted.com/index.php/talks/kevin_kelly_on_the_next_5_000_days_of_the_web.html">Kevin Kelly's Talk</a> here, it's about trying to predict what the
+  <description><![CDATA[<p class="first">Watch <a href="http://www.ted.com/index.php/talks/kevin_kelly_on_the_next_5_000_days_of_the_web.html">Kevin Kelly's Talk</a> here, it's about trying to predict what the
 Internet will look like 5 thousands days from now.</p>
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 09 Dec 2008 00:00:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2008/12/09-useful-emacs-trick.html</guid>
 </item>
-
-
 <item>
   <title>emacs-snapshot</title>
   <link>http://tapoueh.org/blog/2008/12/08-emacs-snapshot.html</link>
-  <description><![CDATA[<h2>emacs-snapshot</h2>
-<div class="date">Monday, December 08 2008, 16:10</div>
-
-
-<p class="first">If you want to live on the bleeding edge, it's easy enough to get a non
+  <description><![CDATA[<p class="first">If you want to live on the bleeding edge, it's easy enough to get a non
 existing release of <a href="http://www.gnu.org/software/emacs/">GNU Emacs</a> under <a href="http://www.debian.org/releases/unstable/">debian sid</a>, thanks to
 <a href="http://emacs.orebokech.com/">http://emacs.orebokech.com/</a>.</p>
 
@@ -6791,68 +6330,41 @@ hunk ./dim-muse.el 22
 editing, while using <a href="http://www.emacswiki.org/emacs/?action=browse;oldid=EmacsCVS;id=EmacsFromCVS">EmacsCVS</a> for other activities.</p>
 
 <p>And I'm using the patched <code>Htmlize</code> on both the versions, by the way.</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 08 Dec 2008 16:10:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2008/12/08-emacs-snapshot.html</guid>
 </item>
-
-
 <item>
   <title>new site, using new software</title>
   <link>http://tapoueh.org/blog/2008/12/06-new-site.html</link>
-  <description><![CDATA[<h2>new site, using new software.</h2>
-<div class="date">Saturday, December 06 2008</div>
-
-
-<p class="first">Oh and check out the <a href="skytools.html">skytools</a> page too. <a href="http://mwolson.org/projects/EmacsMuse.html">Emacs Muse</a> is so great a project
+  <description><![CDATA[<p class="first">Oh and check out the <a href="skytools.html">skytools</a> page too. <a href="http://mwolson.org/projects/EmacsMuse.html">Emacs Muse</a> is so great a project
 that instead of just working on how to publish a website with this tool, I
 found myself editing a rather large document about <code>londite.py</code>.</p>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Sat, 06 Dec 2008 00:00:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2008/12/06-new-site.html</guid>
 </item>
-
-
 <item>
   <title>Emacs Muse powered blog</title>
   <link>http://tapoueh.org/blog/2008/12/05-emacs-muse-powered-blog.html</link>
-  <description><![CDATA[<h2>Emacs Muse powered blog</h2>
-<div class="date">Friday, December 05 2008</div>
-
-
-<p class="first">So finaly a blogging software for <em>geeks</em> exists?</p>
+  <description><![CDATA[<p class="first">So finaly a blogging software for <em>geeks</em> exists?</p>
 
 <blockquote>
 <p class="quoted">
 The problem with communication is that you think it happened.</p>
 
 </blockquote>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Fri, 05 Dec 2008 00:00:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2008/12/05-emacs-muse-powered-blog.html</guid>
 </item>
-
-
 <item>
   <title>Fake entry</title>
   <link>http://tapoueh.org/blog/2008/12/04-fake-entry.html</link>
-  <description><![CDATA[<h2>Fake entry</h2>
-<div class="date">Thursday, December 04 2008</div>
-
-
-<p class="first">This is a test of a fake entry to see how muse will manage this.</p>
+  <description><![CDATA[<p class="first">This is a test of a fake entry to see how muse will manage this.</p>
 
 <p>With some <code>SQL</code> inside:</p>
 
@@ -6865,15 +6377,10 @@ SELECT * FROM planet.postgresql.org WHERE author = "dim";
 </pre></p>
 
 </blockquote>
-
-
-
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Thu, 04 Dec 2008 00:00:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2008/12/04-fake-entry.html</guid>
 </item>
-
-
   </channel>
 </rss>
