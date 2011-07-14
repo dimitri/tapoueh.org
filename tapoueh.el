@@ -9,7 +9,7 @@
  'muse-project-alist
  `("tapoueh.org"
    (,@(loop for d in (muse-project-alist-dirs "~/dev/tapoueh.org/")
-	    unless (string-match (rx (or "images")) d)
+	    unless (string-match (rx (or "images" "rss")) d)
 	    collect d)
     :default "index"
     :force-publish ("index"))
@@ -272,6 +272,8 @@ tags index files"
   ;; system of the articles --- we WANT all of them to be utf-8
   (setq buffer-file-coding-system 'utf-8)
 
+  (tapoueh-insert-breadcrumb)
+
   (let ((date
 	 (tapoueh-format-date
 	  (tapoueh-extract-directive "date" (muse-current-file)))))
@@ -436,6 +438,47 @@ An article is a list of SOURCE LINK TITLE DATE FORMATED-DATE TAGS"
 	      src (concat updir link) title date fdate tags))))
 
 ;;;
+;;; Breadcrumb support
+;;;
+(defun tapoueh-breadcrumb-to-current-page ()
+  "Return a list of (name . link) from the index root page to current one"
+  (let* ((current (muse-current-file))
+	 (cwd     (file-name-directory current))
+	 (project (muse-project-of-file current))
+	 (root    (muse-style-element :path (caddr project)))
+	 (path    (tapoueh-path-to-root))
+	 (dirs    (split-string (file-relative-name current root) "/")))
+    ;; ("blog" "2011" "07" "13-back-from-char11.muse")
+    (append
+     (list (cons "/dev/dim" (concat path "index.html")))
+     (loop for p in (butlast dirs)
+	   collect (cons p (format "%s%s/index.html" path p))
+	   do (setq path (concat path p "/"))))))
+
+(defun tapoueh-insert-breadcrumb-div ()
+  "The real HTML inserting"
+  (insert "<div id=\"breadcrumb\">")
+  (loop for (name . link) in (tapoueh-breadcrumb-to-current-page)
+	do (insert (format "<a href=%s>%s</a>" link name) " / "))
+  (insert "</div>\n"))
+
+(defun tapoueh-insert-breadcrumb ()
+  "Must run with current buffer being a muse article"
+  (save-excursion
+    (beginning-of-buffer)
+    (when (tapoueh-extract-directive "author" (muse-current-file))
+      (re-search-forward "<body>" nil t) ; find where the article content is
+      (re-search-forward "<h2>" nil t)	 ; that's the title line
+      (beginning-of-line)
+      (open-line 1)
+      (tapoueh-insert-breadcrumb-div)
+
+      (re-search-forward "<h2>" nil t 2) ; that's the TAG line
+      (beginning-of-line)
+      (open-line 1)
+      (tapoueh-insert-breadcrumb-div))))
+
+;;;
 ;;; RSS Support
 ;;;
 (defun tapoueh-get-output-rss-content ()
@@ -451,7 +494,10 @@ content to place in the RSS item description"
 	    (point)
 	    (progn
 	      (re-search-forward "<h2>Tags</h2>" nil t)
+	      (re-search-backward "breadcrumb" nil t)
 	      (forward-line -1)
+	      (while (looking-at (rx (or " " "\n"))) (forward-char -1))
+	      (forward-char 1)
 	      (point))))
 
 (defun tapoueh-goto-next-rss-item ()
@@ -534,7 +580,11 @@ file to be the relevant information."
 	 (pname   (car project)))
     (when (string= pname "tapoueh.org")
 	(beginning-of-buffer)
-	(unless (looking-at "#")
+	(unless (or muse-publishing-current-file
+		    (and (buffer-file-name)
+		     (file-exists-p (buffer-file-name))
+		     (tapoueh-extract-directive "title" (muse-current-file))))
+	  (message "New Muse File: %s" (muse-current-file))
 	  (let ((title (read-string "Article Title: ")))
 	    (insert "#author Dimitri Fontaine\n"
 		    (format "#title  %s\n" title)
