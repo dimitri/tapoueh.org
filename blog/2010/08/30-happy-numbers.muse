@@ -1,7 +1,7 @@
 #author Dimitri Fontaine
 #title  Happy Numbers
 #date   20100830-11:00
-#tags   PostgreSQL Emacs 9.1
+#tags   PostgreSQL Emacs
 
 * Happy Numbers
 
@@ -9,7 +9,7 @@ After discovering the excellent [[http://gwene.org/][Gwene]] service, which allo
 to *newsgroups* to read =RSS= content (*blogs*, *planets*, *commits*, etc), I came to
 read this nice article about [[http://programmingpraxis.com/2010/07/23/happy-numbers/][Happy Numbers]]. That's a little problem that
 fits well an interview style question, so I first solved it yesterday
-evening in [[static/happy-numbers.el][Emacs Lisp]] as that's the language I use the most those days.
+evening in [[http://www.gnu.org/software/emacs/emacs-lisp-intro/html_node/List-Processing.html#List-Processing][Emacs Lisp]] as that's the language I use the most those days.
 
 <quote>
   A happy number is defined by the following process. Starting with any
@@ -47,16 +47,16 @@ read the following:
 <src lang="sql">
 with recursive happy(n, seen) as (
     select 7::bigint, '{}'::bigint[]
-  union all           
+  union all
     select sum(d*d), h.seen || sum(d*d)
       from (select n, digits(n) as d, seen
               from happy
-           ) as h     
+           ) as h
   group by h.n, h.seen
     having not seen @> array[sum(d*d)]
-)                     
+)
   select * from happy;
-  n  |       seen       
+  n  |       seen
 -----+------------------
    7 | {}
   49 | {49}
@@ -84,7 +84,7 @@ create or replace function happy(x bigint)
 as $$
 with recursive happy(n, seen) as (
     select $1, '{}'::bigint[]
-  union all 
+  union all
     select sum(d*d), h.seen || sum(d*d)
       from (select n, digits(n) as d, seen
               from happy
@@ -106,19 +106,24 @@ contains a line =input, {}=. Let's now play the same tricks as in the puzzle
 article:
 
 <src lang="sql">
-=# select array_agg(x) as happy from generate_series(1, 50) as t(x) where happy(x);
-              happy               
+=# select array_agg(x) as happy
+     from generate_series(1, 50) as t(x)
+    where happy(x);
+              happy
 ----------------------------------
  {1,7,10,13,19,23,28,31,32,44,49}
 (1 row)
 
 Time: 24.527 ms
 
-=# explain analyze select x from generate_series(1, 10000) as t(x) where happy(x);
-                      QUERY PLAN                                                        
-----------------------------------------------------------------------------------------
- Function Scan on generate_series t  (cost=0.00..265.00 rows=333 width=4)
-                          (actual time=2.938..3651.019 rows=1442 loops=1)
+=# explain analyze select x
+                     from generate_series(1, 10000) as t(x)
+                    where happy(x);
+                      QUERY PLAN
+------------------------------------------------------------
+ Function Scan on generate_series t
+     (cost=0.00..265.00 rows=333 width=4)
+     (actual time=2.938..3651.019 rows=1442 loops=1)
    Filter: happy((x)::bigint)
  Total runtime: 3651.534 ms
 (3 rows)
@@ -130,3 +135,37 @@ Time: 3652.178 ms
 here). For what it's worth, finding the first =10000= happy numbers in *Emacs
 Lisp* on the same laptop takes =2830 ms=, also running a recursive version of
 the code.
+
+** Update, the Emacs Lisp version, inline
+
+For your pleasure:
+
+<src lang="emacs-lisp">
+(defun happy? (&optional n seen)
+  "return true when n is a happy number"
+  (interactive)
+  (let* ((number    (or n (read-from-minibuffer
+			   "Is this number happy: ")))
+	 (digits    (mapcar
+		     'string-to-int
+		     (subseq (split-string number "") 1 -1)))
+	 (squares   (mapcar (lambda (x) (* x x)) digits))
+	 (happiness (apply '+ squares)))
+    (cond ((eq 1 happiness)      t)
+	  ((memq happiness seen) nil)
+	  (t
+	   (happy? (number-to-string happiness)
+		   (push happiness seen))))))
+
+(defun find-happy-numbers (&optional limit)
+  "find all happy numbers from 1 to limit"
+  (interactive)
+  (let ((count (or limit
+                   (read-from-minibuffer
+		    "List of happy numbers from 1 to: ")))
+	happy)
+    (dotimes (n (string-to-int count))
+      (when (happy? (number-to-string (1+ n)))
+	(push (1+ n) happy)))
+    (nreverse happy)))
+</src>

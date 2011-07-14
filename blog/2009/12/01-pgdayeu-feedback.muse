@@ -1,7 +1,7 @@
 #author Dimitri Fontaine
 #title  PGday.eu feedback
 #date   20091201-16:45
-#tags   Emacs pg_staging
+#tags   Emacs pg_staging Conferences
 
 * PGday.eu feedback
 
@@ -13,9 +13,9 @@ and I spoke about [[http://matplotlib.sourceforge.net/gallery.html][matplotlib]]
 Here is my try at some nice graphics. Well I'll let you decide how nice the
 result is:
 
-	      [[../../../images//feedback.png][../images/feedback.png]]
+	      [[../../../images//feedback.png][../../../images/feedback.png]]
 
-If you want to see the little python script I used, here it is: [[http://pgsql.tapoueh.org/confs/pgday_2009/feedback.py][feedback.py]],
+If you want to see the little python script I used, here it is: [[http://git.tapoueh.org/?p=pgconfs.git;a=blob;f=pgday_2009/feedback.py;hb=master][feedback.py]],
 with the data embedded and all...
 
 Now, how to read it? Well, the darker the color the better the score. For
@@ -33,4 +33,73 @@ Through Ascii Art* tool. I already used it and together with [[news.dim.html][Em
 
 Oh yes the baseline of this post is that there will be later talks. I seem
 to be liking those and the audience feedback this time is saying that it's
-not too bad for them. See you soon :)
+not too bad for them. See you soon :)
+
+** Update
+
+I have added the =feedback.py= script now that each page here is published
+separately.
+
+<src lang="python">
+#! /usr/bin/env python
+#
+# http://matplotlib.sourceforge.net/examples/pylab_examples/bar_stacked.html
+
+from pylab import *
+import numpy as np
+
+clf()
+subplot(111)
+
+N = 4
+
+# http://html-color-codes.info/ for inspiration
+scoreColors   = (('#F5D0A9', '#F7BE81',
+                  '#FAAC58', '#FF8000', '#DF7401'),
+                 ('#A9F5A9', '#81F781',
+                  '#58FA58', '#2EFE2E', '#01DF01'))
+
+# data from the mail
+expHMScores   = ((0, 0, 1, 2, 5),
+                 (0, 0, 1, 3, 4),
+                 (0, 0, 0, 0, 8),
+                 (0, 0, 0, 3, 5))
+
+stagingScores = ((0, 0, 0, 3, 3),
+                 (0, 1, 1, 1, 3),
+                 (0, 0, 1, 1, 4),
+                 (0, 0, 0, 4, 2))
+
+ind = np.arange(N)    # the x locations for the groups
+width = 0.4       # the width of the bars: can also be len(x) sequence
+
+hd = array([expHMScores[x][0] for x in range(0, 4)])
+hp = bar(ind, hd, width, color = scoreColors[0][0])
+
+sd = array([stagingScores[x][0] for x in range(0, 4)])
+sp = bar(ind+width, sd, width, color = scoreColors[1][0])
+
+for s in range(1, 5):
+    d = array([expHMScores[x][s] for x in range(0, 4)])
+    bar(ind, d, width,
+        color = scoreColors[0][s], bottom = hd)
+    hd += d
+
+    d = array([stagingScores[x][s] for x in range(0, 4)])
+    bar(ind+width, d, width,
+        color = scoreColors[1][s], bottom = sd)
+    sd += d
+
+ylabel('Scores')
+title('PGday 2009 feedback')
+xticks(ind+width,
+       ('Topic Importance',
+        'Content Quality',
+        'Speaker knowledge',
+        'Speaker Quality') )
+
+legend([hp[0], sp[0]], ["Hi-Media", "pg_staging"])
+
+grid(True)
+savefig('feedback.png', dpi=75, orientation='portrait')
+</src>
