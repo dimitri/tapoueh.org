@@ -24,7 +24,7 @@
 (muse-derive-style
  "tapoueh-html" "html"
  :before #'tapoueh-add-tag-links
- :after #'tapoueh-add-date-entry
+ :after #'tapoueh-set-coding-system
  :final #'tapoueh-add-item-to-rss
  :header "~/dev/tapoueh.org/static/header.html"
  :footer "~/dev/tapoueh.org/static/footer.html"
@@ -262,28 +262,26 @@ tags index files"
 	(format-time-string "%A, %B %d %Y, %R" time)))))
 
 ;;;
-;;; We want to see the article date in the output, which is not the default
-;;; for the HTML Muse Style.
+;;; Add date to current article
 ;;;
-(defun tapoueh-add-date-entry ()
-  ":after function to add the article date (if any) in the HTML output"
-
-  ;; from Muse documentation, :after is the place where to set the coding
-  ;; system of the articles --- we WANT all of them to be utf-8
-  (setq buffer-file-coding-system 'utf-8)
-
-  (tapoueh-insert-breadcrumb)
-
+;;;  <lisp>(tapoueh-insert-article-date-here)</lisp>
+;;;
+(defun tapoueh-insert-article-date-here ()
+  "Insert the DATE directive, if any, properly formated, just here"
   (let ((date
 	 (tapoueh-format-date
 	  (tapoueh-extract-directive "date" (muse-current-file)))))
     (when date
-      (save-excursion
-	(beginning-of-buffer)
-	(search-forward "/header" nil t)
-	(search-forward "/h2>\n" nil t)
-	(open-line 1)
-	(insert (format "<div class=\"date\">%s</div>\n" date))))))
+      (insert date))))
+;;;
+;;; We want to see the article date in the output, which is not the default
+;;; for the HTML Muse Style.
+;;;
+(defun tapoueh-set-coding-system ()
+  ":after function to force the coding system to UTF-8"
+  ;; from Muse documentation, :after is the place where to set the coding
+  ;; system of the articles --- we WANT all of them to be utf-8
+  (setq buffer-file-coding-system 'utf-8))
 
 ;;;
 ;;; Walk recursively through a directory and build a list of Muse articles
@@ -442,6 +440,8 @@ An article is a list of SOURCE LINK TITLE DATE FORMATED-DATE TAGS"
 ;;;
 ;;; Breadcrumb support
 ;;;
+;;;  <lisp>(tapoueh-insert-breadcrumb-here)</lisp>
+;;;
 (defun tapoueh-breadcrumb-to-current-page ()
   "Return a list of (name . link) from the index root page to current one"
   (let* ((current (muse-current-file))
@@ -457,28 +457,15 @@ An article is a list of SOURCE LINK TITLE DATE FORMATED-DATE TAGS"
 	   collect (cons p (format "%s%s/index.html" path p))
 	   do (setq path (concat path p "/"))))))
 
-(defun tapoueh-insert-breadcrumb-div ()
-  "The real HTML inserting"
-  (insert "<div id=\"breadcrumb\">")
+(defun tapoueh-insert-breadcrumb-hrefs ()
+  "The inserting of HTML links"
   (loop for (name . link) in (tapoueh-breadcrumb-to-current-page)
-	do (insert (format "<a href=%s>%s</a>" link name) " / "))
-  (insert "</div>\n"))
+	do (insert (format "<a href=%s>%s</a>" link name) " / ")))
 
-(defun tapoueh-insert-breadcrumb ()
-  "Must run with current buffer being a muse article"
-  (save-excursion
-    (beginning-of-buffer)
-    (when (tapoueh-extract-directive "author" (muse-current-file))
-      (re-search-forward "<body>" nil t) ; find where the article content is
-      (re-search-forward "<h2>" nil t)	 ; that's the title line
-      (beginning-of-line)
-      (open-line 1)
-      (tapoueh-insert-breadcrumb-div)
-
-      (re-search-forward "<h2>" nil t 2) ; that's the TAG line
-      (beginning-of-line)
-      (open-line 1)
-      (tapoueh-insert-breadcrumb-div))))
+(defun tapoueh-insert-breadcrumb-here ()
+  "Called from the template file (header or Muse file)"
+  ;; (when (tapoueh-extract-directive "author" (muse-current-file))
+    (tapoueh-insert-breadcrumb-hrefs))
 
 ;;;
 ;;; RSS Support
@@ -592,8 +579,6 @@ file to be the relevant information."
 		    (format "#title  %s\n" title)
 		    (format "#date   %s\n" (format-time-string "%Y%m%d-%R"))
 		    "#tags   \n"
-		    "\n"
-		    (format "* %s\n" title)
 		    "\n"))))))
 
 (add-hook 'muse-mode-hook 'tapoueh-insert-muse-headers)
