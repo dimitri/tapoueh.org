@@ -28,6 +28,7 @@
  :final #'tapoueh-add-item-to-rss
  :header "~/dev/tapoueh.org/static/header.html"
  :footer "~/dev/tapoueh.org/static/footer.html"
+ :suffix ".html"
  :style-sheet "<link rel=\"stylesheet\" type=\"text/css\"  media=\"all\" href=\"static/styles.css\" />")
 
 (defvar tapoueh-rss-tags '(("rss/postgresql.xml"   . postgresql)
