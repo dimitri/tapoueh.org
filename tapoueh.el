@@ -329,7 +329,8 @@ Returns a list of (SOURCE LINK TITLE DATE FORMATED-DATE (TAG TAG))"
 ;;;
 (defun tapoueh-insert-article-link-li (source link title date fdate tags)
   "insert given article in a nested list"
-  (let* ((isdir    (string= (substring link -10) "index.html"))
+  (let* ((isdir    (and (> (length link) 10)
+			(string= (substring link -10) "index.html")))
 	 (spaces   (apply
 		    'concat
 		    (split-string
