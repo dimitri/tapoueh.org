@@ -559,6 +559,38 @@ file to be the relevant information."
 		(concat root "/" rss) source output link)))))
 
 ;;;
+;;; SiteMap
+;;;
+(defun tapoueh-sitemap (project)
+  "Create the sitemap.xml file"
+  (let ((root (muse-style-element :path (caddr project))))
+    (with-temp-file (format "%s/sitemap.xml" root)
+      (insert "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+	      "<urlset\n"
+	      "    xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"\n"
+	      "    xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
+	      "    xsi:schemaLocation=\"http://www.sitemaps.org/schemas/sitemap/0.9\n"
+	      "        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd\">\n")
+      (loop for (src link title date fdate tags) in (tapoueh-walk-articles root)
+	    unless (string-match ".git" src)
+	    do (progn
+		 (insert "<url>\n"
+			 (format "  <loc>http://tapoueh.org/%s</loc>\n" link)
+			 (format "  <lastmod>%s</lastmod>\n"
+				 (format-time-string "%Y%d%m-%R"
+						     (nth 4 (file-attributes src))))
+			 (format "  <changefreq>%s</changefreq>\n"
+				 (cond ((string-match (rx (or "tag" "rss")) link)
+					"always")
+				       ((string-match "index" link)
+					"always")
+				       (t "weekly")))
+			 "</url>\n")))
+      (insert "</urlset>\n"))))
+
+(add-hook 'muse-after-project-publish-hook 'tapoueh-sitemap)
+
+;;;
 ;;; Facilities
 ;;;
 (defun tapoueh-insert-muse-headers ()
