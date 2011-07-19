@@ -571,7 +571,7 @@ file to be the relevant information."
 	 (pname   (car project)))
     (when (string= pname "tapoueh.org")
 	(beginning-of-buffer)
-	(unless (or muse-publishing-current-file
+	(unless (or (boundp 'muse-publishing-current-file)
 		    (and (buffer-file-name)
 		     (file-exists-p (buffer-file-name))
 		     (tapoueh-extract-directive "title" (muse-current-file))))
