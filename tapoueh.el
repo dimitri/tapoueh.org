@@ -476,16 +476,13 @@ An article is a list of SOURCE LINK TITLE DATE FORMATED-DATE TAGS"
   "Current buffer is the HTML rendered article, extract the
 content to place in the RSS item description"
   (beginning-of-buffer)
-  (re-search-forward "<body>" nil t)	; find where the article content is
-  (re-search-forward "</h2>" nil t)	; that's the title line
-  (re-search-forward "</div>" nil t)	; that's the date line
+  (re-search-forward "<div id=\"article\">" nil t)
   (while (looking-at (rx space))	; we skip any white space
     (forward-char))
   (buffer-substring-no-properties
 	    (point)
 	    (progn
 	      (re-search-forward "<h2>Tags</h2>" nil t)
-	      (re-search-backward "breadcrumb" nil t)
 	      (forward-line -1)
 	      (while (looking-at (rx (or " " "\n"))) (forward-char -1))
 	      (forward-char 1)
