@@ -116,6 +116,18 @@ on filter.
 	  (tapoueh-path-to-root)
 	  "static/2ndQuadrant-cross.png\">"))
 
+(defun tapoueh-current-page-url ()
+  "Get the current page full URL"
+  (let* ((current (muse-current-file))
+	 (cwd     (file-name-directory current))
+	 (project (muse-project-of-file current))
+	 (base    (muse-style-element :base-url (caddr project)))
+	 (root    (muse-style-element :path (caddr project)))
+	 (link    (concat (file-name-sans-extension
+			   (file-relative-name current root))
+			  ".html")))
+    (concat base link)))
+
 (defun tapoueh-extract-buffer-directive (directive)
   "Extracts DIRECTIVE content from current buffer."
   (save-excursion
