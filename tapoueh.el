@@ -571,6 +571,29 @@ file to be the relevant information."
 		(concat root "/" rss) source output link)))))
 
 ;;;
+;;; Social Networks Integration
+;;;
+(defun tapoueh-social-div ()
+  "Output a <div> for connecting to social network for tagged articles"
+  (when (tapoueh-extract-directive "tags" (muse-current-file))
+    (insert
+     "<div id=\"social\">\n"
+     "<ul>"
+     ;; Google +1
+     "<li><g:plusone size=\"tall\" href=\""
+     (tapoueh-current-page-url)
+     "\"></g:plusone></li>\n"
+     ;; Twitter this
+     "<li><a href=\"http://twitter.com/share\" class=\"twitter-share-button\" data-count=\"vertical\">Tweet</a><script type=\"text/javascript\" src=\"http://platform.twitter.com/widgets.js\"></script></li>\n"
+     "<li><iframe src=\"http://www.facebook.com/plugins/like.php?href="
+     (tapoueh-current-page-url)
+     ";layout=box_count;show_faces=false\"\n"
+     "   scrolling=\"no\" frameborder=\"0\" allowTransparency=\"true\"\n"
+     "   style=\"border:none; overflow:hidden;\"></iframe></li>\n"
+     "</ul>\n"
+     "</div>\n")))
+
+;;;
 ;;; SiteMap
 ;;;
 (defun tapoueh-sitemap (project)
