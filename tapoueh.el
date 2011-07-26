@@ -585,11 +585,16 @@ file to be the relevant information."
      "\"></g:plusone></li>\n"
      ;; Twitter this
      "<li><a href=\"http://twitter.com/share\" class=\"twitter-share-button\" data-count=\"vertical\">Tweet</a><script type=\"text/javascript\" src=\"http://platform.twitter.com/widgets.js\"></script></li>\n"
+     ;; Facebook Like
      "<li><iframe src=\"http://www.facebook.com/plugins/like.php?href="
-     (tapoueh-current-page-url)
+     (replace-regexp-in-string
+      ":" "%3A"
+      (replace-regexp-in-string
+       "/" "%2F"
+       (tapoueh-current-page-url)))
      ";layout=box_count;show_faces=false\"\n"
      "   scrolling=\"no\" frameborder=\"0\" allowTransparency=\"true\"\n"
-     "   style=\"border:none; overflow:hidden;\"></iframe></li>\n"
+     "   style=\"height: 62px; width: 100%; border:none; overflow:hidden;\"></iframe></li>\n"
      "</ul>\n"
      "</div>\n")))
 
