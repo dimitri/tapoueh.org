@@ -1,8 +1,21 @@
 ;;; tapoueh.el --- Muse Setup for tapoueh.org
 ;;
 (require 'muse-mode)
+(require 'muse-html)
 (require 'muse-project)  ; publication par projets
 
+;; Tapoueh muse Style
+(muse-derive-style
+ "tapoueh-html" "html"
+ :before #'tapoueh-add-tag-links
+ :after #'tapoueh-set-coding-system
+ :final #'tapoueh-add-item-to-rss
+ :header "~/dev/tapoueh.org/static/header.html"
+ :footer "~/dev/tapoueh.org/static/footer.html"
+ :suffix ".html"
+ :style-sheet "<link rel=\"stylesheet\" type=\"text/css\"  media=\"all\" href=\"static/styles.css\" />")
+
+;; Now the project, we force the list to nil for debug/devel purposes
 (setq muse-project-alist nil)
 
 (add-to-list
@@ -21,16 +34,9 @@
       :default "index.muse"
       :base-url "http://tapoueh.org/")))
 
-(muse-derive-style
- "tapoueh-html" "html"
- :before #'tapoueh-add-tag-links
- :after #'tapoueh-set-coding-system
- :final #'tapoueh-add-item-to-rss
- :header "~/dev/tapoueh.org/static/header.html"
- :footer "~/dev/tapoueh.org/static/footer.html"
- :suffix ".html"
- :style-sheet "<link rel=\"stylesheet\" type=\"text/css\"  media=\"all\" href=\"static/styles.css\" />")
-
+;;;
+;;; Variables used in the tapoueh.el muse "setup"
+;;;
 (defvar tapoueh-rss-tags '(("rss/postgresql.xml"   . postgresql)
 			   ("rss/emacs.xml"        . emacs)
 			   ("rss/debian.xml"       . debian)
