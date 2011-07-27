@@ -381,22 +381,26 @@ Returns a list of (SOURCE LINK TITLE DATE FORMATED-DATE (TAG TAG))"
 
 (defun tapoueh-tags-cloud (&optional subdir)
   "Produce a tag cloud from articles"
-  (let* ((current muse-publishing-current-output-path)
-	 (project (muse-project-of-file current))
-	 (root    (muse-style-element :path (caddr project)))
-	 (dir     (if subdir (concat root "/" subdir) root))
-	 (tags    (tapoueh-list-all-tags dir))
-	 (max     (when tags (float (cdar tags)))))
-    (loop for (tag . count) in tags
-	  do (insert
-	      (format
-	       (concat
-		"<literal><a href=%stags/%s.html "
-		"style=\"font-size: %2.2f%%;\">%s</a></literal> ")
-	       (tapoueh-path-to-root)
-	       (downcase tag)
-	       (* 250 (/ count max))
-	       tag)))))
+  (unless
+      (and (buffer-file-name (current-buffer))
+	   (string= "muse"
+		    (file-name-extension (buffer-file-name (current-buffer)))))
+    (let* ((current muse-publishing-current-output-path)
+	   (project (muse-project-of-file current))
+	   (root    (muse-style-element :path (caddr project)))
+	   (dir     (if subdir (concat root "/" subdir) root))
+	   (tags    (tapoueh-list-all-tags dir))
+	   (max     (when tags (float (cdar tags)))))
+      (loop for (tag . count) in tags
+	    do (insert
+		(format
+		 (concat
+		  "<literal><a href=%stags/%s.html "
+		  "style=\"font-size: %2.2f%%;\">%s</a></literal> ")
+		 (tapoueh-path-to-root)
+		 (downcase tag)
+		 (* 250 (/ count max))
+		 tag))))))
 
 ;;;
 ;;; Mainly useful when importing a lot old untagged articles
