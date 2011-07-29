@@ -665,6 +665,54 @@ file to be the relevant information."
 
 (add-hook 'muse-mode-hook 'tapoueh-insert-muse-headers)
 
+;;
+;; hook to publish all index and archives from current article to root
+;;
+(defun tapoueh-reindex-file (file style)
+  "muse-publish-file, but message about it"
+  (message "Reindexing %s" file)
+  (muse-publish-file file style))
+
+(defun tapoueh-reindex ()
+  "when publishing a blog article, force publishing indexes and blog/archive.
+
+Also add a project wide publishing so that TAGs and SiteMap are updated"
+  (let* ((current (muse-current-file))
+	 (cwd     (file-name-directory current))
+	 (project (muse-project-of-file current))
+	 (pname   (car project))
+	 (tags    (tapoueh-extract-directive "tags" current))
+	 (style   (caddr project))
+	 (root    (muse-style-element :path style))
+	 (path    (tapoueh-path-to-root))
+	 ;; ("blog" "2011" "07" "13-back-from-char11.muse")
+	 (dirs    (split-string (file-relative-name current root) "/")))
+    ;; only do the post processing for articles with TAGs
+    ;; and avoid infinite recursion
+    (when (and (string= "tapoueh.org" pname)
+	       tags
+	       (string= (file-name-extension current) "muse"))
+      (message "tapoueh-reindex: %s %s" current tags)
+      (loop for p in (butlast dirs)
+	    do (progn
+		 (let* ((subdir   (expand-file-name p path))
+			(index    (expand-file-name "index.muse" subdir))
+			(archives (expand-file-name "archives.muse" subdir)))
+		   (loop for file in (list index archives)
+			 when (file-exists-p file)
+			 do (tapoueh-reindex-file file style))
+		   (setq path (concat path p "/")))))
+
+      ;; don't forget top level files
+      (loop for file in (list (expand-file-name "index.muse" root)
+			      (expand-file-name "contents.muse" root))
+	    do (tapoueh-reindex-file file style))
+
+      ;; and now publish the project, for SiteMap and TAG
+      (muse-project-publish project))))
+
+(add-hook 'muse-after-publish-hook 'tapoueh-reindex)
+
 ;;;
 ;;; C-c C-r to rsync the static website to the hosting server
 ;;;
