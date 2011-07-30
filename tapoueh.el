@@ -671,7 +671,7 @@ file to be the relevant information."
 (defun tapoueh-reindex-file (file style)
   "muse-publish-file, but message about it"
   (message "Reindexing %s" file)
-  (muse-publish-file file style))
+  (muse-publish-file file style nil 'force))
 
 (defun tapoueh-reindex ()
   "when publishing a blog article, force publishing indexes and blog/archive.
