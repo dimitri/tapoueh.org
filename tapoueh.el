@@ -676,7 +676,7 @@ file to be the relevant information."
 (defun tapoueh-reindex ()
   "when publishing a blog article, force publishing indexes and blog/archive.
 
-Also add a project wide publishing so that TAGs and SiteMap are updated"
+You still need to publish the project itself (TAGs, SiteMap)."
   (let* ((current (muse-current-file))
 	 (cwd     (file-name-directory current))
 	 (project (muse-project-of-file current))
@@ -706,10 +706,7 @@ Also add a project wide publishing so that TAGs and SiteMap are updated"
       ;; don't forget top level files
       (loop for file in (list (expand-file-name "index.muse" root)
 			      (expand-file-name "contents.muse" root))
-	    do (tapoueh-reindex-file file style))
-
-      ;; and now publish the project, for SiteMap and TAG
-      (muse-project-publish project))))
+	    do (tapoueh-reindex-file file style)))))
 
 (add-hook 'muse-after-publish-hook 'tapoueh-reindex)
 
