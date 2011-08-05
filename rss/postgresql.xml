@@ -7,6 +7,100 @@
     <language>en-us</language>
     <generator>Emacs Muse</generator>
 <item>
+  <title>pgloader reformating</title>
+  <link>http://tapoueh.org/blog/2011/08/05-reformating-modules-for-pgloader.html</link>
+  <description><![CDATA[<p>Back to our series about <a href="../../../pgsql/pgloader.html">pgloader</a>.  The previous articles detailed
+<a href="http://tapoueh.org/blog/2011/07/22-how-to-use-pgloader.html">How To Use PgLoader</a> then <a href="http://tapoueh.org/blog/2011/07/29-how-to-setup-pgloader.html">How to Setup pgloader</a>, then what to expect from a
+<a href="http://tapoueh.org/blog/2011/08/01-parallel-pgloader.html">parallel pgloader</a> setup.  This article will detail how to <em>reformat</em> input
+columns so that what <a href="http://www.postgresql.org/">PostgreSQL</a> sees is not what's in the data file, but the
+result of a <em>transformation</em> from this data into something acceptable as an
+<em>input</em> for the target data type.</p>
+
+<p>Here's what the <a href="http://pgloader.projects.postgresql.org/">pgloader documentation</a> has to say about this <em>reformat</em>
+parameter: <em>The value of this option is a comma separated list of columns to
+rewrite, which are a colon separated list of column name, reformat module
+name, reformat function name</em>.</p>
+
+<p>And here's the <a href="https://github.com/dimitri/pgloader/blob/master/examples/pgloader.conf">examples/pgloader.conf</a> section that deals with reformat:</p>
+
+<pre class="src">
+[<span style="color: #8ae234; font-weight: bold;">reformat</span>]
+<span style="color: #eeeeec;">table</span>           = reformat
+<span style="color: #eeeeec;">format</span>          = text
+<span style="color: #eeeeec;">filename</span>        = reformat/reformat.data
+<span style="color: #eeeeec;">field_sep</span>       = |
+<span style="color: #eeeeec;">columns</span>         = id, timestamp
+<span style="color: #eeeeec;">reformat</span>        = timestamp:mysql:timestamp
+</pre>
+
+<p>The documentation says some more about it, so check it out.  Also, the
+<code>reformat_path</code> option (set either on the command line or in the configuration
+file) is used to find the python module implementing the reformat function.
+Please refer to the manual as to how to set it.</p>
+
+<p>Now, obviously, for the <em>reformat</em> to happen we need to write some code.
+That's the whole point of the option: you need something very specific, you
+are in a position to write the 5 lines of code needed to make it happen,
+<a href="http://tapoueh.org/pgsql/pgloader.html">pgloader</a> allows you to just do that.  Of course, the code needs to be
+written in python here, so that you can even benefit from the
+<a href="http://tapoueh.org/blog/2011/08/01-parallel-pgloader.html">parallel pgloader</a> settings.</p>
+
+
+<p>Let's see an reformat module exemple, as found in <a href="https://github.com/dimitri/pgloader/blob/master/reformat/mysql.py">reformat/mysql.py</a> in the
+<code>pgloader</code> sources:</p>
+
+<pre class="src">
+<span style="color: #888a85;"># </span><span style="color: #888a85;">Author: Dimitri Fontaine &lt;<a href="mailto:dim&#64;tapoueh.org">dim&#64;tapoueh.org</a>&gt;
+</span><span style="color: #888a85;">#</span><span style="color: #888a85;">
+</span><span style="color: #888a85;"># </span><span style="color: #888a85;">pgloader mysql reformating module
+</span><span style="color: #888a85;">#</span><span style="color: #888a85;">
+</span>
+<span style="color: #729fcf; font-weight: bold;">def</span> <span style="color: #edd400; font-weight: bold; font-style: italic;">timestamp</span>(reject, <span style="color: #729fcf;">input</span>):
+    <span style="color: #ad7fa8; font-style: italic;">""" Reformat str as a PostgreSQL timestamp
+
+    MySQL timestamps are like:  20041002152952
+    We want instead this input: 2004-10-02 15:29:52
+    """</span>
+    <span style="color: #729fcf; font-weight: bold;">if</span> <span style="color: #729fcf;">len</span>(<span style="color: #729fcf;">input</span>) != 14:
+        <span style="color: #eeeeec;">e</span> = <span style="color: #ad7fa8; font-style: italic;">"MySQL timestamp reformat input too short: %s"</span> % <span style="color: #729fcf;">input</span>
+        reject.log(e, <span style="color: #729fcf;">input</span>)
+
+    <span style="color: #eeeeec;">year</span>    = <span style="color: #729fcf;">input</span>[0:4]
+    <span style="color: #eeeeec;">month</span>   = <span style="color: #729fcf;">input</span>[4:6]
+    <span style="color: #eeeeec;">day</span>     = <span style="color: #729fcf;">input</span>[6:8]
+    <span style="color: #eeeeec;">hour</span>    = <span style="color: #729fcf;">input</span>[8:10]
+    <span style="color: #eeeeec;">minute</span>  = <span style="color: #729fcf;">input</span>[10:12]
+    <span style="color: #eeeeec;">seconds</span> = <span style="color: #729fcf;">input</span>[12:14]
+
+    <span style="color: #729fcf; font-weight: bold;">return</span> <span style="color: #ad7fa8; font-style: italic;">'%s-%s-%s %s:%s:%s'</span> % (year, month, day, hour, minute, seconds)
+</pre>
+
+<p>This reformat module will <em>transform</em> a <code>timestamp</code> representation as issued by
+certain versions of MySQL into something that PostgreSQL is able to read as
+a timestamp.</p>
+
+<p>If you're in the camp that wants to write as little code as possible rather
+than easy to read and maintain code, I guess you could write it this way
+instead:</p>
+
+<pre class="src">
+<span style="color: #729fcf; font-weight: bold;">import</span> re
+<span style="color: #729fcf; font-weight: bold;">def</span> <span style="color: #edd400; font-weight: bold; font-style: italic;">timestamp</span>(reject, <span style="color: #729fcf;">input</span>):
+    <span style="color: #ad7fa8; font-style: italic;">""" 20041002152952 -&gt; 2004-10-02 15:29:52 """</span>
+    <span style="color: #eeeeec;">g</span> = re.match(r<span style="color: #ad7fa8; font-style: italic;">"(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})"</span>, <span style="color: #729fcf;">input</span>)
+    <span style="color: #729fcf; font-weight: bold;">return</span> <span style="color: #ad7fa8; font-style: italic;">'%s-%s-%s %s:%s:%s'</span> % <span style="color: #729fcf;">tuple</span>([g.group(x+1) <span style="color: #729fcf; font-weight: bold;">for</span> x <span style="color: #729fcf; font-weight: bold;">in</span> <span style="color: #729fcf;">range</span>(6)])
+</pre>
+
+<p>Whenever you have an input file with data that PostgreSQL chokes upon, you
+can solve this problem from <a href="http://tapoueh.org/pgsql/pgloader.html">pgloader</a> itself: no need to resort to scripting
+and a pipelines of <a href="http://www.gnu.org/software/gawk/manual/gawk.html">awk</a> (which I use a lot in other cases, don't get me
+wrong) or other tools.  See, you finally have an excuse to <a href="http://diveintopython.org/">Dive into Python</a>!</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Fri, 05 Aug 2011 11:30:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2011/08/05-reformating-modules-for-pgloader.html</guid>
+</item>
+<item>
   <title>See Tsung in action</title>
   <link>http://tapoueh.org/blog/2011/08/02-see-tsung-in-action.html</link>
   <description><![CDATA[<p><a href="http://tsung.erlang-projects.org/">Tsung</a> is an open-source multi-protocol distributed load testing tool and a

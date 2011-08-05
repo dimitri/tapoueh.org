@@ -1,0 +1,91 @@
+#author Dimitri Fontaine
+#title  pgloader reformating
+#date   20110805-11:30
+#tags   PostgreSQL pgloader
+
+Back to our series about [[../../../pgsql/pgloader.html][pgloader]].  The previous articles detailed
+[[http://tapoueh.org/blog/2011/07/22-how-to-use-pgloader.html][How To Use PgLoader]] then [[http://tapoueh.org/blog/2011/07/29-how-to-setup-pgloader.html][How to Setup pgloader]], then what to expect from a
+[[http://tapoueh.org/blog/2011/08/01-parallel-pgloader.html][parallel pgloader]] setup.  This article will detail how to *reformat* input
+columns so that what [[http://www.postgresql.org/][PostgreSQL]] sees is not what's in the data file, but the
+result of a *transformation* from this data into something acceptable as an
+*input* for the target data type.
+
+Here's what the [[http://pgloader.projects.postgresql.org/][pgloader documentation]] has to say about this *reformat*
+parameter: *The value of this option is a comma separated list of columns to
+rewrite, which are a colon separated list of column name, reformat module
+name, reformat function name*.
+
+And here's the [[https://github.com/dimitri/pgloader/blob/master/examples/pgloader.conf][examples/pgloader.conf]] section that deals with reformat:
+
+<src lang="conf">
+[reformat]
+table           = reformat
+format          = text
+filename        = reformat/reformat.data
+field_sep       = |
+columns         = id, timestamp
+reformat        = timestamp:mysql:timestamp
+</src>
+
+The documentation says some more about it, so check it out.  Also, the
+=reformat_path= option (set either on the command line or in the configuration
+file) is used to find the python module implementing the reformat function.
+Please refer to the manual as to how to set it.
+
+Now, obviously, for the *reformat* to happen we need to write some code.
+That's the whole point of the option: you need something very specific, you
+are in a position to write the 5 lines of code needed to make it happen,
+[[http://tapoueh.org/pgsql/pgloader.html][pgloader]] allows you to just do that.  Of course, the code needs to be
+written in python here, so that you can even benefit from the
+[[http://tapoueh.org/blog/2011/08/01-parallel-pgloader.html][parallel pgloader]] settings.
+
+
+Let's see an reformat module exemple, as found in [[https://github.com/dimitri/pgloader/blob/master/reformat/mysql.py][reformat/mysql.py]] in the
+=pgloader= sources:
+
+<src lang="python">
+# Author: Dimitri Fontaine <dim@tapoueh.org>
+#
+# pgloader mysql reformating module
+#
+
+def timestamp(reject, input):
+    """ Reformat str as a PostgreSQL timestamp
+
+    MySQL timestamps are like:  20041002152952
+    We want instead this input: 2004-10-02 15:29:52
+    """
+    if len(input) != 14:
+        e = "MySQL timestamp reformat input too short: %s" % input
+        reject.log(e, input)
+    
+    year    = input[0:4]
+    month   = input[4:6]
+    day     = input[6:8]
+    hour    = input[8:10]
+    minute  = input[10:12]
+    seconds = input[12:14]
+    
+    return '%s-%s-%s %s:%s:%s' % (year, month, day, hour, minute, seconds)
+</src>
+
+This reformat module will *transform* a =timestamp= representation as issued by
+certain versions of MySQL into something that PostgreSQL is able to read as
+a timestamp.
+
+If you're in the camp that wants to write as little code as possible rather
+than easy to read and maintain code, I guess you could write it this way
+instead:
+
+<src lang="python">
+import re
+def timestamp(reject, input):
+    """ 20041002152952 -> 2004-10-02 15:29:52 """
+    g = re.match(r"(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})", input)
+    return '%s-%s-%s %s:%s:%s' % tuple([g.group(x+1) for x in range(6)])
+</src>
+
+Whenever you have an input file with data that PostgreSQL chokes upon, you
+can solve this problem from [[http://tapoueh.org/pgsql/pgloader.html][pgloader]] itself: no need to resort to scripting
+and a pipelines of [[http://www.gnu.org/software/gawk/manual/gawk.html][awk]] (which I use a lot in other cases, don't get me
+wrong) or other tools.  See, you finally have an excuse to [[http://diveintopython.org/][Dive into Python]]!
