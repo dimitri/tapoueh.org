@@ -1,0 +1,40 @@
+#author Dimitri Fontaine
+#title  Emacs Startup
+#date   20110806-14:58
+#tags   Emacs el-get
+
+Using [[http://www.gnu.org/software/emacs/][Emacs]] we get to manage a larger and larger setup file (either =~/.emacs=
+or =~/.emacs.d/init.el=), sometime with lots of dependencies, and some
+sub-files thanks to the =load= function or the =provide= and =require= mechanism.
+
+Some users are even starting Emacs often enough for the startup time to be a
+concern.  With an =emacs-uptime= (yes it's a command, you can =M-x
+emacs-uptime=) of days to weeks (=10 days, 17 hours, 45 minutes, 34 seconds= as
+of this writing), it's not something I really care about much.
+
+But I know that some [[http://tapoueh.org/emacs/el-get.html][el-get]] users still do care, and will use =el-get-is-lazy=
+and do all their Emacs tweaking as =eval-after-load= blocks.  Trying to have
+an idea of how much a *worst case* startup with [[http://www.emacswiki.org/emacs/el-get][el-get]] is, I have added the
+following piece of =elisp= at the very end of my startup code:
+
+<src lang="emacs-lisp">
+(defun dim:notify-startup-done ()
+  " notify user that Emacs is now ready"
+  (el-get-notify
+   "Emacs is ready."
+   (format "The init sequence took %g seconds."
+	   (float-time (time-subtract after-init-time before-init-time)))))
+
+(add-hook 'after-init-hook 'dim:notify-startup-done)
+</src>
+
+The =el-get-notify= function will adapt and either use the dbus implementation
+from Emacs 24, or [[http://www.emacswiki.org/emacs/notify.el][notify.el]] from [[http://www.emacswiki.org/][EmacsWiki]] (just =M-x el-get-install= it if
+you need it), or will use its own implementation of an Emacs [[http://growl.info/][Growl]] client
+(it's about 5 lines long), and baring all of that will use the =message=
+function.
+
+The reason I say *worst case* is that I have a lot of packages to initialize
+at startup, and that I did absolutely no effort for this initializing to be
+quick.  Still, my Emacs setup is taking about 20 seconds to boot.  Pretty
+good I would say, for a weekly operation.
