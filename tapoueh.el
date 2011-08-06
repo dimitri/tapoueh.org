@@ -41,7 +41,7 @@
 			   ("rss/emacs.xml"        . emacs)
 			   ("rss/debian.xml"       . debian)
 			   ("rss/postgresqlfr.xml" . postgresqlfr)
-			   ("rss/index.xml"        . nil))
+			   ("rss/tapoueh.xml"      . nil))
   "An alist of RSS filename and subscribed TAG, nil meaning all")
 
 ;;;
@@ -106,7 +106,7 @@ on filter.
   (let* ((current muse-publishing-current-output-path)
 	 (cwd     (file-name-directory current))
 	 (project (muse-project-of-file current)))
-    (concat "href=\"" (tapoueh-path-to-root) "rss/index.xml" "\"")))
+    (concat "href=\"" (tapoueh-path-to-root) "rss/tapoueh.xml" "\"")))
 
 (defun tapoueh-contents ()
   "Output the link to the /contents.html page"
