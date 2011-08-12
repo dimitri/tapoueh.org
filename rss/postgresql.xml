@@ -7,6 +7,74 @@
     <language>en-us</language>
     <generator>Emacs Muse</generator>
 <item>
+  <title>pgloader constant cols</title>
+  <link>http://tapoueh.org/blog/2011/08/12-pgloader-udc.html</link>
+  <description><![CDATA[<p>The previous articles in the <a href="../../../pgsql/pgloader.html">pgloader</a> series detailed <a href="http://tapoueh.org/blog/2011/07/22-how-to-use-pgloader.html">How To Use PgLoader</a>
+then <a href="http://tapoueh.org/blog/2011/07/29-how-to-setup-pgloader.html">How to Setup pgloader</a>, then what to expect from a <a href="http://tapoueh.org/blog/2011/08/01-parallel-pgloader.html">parallel pgloader</a>
+setup, and then <a href="http://tapoueh.org/blog/2011/08/05-reformating-modules-for-pgloader.html">pgloader reformating</a>.  Another need you might encounter when
+you get to use <a href="../../../pgsql/pgloader.html">pgloader</a> is adding <em>constant</em> values into a table's column.</p>
+
+<p>The basic situation where you need to do so is adding an <em>origin</em> field to
+your table.  The value of that is not to be found in the data file itself,
+typically, but known in the pgloader setup.  That could even be the <code>filename</code>
+you are importing data from.</p>
+
+<p>In <a href="../../../pgsql/pgloader.html">pgloader</a> that's called a <em>user defined column</em>.  Here's what the relevant
+<a href="https://github.com/dimitri/pgloader/blob/master/examples/pgloader.conf">examples/pgloader.conf</a> setup looks like:</p>
+
+<pre class="src">
+[<span style="color: #8ae234; font-weight: bold;">udc</span>]
+<span style="color: #eeeeec;">table</span>           = udc
+<span style="color: #eeeeec;">format</span>          = text
+<span style="color: #eeeeec;">filename</span>        = udc/udc.data
+<span style="color: #eeeeec;">input_encoding</span>  = <span style="color: #ad7fa8; font-style: italic;">'latin1'</span>
+<span style="color: #eeeeec;">field_sep</span>       = %
+<span style="color: #eeeeec;">columns</span>         = b:2, d:1, x:3, y:4
+<span style="color: #eeeeec;">udc_c</span>           = constant value
+<span style="color: #eeeeec;">copy_columns</span>    = b, c, d
+</pre>
+
+<p>And the data file is:</p>
+
+<pre class="src">
+1%5%foo%bar
+2%10%bar%toto
+3%4%toto%titi
+4%18%titi%baz
+5%2%baz%foo
+</pre>
+
+<p>And here's what the loaded table looks like:</p>
+
+<pre class="src">
+pgloader/examples$ pgloader -Tsc pgloader.conf udc
+Table name        |    duration |    size |  copy rows |     errors
+====================================================================
+udc               |      0.201s |       - |          5 |          0
+
+pgloader/examples$ psql --cluster 8.4/main pgloader -c <span style="color: #ad7fa8; font-style: italic;">"table udc"</span>
+ b  |       c        | d
+----+----------------+---
+  5 | constant value | 1
+ 10 | constant value | 2
+  4 | constant value | 3
+ 18 | constant value | 4
+  2 | constant value | 5
+(5 rows)
+</pre>
+
+<p>Of course the configuration is not so straightforward as to process fields
+in the data file in the order that they appear, after all the
+<a href="https://github.com/dimitri/pgloader/blob/master/examples/pgloader.conf">examples/pgloader.conf</a> are also a test suite.</p>
+
+<p>Long story short: if you need to add some <em>constant</em> values into the target
+table you're loading data to, <a href="../../../pgsql/pgloader.html">pgloader</a> will help you there!</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Fri, 12 Aug 2011 11:00:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2011/08/12-pgloader-udc.html</guid>
+</item>
+<item>
   <title>pgloader reformating</title>
   <link>http://tapoueh.org/blog/2011/08/05-reformating-modules-for-pgloader.html</link>
   <description><![CDATA[<p>Back to our series about <a href="../../../pgsql/pgloader.html">pgloader</a>.  The previous articles detailed
