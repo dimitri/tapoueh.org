@@ -710,6 +710,30 @@ You still need to publish the project itself (TAGs, SiteMap)."
 
 (add-hook 'muse-after-publish-hook 'tapoueh-reindex)
 
+;;
+;; walk all blog articles and refresh given tag, and the rss if the tag is
+;; part of tapoueh-rss-tags
+;;
+;; allow to manually clean-up rss/emacs.xml (e.g.) then refill it from
+;; scratch.
+;;
+(defun tapoueh-retag-articles (&optional tag)
+  "Walk trhough all articles, and for each one tagged TAG update
+the tag file and the rss file if any"
+  (interactive "MRetag for tag: ")
+  (when tag
+    (let* ((root "~/dev/tapoueh.org/")
+	   (blog (expand-file-name "blog" root)))
+      (loop for (src link title date fdate tags) in (tapoueh-walk-articles blog)
+	    when (and (not (file-directory-p src))
+		      (member tag (tapoueh-extract-directive "tags" src)))
+	    do (let ((flink (concat "blog/" link)))
+		 (message "tapoueh-retag-articles: %S %S" src title)
+	    	 (tapoueh-add-article-to-tag flink title fdate tag)
+		 (with-current-buffer (find-file-noselect flink)
+		   (tapoueh-add-item-to-rss src flink nil)))
+	    collect src))))
+
 ;;;
 ;;; C-c C-r to rsync the static website to the hosting server
 ;;;

@@ -23,15 +23,15 @@ you are importing data from.</p>
 <a href="https://github.com/dimitri/pgloader/blob/master/examples/pgloader.conf">examples/pgloader.conf</a> setup looks like:</p>
 
 <pre class="src">
-[<span style="color: #8ae234; font-weight: bold;">udc</span>]
-<span style="color: #eeeeec;">table</span>           = udc
-<span style="color: #eeeeec;">format</span>          = text
-<span style="color: #eeeeec;">filename</span>        = udc/udc.data
-<span style="color: #eeeeec;">input_encoding</span>  = <span style="color: #ad7fa8; font-style: italic;">'latin1'</span>
-<span style="color: #eeeeec;">field_sep</span>       = %
-<span style="color: #eeeeec;">columns</span>         = b:2, d:1, x:3, y:4
-<span style="color: #eeeeec;">udc_c</span>           = constant value
-<span style="color: #eeeeec;">copy_columns</span>    = b, c, d
+[<span style="color: #228b22;">udc</span>]
+<span style="color: #b8860b;">table</span>           = udc
+<span style="color: #b8860b;">format</span>          = text
+<span style="color: #b8860b;">filename</span>        = udc/udc.data
+<span style="color: #b8860b;">input_encoding</span>  = <span style="color: #bc8f8f;">'latin1'</span>
+<span style="color: #b8860b;">field_sep</span>       = %
+<span style="color: #b8860b;">columns</span>         = b:2, d:1, x:3, y:4
+<span style="color: #b8860b;">udc_c</span>           = constant value
+<span style="color: #b8860b;">copy_columns</span>    = b, c, d
 </pre>
 
 <p>And the data file is:</p>
@@ -52,7 +52,7 @@ Table name        |    duration |    size |  copy rows |     errors
 ====================================================================
 udc               |      0.201s |       - |          5 |          0
 
-pgloader/examples$ psql --cluster 8.4/main pgloader -c <span style="color: #ad7fa8; font-style: italic;">"table udc"</span>
+pgloader/examples$ psql --cluster 8.4/main pgloader -c <span style="color: #bc8f8f;">"table udc"</span>
  b  |       c        | d
 ----+----------------+---
   5 | constant value | 1
@@ -2259,6 +2259,90 @@ the project! Stay tuned!</p>
 
 <item>
   <title>Regexp performances and Finite Automata</title>
+  <link>http://tapoueh.org/blog/2010/09/blog/2010/09/26-regexp-performances-and-finite-automata.html</link>
+  <description><![CDATA[<p><span class="hack"> </span></p>
+
+<p>The major reason why I dislike <a href="http://www.perl.org/">perl</a> so much, and <a href="http://www.ruby-lang.org">ruby</a> too, and the thing I'd
+want different in the <a href="http://www.gnu.org/software/emacs/manual/elisp.html">Emacs Lisp</a> <code>API</code> so far is how they set developers mind
+into using <a href="http://www.regular-expressions.info/">regexp</a>. You know the quote, don't you?</p>
+
+<blockquote>
+<p class="quoted">
+Some people, when confronted with a problem, think “I know, I'll use regular
+expressions.” Now they have two problems.</p>
+
+</blockquote>
+
+<p>That said, some situations require the use of <em>regexp</em> — or are so much
+simpler to solve using them than the maintenance hell you're building here
+ain't that big a drag. The given expressiveness is hard to match with any
+other solution, to the point I sometime use them in my code (well I use <a href="http://www.emacswiki.org/emacs/rx">rx</a>
+to lower the burden sometime, just see this example).</p>
+
+<pre class="src">
+(rx bol (zero-or-more blank) (one-or-more digit) <span style="color: #bc8f8f;">":"</span>)
+<span style="color: #bc8f8f;">"^[[:blank:]]*[[:digit:]]+:"</span>
+</pre>
+
+<p>The thing you might want to know about <em>regexp</em> is that computing them is an
+heavy task usually involving <em>parsing</em> their representation, <em>compiling</em> it to
+some executable code, and then <em>executing</em> generated code. It's been showed in
+the past (as soon as 1968) that a <em>regexp</em> is just another way to write a
+finite automata, at least as soon as you don't need <em>backtracking</em>. The
+writing of this article is my reaction to reading
+<a href="http://swtch.com/~rsc/regexp/regexp1.html">Regular Expression Matching Can Be Simple And Fast</a> (but is slow in Java,
+Perl, PHP, Python, Ruby, ...), a very interesting article — see the
+benchmarks in there.</p>
+
+<p>The bulk of it is that we find mainly two categories of <em>regexp</em> engine in the
+wild, those that are using <a href="http://en.wikipedia.org/wiki/Nondeterministic_finite_state_machine">NFA</a> and <a href="http://en.wikipedia.org/wiki/Deterministic_finite_automaton">DFA</a> intermediate representation
+techniques, and the others. Our beloved <a href="http://www.postgresql.org/">PostgreSQL</a> sure offers the feature,
+it's the <code>~</code> and <code>~*</code> <a href="http://www.postgresql.org/docs/9.0/interactive/functions-matching.html">operators</a>. The implementation here is based on
+<a href="http://www.arglist.com/regex/">Henry Spencer</a>'s work, which the aforementioned article says</p>
+
+<blockquote>
+<p class="quoted">
+became very widely used, eventually serving as the basis for the slow
+regular expression implementations mentioned earlier: Perl, PCRE, Python,
+and so on.</p>
+
+</blockquote>
+
+<p>Having a look at the actual implementation shows that indeed, current
+PostgreSQL code for <em>regexp</em> matching uses intermediate representations of
+them as <code>NFA</code> and <code>DFA</code>. The code is quite complex, even more than I though it
+would be, and I didn't have the time it would take to check it against the
+proposed one from the <em>simple and fast</em> article.</p>
+
+<pre class="src">
+postgresql/src/backend/regex
+  -rw-r--r--   1 dim  staff   4362 Sep 25 20:59 COPYRIGHT
+  -rw-r--r--   1 dim  staff    614 Sep 25 20:59 Makefile
+  -rw-r--r--   1 dim  staff  28217 Sep 25 20:59 re_syntax.n
+  -rw-r--r--   1 dim  staff  16589 Sep 25 20:59 regc_color.c
+  -rw-r--r--   1 dim  staff   3464 Sep 25 20:59 regc_cvec.c
+  -rw-r--r--   1 dim  staff  25036 Sep 25 20:59 regc_lex.c
+  -rw-r--r--   1 dim  staff  16845 Sep 25 20:59 regc_locale.c
+  -rw-r--r--   1 dim  staff  35917 Sep 25 20:59 regc_nfa.c
+  -rw-r--r--   1 dim  staff  50714 Sep 25 20:59 regcomp.c
+  -rw-r--r--   1 dim  staff  17368 Sep 25 20:59 rege_dfa.c
+  -rw-r--r--   1 dim  staff   3627 Sep 25 20:59 regerror.c
+  -rw-r--r--   1 dim  staff  27664 Sep 25 20:59 regexec.c
+  -rw-r--r--   1 dim  staff   2122 Sep 25 20:59 regfree.c
+</pre>
+
+<p>So all in all, I'll continue avoiding <em>regexp</em> as much as I currently do, and
+will maintain my tendency to using <a href="http://www.gnu.org/manual/gawk/gawk.html">awk</a> when I need them on files (it allows
+to refine the searching without resorting to more and more pipes in the
+command line). And as far as resorting to using <em>regexp</em> in PostgreSQL is
+concerned, it seems that the code here is already about topnotch. Once more.</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Sun, 26 Sep 2010 21:00:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/09/blog/2010/09/26-regexp-performances-and-finite-automata.html</guid>
+</item>
+<item>
+  <title>Regexp performances and Finite Automata</title>
   <link>http://tapoueh.org/blog/2010/09/26-regexp-performances-and-finite-automata.html</link>
   <description><![CDATA[h1>Regexp performances and Finite Automata</h1>
 <div id="breadcrumb"><a href=../../../index.html>/dev/dim</a> / <a href=../../../blog/index.html>blog</a> / <a href=../../../blog/2010/index.html>2010</a> / <a href=../../../blog/2010/09/index.html>09</a> / </div>
@@ -2593,6 +2677,178 @@ system here. That's also being discussed on the <a href="http://archives.postgre
 </item>
 
 
+<item>
+  <title>Happy Numbers</title>
+  <link>http://tapoueh.org/blog/2010/08/blog/2010/08/30-happy-numbers.html</link>
+  <description><![CDATA[<p>After discovering the excellent <a href="http://gwene.org/">Gwene</a> service, which allows you to subscribe
+to <em>newsgroups</em> to read <code>RSS</code> content (<em>blogs</em>, <em>planets</em>, <em>commits</em>, etc), I came to
+read this nice article about <a href="http://programmingpraxis.com/2010/07/23/happy-numbers/">Happy Numbers</a>. That's a little problem that
+fits well an interview style question, so I first solved it yesterday
+evening in <a href="http://www.gnu.org/software/emacs/emacs-lisp-intro/html_node/List-Processing.html#List-Processing">Emacs Lisp</a> as that's the language I use the most those days.</p>
+
+<blockquote>
+<p class="quoted">
+A happy number is defined by the following process. Starting with any
+positive integer, replace the number by the sum of the squares of its
+digits, and repeat the process until the number equals 1 (where it will
+stay), or it loops endlessly in a cycle which does not include 1. Those
+numbers for which this process ends in 1 are happy numbers, while those
+that do not end in 1 are unhappy numbers (or sad numbers).</p>
+
+</blockquote>
+
+<p>Now, what about implementing the same in pure <code>SQL</code>, for more fun? Now that's
+interesting! After all, we didn't get <code>WITH RECURSIVE</code> for tree traversal
+only, <a href="http://archives.postgresql.org/message-id/e08cc0400911042333o5361b21cu2c9438f82b1e55ce@mail.gmail.com">did we</a>?</p>
+
+<p>Unfortunately, we need a little helper function first, if only to ease the
+reading of the recursive query. I didn't try to inline it, but here it goes:</p>
+
+<pre class="src">
+create or replace function digits(x bigint)
+  returns setof int
+  language sql
+as $$
+  select substring($1::text from i for 1)::int
+    from generate_series(1, length($1::text)) as t(i)
+$$;
+</pre>
+
+<p>That was easy: it will output one row per digit of the input number — and
+rather than resorting to powers of ten and divisions and remainders, we do
+use plain old text representation and <code>substring</code>. Now, to the real
+problem. If you're read what is an happy number and already did read the
+fine manual about <a href="http://www.postgresql.org/docs/8.4/interactive/queries-with.html">Recursive Query Evaluation</a>, it should be quite easy to
+read the following:</p>
+
+<pre class="src">
+with recursive happy(n, seen) as (
+    select 7::bigint, <span style="color: #bc8f8f;">'{}'</span>::bigint[]
+  union all
+    select sum(d*d), h.seen || sum(d*d)
+      from (select n, digits(n) as d, seen
+              from happy
+           ) as h
+  group by h.n, h.seen
+    having not seen @&gt; array[sum(d*d)]
+)
+  select * from happy;
+  n  |       seen
+<span style="color: #b22222;">-----+------------------
+</span>   7 | {}
+  49 | {49}
+  97 | {49,97}
+ 130 | {49,97,130}
+  10 | {49,97,130,10}
+   1 | {49,97,130,10,1}
+(6 rows)
+
+Time: 1.238 ms
+</pre>
+
+<p>That shows how it works for some <em>happy</em> number, and it's easy to test for a
+non-happy one, like for example <code>17</code>. The query won't cycle thanks to the <code>seen</code>
+array and the <code>having</code> filter, so the only difference between an <em>happy</em> and a
+<em>sad</em> number will be that in the former case the last line output by the
+recursive query will have <code>n = 1</code>. Let's expand this knowledge
+into a proper function (because we want to be able to have the number we
+test for happiness as an argument):</p>
+
+<pre class="src">
+create or replace function happy(x bigint)
+  returns boolean
+  language sql
+as $$
+with recursive happy(n, seen) as (
+    select $1, <span style="color: #bc8f8f;">'{}'</span>::bigint[]
+  union all
+    select sum(d*d), h.seen || sum(d*d)
+      from (select n, digits(n) as d, seen
+              from happy
+           ) as h
+  group by h.n, h.seen
+    having not seen @&gt; array[sum(d*d)]
+)
+  select n = 1 as happy
+    from happy
+order by array_length(seen, 1) desc nulls last
+   limit 1
+$$;
+</pre>
+
+<p>We need the <code>desc nulls last</code> trick in the <code>order by</code> because the <code>array_length()</code>
+of any dimension of an empty array is <code>NULL</code>, and we certainly don't want to
+return all and any number as unhappy on the grounds that the query result
+contains a line <code>input, {}</code>. Let's now play the same tricks as in the puzzle
+article:</p>
+
+<pre class="src">
+=# select array_agg(x) as happy
+     from generate_series(1, 50) as t(x)
+    where happy(x);
+              happy
+<span style="color: #b22222;">----------------------------------
+</span> {1,7,10,13,19,23,28,31,32,44,49}
+(1 row)
+
+Time: 24.527 ms
+
+=# explain analyze select x
+                     from generate_series(1, 10000) as t(x)
+                    where happy(x);
+                      QUERY PLAN
+<span style="color: #b22222;">------------------------------------------------------------
+</span> Function Scan on generate_series t
+     (cost=0.00..265.00 rows=333 width=4)
+     (actual time=2.938..3651.019 rows=1442 loops=1)
+   Filter: happy((x)::bigint)
+ Total runtime: 3651.534 ms
+(3 rows)
+
+Time: 3652.178 ms
+</pre>
+
+<p>(Yes, I tricked the <code>EXPLAIN ANALYZE</code> output so that it fits on the page width
+here). For what it's worth, finding the first <code>10000</code> happy numbers in <em>Emacs
+Lisp</em> on the same laptop takes <code>2830 ms</code>, also running a recursive version of
+the code.</p>
+
+<h3>Update, the Emacs Lisp version, inline:</h3>
+
+<pre class="src">
+(<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">happy?</span> (<span style="color: #228b22;">&amp;optional</span> n seen)
+  <span style="color: #bc8f8f;">"return true when n is a happy number"</span>
+  (interactive)
+  (<span style="color: #7f007f;">let*</span> ((number    (or n (read-from-minibuffer
+                           <span style="color: #bc8f8f;">"Is this number happy: "</span>)))
+         (digits    (mapcar
+                     'string-to-int
+                     (subseq (split-string number <span style="color: #bc8f8f;">""</span>) 1 -1)))
+         (squares   (mapcar (<span style="color: #7f007f;">lambda</span> (x) (* x x)) digits))
+         (happiness (apply '+ squares)))
+    (<span style="color: #7f007f;">cond</span> ((eq 1 happiness)      t)
+          ((memq happiness seen) nil)
+          (t
+           (happy? (number-to-string happiness)
+                   (push happiness seen))))))
+
+(<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">find-happy-numbers</span> (<span style="color: #228b22;">&amp;optional</span> limit)
+  <span style="color: #bc8f8f;">"find all happy numbers from 1 to limit"</span>
+  (interactive)
+  (<span style="color: #7f007f;">let</span> ((count (or limit
+                   (read-from-minibuffer
+                    <span style="color: #bc8f8f;">"List of happy numbers from 1 to: "</span>)))
+        happy)
+    (<span style="color: #7f007f;">dotimes</span> (n (string-to-int count))
+      (<span style="color: #7f007f;">when</span> (happy? (number-to-string (1+ n)))
+        (push (1+ n) happy)))
+    (nreverse happy)))
+</pre>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Mon, 30 Aug 2010 11:00:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/08/blog/2010/08/30-happy-numbers.html</guid>
+</item>
 <item>
   <title>Happy Numbers</title>
   <link>http://tapoueh.org/blog/2010/08/30-happy-numbers.html</link>
@@ -3379,6 +3635,40 @@ ORDER BY relname;
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 26 Jul 2010 17:00:00 +0200</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2010/07/26-partitioning-relation-size-per-group.html</guid>
+</item>
+<item>
+  <title>Emacs and PostgreSQL</title>
+  <link>http://tapoueh.org/blog/2010/07/blog/2010/07/22-emacs-and-postgresql.html</link>
+  <description><![CDATA[<p>Those are my two all times favorite Open Source Software. Or <a href="http://www.gnu.org/philosophy/free-sw.html">Free Software</a>
+in the <a href="http://www.gnu.org/">GNU</a> sense of the world, as both the <em>BSD</em> and the <em>GPL</em> are labeled free
+there. Even if I prefer the <a href="http://www.debian.org/social_contract">The Debian Free Software Guidelines</a> as a global
+definition and the <a href="http://sam.zoy.org/wtfpl/">WTFPL</a> license. But that's a digression.</p>
+
+<p>I think that <a href="http://www.gnu.org/software/emacs/">Emacs</a> and <a href="http://www.postgresql.org/">PostgreSQL</a> do share a lot in common. I'd begin with
+the documentation, which quality is amazing for both projects. Then of
+course the extensibility with <a href="http://www.gnu.org/software/emacs/emacs-lisp-intro/html_node/Preface.html#Preface">Emacs Lisp</a> on the one hand and
+<a href="http://www.postgresql.org/docs/8.4/static/extend.html">catalog-driven operations</a> on the other hand. Whether you're extending Emacs
+or PostgreSQL you'll find that it's pretty easy to tweak the system <em>while
+it's running</em>. The other comparison points are less important, like the fact
+the both the systems get about the same uptime on my laptop (currently <em>13
+days, 23 hours, 57 minutes, 10 seconds</em>).</p>
+
+<p>So of course I'm using <em>Emacs</em> to edit <em>PostgreSQL</em> <code>.sql</code> files, including stored
+procedures. And it so happens that <a href="http://archives.postgresql.org/pgsql-hackers/2010-07/msg01067.php">line numbering in plpgsql</a> is not as
+straightforward as one would naively think, to the point that we'd like to
+have better tool support there. So I've extended Emacs <a href="http://www.gnu.org/software/emacs/manual/html_node/emacs/Minor-Modes.html">linum-mode minor mode</a>
+to also display the line numbers as computed per PostgreSQL, and here's what
+it looks like:</p>
+
+<center>
+<p><img src="../../../images//emacs-pgsql-line-numbers.png" alt=""></p>
+</center>
+
+<p>Now, here's also the source code, <a href="https://github.com/dimitri/pgsql-linum-format">pgsql-linum-format</a>. Hope you'll enjoy!</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Thu, 22 Jul 2010 09:30:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2010/07/blog/2010/07/22-emacs-and-postgresql.html</guid>
 </item>
 <item>
   <title>Emacs and PostgreSQL</title>
