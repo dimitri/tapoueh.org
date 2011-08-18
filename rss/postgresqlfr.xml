@@ -7,6 +7,91 @@
     <language>en-us</language>
     <generator>Emacs Muse</generator>
 <item>
+  <title>Échappement de chaînes</title>
+  <link>http://tapoueh.org/blog/2011/08/18-echappements-de-chaine.html</link>
+  <description><![CDATA[<p>Parmis les nouveautés de la <a href="http://www.postgresql.org/about/news.1331">prochaine version</a> de <a href="http://www.postgresql.org/">PostgreSQL</a>, la fameuse <code>9.1</code>,
+il faut signaler le changement de valeur par défaut de la variable
+<code>standard_conforming_strings</code>, qui passe à <em>vraie</em>.</p>
+
+<p>En effet, l'utilisation d'échappements avec le caractère « anti-slash »
+n'est pas conforme au standard SQL.  Le paramètre
+<code>standard_conforming_strings</code> permet de contrôler le comportement de
+PostgreSQL lorsqu'il lit une chaîne de caractère dans une requête SQL.</p>
+
+<p>Voyons quelques exemples :</p>
+
+<pre class="src">
+dimitri=# set standard_conforming_strings to true;
+SET
+dimitri=# select 'hop''';
+ ?column?
+----------
+ hop'
+(1 ligne)
+
+dimitri=# select 'hop\'';
+dimitri'# ';
+ ?column?
+----------
+ hop\';
+
+(1 ligne)
+
+dimitri=# select E'hop\'';
+ ?column?
+----------
+ hop'
+(1 ligne)
+
+dimitri=# set standard_conforming_strings to false;
+SET
+dimitri=# select E'hop\'';
+ ?column?
+----------
+ hop'
+(1 ligne)
+
+dimitri=# select 'hop\'';
+ATTENTION:  utilisation non standard de \' dans une cha&#238;ne litt&#233;rale
+LIGNE 1 : select 'hop\'';
+                 ^
+ASTUCE : Utilisez '' pour &#233;crire des guillemets dans une cha&#238;ne ou utilisez
+la syntaxe de cha&#238;ne d'&#233;chappement (E'...').
+ ?column?
+----------
+ hop'
+(1 ligne)
+</pre>
+
+<p>Il existe un moyen de forcer PostgreSQL à accepter l'utilisation
+d'échappements avec « anti-slash » indépendamment de la valeur de
+<code>standard_conforming_strings</code>, c'est la notation préfixée avec <code>E</code>.  Il est
+recommandé de toujours l'utiliser dès lors que la chaîne de caractère
+contient des « anti-slash » utilisés comme échappement (du caractère simple
+guillemet en général).</p>
+
+<p>Le paramètre <code>escape_string_warning</code>, enfin, permet de désactiver les
+avertissements tels que présentés dans le dernier exemple ci-dessus,
+lorsqu'il est positionné à <code>off</code>.  Bien sûr, sa valeur par défaut est <code>on</code>.</p>
+
+<p>Toute apparition de ce <em>WARNING</em> lorsque <code>escape_string_warning</code> est <code>on</code> signifie
+que votre application n'est pas prête à migrer à <code>9.1</code> avec son paramétrage
+par défaut.  Il existe deux actions possible : changer le paramétrage de sa
+nouvelle valeur par défaut à sa précédente, ou bien corriger ses
+applications pour utiliser le préfixe <code>E</code> dès que cela est nécessaire.</p>
+
+<p>L'utilisation de <code>standard_conforming_strings</code> à <code>on</code> présente un autre avantage
+au respect du standard SQL : la sécurité contre les injections.  S'il n'est
+pas possible d'échapper le guillemet simple qui termine toute chaîne de
+caractère utilisateur, il devient compliqué de jouer au plus malin avec le
+<em>parser</em>.  Le mieux ici reste bien sûr d'utiliser les requêtes paramétrées, à
+suivre dans un prochain article.</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Thu, 18 Aug 2011 19:01:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2011/08/18-echappements-de-chaine.html</guid>
+</item>
+<item>
   <title>Tutoriel pgloader</title>
   <link>http://tapoueh.org/blog/2011/08/15-tutoriel-pgloader.html</link>
   <description><![CDATA[<p>En reprenant le contenu des articles de la série sur <a href="http://tapoueh.org/pgsql/pgloader.html">pgloader</a>, j'ai pris le
