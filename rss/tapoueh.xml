@@ -7,6 +7,178 @@
     <language>en-us</language>
     <generator>Emacs Muse</generator>
 <item>
+  <title>pgfincore in debian</title>
+  <link>http://tapoueh.org/blog/2011/08/19-pgfincore-in-debian.html</link>
+  <description><![CDATA[<p>As of pretty recently, <a href="http://villemain.org/projects/pgfincore">pgfincore</a> is now in debian, as you can see on its
+<a href="http://packages.debian.org/sid/postgresql-9.0-pgfincore">postgresql-9.0-pgfincore</a> page.  The reason why it entered the <a href="http://www.debian.org/">debian</a>
+archives is that it reached the <code>1.0</code> release!</p>
+
+<p>Rather than talking about what <em>pgfincore</em> is all about (<em>A set of functions to
+manage pages in memory from PostgreSQL</em>), I will talk about its packaging and
+support as a <em>debian package</em>.  Here's the first example of a modern
+multi-version packaging I have to offer.  <a href="https://github.com/dimitri/pgfincore/tree/master/debian">pgfincore packaging</a> supports
+building for <code>8.4</code> and <code>9.0</code> and <code>9.1</code> out of the box, even if the only binary
+you'll find in <em>debian</em> sid is the <code>9.0</code> one, as you can check on the
+<a href="http://packages.debian.org/source/sid/pgfincore">pgfincore debian source package</a> page.</p>
+
+<p>Also, this is the first package I've done properly using the newer version
+of <a href="http://kitenet.net/~joey/code/debhelper/">debhelper</a>, which make the <a href="https://github.com/dimitri/pgfincore/blob/master/debian/rules">debian/rules</a> file easier than ever.  Let's have
+a look at it:</p>
+
+<pre class="src">
+<span style="color: #b8860b;">SRCDIR</span> = $(<span style="color: #b8860b;">CURDIR</span>)
+<span style="color: #b8860b;">TARGET</span> = $(<span style="color: #b8860b;">CURDIR</span>)/debian/pgfincore-%v
+<span style="color: #b8860b;">PKGVERS</span> = $(<span style="color: #b8860b;">shell</span> dpkg-parsechangelog | awk -F <span style="color: #bc8f8f;">'[:-]'</span> <span style="color: #bc8f8f;">'/^Version:/ { print substr($$2, 2) }'</span>)
+<span style="color: #b8860b;">EXCLUDE</span> = --exclude-vcs --exclude=debian
+
+<span style="color: #7f007f;">include</span> <span style="color: #b8860b;">/usr/share/postgresql-common/pgxs_debian_control.mk</span>
+
+<span style="color: #0000ff;">override_dh_auto_clean</span>: debian/control
+        pg_buildext clean $(<span style="color: #b8860b;">SRCDIR</span>) $(<span style="color: #b8860b;">TARGET</span>) <span style="color: #bc8f8f;">"$(</span><span style="color: #b8860b;">CFLAGS</span><span style="color: #bc8f8f;">)"</span>
+        dh_clean
+
+<span style="color: #0000ff;">override_dh_auto_build</span>:
+<span style="background-color: #ff69b4;">        #</span><span style="color: #b22222;"> </span><span style="color: #b22222;">build all supported version
+</span>        pg_buildext build $(<span style="color: #b8860b;">SRCDIR</span>) $(<span style="color: #b8860b;">TARGET</span>) <span style="color: #bc8f8f;">"$(</span><span style="color: #b8860b;">CFLAGS</span><span style="color: #bc8f8f;">)"</span>
+
+<span style="color: #0000ff;">override_dh_auto_install</span>:
+<span style="background-color: #ff69b4;">        #</span><span style="color: #b22222;"> </span><span style="color: #b22222;">then install each of them
+</span>        for v in <span style="color: #bc8f8f;">`pg_buildext supported-versions $(</span><span style="color: #b8860b;">SRCDIR</span><span style="color: #bc8f8f;">)`</span>; do \
+                dh_install -ppostgresql-$$v-pgfincore ;\
+        done
+
+<span style="color: #0000ff;">orig</span>: clean
+        cd .. &amp;&amp; tar czf pgfincore_$(<span style="color: #b8860b;">PKGVERS</span>).orig.tar.gz $(<span style="color: #b8860b;">EXCLUDE</span>) pgfincore
+
+<span style="color: #0000ff;">%</span>:
+        dh <span style="color: #0000ff;">$</span><span style="color: #5f9ea0;">@</span>
+</pre>
+
+<p>The <code>debian/rules</code> file is known to be the corner stone of your debian
+packaging, and usually is the most complex part of it.  It's a <code>Makefile</code> at
+its heart, and we can see that thanks to the <code>debhelper</code> magic it's not that
+complex to maintain anymore.</p>
+
+<p>Then, this file is using support from a bunch of helpers command, each of
+them comes with its own man page and does a little part of the work.  The
+overall idea around <code>debhelper</code> is that what it does covers 90% of the cases
+around, and it's not aiming for more.  You have to <em>override</em> the parts where
+it defaults to being wrong.</p>
+
+<p>Here for example the build system has to produce files for all three
+supported versions of <a href="http://www.postgresql.org/">PostgreSQL</a>, which means invoking the same build system
+three time with some changes in the <em>environment</em> (mainly setting the
+<code>PG_CONFIG</code> variable correctly).  But even for that we have a <em>debian</em> facility,
+that comes in the package <a href="http://packages.debian.org/sid/postgresql-server-dev-all">postgresql-server-dev-all</a>, called <code>pg_buildext</code>.  As
+long as your extension build system is <code>VPATH</code> friendly, it's all automated.</p>
+
+<p>Please read that last sentence another time.  <code>VPATH</code> is the thing that allows
+<code>Make</code> to find your source tree somewhere in the system, not in the current
+working directory.  That allows you to cleanly build the same sources in
+different build locations, which is exactly what we need here, and is
+cleanly supported by <a href="http://www.postgresql.org/docs/9.1/static/extend-pgxs.html">PGXS</a>, the <a href="http://www.postgresql.org/docs/9.1/static/extend-pgxs.html">PostgreSQL Extension Building Infrastructure</a>.</p>
+
+<p>Which means that the main <code>Makefile</code> of <em>pgfincore</em> had to be simplified, and
+the code layout too.  Some advances <code>Make</code> features such as <code>$(wildcard ...)</code>
+and all will not work here.  See what we got at the end:</p>
+
+<pre class="src">
+ifndef VPATH
+<span style="color: #b8860b;">SRCDIR</span> = .
+else
+<span style="color: #b8860b;">SRCDIR</span> = $(<span style="color: #b8860b;">VPATH</span>)
+endif
+
+<span style="color: #b8860b;">EXTENSION</span>    = pgfincore
+<span style="color: #b8860b;">EXTVERSION</span>   = $(<span style="color: #b8860b;">shell</span> grep default_version $(<span style="color: #b8860b;">SRCDIR</span>)/$(<span style="color: #b8860b;">EXTENSION</span>).control | \
+               sed -e <span style="color: #bc8f8f;">"s/default_version[[:space:]]*=[[:space:]]*'\([^']*\)'/\1/"</span>)
+
+<span style="color: #b8860b;">MODULES</span>      = $(<span style="color: #b8860b;">EXTENSION</span>)
+<span style="color: #b8860b;">DATA</span>         = sql/pgfincore.sql sql/uninstall_pgfincore.sql
+<span style="color: #b8860b;">DOCS</span>         = doc/README.$(<span style="color: #b8860b;">EXTENSION</span>).rst
+
+<span style="color: #b8860b;">PG_CONFIG</span>    = pg_config
+
+<span style="color: #b8860b;">PG91</span>         = $(<span style="color: #b8860b;">shell</span> $(<span style="color: #b8860b;">PG_CONFIG</span>) --version | grep -qE <span style="color: #bc8f8f;">"8\.|9\.0"</span> &amp;&amp; echo no || echo yes)
+
+ifeq ($(<span style="color: #b8860b;">PG91</span>),yes)
+<span style="color: #0000ff;">all</span>: pgfincore--$(<span style="color: #b8860b;">EXTVERSION</span>).sql
+
+<span style="color: #0000ff;">pgfincore--$(</span><span style="color: #0000ff;">EXTVERSION</span><span style="color: #0000ff;">).sql</span>: sql/pgfincore.sql
+        cp $<span style="color: #5f9ea0;">&lt;</span> <span style="color: #0000ff;">$</span><span style="color: #5f9ea0;">@</span>
+
+<span style="color: #b8860b;">DATA</span>        = pgfincore--unpackaged--$(<span style="color: #b8860b;">EXTVERSION</span>).sql pgfincore--$(<span style="color: #b8860b;">EXTVERSION</span>).sql
+<span style="color: #b8860b;">EXTRA_CLEAN</span> = sql/$(<span style="color: #b8860b;">EXTENSION</span>)--$(<span style="color: #b8860b;">EXTVERSION</span>).sql
+endif
+
+<span style="color: #b8860b;">PGXS</span> := $(<span style="color: #b8860b;">shell</span> $(<span style="color: #b8860b;">PG_CONFIG</span>) --pgxs)
+<span style="color: #7f007f;">include</span> $(<span style="color: #b8860b;">PGXS</span>)
+
+<span style="color: #0000ff;">deb</span>:
+        dh clean
+        make -f debian/rules orig
+        debuild -us -uc -sa
+</pre>
+
+<p>No more <code>Make</code> magic to find source files.  Franckly though, when your sources
+are 1 <code>c</code> file and 2 <code>sql</code> files, you don't need that much magic anyway.  You
+just want to believe that a single generic <code>Makefile</code> will happily build any
+project you throw at it, only requiring minor adjustment.  Well, the reality
+is that you might need some more little adjustments if you want to benefit
+from <code>VPATH</code> building, and having the binaries for <code>8.4</code> and <code>9.0</code> and <code>9.1</code> built
+seemlessly in a simple loop.  Like we have here for <em>pgfincore</em>.</p>
+
+<p>Now the <code>Makefile</code> still contains a little bit of magic, in order to parse the
+extension version number from its <em>control file</em> and produce a <em>script</em> named
+accordingly.  Then you'll notice a difference between the
+<a href="https://github.com/dimitri/pgfincore/blob/master/debian/postgresql-9.1-pgfincore.install">postgresql-9.1-pgfincore.install</a> file and the
+<a href="https://github.com/dimitri/pgfincore/blob/master/debian/postgresql-9.0-pgfincore.install">postgresql-9.0-pgfincore.install</a>.  We're just not shipping the same files:</p>
+
+<pre class="src">
+debian/pgfincore-9.0/pgfincore.so usr/lib/postgresql/9.0/lib
+sql/pgfincore.sql usr/share/postgresql/9.0/contrib
+sql/uninstall_pgfincore.sql usr/share/postgresql/9.0/contrib
+</pre>
+
+<p>As you can see here:</p>
+
+<pre class="src">
+debian/pgfincore-9.1/pgfincore.so usr/lib/postgresql/9.1/lib
+debian/pgfincore-9.1/pgfincore*.sql usr/share/postgresql/9.1/extension
+sql/pgfincore--unpackaged--1.0.sql usr/share/postgresql/9.1/extension
+</pre>
+
+<p>So, now that we uncovered all the relevant magic, packaging and building
+your next extension so that it supports as many PostgreSQL major releases as
+you need to will be that easy.</p>
+
+<p>For reference, you might need to also tweak
+<code>/usr/share/postgresql-common/supported-versions</code> so that it allows you to
+build for all those versions you claim to support in the <a href="https://github.com/dimitri/pgfincore/blob/master/debian/pgversions">debian/pgversions</a>
+file.</p>
+
+<pre class="src">
+$ sudo dpkg-divert \
+--divert /usr/share/postgresql-common/supported-versions.distrib \
+--rename /usr/share/postgresql-common/supported-versions
+
+$ cat /usr/share/postgresql-common/supported-versions
+#! /bin/bash
+
+dpkg -l postgresql-server-dev-* \
+| awk -F '[ -]' '/^ii/ &amp;&amp; ! /server-dev-all/ {print $6}'
+</pre>
+
+<p>All of this will come pretty handy when we finally sit down and work on a
+way to provide binary packages for PostgreSQL and its extensions, and all
+supported versions of those at that.  This very project is not dead, it's
+just sleeping some more.</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Fri, 19 Aug 2011 23:00:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2011/08/19-pgfincore-in-debian.html</guid>
+</item>
+<item>
   <title>Échappement de chaînes</title>
   <link>http://tapoueh.org/blog/2011/08/18-echappements-de-chaine.html</link>
   <description><![CDATA[<p>Parmis les nouveautés de la <a href="http://www.postgresql.org/about/news.1331">prochaine version</a> de <a href="http://www.postgresql.org/">PostgreSQL</a>, la fameuse <code>9.1</code>,
