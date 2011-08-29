@@ -7,6 +7,98 @@
     <language>en-us</language>
     <generator>Emacs Muse</generator>
 <item>
+  <title>pg_restore -L &amp; pg_staging</title>
+  <link>http://tapoueh.org/blog/2011/08/29-pgstaging-and-pgrestore-listing.html</link>
+  <description><![CDATA[<p>On the <a href="http://archives.postgresql.org/pgsql-hackers">PostgreSQL Hackers</a> mailing lists, <a href="http://people.planetpostgresql.org/andrew/">Andrew Dunstan</a> just proposed some
+new options for <code>pg_dump</code> and <code>pg_restore</code> to ease our lives.  One of the
+answers was talking about some scripts available to exploit the <a href="http://www.postgresql.org/docs/9.0/static/app-pgrestore.html">pg_restore</a>
+listing that you play with using options <code>-l</code> and <code>-L</code>, or the long name
+versions <code>--list</code> and <code>--use-list</code>.  The <a href="../../../pgsql/pgstaging.html">pg_staging</a> tool allows you to easily
+exploit those lists too.</p>
+
+<p>The <code>pg_restore</code> list is just a listing of one object per line of all objects
+contained into a <em>custom</em> dump, that is one made with <code>pg_dump -Fc</code>.  You can
+then tweak this listing in order to comment out some objects (prepending a <code>;</code>
+to the line where you find it), and give your hacked file back to <code>pg_restore
+--use-list</code> so that it will skip them.</p>
+
+<p>What's pretty useful here, among other things, is that a table will have in
+fact more than one line in the listing.  One is for the <code>TABLE</code> definition,
+another one for the <code>TABLE DATA</code>.  So that <code>pg_staging</code> is able to provide you
+with options for only restoring some <em>schemas</em>, some <em>schemas_nodata</em> and even
+some <em>tablename_nodata_regexp</em>, to use directly the configuration options
+names.</p>
+
+<p>How to do a very simple exclusion of some table's data when restoring a
+dump, will you ask me?  There we go.  Let's first prepare an environment,
+where I have only a <a href="http://www.postgresql.org/">PostgreSQL</a> server running.</p>
+
+<pre class="src">
+$ git clone git://github.com/dimitri/pg_staging.git
+$ git clone git://github.com/dimitri/pgloader.git
+$ for s in */*.sql; do psql -f $s; done
+$ pg_dump -Fc &gt; pgloader.dump
+</pre>
+
+<p>Now I have a dump with some nearly random SQL objects in it, let's filter
+out the tables named <em>reformat</em> and <em>parallel</em> from that.  We will take the
+sample setup from the <code>pg_staging</code> project.  Going the quick route, we will
+not even change the default sample database name that's used, which is
+<code>postgres</code>.  After all, the <code>catalog</code> command of <code>pg_staging</code> that we're using
+here is a <em>developer</em> command, you're supposed to be using <code>pg_staging</code> for a
+lot more services that just this one.</p>
+
+<pre class="src">
+$ cp pg_staging/pg_staging.ini .
+$ (echo <span style="color: #bc8f8f;">"schemas = public"</span>;
+   echo <span style="color: #bc8f8f;">"tablename_nodata_regexp = parallel,reformat"</span>) \
+  &gt;&gt; pg_staging.ini
+$ echo <span style="color: #bc8f8f;">"catalog postgres pgloader.dump"</span> \
+   | python pg_staging/pg_staging.py -c pg_staging.ini
+ ; Archive created at Mon Aug 29 17:17:49 2011
+ ;
+ ; [EDITED OUTPUT]
+ ;
+ ; Selected TOC Entries:
+ ;
+3; 2615 2200 SCHEMA - public postgres
+1864; 0 0 COMMENT - SCHEMA public postgres
+1536; 1259 174935 TABLE public parallel dimitri
+1537; 1259 174943 TABLE public partial dimitri
+1538; 1259 174951 TABLE public reformat dimitri
+;1853; 0 174935 TABLE DATA public parallel dimitri
+1854; 0 174943 TABLE DATA public partial dimitri
+;1855; 0 174951 TABLE DATA public reformat dimitri
+1834; 2606 174942 CONSTRAINT public parallel_pkey dimitri
+1836; 2606 174950 CONSTRAINT public partial_pkey dimitri
+1838; 2606 174955 CONSTRAINT public reformat_pkey dimitri
+</pre>
+
+<p>We can see that the objects indeed are skipped, now how to really go about
+the <code>pg_restore</code> is like that:</p>
+
+<pre class="src">
+$ createdb foo
+$ echo <span style="color: #bc8f8f;">"catalog postgres pgloader.dump"</span> \
+ |python pg_staging/pg_staging.py -c pg_staging.ini &gt; short.list
+$ pg_restore -L short.list -d foo pgloader.dump
+</pre>
+
+<p>The little bonus with using <code>pg_staging</code> is that when filtering out a <em>schema</em>
+it will track all tables and triggers from that schema, and also the
+functions used in the trigger definition.  Which is not as easy as it
+sounds, believe me!</p>
+
+<p>The practical use case is when filtering out <code>PGQ</code> and <code>Londiste</code>, then the <code>PGQ</code>
+triggers will automatically be skipped by <code>pg_staging</code> rather than polluting
+the <code>pg_restore</code> logs because the <code>CREATE TRIGGER</code> command could not find the
+necessary implementation procedure.</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Mon, 29 Aug 2011 18:00:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2011/08/29-pgstaging-and-pgrestore-listing.html</guid>
+</item>
+<item>
   <title>Skytools, version 3</title>
   <link>http://tapoueh.org/blog/2011/08/26-skytools3.html</link>
   <description><![CDATA[<p>You can find <a href="http://packages.debian.org/source/experimental/skytools3">skytools3</a> in debian experimental already, it's in <em>release
