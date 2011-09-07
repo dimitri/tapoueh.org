@@ -7,6 +7,132 @@
     <language>en-us</language>
     <generator>Emacs Muse</generator>
 <item>
+  <title>Éviter les injections SQL</title>
+  <link>http://tapoueh.org/blog/2011/09/07-eviter-les-injections-sql.html</link>
+  <description><![CDATA[<p>Nous avons parlé la dernière fois les règles d'<a href="http://tapoueh.org/blog/2011/08/18-echappements-de-chaine.html">échappement de chaînes</a> avec
+PostgreSQL, et mentionné qu'utiliser ces techniques afin de protéger les
+données insérées dans les requêtes SQL n'était pas une bonne idée dans la
+mesure où PostgreSQL offre une fonctionnalité bien plus adaptée.</p>
+
+<p>Nous faisons face ici à un problème de sécurité très bien décrit dans le
+billet humoristique de <a href="http://xkcd.com/327/">Little Boby Tables</a>, dont je vous recommande la
+lecture. L'idée est simple, la mise en place de contre mesure fourmille de
+pièges subtils, à moins d'utiliser la solution décrite ci-après.</p>
+
+<center>
+<p><img src="http://imgs.xkcd.com/comics/exploits_of_a_mom.png" alt=""></p>
+</center>
+
+<p>Lorsque l'on envoie une requête SQL à PostgreSQL, celle-ci contient
+pêle-mêle un mélange de mots-clés SQL et de données utilisateurs. Dans la
+requête <code>SELECT colname FROM table WHERE pk = 1234;</code>
+l'élément <code>1234</code> est une donnée fournie à PostgreSQL. Lorsque l'on utilise
+d'autre types de données, on va parler de <em>litéral</em>, qui peut être ou non
+<em>décoré</em>.  Un exemple ?</p>
+
+<pre class="src">
+=# SELECT <span style="color: #ad7fa8; font-style: italic;">'undecorated literal'</span>, pg_typeof(<span style="color: #ad7fa8; font-style: italic;">'undecoreted literal'</span>),
+          date <span style="color: #ad7fa8; font-style: italic;">'today'</span>, pg_typeof(date <span style="color: #ad7fa8; font-style: italic;">'today'</span>);
+      ?column?       | pg_typeof |    date    | pg_typeof
+<span style="color: #888a85;">---------------------+-----------+------------+-----------
+</span> undecorated literal | unknown   | 2011-09-07 | date
+(1 row)
+</pre>
+
+<p>Outre l'aspect types de données (un litéral non décoré est de type <em>unknown</em>
+jusqu'à ce qu'une opération force son type, c'est ce qui permet d'avoir du
+polymorphisme dans PostgreSQL), nous voyons ici que PostgreSQL doit faire la
+différence entre le SQL lui-même et les paramètres qui le composent. Il sait
+bien sûr faire cela, il suffit d'encadrer les valeurs dans des simples
+guillemets ou bien d'utiliser la notation dite de <a href="http://docs.postgresqlfr.org/9.0/sql-syntax.html#sql-syntax-dollar-quoting">dollar quoting</a>. Mais si
+l'on ne prend pas de précautions, l'utilisateur peut terminer la séquence
+d'échappements depuis le champ de saisie du formulaire…</p>
+
+<p><a href="http://docs.postgresql.fr/9.1/libpq.html">libpq</a> est la librairie standard cliente de PostgreSQL et fourni des <em>API</em> de
+connexion et propose une fonction <a href="http://docs.postgresql.fr/9.1/libpq-exec.html#libpq-pqexecparams">PGexecParams</a>. Cette fonction expose un
+mécanisme disponible dans le protocole de communication de PostgreSQL
+lui-même : il est possible de faire parvenir le SQL et les données qu'il
+contient dans deux parties différentes du messages plutôt que de les
+mélanger. Ainsi, le serveur n'a plus du tout à deviner où commencent et où
+terminent les données dans la requête, il lui suffit de regarder dans le
+tableau séparé contenant les données quand il en a besoin.</p>
+
+<p>Terminées les injections SQL !</p>
+
+<p>Note : cette fonction est exposée dans la plupart des pilotes de connexion,
+et même en PHP, dont la popularité et l'exposition me poussent à donner une
+référence plus précise : utilisez <a href="http://fr2.php.net/manual/en/function.pg-query-params.php">pg_query_params</a>, son intérêt n'est pas
+simplement syntaxique, il va jusque dans la définition des échanges de
+données entre le client (votre code PHP) et le serveur (PostgreSQL).</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Wed, 07 Sep 2011 11:36:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2011/09/07-eviter-les-injections-sql.html</guid>
+</item>
+<item>
+  <title>Éviter les injections SQL</title>
+  <link>http://tapoueh.org/blog/2011/09/07-requete-parametree.html</link>
+  <description><![CDATA[<p>Nous avons parlé la dernière fois les règles d'<a href="http://tapoueh.org/blog/2011/08/18-echappements-de-chaine.html">échappement de chaînes</a> avec
+PostgreSQL, et mentionné qu'utiliser ces techniques afin de protéger les
+données insérées dans les requêtes SQL n'était pas une bonne idée dans la
+mesure où PostgreSQL offre une fonctionnalité bien plus adaptée.</p>
+
+<p>Nous faisons face ici à un problème de sécurité très bien décrit dans le
+billet humoristique de <a href="http://xkcd.com/327/">Little Boby Tables</a>, dont je vous recommande la
+lecture. L'idée est simple, la mise en place de contre mesure fourmille de
+pièges subtils, à moins d'utiliser la solution décrite ci-après.</p>
+
+<center>
+<p><img src="http://imgs.xkcd.com/comics/exploits_of_a_mom.png" alt=""></p>
+</center>
+
+<p>Lorsque l'on envoie une requête SQL à PostgreSQL, celle-ci contient
+pêle-mêle un mélange de mots-clés SQL et de données utilisateurs. Dans la
+requête <code>SELECT colname FROM table WHERE pk = 1234;</code>
+l'élément <code>1234</code> est une donnée fournie à PostgreSQL. Lorsque l'on utilise
+d'autre types de données, on va parler de <em>litéral</em>, qui peut être ou non
+<em>décoré</em>.  Un exemple ?</p>
+
+<pre class="src">
+=# SELECT <span style="color: #ad7fa8; font-style: italic;">'undecorated literal'</span>, pg_typeof(<span style="color: #ad7fa8; font-style: italic;">'undecoreted literal'</span>),
+          date <span style="color: #ad7fa8; font-style: italic;">'today'</span>, pg_typeof(date <span style="color: #ad7fa8; font-style: italic;">'today'</span>);
+      ?column?       | pg_typeof |    date    | pg_typeof
+<span style="color: #888a85;">---------------------+-----------+------------+-----------
+</span> undecorated literal | unknown   | 2011-09-07 | date
+(1 row)
+</pre>
+
+<p>Outre l'aspect types de données (un litéral non décoré est de type <em>unknown</em>
+jusqu'à ce qu'une opération force son type, c'est ce qui permet d'avoir du
+polymorphisme dans PostgreSQL), nous voyons ici que PostgreSQL doit faire la
+différence entre le SQL lui-même et les paramètres qui le composent. Il sait
+bien sûr faire cela, il suffit d'encadrer les valeurs dans des simples
+guillemets ou bien d'utiliser la notation dite de <a href="http://docs.postgresqlfr.org/9.0/sql-syntax.html#sql-syntax-dollar-quoting">dollar quoting</a>. Mais si
+l'on ne prend pas de précautions, l'utilisateur peut terminer la séquence
+d'échappements depuis le champ de saisie du formulaire…</p>
+
+<p><a href="http://docs.postgresql.fr/9.1/libpq.html">libpq</a> est la librairie standard cliente de PostgreSQL et fourni des <em>API</em> de
+connexion et propose une fonction <a href="http://docs.postgresql.fr/9.1/libpq-exec.html#libpq-pqexecparams">PGexecParams</a>. Cette fonction expose un
+mécanisme disponible dans le protocole de communication de PostgreSQL
+lui-même : il est possible de faire parvenir le SQL et les données qu'il
+contient dans deux parties différentes du messages plutôt que de les
+mélanger. Ainsi, le serveur n'a plus du tout à deviner où commencent et où
+terminent les données dans la requête, il lui suffit de regarder dans le
+tableau séparé contenant les données quand il en a besoin.</p>
+
+<p>Terminées les injections SQL !</p>
+
+<p>Note : cette fonction est exposée dans la plupart des pilotes de connexion,
+et même en PHP, que la popularité et l'exposition me poussent à donner une
+référence plus précise : utilisez <a href="http://fr2.php.net/manual/en/function.pg-query-params.php">pg_query_params</a>, son intérêt n'est pas
+simplement syntaxique, il va jusque dans la définition des échanges de
+données entre le client (votre code PHP) et le serveur (PostgreSQL).</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Wed, 07 Sep 2011 11:36:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2011/09/07-requete-parametree.html</guid>
+</item>
+<item>
   <title>PostgreSQL and debian</title>
   <link>http://tapoueh.org/blog/2011/09/05-apt-postgresql-org.html</link>
   <description><![CDATA[<p>After talking about it for a very long time, work finally did begin!  I'm
