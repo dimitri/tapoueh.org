@@ -7,6 +7,188 @@
     <language>en-us</language>
     <generator>Emacs Muse</generator>
 <item>
+  <title>Skytools3: walmgr</title>
+  <link>http://tapoueh.org/blog/2011/09/21-skytools-walmgr-part-1.html</link>
+  <description><![CDATA[<p>Let's begin the <a href="http://wiki.postgresql.org/wiki/SkyTools">Skytools 3</a> documentation effort, which is long overdue.  The
+code is waiting for you over at <a href="https://github.com/markokr/skytools">github</a>, and is stable and working.  Why is
+it still in <em>release candidate</em> status, I hear you asking?  Well because it's
+missing updated documentation.</p>
+
+<p><a href="http://packages.debian.org/experimental/skytools3-walmgr">WalMgr</a> is the Skytools component that manages <em>WAL shipping</em> for you, and
+archiving too.  It knows how to prepare your master and standby setup, how
+to take a base backup and push it to the standby's system, how to archive
+(at the satndby) master's WAL files as they are produced and have the
+standby restore from this archive.</p>
+
+<p>What's new in <code>walmgr</code> from Skytools 3 is its support for <em>Streaming
+Replication</em> that made its way into PostgreSQL 9.0 and is even more useful in
+PostgreSQL 9.1 (better monitoring, synchronous replication option).</p>
+
+<h2>Getting ready</h2>
+
+<p class="first">Now, I'm using debian here, and a build virtual machine where I'm doing the
+<em>backporting</em> work.  As <a href="http://www.postgresql.org/about/news.1349">PostgreSQL 9.1</a> is now out, let's use that.</p>
+
+<pre class="src">
+:~$ pg_lsclusters
+Version Cluster   Port Status Owner    Data directory
+8.4     main      5432 online postgres /var/lib/postgresql/8.4/main ...
+9.0     main      5433 online postgres /var/lib/postgresql/9.0/main ...
+9.1     main      5434 online postgres /var/lib/postgresql/9.1/main ...
+</pre>
+
+<p>After some editing of the configuration files (enabling <em>hot standby</em> and
+switching <code>pg_hba.conf</code> to <code>trust</code> for the sake of this example), we can see
+that the cluster is ready to be abused:</p>
+
+<pre class="src">
+:~$ sudo pg_ctlcluster 9.1 main restart
+:~$ psql --cluster 9.1/main  -U postgres \
+-c <span style="color: #ad7fa8; font-style: italic;">"select name, setting from pg_settings where name in ('max_wal_senders', 'wal_level')"</span>
+      name       |   setting
+-----------------+-------------
+ max_wal_senders | 1
+ wal_level       | hot_standby
+(2 rows)
+
+:~$ sudo mkdir -p /etc/walshipping/9.1/main /var/lib/postgresql/walshipping
+:~$ sudo chown -R postgres:postgres /etc/walshipping /var/lib/postgresql/walshipping
+
+:~$ ssh-keygen -t dsa
+:~/.ssh$ cp id_dsa.pub authorized_keys
+:~$ ssh localhost
+</pre>
+
+<p>So the order of operations is to prepare a standby, then have it restore
+from the archives, then activate the wal streaming and check that the setup
+allows the standby to switch back and forth between the streaming and the
+archives.</p>
+
+
+<h2>Setting walmgr</h2>
+
+<p class="first">To prepare the standby, we will do a <em>base backup</em> of the master.  That step
+is handled by <code>walmgr</code>, so we first need to set it up.  Here's the sample
+<code>master.ini</code> file:</p>
+
+<pre class="src">
+[<span style="color: #8ae234; font-weight: bold;">walmgr</span>]
+<span style="color: #eeeeec;">job_name</span>             = wal-master
+<span style="color: #eeeeec;">logfile</span>              = /var/log/postgresql/%(job_name)s.log
+<span style="color: #eeeeec;">pidfile</span>              = /var/run/postgresql/%(job_name)s.pid
+<span style="color: #eeeeec;">use_skylog</span>           = 0
+
+<span style="color: #eeeeec;">master_db</span>            = port=5434 dbname=template1
+<span style="color: #eeeeec;">master_data</span>          = /var/lib/postgresql/9.1/main/
+<span style="color: #eeeeec;">master_config</span>        = /etc/postgresql/9.1/main/postgresql.conf
+<span style="color: #eeeeec;">master_bin</span>           = /usr/lib/postgresql/9.1/bin
+
+<span style="color: #888a85;"># </span><span style="color: #888a85;">set this only if you can afford database restarts during setup and stop.
+</span><span style="color: #eeeeec;">master_restart_cmd</span>   = pg_ctlcluster 9.1 main restart
+
+<span style="color: #eeeeec;">slave</span> = 127.0.0.1
+<span style="color: #eeeeec;">slave_config</span> = /etc/walshipping/9.1/main/standby.ini
+
+<span style="color: #eeeeec;">walmgr_data</span>          = /var/lib/postgresql/walshipping/9.1/main
+<span style="color: #eeeeec;">completed_wals</span>       = %(walmgr_data)s/logs.complete
+<span style="color: #eeeeec;">partial_wals</span>         = %(walmgr_data)s/logs.partial
+<span style="color: #eeeeec;">full_backup</span>          = %(walmgr_data)s/data.master
+<span style="color: #eeeeec;">config_backup</span>        = %(walmgr_data)s/config.backup
+
+<span style="color: #888a85;"># </span><span style="color: #888a85;">syncdaemon update frequency
+</span><span style="color: #eeeeec;">loop_delay</span>           = 10.0
+<span style="color: #888a85;"># </span><span style="color: #888a85;">use record based shipping available since 8.2
+</span><span style="color: #eeeeec;">use_xlog_functions</span>   = 0
+
+<span style="color: #888a85;"># </span><span style="color: #888a85;">pass -z to rsync, useful on low bandwidth links
+</span><span style="color: #eeeeec;">compression</span>          = 0
+
+<span style="color: #888a85;"># </span><span style="color: #888a85;">keep symlinks for pg_xlog and pg_log
+</span><span style="color: #eeeeec;">keep_symlinks</span>        = 1
+
+<span style="color: #888a85;"># </span><span style="color: #888a85;">tell walmgr to set wal_level to hot_standby during setup
+</span><span style="color: #888a85;">#</span><span style="color: #888a85;">hot_standby          = 1
+</span>
+<span style="color: #888a85;"># </span><span style="color: #888a85;">periodic sync
+</span><span style="color: #888a85;">#</span><span style="color: #888a85;">command_interval     = 600
+</span><span style="color: #888a85;">#</span><span style="color: #888a85;">periodic_command     = /var/lib/postgresql/walshipping/periodic.sh
+</span></pre>
+
+<p>And the <code>/etc/walshipping/9.1/main/standby.ini</code> companion:</p>
+
+<pre class="src">
+[<span style="color: #8ae234; font-weight: bold;">walmgr</span>]
+<span style="color: #eeeeec;">job_name</span>             = wal-standby
+<span style="color: #eeeeec;">logfile</span>              = /var/log/postgresql/%(job_name)s.log
+<span style="color: #eeeeec;">use_skylog</span>           = 0
+
+<span style="color: #eeeeec;">slave_data</span>           = /var/lib/postgresql/9.1/standby
+<span style="color: #eeeeec;">slave_bin</span>            = /usr/lib/postgresql/9.1/bin
+<span style="color: #eeeeec;">slave_stop_cmd</span>       = pg_ctlcluster 9.1 standby stop
+<span style="color: #eeeeec;">slave_start_cmd</span>      = pg_ctlcluster 9.1 standby start
+<span style="color: #eeeeec;">slave_config_dir</span>     = /etc/postgresql/9.1/standby/
+
+<span style="color: #eeeeec;">walmgr_data</span>          = /var/lib/postgresql/walshipping/9.1/main
+<span style="color: #eeeeec;">completed_wals</span>       = %(walmgr_data)s/logs.complete
+<span style="color: #eeeeec;">partial_wals</span>         = %(walmgr_data)s/logs.partial
+<span style="color: #eeeeec;">full_backup</span>          = %(walmgr_data)s/data.master
+<span style="color: #eeeeec;">config_backup</span>        = %(walmgr_data)s/config.backup
+
+<span style="color: #eeeeec;">backup_datadir</span>       = no
+<span style="color: #eeeeec;">keep_backups</span>         = 0
+<span style="color: #888a85;"># </span><span style="color: #888a85;">archive_command =
+</span>
+<span style="color: #888a85;"># </span><span style="color: #888a85;">primary database connect string for hot standby -- enabling
+</span><span style="color: #888a85;"># </span><span style="color: #888a85;">this will cause the slave to be started in hot standby mode.
+</span><span style="color: #eeeeec;">primary_conninfo</span>     = host=127.0.0.1 port=5434 user=postgres
+</pre>
+
+<p>And let's get started:</p>
+
+<pre class="src">
+:~$ cp standby.ini /etc/walshipping/9.1/main/
+
+:~$ walmgr3 -v master.ini setup
+2011-09-21 16:57:05,685 30450 INFO Configuring WAL archiving
+2011-09-21 16:57:05,687 30450 DEBUG found 'archive_mode' in config -- enabling it
+2011-09-21 16:57:05,687 30450 DEBUG found 'wal_level' in config -- setting to 'archive'
+2011-09-21 16:57:05,688 30450 DEBUG modifying configuration: {'archive_mode': 'on', 'wal_level': 'archive', 'archive_command': '/usr/bin/walmgr3 /var/lib/postgresql/master.ini xarchive %p %f'}
+2011-09-21 16:57:05,688 30450 DEBUG found parameter archive_mode with value ''off''
+2011-09-21 16:57:05,690 30450 DEBUG found parameter wal_level with value ''minimal''
+2011-09-21 16:57:05,690 30450 DEBUG found parameter archive_command with value ''''
+2011-09-21 16:57:05,691 30450 INFO Restarting postmaster
+2011-09-21 16:57:05,691 30450 DEBUG Execute cmd: 'pg_ctlcluster 9.1 main restart'
+2011-09-21 16:57:09,404 30450 DEBUG Execute cmd: 'ssh' '-Tn' '-o' 'Batchmode=yes' '-o' 'StrictHostKeyChecking=no' '127.0.0.1' '/usr/bin/walmgr3' '/etc/walshipping/9.1/main/standby.ini' 'setup'
+2011-09-21 16:57:09,712 30450 INFO Done
+
+postgres@squeeze64:~$ walmgr3 master.ini backup
+2011-09-21 17:00:17,259 30702 INFO Backup lock obtained.
+2011-09-21 17:00:17,277 30692 INFO Execute SQL: select pg_start_backup('FullBackup'); [port=5434 dbname=template1]
+2011-09-21 17:00:17,791 30712 INFO Removing expired backup directory: /var/lib/postgresql/walshipping/9.1/main/data.master
+2011-09-21 17:00:18,200 30692 INFO Checking tablespaces
+2011-09-21 17:00:18,202 30692 INFO pg_log does not exist, skipping
+2011-09-21 17:00:18,259 30692 INFO Backup conf files from /etc/postgresql/9.1/main
+2011-09-21 17:00:18,590 30731 INFO First useful WAL file is: 000000010000000200000092
+2011-09-21 17:00:19,901 30759 INFO Backup lock released.
+2011-09-21 17:00:19,919 30692 INFO Full backup successful
+
+:~$ walmgr3 /etc/walshipping/9.1/main/standby.ini listbackups
+
+List of backups:
+
+Backup set      Timestamp                Label       First WAL
+--------------- ------------------------ ----------- ------------------------
+data.master     2011-09-21 17:00:17 CEST FullBackup  000000010000000200000092
+</pre>
+
+<p>Following articles will show how to manage that archive and how to go from
+that to an <em>Hot Standby</em> fed by either <em>Streaming Replication</em> or <em>Archives</em>.</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Wed, 21 Sep 2011 17:21:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2011/09/21-skytools-walmgr-part-1.html</guid>
+</item>
+<item>
   <title>el-get-3.1</title>
   <link>http://tapoueh.org/blog/2011/09/16-el-get-3.1.html</link>
   <description><![CDATA[<p>The <a href="https://github.com/dimitri/el-get">el-get</a> project releases its new stable version, <code>3.1</code>. This new release
