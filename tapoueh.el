@@ -567,18 +567,23 @@ in fact, from the current buffer."
   ":final function used to publish the current blog entry into
 the relevant RSS streams, if any. We consider the TAGs of the
 file to be the relevant information."
-  (let* ((project (muse-project-of-file source))
-	 (root    (muse-style-element :path (caddr project)))
-	 (url     (muse-style-element :base-url (caddr project)))
-	 (relname (file-relative-name output root))
-	 (link    (concat url relname))
-	 (tags    (mapcar (lambda (x) (intern (downcase x)))
-			  (tapoueh-extract-directive "tags" source))))
-    (when tags
-      (loop for (rss . tag) in tapoueh-rss-tags
-	    when (or (null tag) (member tag tags))
-	    do (tapoueh-add-article-to-rss
-		(concat root "/" rss) source output link)))))
+  (unless
+      (or (bound-and-true-p muse-publishing-current-file)
+	  (and (buffer-file-name source)
+	       (file-exists-p (buffer-file-name source))
+	       (tapoueh-extract-directive "title" (muse-current-file))))
+    (let* ((project (muse-project-of-file source))
+	   (root    (muse-style-element :path (caddr project)))
+	   (url     (muse-style-element :base-url (caddr project)))
+	   (relname (file-relative-name output root))
+	   (link    (concat url relname))
+	   (tags    (mapcar (lambda (x) (intern (downcase x)))
+			    (tapoueh-extract-directive "tags" source))))
+      (when tags
+	(loop for (rss . tag) in tapoueh-rss-tags
+	      when (or (null tag) (member tag tags))
+	      do (tapoueh-add-article-to-rss
+		  (concat root "/" rss) source output link))))))
 
 ;;;
 ;;; Social Networks Integration
@@ -650,9 +655,9 @@ file to be the relevant information."
 	 (pname   (car project)))
     (when (string= pname "tapoueh.org")
 	(beginning-of-buffer)
-	(unless (or (and (boundp 'muse-publishing-current-file)
-			 muse-publishing-current-file)
-		    (and (buffer-file-name)
+	(unless
+	    (or (bound-and-true-p muse-publishing-current-file)
+		(and (buffer-file-name)
 		     (file-exists-p (buffer-file-name))
 		     (tapoueh-extract-directive "title" (muse-current-file))))
 	  (message "New Muse File: %s" (muse-current-file))
