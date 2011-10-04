@@ -122,6 +122,12 @@ on filter.
 	  (tapoueh-path-to-root)
 	  "static/2ndQuadrant-cross.png\">"))
 
+(defun tapoueh-expert-postgresql-logo ()
+  "Get the :style-sheet property and rework the link to the CSS"
+  (concat "<img src=\""
+	  (tapoueh-path-to-root)
+	  "static/expert-postgresql.png\">"))
+
 (defun tapoueh-current-page-url ()
   "Get the current page full URL"
   (let* ((current (muse-current-file))
