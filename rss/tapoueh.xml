@@ -7,6 +7,64 @@
     <language>en-us</language>
     <generator>Emacs Muse</generator>
 <item>
+  <title>Scaling Stored Procedures</title>
+  <link>http://tapoueh.org/blog/2011/10/06-scaling-with-stored-procedures.html</link>
+  <description><![CDATA[<p>In the news recently <em>stored procedures</em> where used as an excuse for moving
+away logic from the database layer to application layer, and to migrate away
+from a powerful technology to a simpler one, now that there's no logic
+anymore in the database.</p>
+
+<p>It's not the way I would typically approach scaling problems, and apparently
+I'm not alone on the <em>Stored Procedures</em> camp.  Did you read this nice blog
+post <a href="http://ora-00001.blogspot.com/2011/07/mythbusters-stored-procedures-edition.html">Mythbusters: Stored Procedures Edition</a> already?  Well it happens in
+another land that where my comfort zone is, but still has some interesting
+things to say.</p>
+
+<p>I won't try and address all of the myths they attack in a single article.
+Let's pick the scalability problems, the two of them I think about are code
+management and performances.  We are quite well equiped for that in
+PostgreSQL, really.</p>
+
+<p>For code maintainance we now have <a href="http://www.postgresql.org/docs/9.1/static/extend-extensions.html">PostgreSQL Extensions</a>, which allows you to
+pack all your procedures into separate <em>extensions</em>, and to maintain a version
+number and upgrade procedures for each of them.  You can handle separate
+rollouts in development for going from <code>1.12</code> to <code>1.13</code> then <code>1.14</code> and after the
+developers tested it more completely and changed their mind again on the
+best API they want to work with, <code>1.15</code> which is stamped ok for production.
+At this point, <code>ALTER EXTENSION UPGRADE</code> will happily apply all the rollouts
+in sequence to upgrade from <code>1.12</code> straight to <code>1.15</code> in one go.  And if you
+prefer to bake a special careful script to handle that big jump, you also
+can provide a specific <code>extension--1.12--1.15.sql</code> script.</p>
+
+<p>Of course you're managing all those files with your favorite <em>SCM</em>, to answer
+to some other myth from the blog reference we are loosely following.</p>
+
+<center>
+<p><a class="image-link" href="http://postgresqlrussia.org/articles/view/131">
+<img src="../../../images/Moskva_DB_Tools.v3.png"></a></p>
+</center>
+
+<p>I wanted to talk about the other side of the scalability problem, which is
+the operations side of it.  What happens when you need to scale the database
+in terms of its size and level of concurrent activity?  PostgreSQL earned a
+very good reputation at being able to scale-up, what about scaling-out?
+Certainly, now that you're all down into <em>Stored Procedure</em>, it's going to be
+a very bad situation?</p>
+
+<p>Well, in fact, you're then in a very good position here, thanks to <a href="http://wiki.postgresql.org/wiki/PL/Proxy">PLproxy</a>.
+This <em>extension</em> is a custom procedural language whose job is to handle a
+cluster of database shards that all expose the same PL API, and it's very
+good at doing that.</p>
+
+<p><em>Stored Procedures</em> are a very good tool to have, be sure to get comfortable
+enough with them so that you can choose exactly when to use them.  If you're
+not sure about that, we at <a href="http://www.2ndquadrant.com/">2ndQuadrant</a> will be happy to help you there!</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Thu, 06 Oct 2011 18:23:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2011/10/06-scaling-with-stored-procedures.html</guid>
+</item>
+<item>
   <title>See you in Amsterdam</title>
   <link>http://tapoueh.org/blog/2011/10/04-see-you-in-Amsterdam.html</link>
   <description><![CDATA[<p>The next <a href="http://2011.pgconf.eu/">PostgreSQL conference</a> is approaching very fast now, I hope you have
