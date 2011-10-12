@@ -7,6 +7,65 @@
     <language>en-us</language>
     <generator>Emacs Muse</generator>
 <item>
+  <title>Implementing backups</title>
+  <link>http://tapoueh.org/blog/2011/10/12-backup-strategy.html</link>
+  <description><![CDATA[<p>I've been asked about my opinion on backup strategy and best practices, and
+it so happens that I have some kind of on opinion on the matter.</p>
+
+<p>I tend to think best practice here begins with defining properly the <em>backup
+plan</em> you want to implement. It's quite a complex matter, so be sure to ask
+yourself about your needs: what do you want to be protected from?</p>
+
+<center>
+<p><img src="../../../images/online-backup.jpg" alt=""></p>
+</center>
+
+<p>The two main things to want to protect from are hardware loss (crash
+disaster, plane in the data center, fire, water flood, etc) and human error
+(<code>UPDATE</code> without a where clause). Replication is an answer to the former,
+archiving and dumps to the latter. You generally need both.</p>
+
+<p>Often enough “backups” include <code>WAL</code> <em>archiving</em> and <em>shipping</em> and nightly or
+weekly <em>base backups</em>, with some retention and some scripts or procedures
+ready to setup <a href="http://www.postgresql.org/docs/9.1/static/continuous-archiving.html">Point In Time Recovery</a> and recover some data without
+interfering with the WAL archiving and shipping. Of course with PostgreSQL
+9.0 and 9.1, the <em>WAL Shipping</em> can be implemented with <em>streaming replication</em>
+and you can even have a <em>Hot Standby</em>. But for backups you still want
+archiving.</p>
+
+<p>Mostly I still implement <code>pg_dump -Fc</code> nightly backups with a custom retention
+(for example, 1 backup a month kept 2 years, 1 backup a week kept 6 or 12
+months, 1 backup a night kept 1 to 2 weeks), when the database size allow
+the <code>pg_dump</code> run to remain constrained in the <em>maintenance window</em>, if any.</p>
+
+<p>Don't forget that while <code>pg_dump</code> runs, you can't roll out <em>DDL changes</em> to the
+production system any more, so you want to be careful about this
+<em>maintenance window</em> thing. When you have one.</p>
+
+<p><em>Physical backups</em> are not locking <em>rollouts</em> away, but they often suck a good
+deal of the <em>IO bandwidth</em> so you need to pick up a right timing to do them.
+That's how you can get to once a week base backup and WAL <em>archiving</em>.</p>
+
+<p>If you can't <code>pg_dump</code> production, maybe you can have <em>automated restore jobs</em>
+from the <em>physical backups</em> that you then <code>pg_dump -Fc</code>, so that you still have
+that. That can come up handy, really: you can't test your <em>major upgrade</em> out
+of a <em>physical backup</em>.</p>
+
+<p>Also, <strong><em>obviously</em></strong>, never consider your backup strategy implemented until you
+have either <em>automated restores</em> in place or a regular schedule to exercise
+them (<em>staging instances</em>, devel instances).</p>
+
+<p>Then as far as the practical tools go, I tend to think that <a href="http://tapoueh.org/pgsql/pgstaging.html">pg_staging</a> is
+worth its installation complexity, and for WAL archiving and base backup I
+recommend <a href="http://skytools.projects.postgresql.org/doc/walmgr.html">walmgr</a> from <a href="http://wiki.postgresql.org/wiki/SkyTools">Skytools</a>, that's a very handy tool. When using
+PostgreSQL <code>9.0</code> or <code>9.1</code>, consider using <a href="http://packages.debian.org/experimental/skytools3-walmgr">walmgr3</a> so that it's behaving nice
+alongside <em>streaming replication</em>.</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Wed, 12 Oct 2011 22:22:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2011/10/12-backup-strategy.html</guid>
+</item>
+<item>
   <title>Scaling Stored Procedures</title>
   <link>http://tapoueh.org/blog/2011/10/06-scaling-with-stored-procedures.html</link>
   <description><![CDATA[<p>In the news recently <em>stored procedures</em> where used as an excuse for moving
