@@ -7,6 +7,85 @@
     <language>en-us</language>
     <generator>Emacs Muse</generator>
 <item>
+  <title>Extension White Listing</title>
+  <link>http://tapoueh.org/blog/2012/03/08-extension-white-listing.html</link>
+  <description><![CDATA[<p>PostgreSQL 9.1 includes proper extension support, as you might well know if
+you ever read this very blog here. Some hosting facilities are playing with
+PostgreSQL at big scale (hello <a href="https://postgres.heroku.com/blog">Heroku</a>!) and still meet with small caveats
+making their life uneasy.</p>
+
+<p>To be specific, only <em>superusers</em> are allowed to install C coded stored
+procedures, and that impacts a lot of very useful PostgreSQL extension: all
+those shiped in the <em>contrib</em> package are coded in C. Now, <a href="https://postgres.heroku.com/blog">Heroku</a> is not
+giving away <em>superuser</em> access to their hosted customers in order to limit the
+number of ways they can shoot themselves in the foot. And given PostgreSQL
+security model, being granted <em>database owner</em> is mostly good enough for day
+to day operation.</p>
+
+<blockquote>
+<p class="quoted">
+See Andrew's article <a href="http://people.planetpostgresql.org/andrew/index.php?/archives/259-Heroku&#44;-a-really-easy-way-to-get-a-database-in-a-hurry..html">Heroku, a really easy way to get a database in a hurry</a>
+for more context about Heroku's offering here.</p>
+
+</blockquote>
+
+<p>Mostly, but as we see, not completely good enough. How to arrange for a non
+<em>superuser</em> to be able to still install a C-coded extension in his own
+database? That's quite dangerous as any bug causing a crash would mean a
+PostgreSQL whole restart. So you not only want to empower <code>CREATE EXTENSION</code>
+to database owners, you also want to be able to review and explicitely <em>white
+list</em> the allowed extensions.</p>
+
+<p>Here we go: <a href="https://github.com/dimitri/pgextwlist">pgextwlist</a> is a PostgreSQL extensions implementing just that
+idea. You have to tweak <code>local_preload_libraries</code> so that it gets loaded
+automatically and early enough, and you have to provide for the list of
+authorized extensions in the <code>extwlist.extensions</code> setting.</p>
+
+<p>Let's see a usage example, straight from the documentation:</p>
+
+<pre class="src">
+dim=&gt; select rolsuper from pg_roles where rolname = current_user;
+select rolsuper from pg_roles where rolname = current_user;
+ rolsuper
+<span style="color: #888a85;">----------
+</span> f
+(1 row)
+
+dim=&gt; create extension hstore;
+create extension hstore;
+WARNING:  =&gt; is deprecated as an operator name
+DETAIL:  This name may be disallowed altogether in future versions of PostgreSQL.
+CREATE EXTENSION
+
+dim=&gt; create extension earthdistance;
+create extension earthdistance;
+ERROR:  extension "earthdistance" is not whitelisted
+DETAIL: Installing the extension "earthdistance" failed, because it is not
+        on the whitelist of user-installable extensions.
+HINT: Your system administrator has allowed users to install certain
+      extensions. SHOW extwlist.extensions;
+
+dim=&gt; \dx
+\dx
+                           List of installed extensions
+  Name   | Version |   Schema   |                   Description
+<span style="color: #888a85;">---------+---------+------------+--------------------------------------------------
+</span> hstore  | 1.0     | public     | data type for storing sets of (key, value) pairs
+ plpgsql | 1.0     | pg_catalog | PL/pgSQL procedural language
+(2 rows)
+
+dim=&gt; drop extension hstore;
+drop extension hstore;
+DROP EXTENSION
+</pre>
+
+<p>As you can see, it allows non <em>superusers</em> to install an extension written in C.</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Thu, 08 Mar 2012 14:25:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2012/03/08-extension-white-listing.html</guid>
+</item>
+<item>
   <title>pgbouncer munin plugin</title>
   <link>http://tapoueh.org/blog/2011/11/16-pgbouncer-munin.html</link>
   <description><![CDATA[<p>It seems that if you search for a <a href="http://munin-monitoring.org/">munin</a> plugin for <a href="http://wiki.postgresql.org/wiki/PgBouncer">pgbouncer</a> it's easy
