@@ -7,6 +7,60 @@
     <language>en-us</language>
     <generator>Emacs Muse</generator>
 <item>
+  <title>PGQ Coop Consumers</title>
+  <link>http://tapoueh.org/blog/2012/03/12-PGQ-Cooperative-Consumers.html</link>
+  <description><![CDATA[<p>While working a new <a href="http://www.postgresql.org/">PostgreSQL</a> architecture for an high scale project that
+used to be in the top 10 of internet popular web sites (in terms of
+visitors), I needed to be able to off load some processing from the main
+path: that's called a <em>batch job</em>. This needs to be <em>transactional</em>: don't run
+the job if we did <code>rollback;</code> the transaction, process all <em>events</em> that were
+part of the same transaction in the same transaction, etc.</p>
+
+<center>
+<p><img src="../../../images/workers.jpg" alt=""></p>
+</center>
+
+<p>That calls for using <a href="http://wiki.postgresql.org/wiki/PGQ_Tutorial">PGQ</a>, the <em>jobs queue</em> solution from <a href="http://wiki.postgresql.org/wiki/Skytools">Skytools</a>, the power
+horse for <a href="http://wiki.postgresql.org/wiki/Londiste_Tutorial">Londiste</a>. If <code>PGQ</code> is good enough to build a full trigger-based
+replication solution on top of it, certainly it's good enough for our custom
+processing, right? Well, you still need to check that your expectations are
+met, and that was happily the case in my implementation. It's a very common
+problem, and <code>PGQ</code> very often is a great solution to it.</p>
+
+<p>As this implementation is <code>PHP</code> centric, we've been using <a href="https://github.com/dimitri/libphp-pgq">libphp-pgq</a> to drive
+our background workers. Using <code>PGQ</code> in <code>PHP</code> has been very easy to setup, the
+only trap being not to forget about running the <em>ticker</em> process.</p>
+
+<p>It got interesting because of two elements. First, we're nor running a
+single database instance here but a bunch of them... make it <em>256 databases</em>.
+Each of them having <code>5</code> queues to consume, that would be about <code>1280</code> consumer
+processes, distributed on <code>16</code> servers that's still <code>80</code> per server, so way too
+many. What we did instead is reuse the <a href="https://github.com/markokr/skytools/blob/master/scripts/queue_mover.py">queue mover</a> script found in the
+Skytools distribution and adapt it to <em>forward</em> the event of the 1280 source
+queues to only 5 destination queues. We then process the events from this
+single location.</p>
+
+<p>Now it's easier to deal with, but we're not still exactly there. Of course,
+with so many sources, concentrating them all into the same place means that
+a single consumer is not able to process the events as fast as they are
+produced. That's where the <em>cooperative consuming</em> shines, it's very easy to
+turn your <em>consumer</em> into a <em>cooperative</em> one even on an existing and running
+queue, and that's what we did. So now we can choose how many <em>workers</em> we want
+per queue: one of them has 4 workers, another one see not so much activity
+and 1 worker still fits.</p>
+
+<center>
+<p><img src="../../../images/coop-workers.jpeg" alt=""></p>
+</center>
+
+<p>The queue mover script that knows how to subscribe to many queues from the
+same process is going to be contributed to Skytools proper, of course.</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Mon, 12 Mar 2012 14:43:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2012/03/12-PGQ-Cooperative-Consumers.html</guid>
+</item>
+<item>
   <title>Extension White Listing</title>
   <link>http://tapoueh.org/blog/2012/03/08-extension-white-listing.html</link>
   <description><![CDATA[<p>PostgreSQL 9.1 includes proper extension support, as you might well know if
