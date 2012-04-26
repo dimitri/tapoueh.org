@@ -7,6 +7,76 @@
     <language>en-us</language>
     <generator>Emacs Muse</generator>
 <item>
+  <title>Clean PGQ Subconsumers</title>
+  <link>http://tapoueh.org/blog/2012/04/26-unregister-subconsumers.html</link>
+  <description><![CDATA[<p>Now that you're all using the wonders of <a href="../03/12-PGQ-Cooperative-Consumers.html">Cooperative Consumers</a> to help you
+efficiently and reliably implement your business constraints and offload
+them from the main user transactions, you're reaching a point where you have
+to clean up your development environment (because that's what happens to
+development environments, right?), and you want a way to start again from a
+clean empty place.</p>
+
+<center>
+<p><img src="../../../images/drop-queue.png" alt=""></p>
+</center>
+
+<p>Here we go. It used to be much more simple than that, so if you're still
+using <strong>PGQ</strong> from <strong>Skytools2</strong>, just jump to the next step.</p>
+
+<h3>Unregister Subconsumers</h3>
+
+<p class="first">That query will figure out subconsumers in the system function
+<code>pgq.get_consumer_info()</code> and ask PGQ to please <em>unregister</em> them, losing events
+in the way, even events from batches that are currently active.</p>
+
+<pre class="src">
+ with subconsumers as (
+   select q1.queue_name,
+          q2.consumer_name,
+          substring(q1.consumer_name from <span style="color: #ad7fa8; font-style: italic;">'%.#"%#"'</span> for <span style="color: #ad7fa8; font-style: italic;">'#'</span>) as subconsumer_name
+    from (select *
+            from pgq.get_consumer_info()
+           where lag is null)
+         as q1
+    join (select *
+           from pgq.get_consumer_info()
+           where lag is not null)
+         as q2
+         on q1.queue_name = q2.queue_name
+)
+select *,
+       pgq_coop.unregister_subconsumer(queue_name, consumer_name,
+                                       subconsumer_name, 1)
+ from subconsumers;
+</pre>
+
+
+<h3>Unregister Consumers</h3>
+
+<p class="first">Now that the first step is done, we have to <em>unregister</em> the main consumers,
+which is easy and what you already did before:</p>
+
+<pre class="src">
+select queue_name, consumer_name,
+       pgq.unregister_consumer(queue_name, consumer_name)
+  from pgq.get_consumer_info();
+</pre>
+
+
+<h3>Drop queues</h3>
+
+<p class="first">And as we want to really clean up the mess, let's also drop the queues.</p>
+
+<pre class="src">
+select queue_name, pgq.drop_queue(queue_name)
+  from pgq.queue;
+</pre>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Thu, 26 Apr 2012 15:05:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2012/04/26-unregister-subconsumers.html</guid>
+</item>
+<item>
   <title>PGQ Coop Consumers</title>
   <link>http://tapoueh.org/blog/2012/03/12-PGQ-Cooperative-Consumers.html</link>
   <description><![CDATA[<p>While working a new <a href="http://www.postgresql.org/">PostgreSQL</a> architecture for an high scale project that
