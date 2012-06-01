@@ -7,6 +7,69 @@
     <language>en-us</language>
     <generator>Emacs Muse</generator>
 <item>
+  <title>M-x recompile</title>
+  <link>http://tapoueh.org/blog/2012/06/01-emacs-recompile.html</link>
+  <description><![CDATA[<p>A friend of mine just asked me for advice to tweak some Emacs features, and
+I think that's really typical of using Emacs: rather than getting used to
+the way things are shipped to you, when using Emacs, you start wanting to
+adapt the tools to the way you want things to be working instead. And you
+can call that the awesome!</p>
+
+<p>In this case we're talking about the <code>M-x compile</code> and <code>M-x recompile</code>
+functions. My friend bound the former to <code>&lt;f11&gt;</code> and wanted that <code>C-u f11</code> do a
+recompile with the exact same command line as the previous <code>compile</code> command.</p>
+
+<p>Well, to be honest, I didn't know about <code>M-x recompile</code> until after I wrote
+the following function, made to trigger another <code>compile</code> with the last
+command used if using <code>C-u</code>.</p>
+
+<pre class="src">
+(<span style="color: #7f007f;">defvar</span> <span style="color: #b8860b;">cyb-compile-last-command</span> nil)
+(<span style="color: #7f007f;">defvar</span> <span style="color: #b8860b;">cyb-compile-command-history</span> nil)
+
+(<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">cyb-compile</span> (arg)
+  <span style="color: #bc8f8f;">"Compile with given command, optionally recompile with last command"</span>
+  (interactive <span style="color: #bc8f8f;">"P"</span>)
+  (<span style="color: #7f007f;">if</span> arg
+      (<span style="color: #7f007f;">progn</span>
+        <span style="color: #b22222;">;; </span><span style="color: #b22222;">arg given: compile with last command
+</span>        (<span style="color: #7f007f;">unless</span> cyb-compile-last-command
+          (<span style="color: #ff0000; font-weight: bold;">error</span> <span style="color: #bc8f8f;">"Can't recompile yet, no known last command"</span>))
+        (compile cyb-compile-last-command))
+    <span style="color: #b22222;">;; </span><span style="color: #b22222;">else branch, no arg given, ask for a command
+</span>    (<span style="color: #7f007f;">let</span> ((command
+           (read-string
+            <span style="color: #bc8f8f;">"Compile with command: "</span>
+            <span style="color: #bc8f8f;">"make -k"</span> 'cyb-compile-command-history <span style="color: #bc8f8f;">"make -k"</span>)))
+      (setq cyb-compile-last-command command)
+      (compile command))))
+
+(global-set-key (kbd <span style="color: #bc8f8f;">"&lt;f11&gt;"</span>) 'cyb-compile)
+</pre>
+
+<p>With that little <em>Emacs Lisp</em> code we're driving Emacs the way we want to be
+working, and that's great! You can see it was a <em>quick hack</em> in that if you
+wanted to use the function non interactively it would still prompt for the
+command to use to compile, when <em>Emacs Lisp</em> <code>interactive</code> special form would
+allow us to implement something way smarter here. Also if we wanted to spend
+some more time on that feature, we should probably tweak the <em>error</em> condition
+to be asking for the command rather than just complaining, that would
+certainly be more useful.</p>
+
+<p>Exercise left to the reader, rewrite using <code>recompile</code> rather than reinventing
+it in a hurry! Beware of <code>call-interactively</code> though. Oh and fix the
+aforementioned infelicities, too.</p>
+
+<p>To conclude, we see that writing <em>Emacs Lisp</em> code to fix a usability problem
+in a hurry is a great force of Emacs, and that we're provided with the
+necessary tool set so as to be able to reach completeness if we wanted to do
+so.</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Fri, 01 Jun 2012 18:45:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2012/06/01-emacs-recompile.html</guid>
+</item>
+<item>
   <title>Battle Language à la Marmite</title>
   <link>http://tapoueh.org/blog/2012/03/01-duchessfr-battle-language.html</link>
   <description><![CDATA[<p>J'ai eu la chance hier soir de participer à la <a href="http://jduchess.org/duchess-france/blog/battle-language-a-la-marmite/">Battle Language à la Marmite</a>,
