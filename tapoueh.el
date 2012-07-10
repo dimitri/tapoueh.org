@@ -39,6 +39,7 @@
 ;;;
 (defvar tapoueh-rss-tags '(("rss/postgresql.xml"   . postgresql)
 			   ("rss/emacs.xml"        . emacs)
+			   ("rss/cl.xml"           . common-lisp)
 			   ("rss/debian.xml"       . debian)
 			   ("rss/postgresqlfr.xml" . postgresqlfr)
 			   ("rss/tapoueh.xml"      . nil))
