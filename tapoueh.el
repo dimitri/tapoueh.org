@@ -453,7 +453,7 @@ An article is a list of SOURCE LINK TITLE DATE FORMATED-DATE TAGS"
     (loop for a in sorted
 	  when (nth 3 a)
 	  collect a into result
-	  until (eq (length result) n)
+	  until (eq (length result) (or n -1)) ; when n is nil, no limit
 	  finally return result)))
 
 (defun tapoueh-insert-latest-articles (&optional n dir)
