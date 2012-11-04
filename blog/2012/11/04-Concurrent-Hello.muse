@@ -1,0 +1,55 @@
+#author Dimitri Fontaine
+#title  Concurrent Hello
+#date   20121104-23:04
+#tags   Common-Lisp
+
+Thanks to [[https://twitter.com/mickael/status/265191809100181504][Mickael]] on *twitter* I ran into that article about implementing a
+very basic *Hello World!* program as a way to get into a new concurrent
+language or facility. The original article, titled
+[[http://himmele.blogspot.de/2012/11/concurrent-hello-world-in-go-erlang.html][Concurrent Hello World in Go, Erlang and C++]] is all about getting to know
+[[http://golang.org/][The Go Programming Language]] better.
+
+To quote the article:
+
+<quote>
+The first thing I always do when playing around with a new
+software platform is to write a concurrent "Hello World" program. The
+program works as follows: One active entity (e.g. thread, Erlang process,
+Goroutine) has to print "Hello " and another one "World!\n" with the two
+active entities synchronizing with each other so that the output always is
+"Hello World!\n".
+</quote>
+
+Here's my try in [[http://cliki.net/][Common Lisp]] using [[http://lparallel.org/][lparallel]], the whole =20= lines of it:
+
+<src lang="lisp">
+(defun say-hello (helloq worldq n)
+  (dotimes (i n)
+    (format t "Hello ")
+    (lq:push-queue :say-world worldq)
+    (lq:pop-queue helloq))
+  (lq:push-queue :quit worldq))
+
+(defun say-world (helloq worldq)
+  (when (eq (lq:pop-queue worldq) :say-world)
+    (format t "World!~%")
+    (lq:push-queue :say-hello helloq)
+    (say-world helloq worldq)))
+
+(defun hello-world (n)
+  (let* ((lp:*kernel*    (lp:make-kernel 2))
+	 (channel        (lp:make-channel))
+	 (helloq         (lq:make-queue))
+	 (worldq         (lq:make-queue)))
+    (lp:submit-task channel #'say-world helloq worldq)
+    (lp:submit-task channel #'say-hello helloq worldq n)))
+</src>
+
+Unfortunately, I have some problem running that (both with [[http://ccl.clozure.com/][CCL]] and [[http://sbcl.org/][sbcl]], in
+two different Operating Systems). Sometimes the first entry get an extra
+line feed in between *Hello* and *World!*, and it seems that I can only blame my
+being a CL noob. I will need to learn some more, but this day is well over
+now and what I wanted to be a nice and quick distraction is taking already
+too much of my time. Too bad, as I wanted to say that I much prefer the
+Common Lisp *syntax* over the *Go* one, and wanted to insist that I'll skip *Go*
+some more...

@@ -7,6 +7,66 @@
     <language>en-us</language>
     <generator>Emacs Muse</generator>
 <item>
+  <title>Concurrent Hello</title>
+  <link>http://tapoueh.org/blog/2012/11/04-Concurrent-Hello.html</link>
+  <description><![CDATA[<p>Thanks to <a href="https://twitter.com/mickael/status/265191809100181504">Mickael</a> on <em>twitter</em> I ran into that article about implementing a
+very basic <em>Hello World!</em> program as a way to get into a new concurrent
+language or facility. The original article, titled
+<a href="http://himmele.blogspot.de/2012/11/concurrent-hello-world-in-go-erlang.html">Concurrent Hello World in Go, Erlang and C++</a> is all about getting to know
+<a href="http://golang.org/">The Go Programming Language</a> better.</p>
+
+<p>To quote the article:</p>
+
+<blockquote>
+<p class="quoted">
+The first thing I always do when playing around with a new
+software platform is to write a concurrent &quot;Hello World&quot; program. The
+program works as follows: One active entity (e.g. thread, Erlang process,
+Goroutine) has to print &quot;Hello &quot; and another one &quot;World!\n&quot; with the two
+active entities synchronizing with each other so that the output always is
+&quot;Hello World!\n&quot;.</p>
+
+</blockquote>
+
+<p>Here's my try in <a href="http://cliki.net/">Common Lisp</a> using <a href="http://lparallel.org/">lparallel</a>, the whole <code>20</code> lines of it:</p>
+
+<pre class="src">
+(<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">say-hello</span> (helloq worldq n)
+  (<span style="color: #7f007f;">dotimes</span> (i n)
+    (format t <span style="color: #bc8f8f;">"Hello "</span>)
+    (lq:push-queue <span style="color: #da70d6;">:say-world</span> worldq)
+    (lq:pop-queue helloq))
+  (lq:push-queue <span style="color: #da70d6;">:quit</span> worldq))
+
+(<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">say-world</span> (helloq worldq)
+  (<span style="color: #7f007f;">when</span> (eq (lq:pop-queue worldq) <span style="color: #da70d6;">:say-world</span>)
+    (format t <span style="color: #bc8f8f;">"World!~%"</span>)
+    (lq:push-queue <span style="color: #da70d6;">:say-hello</span> helloq)
+    (say-world helloq worldq)))
+
+(<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">hello-world</span> (n)
+  (<span style="color: #7f007f;">let*</span> ((lp:*kernel*    (lp:make-kernel 2))
+         (channel        (lp:make-channel))
+         (helloq         (lq:make-queue))
+         (worldq         (lq:make-queue)))
+    (lp:submit-task channel #'say-world helloq worldq)
+    (lp:submit-task channel #'say-hello helloq worldq n)))
+</pre>
+
+<p>Unfortunately, I have some problem running that (both with <a href="http://ccl.clozure.com/">CCL</a> and <a href="http://sbcl.org/">sbcl</a>, in
+two different Operating Systems). Sometimes the first entry get an extra
+line feed in between <em>Hello</em> and <em>World!</em>, and it seems that I can only blame my
+being a CL noob. I will need to learn some more, but this day is well over
+now and what I wanted to be a nice and quick distraction is taking already
+too much of my time. Too bad, as I wanted to say that I much prefer the
+Common Lisp <em>syntax</em> over the <em>Go</em> one, and wanted to insist that I'll skip <em>Go</em>
+some more...</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Sun, 04 Nov 2012 23:04:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2012/11/04-Concurrent-Hello.html</guid>
+</item>
+<item>
   <title>Fast and stupid?</title>
   <link>http://tapoueh.org/blog/2012/08/20-performance-the-easiest-way.html</link>
   <description><![CDATA[<p>I stumbled onto an interesting article about performance when using python,
