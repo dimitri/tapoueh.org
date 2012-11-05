@@ -20,11 +20,9 @@ active entities synchronizing with each other so that the output always is
 "Hello World!\n".
 </quote>
 
-Here's my try in [[http://cliki.net/][Common Lisp]] using [[http://lparallel.org/][lparallel]], the whole =24= lines of it:
+Here's my try in [[http://cliki.net/][Common Lisp]] using [[http://lparallel.org/][lparallel]], the whole =23= lines of it:
 
 <src lang="lisp">
-(defvar *hello-world-kernel* (lp:make-kernel 2))
-
 (defun say-hello (helloq worldq n)
   (dotimes (i n)
     (format t "Hello ")
@@ -39,15 +37,19 @@ Here's my try in [[http://cliki.net/][Common Lisp]] using [[http://lparallel.org
     (say-world helloq worldq)))
 
 (defun hello-world (n)
-  (let* ((lp:*kernel*    *hello-world-kernel*)
-	 (channel        (lp:make-channel))
-	 (helloq         (lq:make-queue))
-	 (worldq         (lq:make-queue)))
+  (let* ((lp:*kernel*  (lp:make-kernel 2)) ; a new one each time, as we end it
+	 (channel      (lp:make-channel))
+	 (helloq       (lq:make-queue))
+	 (worldq       (lq:make-queue)))
     (lp:submit-task channel #'say-world helloq worldq)
     (lp:submit-task channel #'say-hello helloq worldq n)
     (lp:receive-result channel)
+    (lp:receive-result channel)
     (lp:end-kernel)))
 </src>
+
+If you want to play locally with that code, I've been updating it to a
+*github* project named [[https://github.com/dimitri/go-hello-world][go-hello-world]], even if it's coded in *CL*.
 
 ** Beware of the REPL
 
@@ -57,10 +59,10 @@ Lisp folks did hint me about that: it's the *REPL* output that get
 intermingled with the program output, and that's because the =hello-world=
 main function was returning before the thing is over.
 
-I've added a =receive-result= call in it so that it waits until the end of the
-program before returning to the *REPL*, and that indeed fixes it. A way to
-assert that is using the =time= macro, which was always intermingled with the
-output before. It's fixed now:
+I've added a =receive-result= call in it per worker so that it waits until the
+end of the program before returning to the *REPL*, and that indeed fixes it. A
+way to assert that is using the =time= macro, which was always intermingled
+with the output before. It's fixed now:
 
 <src lang="lisp">
 CL-USER> (time (go-hello-world:hello-world 1000))

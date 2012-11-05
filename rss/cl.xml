@@ -28,11 +28,9 @@ active entities synchronizing with each other so that the output always is
 
 </blockquote>
 
-<p>Here's my try in <a href="http://cliki.net/">Common Lisp</a> using <a href="http://lparallel.org/">lparallel</a>, the whole <code>24</code> lines of it:</p>
+<p>Here's my try in <a href="http://cliki.net/">Common Lisp</a> using <a href="http://lparallel.org/">lparallel</a>, the whole <code>23</code> lines of it:</p>
 
 <pre class="src">
-(<span style="color: #7f007f;">defvar</span> <span style="color: #b8860b;">*hello-world-kernel*</span> (lp:make-kernel 2))
-
 (<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">say-hello</span> (helloq worldq n)
   (<span style="color: #7f007f;">dotimes</span> (i n)
     (format t <span style="color: #bc8f8f;">"Hello "</span>)
@@ -47,15 +45,19 @@ active entities synchronizing with each other so that the output always is
     (say-world helloq worldq)))
 
 (<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">hello-world</span> (n)
-  (<span style="color: #7f007f;">let*</span> ((lp:*kernel*    *hello-world-kernel*)
-         (channel        (lp:make-channel))
-         (helloq         (lq:make-queue))
-         (worldq         (lq:make-queue)))
+  (<span style="color: #7f007f;">let*</span> ((lp:*kernel*  (lp:make-kernel 2)) <span style="color: #b22222;">; </span><span style="color: #b22222;">a new one each time, as we end it
+</span>         (channel      (lp:make-channel))
+         (helloq       (lq:make-queue))
+         (worldq       (lq:make-queue)))
     (lp:submit-task channel #'say-world helloq worldq)
     (lp:submit-task channel #'say-hello helloq worldq n)
     (lp:receive-result channel)
+    (lp:receive-result channel)
     (lp:end-kernel)))
 </pre>
+
+<p>If you want to play locally with that code, I've been updating it to a
+<em>github</em> project named <a href="https://github.com/dimitri/go-hello-world">go-hello-world</a>, even if it's coded in <em>CL</em>.</p>
 
 <h3>Beware of the REPL</h3>
 
@@ -65,10 +67,10 @@ Lisp folks did hint me about that: it's the <em>REPL</em> output that get
 intermingled with the program output, and that's because the <code>hello-world</code>
 main function was returning before the thing is over.</p>
 
-<p>I've added a <code>receive-result</code> call in it so that it waits until the end of the
-program before returning to the <em>REPL</em>, and that indeed fixes it. A way to
-assert that is using the <code>time</code> macro, which was always intermingled with the
-output before. It's fixed now:</p>
+<p>I've added a <code>receive-result</code> call in it per worker so that it waits until the
+end of the program before returning to the <em>REPL</em>, and that indeed fixes it. A
+way to assert that is using the <code>time</code> macro, which was always intermingled
+with the output before. It's fixed now:</p>
 
 <pre class="src">
 CL-USER&gt; (time (go-hello-world:hello-world 1000))
