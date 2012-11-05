@@ -28,9 +28,11 @@ active entities synchronizing with each other so that the output always is
 
 </blockquote>
 
-<p>Here's my try in <a href="http://cliki.net/">Common Lisp</a> using <a href="http://lparallel.org/">lparallel</a>, the whole <code>20</code> lines of it:</p>
+<p>Here's my try in <a href="http://cliki.net/">Common Lisp</a> using <a href="http://lparallel.org/">lparallel</a>, the whole <code>24</code> lines of it:</p>
 
 <pre class="src">
+(<span style="color: #7f007f;">defvar</span> <span style="color: #b8860b;">*hello-world-kernel*</span> (lp:make-kernel 2))
+
 (<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">say-hello</span> (helloq worldq n)
   (<span style="color: #7f007f;">dotimes</span> (i n)
     (format t <span style="color: #bc8f8f;">"Hello "</span>)
@@ -45,22 +47,64 @@ active entities synchronizing with each other so that the output always is
     (say-world helloq worldq)))
 
 (<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">hello-world</span> (n)
-  (<span style="color: #7f007f;">let*</span> ((lp:*kernel*    (lp:make-kernel 2))
+  (<span style="color: #7f007f;">let*</span> ((lp:*kernel*    *hello-world-kernel*)
          (channel        (lp:make-channel))
          (helloq         (lq:make-queue))
          (worldq         (lq:make-queue)))
     (lp:submit-task channel #'say-world helloq worldq)
-    (lp:submit-task channel #'say-hello helloq worldq n)))
+    (lp:submit-task channel #'say-hello helloq worldq n)
+    (lp:receive-result channel)))
 </pre>
 
-<p>Unfortunately, I have some problem running that (both with <a href="http://ccl.clozure.com/">CCL</a> and <a href="http://sbcl.org/">sbcl</a>, in
-two different Operating Systems). Sometimes the first entry get an extra
-line feed in between <em>Hello</em> and <em>World!</em>, and it seems that I can only blame my
-being a CL noob. I will need to learn some more, but this day is well over
-now and what I wanted to be a nice and quick distraction is taking already
-too much of my time. Too bad, as I wanted to say that I much prefer the
-Common Lisp <em>syntax</em> over the <em>Go</em> one, and wanted to insist that I'll skip <em>Go</em>
-some more...</p>
+<h3>Beware of the REPL</h3>
+
+<p class="first">In a previous version of this very article, I said that sometimes I get an
+extra line feed in the output and I didn't understand why. Some great Common
+Lisp folks did hint me about that: it's the <em>REPL</em> output that get
+intermingled with the program output, and that's because the <code>hello-world</code>
+main function was returning before the thing is over.</p>
+
+<p>I've added a <code>receive-result</code> call in it so that it waits until the end of the
+program before returning to the <em>REPL</em>, and that indeed fixes it. A way to
+assert that is using the <code>time</code> macro, which was always intermingled with the
+output before. It's fixed now:</p>
+
+<pre class="src">
+CL-USER&gt; (time (go-hello-world:hello-world 1000))
+Hello World!
+...
+Hello World!
+(GO-HELLO-WORLD:HELLO-WORLD 1000)
+took 27,886 microseconds (0.027886 seconds) to run.
+      1,593 microseconds (0.001593 seconds, 5.71%) of which was spent in GC.
+During that period, and with 4 available CPU cores,
+     23,246 microseconds (0.023246 seconds) were spent in user mode
+     14,427 microseconds (0.014427 seconds) were spent in system mode
+ 4,272 bytes of memory allocated.
+ 10 minor page faults, 0 major page faults, 0 swaps.
+(#&lt;PROCESS lparallel kernel shutdown manager(62) [Reset] #x30200109F65D&gt; ...)
+CL-USER&gt;
+</pre>
+
+
+<h3>Conclusion</h3>
+
+<p class="first">While <em>Go</em> language seems to bring very interesting things on the table, such
+as better compilation units and tools, I still think that the concurrency
+primitives at the core of it are easy to find in other places. Which is a
+good thing, as it means we know they work.</p>
+
+<p>That also means that we don't need to accept <em>Go</em> syntax as the only way to
+properly solve that <em>concurrency</em> problem, I much prefer doing so with <em>Common
+Lisp</em> (lack of?) syntax myself.</p>
+
+
+<h3>Update</h3>
+
+<p class="first">A previous version of this article was finished and published too quickly,
+and the conclusion was made from a buggy version of the program. It's all
+fixed now. Thanks a lot to people who contributed comments so that I could
+fix it, and thanks again to <em>James M. Lawrence</em> for <a href="http://lparallel.org/">lparallel</a>!</p>
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Sun, 04 Nov 2012 23:04:00 +0100</pubDate>
