@@ -7,6 +7,250 @@
     <language>en-us</language>
     <generator>Emacs Muse</generator>
 <item>
+  <title>About Vimgolf</title>
+  <link>http://tapoueh.org/blog/2012/11/06-About-vimgolf.html</link>
+  <description><![CDATA[<p>Following some <em>tweet</em> I found myself desultory watching an episode of the
+awesome <a href="http://vimeo.com/channels/222837">VimGolf in Emacs</a> video series by <a href="http://vimeo.com/timvisher">Tim Visher</a>. Those series are about
+picking some challenge from <a href="http://vimgolf.com/">vimgolf</a> and implementing it with our favorite
+editor instead. Because <a href="http://emacsrocks.com/">Emacs Rocks</a> guys.</p>
+
+<center>
+<p><a class="image-link" href="http://emacsrocks.com/">
+<img src="../../../images/emacs-rocks-logo.png"></a></p>
+</center>
+
+<p>Let me tell you upfront that I really dislike the whole idea of the <em>vim golf</em>
+challenge. I've been a user of both <em>Emacs</em> and <em>Vim</em> for many years, and
+finally decided to switch to <em>living in Emacs</em>; or if you prefer, climbing my
+way up from level 2 as in <a href="http://blog.vivekhaldar.com/post/3996068979/the-levels-of-emacs-proficiency">The Levels Of Emacs Proficiency</a>. The reason why is
+that I found that in my case, using <em>Vim</em> would mean spending more time
+thinking about <em>how</em> to do some editing operation rather than the <em>problem</em> I
+wanted to solve by editing some text, most often code.</p>
+
+<p>Of course, the main effect of <em>Vim Golf</em> is to make you focus even more on the
+wrong problem. There's still a good side of it though, which is that such
+challenges are good excuses to discover new features of your editor. So
+let's use that excuse to talk about some nice <em>Emacs</em> features.</p>
+
+<center>
+<p><a class="image-link" href="http://vimgolf.com/challenges/4dd3e19aec9eb6000100000d">
+<img src="../../../images/vim_golf_logo.png"></a></p>
+</center>
+
+<center>
+<p><em>Vim Golf Challenge: Complete the hex array data</em></p>
+</center>
+
+<h3>The challenge</h3>
+
+<p class="first">The previous image will lead you to a particular challenge where it's all
+about filling in an array with consecutive <em>hexadecimal</em> numbers written as
+<code>0xab</code>, where you begin with a template containing only the <code>0x00</code> entry. The
+idea is of course to use the <em>Vim</em> feature that will increment the <em>number at
+point</em>, and is available through the <code>C-a</code> keystroke.</p>
+
+<pre class="src">
+<span style="color: #228b22;">unsigned</span> <span style="color: #228b22;">int</span> <span style="color: #b8860b;">hex</span>[] = {
+        0x00,
+};
+</pre>
+
+
+<h3>A first solution</h3>
+
+<p><em>Emacs</em> does not ship with an <em>increment-number-at-point</em>, much less so with one
+that would support <em>decimal</em>, <em>octal</em> and <em>hexadecimal</em> and even automatically
+recognize <code>0x</code> as a prefix meaning that the next number is <em>hexadecimal</em>. But
+<em>Emacs</em> ship with <a href="http://www.gnu.org/software/emacs/manual/html_node/emacs/Keyboard-Macros.html">Emacs Keyboard Macros</a> and those have a counter, so it's easy
+enough to fill in numbers from 1 to 255 that way: <code>M-1 F3 F3 , F4</code> will
+register a macro where the counter starts at 1, and each time you hit <code>F4</code> it
+will insert the current counter value, increment it and insert a coma. You
+want to do that 254 times, so you do <code>C-u 2 5 4 F4</code> and <em>Emacs</em> just does that.</p>
+
+<p>Now, to transform those decimal numbers into their <em>hexadecimal</em>
+representation, you can use advanced <a href="http://www.gnu.org/software/emacs/manual/html_node/emacs/Regexp-Replace.html">Emacs Regexp Replace</a> features. Replace
+<code>[0-9]+</code> with the result from the following <em>Emacs Lisp</em> code: <code>\,(format
+&quot;0x%02x&quot; (string-to-number \&amp;))</code>. The <code>\&amp;</code> in there will be replaced by the
+matching text, so that will do what we need here, turning <code>10</code> into <code>0x0a</code>.</p>
+
+
+<h3>Let's get some better tools</h3>
+
+<p class="first">We could do better, though. I happen to already use a <em>key chord</em> to duplicate
+the current line, and we would need a function to <a href="http://www.emacswiki.org/emacs/IncrementNumber">Increment Number At Point</a>.
+Those I found over at <a href="http://www.emacswiki.org/">EmacsWiki</a> were not to my taste as they were not able
+to figure out easily which <em>base</em> to use. So here's a little <em>Emacs Lisp</em>
+example showing how to extend your favorite editor to have some <em>Vim</em> common
+features, which is why <em>Emacs</em> ships with <em>Emacs Lisp</em> in the first place.</p>
+
+<pre class="src">
+(<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">duplicate-current-line</span> (<span style="color: #228b22;">&amp;optional</span> n)
+  <span style="color: #bc8f8f;">"duplicate current line, make more than 1 copy given a numeric argument"</span>
+  (interactive <span style="color: #bc8f8f;">"p"</span>)
+  (<span style="color: #7f007f;">let</span> ((nb (or n 1))
+        (current-line (thing-at-point 'line)))
+    (<span style="color: #7f007f;">save-excursion</span>
+      <span style="color: #b22222;">;; </span><span style="color: #b22222;">when on last line, insert a newline first
+</span>      (<span style="color: #7f007f;">when</span> (or (= 1 (forward-line 1)) (eq (point) (point-max)))
+        (insert <span style="color: #bc8f8f;">"\n"</span>))
+
+      <span style="color: #b22222;">;; </span><span style="color: #b22222;">now insert as many time as requested
+</span>      (<span style="color: #7f007f;">while</span> (&gt; n 0)
+        (insert current-line)
+        (decf n)))
+    <span style="color: #b22222;">;; </span><span style="color: #b22222;">now move down as many lines as we inserted
+</span>    (next-line nb)))
+
+(global-set-key (kbd <span style="color: #bc8f8f;">"C-S-d"</span>) 'duplicate-current-line)
+</pre>
+
+<center>
+<p><a class="image-link" href="http://lisperati.com/">
+<img src="../../../images/emacs-on-toaster.jpg"></a></p>
+</center>
+
+<pre class="src">
+(<span style="color: #7f007f;">require</span> '<span style="color: #5f9ea0;">cl</span>)  <span style="color: #b22222;">; </span><span style="color: #b22222;">destructuring-bind is found there
+</span>
+(<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">dim:increment-number-at-point</span> (<span style="color: #228b22;">&amp;optional</span> prefix)
+  (interactive <span style="color: #bc8f8f;">"p"</span>)
+  (<span style="color: #7f007f;">let*</span> ((beg    (skip-chars-backward <span style="color: #bc8f8f;">"0-9a-fA-F"</span>))
+         (hexa   (<span style="color: #7f007f;">save-excursion</span> (forward-char -2) (looking-at-p <span style="color: #bc8f8f;">"0x"</span>)))
+         <span style="color: #b22222;">;; </span><span style="color: #b22222;">force the prefix to hexa (4) we see "0x" before the number
+</span>         (prefix (<span style="color: #7f007f;">if</span> hexa 4 prefix))
+         (end    (re-search-forward <span style="color: #bc8f8f;">"[0-9a-fA-F]+"</span> nil t))
+         (nstr   (match-string 0))
+         (l      (- (match-end 0) (match-beginning 0)))
+         (fmt    (format <span style="color: #bc8f8f;">"%%0%d"</span> l)))
+    (message <span style="color: #bc8f8f;">"PLOP: %d"</span> prefix)
+    (<span style="color: #7f007f;">destructuring-bind</span> (base format)
+        (<span style="color: #7f007f;">case</span> prefix
+          ((1)  '(10 <span style="color: #bc8f8f;">"d"</span>))              <span style="color: #b22222;">; </span><span style="color: #b22222;">no command prefix, decimal
+</span>          ((4)  '(16 <span style="color: #bc8f8f;">"x"</span>))              <span style="color: #b22222;">; </span><span style="color: #b22222;">C-u, hexadecimal
+</span>          ((16) '(8 <span style="color: #bc8f8f;">"o"</span>)))              <span style="color: #b22222;">; </span><span style="color: #b22222;">C-u C-u, octal
+</span>      (<span style="color: #7f007f;">let*</span> ((n   (string-to-number nstr base))
+             (n+1 (+ n 1))
+             (fmt (format <span style="color: #bc8f8f;">"%s%s"</span> fmt format)))
+        (replace-match (format fmt n+1))))))
+
+(global-set-key (kbd <span style="color: #bc8f8f;">"C-c +"</span>) 'dim:increment-number-at-point)
+</pre>
+
+<blockquote>
+<p class="quoted">
+So if you're using <em>Emacs</em> a lot but always found an excuse not to grasp <em>Emacs
+Lisp</em>, I hope that article could be an excuse for you to do so…</p>
+
+</blockquote>
+
+
+<h3>Another solution</h3>
+
+<p class="first">Anyway, now that we are much better equipped, we can picture a better way to
+solve the problem. Instead of using a macro that inserts the next counter
+value, we can use one that duplicate current line, increment number at point
+(and figures out on its own that the number prefixed with <code>0x</code> is
+<em>hexadecimal</em>), and does that 254 times more. Then it's all about reformatting
+the text so that if fits nicely on screen, and for that the command <code>M-q runs
+the command fill-paragraph</code> is exactly what we need. The command <code>C-x f runs
+the command set-fill-column</code> can be used to set the maximum column we allow
+<em>Emacs</em> to reach before going to the next line.</p>
+
+<p>Our <em>Golf</em> then becomes a <code>19</code> steps solution if you start with the cursor at
+the <code>','</code> in the previous example:</p>
+
+<pre class="src">
+C-x f 5 6 RET
+F3 C-S-d C-c + F4
+C-u 2 5 4 F4
+C-SPC M-&lt; C-n M-q
+</pre>
+
+<p>First, set the <em>fill column</em>, then register a macro (in between <code>F3</code> and <code>F4)</code>
+that will duplicate current line (using <code>C-S-d</code>) then increment number at
+point (using <code>C-c +</code>). Third line, replay that macro 254 times (<code>C-u 2 5 4 F4</code>).
+Fourth line, select all those <em>hexadecimal</em> numbers and fill the paragraph
+they form correctly, so as to get:</p>
+
+
+<h3>All those tips for...</h3>
+
+<pre class="src">
+<span style="color: #228b22;">unsigned</span> <span style="color: #228b22;">int</span> <span style="color: #b8860b;">hex</span>[] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+        0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+        0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+        0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27,
+        0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f,
+        0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
+        0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f,
+        0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,
+        0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f,
+        0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57,
+        0x58, 0x59, 0x5a, 0x5b, 0x5c, 0x5d, 0x5e, 0x5f,
+        0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67,
+        0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f,
+        0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77,
+        0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d, 0x7e, 0x7f,
+        0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87,
+        0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f,
+        0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97,
+        0x98, 0x99, 0x9a, 0x9b, 0x9c, 0x9d, 0x9e, 0x9f,
+        0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7,
+        0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf,
+        0xb0, 0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7,
+        0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe, 0xbf,
+        0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7,
+        0xc8, 0xc9, 0xca, 0xcb, 0xcc, 0xcd, 0xce, 0xcf,
+        0xd0, 0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7,
+        0xd8, 0xd9, 0xda, 0xdb, 0xdc, 0xdd, 0xde, 0xdf,
+        0xe0, 0xe1, 0xe2, 0xe3, 0xe4, 0xe5, 0xe6, 0xe7,
+        0xe8, 0xe9, 0xea, 0xeb, 0xec, 0xed, 0xee, 0xef,
+        0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7,
+        0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff,
+};
+</pre>
+
+
+<h3>Conclusion</h3>
+
+<p class="first">Thanks to the excuse of that challenge we now have a generic facility to
+increment a number at point in different common bases, which is a nice
+building block for all kinds of <em>Emacs Keyboard Macros</em>. We also now have a
+function to duplicate the line at point, which is something I use very often
+myself.</p>
+
+<p>More importantly, we've been refreshing our memory on how to use some
+advanced replacement facilities wherein you can actually use inline <em>Emacs
+Lisp</em> code as a replacement pattern, and for the most interested readers here
+we have a good excuse to learn some more about <em>Emacs Lisp</em> programming.</p>
+
+<p>The main thing I want to say is that using <em>Emacs Keyboard Macros</em> is an
+interactive process: you don't have to pause your current activity to write
+some code in another language (here, that would be either <em>Vim Script</em> or
+<em>Emacs Lisp</em>) just to save a few minutes on a boring task.</p>
+
+<p>How effective your are at solving that challenge, for me, is not at all
+about measure how many keystrokes you ended up using, it's all about being
+able to get some precious help from your working tools <strong><em>without</em></strong> having to
+stop focusing on the main problem you are solving.</p>
+
+<p>I wouldn't ever get to write such <em>Emacs Lisp</em> code when doing that kind of
+editing once. I would only do that when I'm thinking I've just been doing a
+boring task by hand one time too many already. Like for example copying and
+pasting the <code>pg_backend_pid()</code> of the <a href="http://www.postgresql.org/">PostgreSQL</a> backend I'm working with at
+the <code>psql</code> prompt so that I can attach <code>gdb</code> to it. I'll get back to talking
+about <a href="https://github.com/dimitri/pgdevenv-el">pgdevenv-el</a> later!</p>
+
+<p>Hope you did enjoy that article, whose goal is to help you while you're
+journeying in <a href="http://blog.vivekhaldar.com/post/3996068979/the-levels-of-emacs-proficiency">The Levels Of Emacs Proficiency</a>.</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Sun, 11 Nov 2012 20:52:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2012/11/06-About-vimgolf.html</guid>
+</item>
+<item>
   <title>Editing SQL</title>
   <link>http://tapoueh.org/blog/2012/11/06-Interactive-SQL.html</link>
   <description><![CDATA[<p>It's hard to read my blog yet not know I'm using <a href="http://www.gnu.org/software/emacs/#Platforms">Emacs</a>. It really is a great
