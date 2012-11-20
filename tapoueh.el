@@ -59,7 +59,8 @@
 (defvar *tapoueh-base-url* nil)
 (defvar *tapoueh-css* nil)
 (defvar *tapoueh-style* nil)
-(defvar *tapoueh-articles* nil)
+(defvar *tapoueh-pages* nil)		; all of them
+(defvar *tapoueh-articles* nil)		; only those with Tags
 (defvar *tapoueh-sorted-articles* nil)
 (defvar *tapoueh-revsorted-articles* nil)
 
@@ -144,17 +145,9 @@ on filter.
 	  *tapoueh-path-to-root*
 	  "static/expert-postgresql.png\">"))
 
-;; (defun tapoueh-current-page-url ()
-;;   "Get the current page full URL"
-;;   (let* ((current (muse-current-file))
-;; 	 (cwd     (file-name-directory current))
-;; 	 (project (muse-project-of-file current))
-;; 	 (base    (muse-style-element :base-url (caddr project)))
-;; 	 (root    (muse-style-element :path (caddr project)))
-;; 	 (link    (concat (file-name-sans-extension
-;; 			   (file-relative-name *tapoueh-path* *tapoueh-root*))
-;; 			  ".html")))
-;;     (concat base link)))
+(defun tapoueh-current-page-url ()
+  "Get the current page full URL"
+  *tapoueh-current-link*)
 
 (defun tapoueh-extract-buffer-directive (directive)
   "Extracts DIRECTIVE content from current buffer."
@@ -230,7 +223,7 @@ tags index files"
     (loop for tag in tags
 	  do (tapoueh-add-article-to-tag *tapoueh-current-link* title date tag)))
 
-((defun tapoueh-add-tag-links ()
+(defun tapoueh-add-tag-links ()
   "Muse Style :before function, add a tags section to the article"
   (let ((tags  (tapoueh-extract-directive "tags"))
 	(title (tapoueh-extract-directive "title"))
@@ -292,11 +285,18 @@ tags index files"
 	  *tapoueh-style* style)
 
     ;; only refresh costly caches when necessary, be conservative about it
-    (unless (member path (mapcar 'car *tapoueh-articles*))
-      (message "tapoueh-reset-cache: CACHE RESET")
-      (let* ((articles (tapoueh-walk-articles *tapoueh-root*))
+    (unless (member path (mapcar 'car *tapoueh-pages*))
+      (message "tapoueh-reset-cache: CACHE RESET: %S" path)
+      (let* ((pages (tapoueh-walk-articles *tapoueh-root*))
+	     (articles			; articles are pages with tags
+	      (remove-if-not
+	       (lambda (article)
+		 (destructuring-bind (src link title date fdate tags) article
+		   tags))
+	       pages))
 	     (sorted   (sort articles #'tapoueh-article-date-less-p)))
-	(setq *tapoueh-articles* articles
+	(setq *tapoueh-pages* pages
+	      *tapoueh-articles* articles
 	      *tapoueh-sorted-articles* sorted
 	      *tapoueh-revsorted-articles* (reverse sorted))))))
 
@@ -611,17 +611,11 @@ An article is a list of SOURCE LINK TITLE DATE FORMATED-DATE TAGS"
 	    do (loop for (src link title date fdate tags) in articles
 			 for rel = (when link (tapoueh-relative-name link))
 			 when src
-			 do (tapoueh-insert-article-link-li
-			     ;; force the nesting at only one space
-			     src rel title date fdate tags " ")))
-      (insert "\n\n\n<literal></div></literal>")
-
-      ;; TODO: re-search-backward <div id="social">
-      ;; forward-line -1
-      ;; insert <div id="browse-articles">
-      ;; insert <div id="previous-article"> ...
-      ;; insert <div class="next-article"> ...
-	    )))
+			 do
+			 (tapoueh-insert-article-link-li
+			  ;; force the nesting at only one space
+			  src rel title date fdate tags " ")))
+      (insert "\n\n\n<literal></div></literal>"))))
 
 ;;;
 ;;; Breadcrumb support
@@ -824,10 +818,10 @@ file to be the relevant information."
 ;;
 ;; hook to publish all index and archives from current article to root
 ;;
-(defun tapoueh-reindex-file (file style)
+(defun tapoueh-reindex-file (file)
   "muse-publish-file, but message about it"
   (message "Reindexing %s" file)
-  (muse-publish-file file style nil 'force))
+  (muse-publish-file file *tapoueh-style* nil 'force))
 
 (defun tapoueh-reindex ()
   "when publishing a blog article, force publishing indexes and blog/archive.
@@ -850,13 +844,13 @@ You still need to publish the project itself (TAGs, SiteMap)."
 			(archives (expand-file-name "archives.muse" subdir)))
 		   (loop for file in (list index archives)
 			 when (file-exists-p file)
-			 do (tapoueh-reindex-file file style))
+			 do (tapoueh-reindex-file file))
 		   (setq path (concat path p "/")))))
 
       ;; don't forget top level files
       (loop for file in (list (expand-file-name "index.muse" *tapoueh-root*)
 			      (expand-file-name "contents.muse" *tapoueh-root*))
-	    do (tapoueh-reindex-file file style)))))
+	    do (tapoueh-reindex-file file)))))
 
 (add-hook 'muse-after-publish-hook 'tapoueh-reindex)
 
