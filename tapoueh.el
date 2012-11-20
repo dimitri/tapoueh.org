@@ -7,7 +7,7 @@
 ;; Tapoueh muse Style
 (muse-derive-style
  "tapoueh-html" "html"
- :before #'tapoueh-add-tag-links
+ :before #'tapoueh-prepare-article-processing
  :after #'tapoueh-set-coding-system
  :final #'tapoueh-add-item-to-rss
  :header "~/dev/tapoueh.org/static/header.html"
@@ -44,6 +44,24 @@
 			   ("rss/postgresqlfr.xml" . postgresqlfr)
 			   ("rss/tapoueh.xml"      . nil))
   "An alist of RSS filename and subscribed TAG, nil meaning all")
+
+;;;
+;;; Cache some data for the duration of the article processing
+;;;
+(defvar *tapoueh-project* nil)
+(defvar *tapoueh-project-name* nil)
+(defvar *tapoueh-current-file* nil)
+(defvar *tapoueh-current-link* nil)
+(defvar *tapoueh-current-relpath* nil)
+(defvar *tapoueh-path-to-root* nil)
+(defvar *tapoueh-project* nil)
+(defvar *tapoueh-root* nil)
+(defvar *tapoueh-base-url* nil)
+(defvar *tapoueh-css* nil)
+(defvar *tapoueh-style* nil)
+(defvar *tapoueh-articles* nil)
+(defvar *tapoueh-sorted-articles* nil)
+(defvar *tapoueh-revsorted-articles* nil)
 
 ;;;
 ;;; Some tools
@@ -85,61 +103,58 @@ on filter.
 ;;;
 ;;;  Tapoueh.org
 ;;;
-(defun tapoueh-path-to-root ()
+(defun tapoueh-path-to-root (current root)
   "Return as many \"../\" as necessary to get back to website root"
-  (let* ((current (muse-current-file))
-	 (cwd     (file-name-directory current))
-	 (project (muse-project-of-file current))
-	 (root    (muse-style-element :path (caddr project))))
-    (mapconcat (lambda (x) "../")
-	       (cdr (split-string (file-relative-name current root) "/")) "")))
+  (mapconcat (lambda (x) "../")
+	     (cdr (split-string (file-relative-name current root) "/")) ""))
 
 (defun tapoueh-style-sheet ()
   "Get the :style-sheet property and rework the link to the CSS"
-  (let* ((current muse-publishing-current-output-path)
-	 (cwd     (file-name-directory current))
-	 (project (muse-project-of-file current))
-	 (css     (muse-style-element :style-sheet (caddr project))))
-    (replace-regexp-in-string "static" (concat (tapoueh-path-to-root) "static") css)))
+  ;; (let* ((current muse-publishing-current-output-path)
+  ;; 	 (cwd     (file-name-directory current))
+  ;; 	 (project (muse-project-of-file current))
+  ;; 	 (css     (muse-style-element :style-sheet (caddr project))))
+    (replace-regexp-in-string
+     "static" (concat *tapoueh-path-to-root* "static") *tapoueh-css*))
 
 (defun tapoueh-rss-index-href ()
   "Get the relative link to the RSS feed"
-  (let* ((current muse-publishing-current-output-path)
-	 (cwd     (file-name-directory current))
-	 (project (muse-project-of-file current)))
-    (concat "href=\"" (tapoueh-path-to-root) "rss/tapoueh.xml" "\"")))
+  ;; (let* ((current muse-publishing-current-output-path)
+  ;; 	 (cwd     (file-name-directory current))
+  ;; 	 (project (muse-project-of-file current)))
+  (concat "href=\"" *tapoueh-path-to-root* "rss/tapoueh.xml" "\""))
 
 (defun tapoueh-contents ()
   "Output the link to the /contents.html page"
-  (concat (tapoueh-path-to-root) "contents.html"))
+  (concat *tapoueh-path-to-root* "contents.html"))
 
 (defun tapoueh-root-index ()
   "Output the link to the /contents.html page"
-  (concat (tapoueh-path-to-root) "index.html"))
+  (concat *tapoueh-path-to-root* "index.html"))
 
 (defun tapoueh-2ndquadrant-logo ()
   "Get the :style-sheet property and rework the link to the CSS"
   (concat "<img src=\""
-	  (tapoueh-path-to-root)
+	  *tapoueh-path-to-root*
 	  "static/2ndQuadrant-cross.png\">"))
 
 (defun tapoueh-expert-postgresql-logo ()
   "Get the :style-sheet property and rework the link to the CSS"
   (concat "<img src=\""
-	  (tapoueh-path-to-root)
+	  *tapoueh-path-to-root*
 	  "static/expert-postgresql.png\">"))
 
-(defun tapoueh-current-page-url ()
-  "Get the current page full URL"
-  (let* ((current (muse-current-file))
-	 (cwd     (file-name-directory current))
-	 (project (muse-project-of-file current))
-	 (base    (muse-style-element :base-url (caddr project)))
-	 (root    (muse-style-element :path (caddr project)))
-	 (link    (concat (file-name-sans-extension
-			   (file-relative-name current root))
-			  ".html")))
-    (concat base link)))
+;; (defun tapoueh-current-page-url ()
+;;   "Get the current page full URL"
+;;   (let* ((current (muse-current-file))
+;; 	 (cwd     (file-name-directory current))
+;; 	 (project (muse-project-of-file current))
+;; 	 (base    (muse-style-element :base-url (caddr project)))
+;; 	 (root    (muse-style-element :path (caddr project)))
+;; 	 (link    (concat (file-name-sans-extension
+;; 			   (file-relative-name *tapoueh-path* *tapoueh-root*))
+;; 			  ".html")))
+;;     (concat base link)))
 
 (defun tapoueh-extract-buffer-directive (directive)
   "Extracts DIRECTIVE content from current buffer."
@@ -188,7 +203,7 @@ tags index files"
 
 (defun tapoueh-add-article-to-tag (link title date tag)
   "Add an article entry (link) in the TAG file"
-  (let* ((tagfile (concat root "/tags/" (downcase tag) ".muse"))
+  (let* ((tagfile (concat *tapoueh-root* "/tags/" (downcase tag) ".muse"))
 	 (reftime (tapoueh-parse-date date)))
     (message "tapoueh-add-article-to-tag: %S" tagfile)
     (if (file-exists-p tagfile)
@@ -212,23 +227,17 @@ tags index files"
 
 (defun tapoueh-add-article-to-tags-list (title date tags)
   "For each root/tags/<tag>.muse file, add an entry to given article"
-  (let* ((current (muse-current-file))
-	 (project (muse-project-of-file current))
-	 (root    (muse-style-element :path (caddr project)))
-	 (link    (concat (file-name-sans-extension
-			   (file-relative-name current root))
-			  ".html")))
     (loop for tag in tags
-	  do (tapoueh-add-article-to-tag link title date tag))))
+	  do (tapoueh-add-article-to-tag *tapoueh-current-link* title date tag)))
 
-(defun tapoueh-add-tag-links ()
+((defun tapoueh-add-tag-links ()
   "Muse Style :before function, add a tags section to the article"
   (let ((tags  (tapoueh-extract-directive "tags"))
 	(title (tapoueh-extract-directive "title"))
 	(date  (tapoueh-format-date (tapoueh-extract-directive "date")))
-	(updir (tapoueh-path-to-root)))
-    (message "tapoueh-add-tag-links: %S" (muse-current-file))
+	(updir *tapoueh-path-to-root*))
     (when tags
+      (message "tapoueh-add-tag-links: %S" (muse-current-file))
       (save-excursion
 	(end-of-buffer)
 	(insert "\n\n* Tags\n\n")
@@ -236,6 +245,64 @@ tags index files"
 	      do (insert (format "[[%stags/%s.html][%s]] "
 				 updir (downcase tag) tag))))
       (tapoueh-add-article-to-tags-list title date tags))))
+
+;;;
+;;; Add Navigation
+;;;
+(defun tapoueh-add-navigation-links ()
+  "Muse Style :before function, add a Navigation section to the article"
+  ;; we only do that for "real" articles, those with tags
+  (let ((tags  (tapoueh-extract-directive "tags")))
+    (when tags
+      (message "tapoueh-add-navigation-links: %S" (muse-current-file))
+      (save-excursion
+	(end-of-buffer)
+	(tapoueh-insert-previous-next-articles)))))
+
+;;;
+;;; Before function:
+;;;   Prepare the cache
+;;;   Add Tags
+;;;   Add Navigation
+;;;
+(defun tapoueh-reset-cache ()
+  "Reset the cache variables for processing current Muse file"
+  (message "tapoueh-reset-cache: CACHE RESET")
+  (let* ((path     (muse-current-file))
+	 (project  (muse-project-of-file path))
+	 (pname    (car project))
+	 (root     (muse-style-element :path (caddr project)))
+	 (base-url (muse-style-element :base-url (caddr project)))
+	 (css      (muse-style-element :style-sheet (caddr project)))
+	 (style    (caddr project))
+	 (relpath  (file-relative-name path *tapoueh-root*))
+	 (link     (concat base-url
+			   (file-name-sans-extension relpath)
+			   ".html"))
+	 (articles (tapoueh-walk-articles root))
+	 (sorted   (sort articles #'tapoueh-article-date-less-p)))
+    ;; now sets the cache for current article processing
+    (setq *tapoueh-project* project
+	  *tapoueh-project-name* pname
+	  *tapoueh-current-file* path
+	  *tapoueh-current-link* link
+	  *tapoueh-current-relpath* relpath
+	  *tapoueh-project* project
+	  *tapoueh-root* root
+	  *tapoueh-path-to-root* (tapoueh-path-to-root path root)
+	  *tapoueh-base-url* base-url
+	  *tapoueh-css* css
+	  *tapoueh-style* style
+	  *tapoueh-articles* articles
+	  *tapoueh-sorted-articles* sorted
+	  *tapoueh-revsorted-articles* (reverse sorted))))
+
+(defun tapoueh-prepare-article-processing ()
+  "Muse Style :before function, reset the cache, add a tags
+   section to the article & add navigation in the Muse buffer"
+  (tapoueh-reset-cache)
+  (tapoueh-add-tag-links)
+  (tapoueh-add-navigation-links))
 
 ;;;
 ;;; Custom date parsing
@@ -353,15 +420,17 @@ Returns a list of (SOURCE LINK TITLE DATE FORMATED-DATE (TAG TAG))"
 ;;;
 ;;; INDEX Support
 ;;;
-(defun tapoueh-insert-article-link-li (source link title date fdate tags)
+(defun tapoueh-insert-article-link-li (source link title date fdate tags
+					      &optional nesting)
   "insert given article in a nested list"
   (let* ((isdir    (and (> (length link) 10)
 			(string= (substring link -10) "index.html")))
-	 (spaces   (apply
-		    'concat
-		    (split-string
-		     (replace-regexp-in-string "[^/]+" " " link) "/")))
-	 (nesting  (if isdir spaces (concat " " spaces))))
+	 (spaces   (unless nesting
+		     (apply
+		      'concat
+		      (split-string
+		       (replace-regexp-in-string "[^/]+" " " link) "/"))))
+	 (nesting  (or nesting (if isdir spaces (concat " " spaces)))))
     (if (and link (file-exists-p source))
 	(insert (format "%s- [[%s][%s]]" nesting link title))
       (insert (format "%s- %s" nesting title)))
@@ -371,7 +440,8 @@ Returns a list of (SOURCE LINK TITLE DATE FORMATED-DATE (TAG TAG))"
 
 (defun tapoueh-list-blog-articles (&optional subdirs-only no-index root)
   "Run through all subdirs from current page and list pages"
-  (loop for (src link title date fdate tags) in (tapoueh-walk-articles root subdirs-only)
+  (loop for (src link title date fdate tags)
+	in (tapoueh-walk-articles root subdirs-only)
 	unless (or (string-match ".git" src)
 		   (and no-index
 			(string= (file-name-nondirectory src) "index.muse")))
@@ -410,7 +480,7 @@ Returns a list of (SOURCE LINK TITLE DATE FORMATED-DATE (TAG TAG))"
 		 (concat
 		  "<literal><a href=%stags/%s.html "
 		  "style=\"font-size: %2.2f%%;\">%s</a></literal> ")
-		 (tapoueh-path-to-root)
+		 *tapoueh-path-to-root*
 		 (downcase tag)
 		 (* 250 (/ count max))
 		 tag))))))
@@ -437,6 +507,12 @@ Returns a list of (SOURCE LINK TITLE DATE FORMATED-DATE (TAG TAG))"
 ;;;
 ;;; TAIL Support (most recent articles, recent first)
 ;;;
+(defun tapoueh-relative-name (link)
+  "Return the project relative name for given LINK"
+  (let* ((cwd     (file-name-directory muse-publishing-current-output-path)))
+    (file-relative-name
+     (expand-file-name link *tapoueh-root*) cwd)))
+
 (defun tapoueh-article-date-less-p (a b)
   "Return t only when article a's date is time-less-p b's date.
 
@@ -448,25 +524,71 @@ An article is a list of SOURCE LINK TITLE DATE FORMATED-DATE TAGS"
 
 (defun tapoueh-latest-articles (&optional n root)
   "List the N most recent articles found in ROOT"
-  (let* ((articles (tapoueh-walk-articles root))
-	 (sorted   (nreverse (sort articles #'tapoueh-article-date-less-p))))
-    (loop for a in sorted
-	  when (nth 3 a)
-	  collect a into result
-	  until (eq (length result) (or n -1)) ; when n is nil, no limit
-	  finally return result)))
+  (loop for a in (if root
+		     ;; only take articles published under given ROOT
+		     (loop for a in *tapoueh-revsorted-articles*
+			   when (string-match (format "^%s" root) (car a))
+			   collect a)
+		   ;; no ROOT given, take them all
+		   *tapoueh-revsorted-articles*)
+	when (nth 3 a)
+	collect a into result
+	until (eq (length result) (or n -1)) ; when n is nil, no limit
+	finally return result))
 
 (defun tapoueh-insert-latest-articles (&optional n dir)
   "Insert the N most recent articles found in ROOT"
-  (let* ((project (muse-project-of-file (muse-current-file)))
-	 (root    (muse-style-element :path (caddr project)))
-	 (cwd     (file-name-directory muse-publishing-current-output-path))
-	 (d       (file-name-as-directory
-		   (if dir (expand-file-name dir root) root)))
-	 (updir   (unless (string= cwd d) (file-relative-name d cwd))))
-    (loop for (src link title date fdate tags) in (tapoueh-latest-articles n d)
-	  do (tapoueh-insert-article-link-li
-	      src (concat updir link) title date fdate tags))))
+  (let* ((d       (file-name-as-directory
+  		   (if dir (expand-file-name dir *tapoueh-root*)
+  		     *tapoueh-root*))))
+  (loop for (src link title date fdate tags) in (tapoueh-latest-articles n d)
+	for rel = (tapoueh-relative-name link)
+	do (tapoueh-insert-article-link-li src rel title date fdate tags))))
+
+(defun tapoueh-previous-next-articles ()
+  "List the N previous and N next articles around given article"
+  (loop for (a . rest) on *tapoueh-sorted-articles*
+	when (member *tapoueh-current-file*
+		     (list (car (first rest)) ; previous articles
+			   (car (second rest))
+			   (car (third rest))
+			   (car (fourth rest))))
+	collect a into previous
+	when (equal *tapoueh-current-file* (car a)) ; next articles follow now
+	do (return (cons previous
+			 (list (list (first rest)
+				     (second rest)
+				     (third rest)
+				     (fourth rest)))))))
+
+(defun tapoueh-insert-previous-next-articles ()
+  "Insert N articles before the current one, and N articles after, in ROOT"
+  (let* ((cwd     (file-name-directory muse-publishing-current-output-path)))
+    (destructuring-bind (previous next)
+	(tapoueh-previous-next-articles)
+      (insert "\n\n\n<literal><div id=\"previous\"></literal>\n\n"
+	      "** Previous Articles\n\n")
+      (loop for articles in (list previous next)
+	    when (eq articles next)
+	    do (insert
+		"\n\n\n<literal></div>"
+		"<div id=\"next\">"
+		"</literal>\n\n"
+		"** Next Articles\n\n")
+	    do (loop for (src link title date fdate tags) in articles
+			 for rel = (when link (tapoueh-relative-name link))
+			 when src
+			 do (tapoueh-insert-article-link-li
+			     ;; force the nesting at only one space
+			     src rel title date fdate tags " ")))
+      (insert "\n\n\n<literal></div></literal>")
+
+      ;; TODO: re-search-backward <div id="social">
+      ;; forward-line -1
+      ;; insert <div id="browse-articles">
+      ;; insert <div id="previous-article"> ...
+      ;; insert <div class="next-article"> ...
+	    )))
 
 ;;;
 ;;; Breadcrumb support
@@ -475,13 +597,10 @@ An article is a list of SOURCE LINK TITLE DATE FORMATED-DATE TAGS"
 ;;;
 (defun tapoueh-breadcrumb-to-current-page ()
   "Return a list of (name . link) from the index root page to current one"
-  (let* ((current (muse-current-file))
-	 (cwd     (file-name-directory current))
-	 (project (muse-project-of-file current))
-	 (root    (muse-style-element :path (caddr project)))
-	 (path    (tapoueh-path-to-root))
-	 (dirs    (split-string (file-relative-name current root) "/")))
+  (let* ((path    *tapoueh-path-to-root*)
+	 (dirs    (split-string *tapoueh-current-relpath* "/")))
     ;; ("blog" "2011" "07" "13-back-from-char11.muse")
+    (message "PHOQUE %S %S" *tapoueh-current-relpath* dirs)
     (append
      (list (cons "/dev/dim" (concat path "index.html")))
      (loop for p in (butlast dirs)
@@ -496,7 +615,7 @@ An article is a list of SOURCE LINK TITLE DATE FORMATED-DATE TAGS"
 (defun tapoueh-insert-breadcrumb-here ()
   "Called from the template file (header or Muse file)"
   ;; (when (tapoueh-extract-directive "author" (muse-current-file))
-    (tapoueh-insert-breadcrumb-hrefs))
+  (tapoueh-insert-breadcrumb-hrefs))
 
 ;;;
 ;;; RSS Support
@@ -574,18 +693,15 @@ in fact, from the current buffer."
   ":final function used to publish the current blog entry into
 the relevant RSS streams, if any. We consider the TAGs of the
 file to be the relevant information."
-  (let* ((project (muse-project-of-file source))
-	 (root    (muse-style-element :path (caddr project)))
-	 (url     (muse-style-element :base-url (caddr project)))
-	 (relname (file-relative-name output root))
-	 (link    (concat url relname))
+  (let* ((relname (file-relative-name output *tapoueh-root*))
+	 (link    (concat *tapoueh-base-url* relname))
 	 (tags    (mapcar (lambda (x) (intern (downcase x)))
 			  (tapoueh-extract-directive "tags" source))))
     (when tags
       (loop for (rss . tag) in tapoueh-rss-tags
 	    when (or (null tag) (member tag tags))
 	    do (tapoueh-add-article-to-rss
-		(concat root "/" rss) source output link)))))
+		(concat *tapoueh-root* "/" rss) source output link)))))
 
 ;;;
 ;;; Social Networks Integration
@@ -598,7 +714,7 @@ file to be the relevant information."
      "<ul>"
      ;; Google +1
      "<li><g:plusone size=\"tall\" href=\""
-     (tapoueh-current-page-url)
+     *tapoueh-current-link*
      "\"></g:plusone></li>\n"
      ;; Twitter this
      "<li><a href=\"http://twitter.com/share\" class=\"twitter-share-button\" data-count=\"vertical\">Tweet</a><script type=\"text/javascript\" src=\"http://platform.twitter.com/widgets.js\"></script></li>\n"
@@ -608,7 +724,7 @@ file to be the relevant information."
       ":" "%3A"
       (replace-regexp-in-string
        "/" "%2F"
-       (tapoueh-current-page-url)))
+       *tapoueh-current-link*))
      ";layout=box_count;show_faces=false\"\n"
      "   scrolling=\"no\" frameborder=\"0\" allowTransparency=\"true\"\n"
      "   style=\"height: 62px; width: 100%; border:none; overflow:hidden;\"></iframe></li>\n"
@@ -620,30 +736,30 @@ file to be the relevant information."
 ;;;
 (defun tapoueh-sitemap (project)
   "Create the sitemap.xml file"
-  (let ((root (muse-style-element :path (caddr project))))
-    (with-temp-file (format "%s/sitemap.xml" root)
-      (insert "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-	      "<urlset\n"
-	      "    xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"\n"
-	      "    xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
-	      "    xsi:schemaLocation=\"http://www.sitemaps.org/schemas/sitemap/0.9\n"
-	      "        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd\">\n")
-      (loop for (src link title date fdate tags) in (tapoueh-walk-articles root)
-	    unless (string-match ".git" src)
-	    do (progn
-		 (insert "<url>\n"
-			 (format "  <loc>http://tapoueh.org/%s</loc>\n" link)
-			 (format "  <lastmod>%s</lastmod>\n"
-				 (format-time-string "%Y%d%m-%R"
-						     (nth 4 (file-attributes src))))
-			 (format "  <changefreq>%s</changefreq>\n"
-				 (cond ((string-match (rx (or "tag" "rss")) link)
-					"always")
-				       ((string-match "index" link)
-					"always")
-				       (t "weekly")))
-			 "</url>\n")))
-      (insert "</urlset>\n"))))
+  (with-temp-file (format "%s/sitemap.xml" root)
+    (insert "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+	    "<urlset\n"
+	    "    xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"\n"
+	    "    xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
+	    "    xsi:schemaLocation=\"http://www.sitemaps.org/schemas/sitemap/0.9\n"
+	    "        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd\">\n")
+    ;; don't use per-article cache here, it's a per-project routine
+    (loop for (src link title date fdate tags) in (tapoueh-walk-articles root)
+	  unless (string-match ".git" src)
+	  do (progn
+	       (insert "<url>\n"
+		       (format "  <loc>http://tapoueh.org/%s</loc>\n" link)
+		       (format "  <lastmod>%s</lastmod>\n"
+			       (format-time-string "%Y%d%m-%R"
+						   (nth 4 (file-attributes src))))
+		       (format "  <changefreq>%s</changefreq>\n"
+			       (cond ((string-match (rx (or "tag" "rss")) link)
+				      "always")
+				     ((string-match "index" link)
+				      "always")
+				     (t "weekly")))
+		       "</url>\n")))
+    (insert "</urlset>\n")))
 
 (add-hook 'muse-after-project-publish-hook 'tapoueh-sitemap)
 
@@ -684,22 +800,16 @@ file to be the relevant information."
   "when publishing a blog article, force publishing indexes and blog/archive.
 
 You still need to publish the project itself (TAGs, SiteMap)."
-  (let* ((current (muse-current-file))
-	 (cwd     (file-name-directory current))
-	 (project (muse-project-of-file current))
-	 (pname   (car project))
-	 (tags    (tapoueh-extract-directive "tags" current))
-	 (style   (caddr project))
-	 (root    (muse-style-element :path style))
-	 (path    (tapoueh-path-to-root))
+  (let* ((tags    (tapoueh-extract-directive "tags" *tapoueh-current-file*))
+	 (path    *tapoueh-path-to-root*)
 	 ;; ("blog" "2011" "07" "13-back-from-char11.muse")
-	 (dirs    (split-string (file-relative-name current root) "/")))
+	 (dirs    (split-string *tapoueh-current-relpath* "/")))
     ;; only do the post processing for articles with TAGs
     ;; and avoid infinite recursion
-    (when (and (string= "tapoueh.org" pname)
+    (when (and (string= "tapoueh.org" *tapoueh-project-name*)
 	       tags
-	       (string= (file-name-extension current) "muse"))
-      (message "tapoueh-reindex: %s %s" current tags)
+	       (string= (file-name-extension *tapoueh-current-file*) "muse"))
+      (message "tapoueh-reindex: %s %s" *tapoueh-current-file* tags)
       (loop for p in (butlast dirs)
 	    do (progn
 		 (let* ((subdir   (expand-file-name p path))
@@ -711,8 +821,8 @@ You still need to publish the project itself (TAGs, SiteMap)."
 		   (setq path (concat path p "/")))))
 
       ;; don't forget top level files
-      (loop for file in (list (expand-file-name "index.muse" root)
-			      (expand-file-name "contents.muse" root))
+      (loop for file in (list (expand-file-name "index.muse" *tapoueh-root*)
+			      (expand-file-name "contents.muse" *tapoueh-root*))
 	    do (tapoueh-reindex-file file style)))))
 
 (add-hook 'muse-after-publish-hook 'tapoueh-reindex)
