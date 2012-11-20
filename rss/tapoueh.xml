@@ -7,6 +7,108 @@
     <language>en-us</language>
     <generator>Emacs Muse</generator>
 <item>
+  <title>CL Happy Numbers</title>
+  <link>http://tapoueh.org/blog/2012/11/20-CL-Happy-Numbers.html</link>
+  <description><![CDATA[<p>A while ago I stumbled upon <a href="http://tapoueh.org/blog/2010/08/30-happy-numbers.html">Happy Numbers</a> as explained in
+<a href="http://programmingpraxis.com/2010/07/23/happy-numbers/">programming praxis</a>, and offered an implementation of them in <code>SQL</code> and in
+<code>Emacs Lisp</code>. Yeah, I know. Why not, though?</p>
+
+<center>
+<p><img src="../../../images/happy-numbers.png" alt=""></p>
+</center>
+
+<p>Today I'm back on that topic and as I'm toying with <em>Common Lisp</em> I though it
+would be a good excuse to learn me some new tricks. As you can see from the
+earlier blog entry, last time I did attack the <em>digits</em> problem quite lightly.
+Let's try a better approach now.</p>
+
+<pre class="src">
+(<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">digits</span> (n)
+  <span style="color: #bc8f8f;">"return the list of the digits of N"</span>
+  (nreverse
+   (<span style="color: #7f007f;">loop</span> for x = n then r
+      for (r d) = (multiple-value-list (truncate x 10))
+      collect d
+      until (zerop r))))
+</pre>
+
+<p>As you can see I wanted to use that facility I like very much, the <code>for
+x = n then r</code> way to handle first loop iteration differently from the
+next ones. But I've been hinted on <code>#lisp</code> that there's a much better way to
+write same code:</p>
+
+<pre class="src">
+(<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">integer-digits</span> (integer)
+  <span style="color: #bc8f8f;">"stassats version"</span>
+  (nreverse
+   (<span style="color: #7f007f;">loop</span> with remainder
+      do (setf (values integer remainder) (truncate integer 10))
+      collect remainder
+      until (zerop integer))))
+</pre>
+
+<p>That code runs about twice as fast as the previous one and is easier to
+reason about. It's using <code>setf</code> and the form <a href="http://www.lispworks.com/documentation/lw51/CLHS/Body/f_values.htm">setf values</a>, something nice to
+discover as it seems to be quite powerful. Let's see how to use it, even if
+it's really simple:</p>
+
+<pre class="src">
+CL-USER&gt; (integer-digits 12304501)
+(1 2 3 0 4 5 0 1)
+</pre>
+
+<p>Let's move on to solving the <em>Happy Numbers</em> problem though:</p>
+
+<pre class="src">
+(<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">sum-of-squares-of-digits</span> (integer)
+  (<span style="color: #7f007f;">loop</span> with remainder
+     do (setf (values integer remainder) (truncate integer 10))
+     sum (* remainder remainder)
+     until (zerop integer)))
+
+(<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">happy?</span> (n <span style="color: #228b22;">&amp;optional</span> seen)
+  <span style="color: #bc8f8f;">"return true when n is a happy number"</span>
+  (<span style="color: #7f007f;">let*</span> ((happiness (sum-of-squares-of-digits n)))
+    (<span style="color: #7f007f;">cond</span> ((eq 1 happiness)      t)
+          ((memq happiness seen) nil)
+          (t
+           (happy? happiness (push happiness seen))))))
+
+(<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">find-happy-numbers</span> (limit)
+  <span style="color: #bc8f8f;">"find all happy numbers from 1 to limit"</span>
+  (<span style="color: #7f007f;">loop</span> for n from 1 to limit when (happy? n) collect n))
+</pre>
+
+<p>And here's how it goes:</p>
+
+<pre class="src">
+CL-USER&gt; (find-happy-numbers 100)
+(1 7 10 13 19 23 28 31 32 44 49 68 70 79 82 86 91 94 97 100)
+
+CL-USER&gt; (time (length (find-happy-numbers 1000000)))
+(LENGTH (FIND-HAPPY-NUMBERS 1000000))
+took 1,621,413 microseconds (1.621413 seconds) to run.
+       116,474 microseconds (0.116474 seconds, 7.18%) of which was spent in GC.
+During that period, and with 4 available CPU cores,
+     1,431,332 microseconds (1.431332 seconds) were spent in user mode
+       145,941 microseconds (0.145941 seconds) were spent in system mode
+ 185,438,208 bytes of memory allocated.
+ 1 minor page faults, 0 major page faults, 0 swaps.
+143071
+</pre>
+
+<p>Of course that code is much faster than the one I wrote before both in <code>SQL</code>
+and <em>Emacs Lisp</em>, the reason being that instead of writing the number into a
+<em>string</em> with <code>(format t &quot;~d&quot; number)</code> then <a href="http://www.lispworks.com/documentation/HyperSpec/Body/f_subseq.htm">subseq</a> to get them one after the
+other, we're now using <a href="http://www.lispworks.com/documentation/HyperSpec/Body/f_floorc.htm">truncate</a>.</p>
+
+<p>Happy hacking!</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Tue, 20 Nov 2012 18:20:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2012/11/20-CL-Happy-Numbers.html</guid>
+</item>
+<item>
   <title>About Vimgolf</title>
   <link>http://tapoueh.org/blog/2012/11/06-About-vimgolf.html</link>
   <description><![CDATA[<p>Following some <em>tweet</em> I found myself desultory watching an episode of the
