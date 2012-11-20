@@ -267,7 +267,6 @@ tags index files"
 ;;;
 (defun tapoueh-reset-cache ()
   "Reset the cache variables for processing current Muse file"
-  (message "tapoueh-reset-cache: CACHE RESET")
   (let* ((path     (muse-current-file))
 	 (project  (muse-project-of-file path))
 	 (pname    (car project))
@@ -278,9 +277,7 @@ tags index files"
 	 (relpath  (file-relative-name path *tapoueh-root*))
 	 (link     (concat base-url
 			   (file-name-sans-extension relpath)
-			   ".html"))
-	 (articles (tapoueh-walk-articles root))
-	 (sorted   (sort articles #'tapoueh-article-date-less-p)))
+			   ".html")))
     ;; now sets the cache for current article processing
     (setq *tapoueh-project* project
 	  *tapoueh-project-name* pname
@@ -292,10 +289,16 @@ tags index files"
 	  *tapoueh-path-to-root* (tapoueh-path-to-root path root)
 	  *tapoueh-base-url* base-url
 	  *tapoueh-css* css
-	  *tapoueh-style* style
-	  *tapoueh-articles* articles
-	  *tapoueh-sorted-articles* sorted
-	  *tapoueh-revsorted-articles* (reverse sorted))))
+	  *tapoueh-style* style)
+
+    ;; only refresh costly caches when necessary, be conservative about it
+    (unless (member path (mapcar 'car *tapoueh-articles*))
+      (message "tapoueh-reset-cache: CACHE RESET")
+      (let* ((articles (tapoueh-walk-articles *tapoueh-root*))
+	     (sorted   (sort articles #'tapoueh-article-date-less-p)))
+	(setq *tapoueh-articles* articles
+	      *tapoueh-sorted-articles* sorted
+	      *tapoueh-revsorted-articles* (reverse sorted))))))
 
 (defun tapoueh-prepare-article-processing ()
   "Muse Style :before function, reset the cache, add a tags
@@ -538,12 +541,42 @@ An article is a list of SOURCE LINK TITLE DATE FORMATED-DATE TAGS"
 
 (defun tapoueh-insert-latest-articles (&optional n dir)
   "Insert the N most recent articles found in ROOT"
-  (let* ((d       (file-name-as-directory
-  		   (if dir (expand-file-name dir *tapoueh-root*)
-  		     *tapoueh-root*))))
+  (let* ((d (file-name-as-directory
+	     (if dir (expand-file-name dir *tapoueh-root*)
+	       *tapoueh-root*))))
   (loop for (src link title date fdate tags) in (tapoueh-latest-articles n d)
 	for rel = (tapoueh-relative-name link)
 	do (tapoueh-insert-article-link-li src rel title date fdate tags))))
+
+;;;
+;;; Previous and Next article, Articles
+;;;
+;;;  <lisp> (tapoueh-insert-previous-article)</lisp>
+;;;
+(defun tapoueh-insert-previous-article ()
+  "Insert a link to the previous article, when relevant"
+  (let ((tags  (tapoueh-extract-directive "tags" *tapoueh-current-file*)))
+    (when tags
+      (destructuring-bind (&optional src link title date fdate tags)
+	  (loop for (a b . rest) on *tapoueh-sorted-articles*
+		when (equal *tapoueh-current-file* (car b))
+		return a)
+	(when link
+	  (let ((rel (tapoueh-relative-name link)))
+	    (insert
+	     (format "<a class=previous href=%s>« %s</a>" rel title))))))))
+
+(defun tapoueh-insert-next-article ()
+  "Insert a link to the previous article, when relevant"
+  (let ((tags  (tapoueh-extract-directive "tags" *tapoueh-current-file*)))
+    (when tags
+      (destructuring-bind (&optional src link title date fdate tags)
+	  (loop for (a b . rest) on *tapoueh-sorted-articles*
+		when (equal *tapoueh-current-file* (car a))
+		return b)
+	(when link
+	  (let ((rel (tapoueh-relative-name link)))
+	    (insert (format "<a class=next href=%s>%s »</a>" rel title))))))))
 
 (defun tapoueh-previous-next-articles ()
   "List the N previous and N next articles around given article"
@@ -600,7 +633,6 @@ An article is a list of SOURCE LINK TITLE DATE FORMATED-DATE TAGS"
   (let* ((path    *tapoueh-path-to-root*)
 	 (dirs    (split-string *tapoueh-current-relpath* "/")))
     ;; ("blog" "2011" "07" "13-back-from-char11.muse")
-    (message "PHOQUE %S %S" *tapoueh-current-relpath* dirs)
     (append
      (list (cons "/dev/dim" (concat path "index.html")))
      (loop for p in (butlast dirs)
@@ -736,30 +768,31 @@ file to be the relevant information."
 ;;;
 (defun tapoueh-sitemap (project)
   "Create the sitemap.xml file"
-  (with-temp-file (format "%s/sitemap.xml" root)
-    (insert "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-	    "<urlset\n"
-	    "    xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"\n"
-	    "    xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
-	    "    xsi:schemaLocation=\"http://www.sitemaps.org/schemas/sitemap/0.9\n"
-	    "        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd\">\n")
-    ;; don't use per-article cache here, it's a per-project routine
-    (loop for (src link title date fdate tags) in (tapoueh-walk-articles root)
-	  unless (string-match ".git" src)
-	  do (progn
-	       (insert "<url>\n"
-		       (format "  <loc>http://tapoueh.org/%s</loc>\n" link)
-		       (format "  <lastmod>%s</lastmod>\n"
-			       (format-time-string "%Y%d%m-%R"
-						   (nth 4 (file-attributes src))))
-		       (format "  <changefreq>%s</changefreq>\n"
-			       (cond ((string-match (rx (or "tag" "rss")) link)
-				      "always")
-				     ((string-match "index" link)
-				      "always")
-				     (t "weekly")))
-		       "</url>\n")))
-    (insert "</urlset>\n")))
+  (let ((root (muse-style-element :path (caddr project))))
+    (with-temp-file (format "%s/sitemap.xml" root)
+      (insert "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+	      "<urlset\n"
+	      "    xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"\n"
+	      "    xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
+	      "    xsi:schemaLocation=\"http://www.sitemaps.org/schemas/sitemap/0.9\n"
+	      "        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd\">\n")
+      ;; don't use per-article cache here, it's a per-project routine
+      (loop for (src link title date fdate tags) in (tapoueh-walk-articles root)
+	    unless (string-match ".git" src)
+	    do (progn
+		 (insert "<url>\n"
+			 (format "  <loc>http://tapoueh.org/%s</loc>\n" link)
+			 (format "  <lastmod>%s</lastmod>\n"
+				 (format-time-string "%Y%d%m-%R"
+						     (nth 4 (file-attributes src))))
+			 (format "  <changefreq>%s</changefreq>\n"
+				 (cond ((string-match (rx (or "tag" "rss")) link)
+					"always")
+				       ((string-match "index" link)
+					"always")
+				       (t "weekly")))
+			 "</url>\n")))
+      (insert "</urlset>\n"))))
 
 (add-hook 'muse-after-project-publish-hook 'tapoueh-sitemap)
 
