@@ -597,7 +597,7 @@ An article is a list of SOURCE LINK TITLE DATE FORMATED-DATE TAGS"
 (defun tapoueh-insert-previous-next-articles ()
   "Insert N articles before the current one, and N articles after, in ROOT"
   (let* ((cwd     (file-name-directory muse-publishing-current-output-path)))
-    (destructuring-bind (previous next)
+    (destructuring-bind (&optional previous next)
 	(tapoueh-previous-next-articles)
       (insert "\n\n\n<literal><div id=\"previous\"></literal>\n\n"
 	      "** Previous Articles\n\n")
@@ -814,6 +814,17 @@ file to be the relevant information."
 		    "\n"))))))
 
 (add-hook 'muse-mode-hook 'tapoueh-insert-muse-headers)
+
+(defun tapoueh-previous-next ()
+  "Force publishing of previous/next pages"
+  (interactive)
+  (tapoueh-reset-cache)
+  (let ((pages (apply 'append (tapoueh-previous-next-articles))))
+    (loop for (src link title date fdate tags) in pages
+	  when src
+	  do (muse-publish-file src *tapoueh-style* nil 'force))))
+
+(define-key muse-mode-map (kbd "C-c C-n") 'tapoueh-previous-next)
 
 ;;
 ;; hook to publish all index and archives from current article to root
