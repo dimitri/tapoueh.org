@@ -221,7 +221,7 @@ tags index files"
 (defun tapoueh-add-article-to-tags-list (title date tags)
   "For each root/tags/<tag>.muse file, add an entry to given article"
     (loop for tag in tags
-	  do (tapoueh-add-article-to-tag *tapoueh-current-link* title date tag)))
+	  do (tapoueh-add-article-to-tag *tapoueh-current-relpath* title date tag)))
 
 (defun tapoueh-add-tag-links ()
   "Muse Style :before function, add a tags section to the article"

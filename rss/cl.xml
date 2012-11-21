@@ -103,6 +103,55 @@ and <em>Emacs Lisp</em>, the reason being that instead of writing the number int
 other, we're now using <a href="http://www.lispworks.com/documentation/HyperSpec/Body/f_floorc.htm">truncate</a>.</p>
 
 <p>Happy hacking!</p>
+
+<h3>Update</h3>
+
+<p class="first">It turns out that to solve math related problem, some maths hindsight is
+helping. Who would have believed that? So if you want to easily get some
+more performances out of the previous code, just try that solution:</p>
+
+<pre class="src">
+(<span style="color: #7f007f;">defvar</span> <span style="color: #b8860b;">*depressed-squares*</span> '(0 4 16 20 37 42 58 89 145)
+  <span style="color: #bc8f8f;">"see http://oeis.org/A039943"</span>)
+
+(<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">undepressed?</span> (n)
+  <span style="color: #bc8f8f;">"same as happy?, using a static list of unhappy sums"</span>
+  (<span style="color: #7f007f;">cond</span> ((eq 1 n) t)
+        ((member n *depressed-squares*) nil)
+        (t
+         (<span style="color: #7f007f;">let</span> ((h (sum-of-squares-of-digits n)))
+           (undepressed? h)))))
+
+(<span style="color: #7f007f;">defun</span> <span style="color: #0000ff;">find-undepressed-numbers</span> (limit)
+  <span style="color: #bc8f8f;">"find all happy numbers from 1 to limit"</span>
+  (<span style="color: #7f007f;">loop</span> for n from 1 to limit when (undepressed? n) collect n))
+</pre>
+
+<p>Time to compare:</p>
+
+<pre class="src">
+CL-USER&gt; (time (length (find-happy-numbers 1000000)))
+(LENGTH (FIND-HAPPY-NUMBERS 1000000))
+took 1,938,048 microseconds (1.938048 seconds) to run.
+       290,902 microseconds (0.290902 seconds, 15.01%) of which was spent in GC.
+During that period, and with 4 available CPU cores,
+     1,778,021 microseconds (1.778021 seconds) were spent in user mode
+       140,862 microseconds (0.140862 seconds) were spent in system mode
+ 185,438,208 bytes of memory allocated.
+ 3,320 minor page faults, 0 major page faults, 0 swaps.
+143071
+
+CL-USER&gt; (time (length (find-undepressed-numbers 1000000)))
+(LENGTH (FIND-UNDEPRESSED-NUMBERS 1000000))
+took 1,036,847 microseconds (1.036847 seconds) to run.
+         5,372 microseconds (0.005372 seconds, 0.52%) of which was spent in GC.
+During that period, and with 4 available CPU cores,
+     1,018,708 microseconds (1.018708 seconds) were spent in user mode
+        16,982 microseconds (0.016982 seconds) were spent in system mode
+ 2,289,152 bytes of memory allocated.
+143071
+CL-USER&gt;
+</pre>
 ]]></description>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Tue, 20 Nov 2012 18:20:00 +0100</pubDate>
