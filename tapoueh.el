@@ -53,6 +53,7 @@
 (defvar *tapoueh-current-file* nil)
 (defvar *tapoueh-current-link* nil)
 (defvar *tapoueh-current-relpath* nil)
+(defvar *tapoueh-current-rellink* nil)
 (defvar *tapoueh-path-to-root* nil)
 (defvar *tapoueh-project* nil)
 (defvar *tapoueh-root* nil)
@@ -220,8 +221,8 @@ tags index files"
 
 (defun tapoueh-add-article-to-tags-list (title date tags)
   "For each root/tags/<tag>.muse file, add an entry to given article"
-    (loop for tag in tags
-	  do (tapoueh-add-article-to-tag *tapoueh-current-relpath* title date tag)))
+  (loop for tag in tags
+	do (tapoueh-add-article-to-tag *tapoueh-current-rellink* title date tag)))
 
 (defun tapoueh-add-tag-links ()
   "Muse Style :before function, add a tags section to the article"
@@ -268,15 +269,15 @@ tags index files"
 	 (css      (muse-style-element :style-sheet (caddr project)))
 	 (style    (caddr project))
 	 (relpath  (file-relative-name path *tapoueh-root*))
-	 (link     (concat base-url
-			   (file-name-sans-extension relpath)
-			   ".html")))
+	 (rellink  (concat (file-name-sans-extension relpath) ".html"))
+	 (link     (concat base-url rellink)))
     ;; now sets the cache for current article processing
     (setq *tapoueh-project* project
 	  *tapoueh-project-name* pname
 	  *tapoueh-current-file* path
 	  *tapoueh-current-link* link
 	  *tapoueh-current-relpath* relpath
+	  *tapoueh-current-rellink* rellink
 	  *tapoueh-project* project
 	  *tapoueh-root* root
 	  *tapoueh-path-to-root* (tapoueh-path-to-root path root)
