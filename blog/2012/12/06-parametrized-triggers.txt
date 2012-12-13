@@ -1,0 +1,130 @@
+#author Dimitri Fontaine
+#title  Trigger Parameters
+#date   20121206-11:10
+#tags   PostgreSQL Triggers hstore
+
+We have a not too active [[http://archives.postgresql.org/pgsql-fr-generale/2012-12/index.php][postgresql-fr-generale]] mailing list where some
+interesting questions are asked by our subscribers. This article comes from
+such a question about how to deal with trigger parameters, which are nice to
+have, but static.
+
+	[[../../../images/trigger-wheels.jpg]]
+
+The exact problem to solve here is how to code a *dynamic trigger* where the
+trigger's function code doesn't have to hard code the field names it will
+process. Basically, [[http://www.postgresql.org/docs/9.2/static/plpgsql-overview.html][PLpgSQL]] is a static language and wants to know all about
+the function data types in use before it *compiles* it, so there's no easy way
+to do that.
+
+That said, we now have [[http://www.postgresql.org/docs/9.2/static/hstore.html][hstore]] and it's empowering us a lot here.
+
+** The exemple
+
+Let's start simple, with a table having a =d_start= and a =d_end= column where
+to store, as you might have already guessed, a start timestamp (with
+timezone) and an ending timezone. The goal will be to have a parametrized
+trigger able to maintain a =duration= for us automatically, something we
+should be able to reuse on other tables.
+
+<src lang="sql">
+create table foo (
+  id serial primary key,
+  d_start timestamptz default now(),
+  d_end timestamptz,
+  duration interval
+);
+
+insert into foo(d_start, d_end)
+     select now() - 10 * random() * interval '1 min',
+            now() + 10 * random() * interval '1 min'
+       from generate_series(1, 10);
+</src>
+
+So now I have a table with 10 lines containing random timestamps, but none
+of them of course has the =duration= field set. Let's see about that now.
+
+** Playing with hstore
+
+The *hstore* extension is full of goodies, we will only have to discover a
+handful of them now.
+
+First thing to do is make =hstore= available in our test database:
+
+<src>
+dim=# create extension hstore;
+CREATE EXTENSION
+</src>
+
+And now play with *hstore* in our table.
+
+<src>
+dim=# select hstore(foo) from foo limit 1;
+
+ "id"=>"1",
+ "d_end"=>"2012-12-06 11:34:53.129109+01",
+ "d_start"=>"2012-12-06 11:16:04.869424+01",
+ "duration"=>NULL
+(1 row)
+</src>
+
+I edited the result for it to be easier to read, splitting it on more than
+one line, so if you try that at home you will have a different result.
+
+What's happening in that first example is that we are transforming a *row
+type* into a value of type *hstore*. A *row type* is the result of =select foo
+from foo;=. Each PostgreSQL relation defines a type of the same name, and you
+can use it as a *composite type* if you want to.
+
+Now, hstore also provides the <code>#=</code> operator which will replace a
+given field in a row, look at that:
+
+<src>
+dim=# select foo #= hstore('duration', '10 mins') from foo limit 1;
+                                   ?column?                                   
+------------------------------------------------------------------------------
+ (1,"2012-12-06 11:16:04.869424+01","2012-12-06 11:34:53.129109+01",00:10:00)
+(1 row)
+
+dim=# select (foo #= hstore('duration', '10 mins')).* from foo limit 1;
+select (foo #= hstore('duration', '10 mins')).* from foo limit 1;
+ id |            d_start            |             d_end             | duration 
+----+-------------------------------+-------------------------------+----------
+  1 | 2012-12-06 11:16:04.869424+01 | 2012-12-06 11:34:53.129109+01 | 00:10:00
+(1 row)
+</src>
+
+In the first case we just replaced the =duration= field with the value =10
+mins=, and to have a better grasp at what just happened, we then use the
+=(...).*= notation to expand the row type into its full definition.
+
+We should be ready for the next step now...
+
+** The generic trigger, using hstore
+
+
+Now let's code the trigger:
+
+<src lang="sql">
+create or replace function tg_duration()
+ -- (
+ --  start_name    text,
+ --  end_name      text,
+ --  duration_name text
+ -- )
+ returns trigger
+ language plpgsql
+as $$
+declare
+   hash hstore := hstore(NEW);
+   duration interval;
+begin
+   duration :=  (hash -> TG_ARGV[1])::timestamptz
+              - (hash -> TG_ARGV[0])::timestamptz;
+
+   NEW := NEW #= hstore(TG_ARGV[2], duration);
+end;
+$$;
+</src>
+
+** Conclusion
+
