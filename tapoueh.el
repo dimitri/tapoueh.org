@@ -213,14 +213,15 @@ tags index files"
 	    (tapoueh-insert-article-link link title date)
 	    (save-buffer)))
       ;; new tagfile
-      (with-temp-buffer
+      (with-temp-file tagfile
 	(insert (format "#title Articles Tagged %s\n\n" tag)
 		(format "* Articles Tagged %s\n\n" tag))
-	(tapoueh-insert-article-link link title date)
-	(write-file tagfile)))))
+	(tapoueh-insert-article-link link title date)))))
 
 (defun tapoueh-add-article-to-tags-list (title date tags)
   "For each root/tags/<tag>.muse file, add an entry to given article"
+  (message "tapoueh-add-article-to-tag-list: %s" title)
+  (message "tapoueh-add-article-to-tag-list: %s" *tapoueh-current-rellink*)
   (loop for tag in tags
 	do (tapoueh-add-article-to-tag *tapoueh-current-rellink* title date tag)))
 
@@ -889,6 +890,17 @@ the tag file and the rss file if any"
 		 (with-current-buffer (find-file-noselect flink)
 		   (tapoueh-add-item-to-rss src flink nil)))
 	    collect src))))
+
+(defun tapoueh-retag-all-articles ()
+  "Recompute tag files for all articles"
+  ;; reset the cache once so that we have *tapoueh-revsorted-articles*
+  (with-current-buffer (find-file-noselect "~/dev/tapoueh.org/index.muse")
+    (tapoueh-reset-cache))
+  (loop for (src link title date fdate tags) in *tapoueh-revsorted-articles*
+	do (with-current-buffer (find-file-noselect src)
+	     ;; reset the cache so that we have proper per-article bindings
+	     (tapoueh-reset-cache)
+	     (tapoueh-add-article-to-tags-list title date tags))))
 
 ;;;
 ;;; C-c C-r to rsync the static website to the hosting server
