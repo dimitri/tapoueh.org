@@ -7,6 +7,318 @@
     <language>en-us</language>
     <generator>Emacs Muse</generator>
 <item>
+  <title>Extensions Templates</title>
+  <link>http://tapoueh.org/blog/2013/01/08-Extensions-Templates.html</link>
+  <description><![CDATA[<p>In a recent article titled <a href="../../2012/12/13-Inline-Extensions.html">Inline Extensions</a> we detailed the problem of how
+to distribute an extension's <em>package</em> to a remote server without having
+access to its file system at all. The solution to that problem is non
+trivial, let's say. But thanks to the awesome <a href="http://www.postgresql.org/community/">PostgreSQL Community</a> we finaly
+have some practical ideas on how to address the problem as discussed on
+<a href="http://archives.postgresql.org/pgsql-hackers/">pgsql-hackers</a>, our development mailing list.</p>
+
+<center>
+<p><img src="../../../images/community.jpg" alt="">
+<em>PostgreSQL is first an Awesome Community</em></p>
+</center>
+
+<p>The solution we talked about is to use <em>templates</em>, and so I've been working
+on a patch to bring <em>templates for extensions</em> to PostgreSQL. As we're talking
+about 3 new system catalogs, that's a big patch in term of lines of code. In
+term of features though, it's quite an easy one.</p>
+
+<p>Here's how it goes. Let's say you want to prepare the system to be able to
+<code>CREATE EXTENSION pair;</code> without having to install it as an <em>OS package</em> for
+which you would need to get <code>root</code> access on the server where your PostgreSQL
+instance is running, which is not always easy, and sometimes not a good
+idea.</p>
+
+<h3>Installing an extension template</h3>
+
+<p class="first">With the <a href="http://www.postgresql.org/message-id/m2wqvoha0p.fsf%402ndQuadrant.fr">template patch</a> I just sent on the lists, what you can do is prepare
+a template with your extension's script and properties, then use it to
+install the extensions.</p>
+
+<pre class="src">
+<span style="color: #7f007f;">create</span> <span style="color: #da70d6;">template</span>
+   <span style="color: #7f007f;">for</span> extension pair <span style="color: #7f007f;">default</span> <span style="color: #da70d6;">version</span> <span style="color: #bc8f8f;">'1.0'</span>
+  <span style="color: #7f007f;">with</span> (<span style="color: #da70d6;">nosuperuser</span>, norelocatable, <span style="color: #da70d6;">schema</span> <span style="color: #da70d6;">public</span>)
+<span style="color: #7f007f;">as</span> $$
+  <span style="color: #7f007f;">CREATE</span> <span style="color: #da70d6;">TYPE</span> <span style="color: #0000ff;">pair</span> <span style="color: #7f007f;">AS</span> ( <span style="color: #da70d6;">k</span> <span style="color: #228b22;">text</span>, v <span style="color: #228b22;">text</span> );
+
+  <span style="color: #7f007f;">CREATE</span> <span style="color: #7f007f;">OR</span> <span style="color: #da70d6;">REPLACE</span> <span style="color: #da70d6;">FUNCTION</span> <span style="color: #0000ff;">pair</span>(anyelement, <span style="color: #228b22;">text</span>)
+  <span style="color: #da70d6;">RETURNS</span> pair <span style="color: #da70d6;">LANGUAGE</span> <span style="color: #da70d6;">SQL</span> <span style="color: #7f007f;">AS</span> <span style="color: #bc8f8f;">'SELECT ROW($1, $2)::pair'</span>;
+
+  <span style="color: #7f007f;">CREATE</span> <span style="color: #7f007f;">OR</span> <span style="color: #da70d6;">REPLACE</span> <span style="color: #da70d6;">FUNCTION</span> <span style="color: #0000ff;">pair</span>(<span style="color: #228b22;">text</span>, anyelement)
+  <span style="color: #da70d6;">RETURNS</span> pair <span style="color: #da70d6;">LANGUAGE</span> <span style="color: #da70d6;">SQL</span> <span style="color: #7f007f;">AS</span> <span style="color: #bc8f8f;">'SELECT ROW($1, $2)::pair'</span>;
+
+  <span style="color: #7f007f;">CREATE</span> <span style="color: #7f007f;">OR</span> <span style="color: #da70d6;">REPLACE</span> <span style="color: #da70d6;">FUNCTION</span> <span style="color: #0000ff;">pair</span>(anyelement, anyelement)
+  <span style="color: #da70d6;">RETURNS</span> pair <span style="color: #da70d6;">LANGUAGE</span> <span style="color: #da70d6;">SQL</span> <span style="color: #7f007f;">AS</span> <span style="color: #bc8f8f;">'SELECT ROW($1, $2)::pair'</span>;
+
+  <span style="color: #7f007f;">CREATE</span> <span style="color: #7f007f;">OR</span> <span style="color: #da70d6;">REPLACE</span> <span style="color: #da70d6;">FUNCTION</span> <span style="color: #0000ff;">pair</span>(<span style="color: #228b22;">text</span>, <span style="color: #228b22;">text</span>)
+  <span style="color: #da70d6;">RETURNS</span> pair <span style="color: #da70d6;">LANGUAGE</span> <span style="color: #da70d6;">SQL</span> <span style="color: #7f007f;">AS</span> <span style="color: #bc8f8f;">'SELECT ROW($1, $2)::pair;'</span>;
+$$;
+</pre>
+
+
+<h3>Installing an extension from a template</h3>
+
+<p class="first">With the template installed in the catalogs, now you can go and install your
+extension:</p>
+
+<pre class="src">
+foo&gt; <span style="color: #7f007f;">create</span> extension pair;
+<span style="color: #7f007f;">CREATE</span> EXTENSION
+
+foo&gt; \dx pair
+     List <span style="color: #da70d6;">of</span> installed extensions
+ <span style="color: #da70d6;">Name</span> | <span style="color: #da70d6;">Version</span> | <span style="color: #da70d6;">Schema</span> | Description
+<span style="color: #b22222;">------+---------+--------+-------------
+</span> pair | 1.0     | <span style="color: #da70d6;">public</span> |
+(1 <span style="color: #da70d6;">row</span>)
+
+foo&gt; \dx+ pair
+     Objects <span style="color: #7f007f;">in</span> extension "pair"
+          <span style="color: #da70d6;">Object</span> Description
+<span style="color: #b22222;">--------------------------------------
+</span> <span style="color: #da70d6;">function</span> pair(anyelement,anyelement)
+ <span style="color: #da70d6;">function</span> pair(anyelement,<span style="color: #228b22;">text</span>)
+ <span style="color: #da70d6;">function</span> pair(<span style="color: #228b22;">text</span>,anyelement)
+ <span style="color: #da70d6;">function</span> pair(<span style="color: #228b22;">text</span>,<span style="color: #228b22;">text</span>)
+ <span style="color: #da70d6;">type</span> pair
+(5 <span style="color: #da70d6;">rows</span>)
+</pre>
+
+<p>The extension installation is now happening from the catalog templates
+rather than the file system, which means you didn't need to be <code>root</code> on the
+system where the server is running. Also note that this example above did
+happen when connected as the <em>database owner</em>, a user who is not the
+<em>superuser</em>. Requiring less privileges is always good news, right?</p>
+
+
+<h3>Managing upgrade scripts and extension update</h3>
+
+<p class="first">Now that the extension is installed, you might want to update it with some
+new awesome features. Let's have a look at that.</p>
+
+<center>
+<p><img src="../../../images/extension-update.png" alt=""></p>
+</center>
+
+<center>
+<p><em>Upload your Extension Update Scripts</em></p>
+</center>
+
+<p>Rather than make a new version of the extension package with the new files
+in there, then asking the operations team to make the new package available
+on the internal repositories then install them on the servers, you could now
+prepare and <em>QA</em> the new setup that way:</p>
+
+<pre class="src">
+<span style="color: #7f007f;">create</span> <span style="color: #da70d6;">template</span> <span style="color: #7f007f;">for</span> extension pair <span style="color: #7f007f;">from</span> <span style="color: #bc8f8f;">'1.0'</span> <span style="color: #7f007f;">to</span> <span style="color: #bc8f8f;">'1.1'</span>
+<span style="color: #7f007f;">as</span> $$
+  <span style="color: #7f007f;">CREATE</span> <span style="color: #da70d6;">OPERATOR</span> ~&gt; (LEFTARG = <span style="color: #228b22;">text</span>,
+                      RIGHTARG = anyelement,
+                      <span style="color: #da70d6;">PROCEDURE</span> = pair);
+
+  <span style="color: #7f007f;">CREATE</span> <span style="color: #da70d6;">OPERATOR</span> ~&gt; (LEFTARG = anyelement,
+                      RIGHTARG = <span style="color: #228b22;">text</span>,
+                      <span style="color: #da70d6;">PROCEDURE</span> = pair);
+
+  <span style="color: #7f007f;">CREATE</span> <span style="color: #da70d6;">OPERATOR</span> ~&gt; (LEFTARG = anyelement,
+                      RIGHTARG = anyelement,
+                      <span style="color: #da70d6;">PROCEDURE</span> = pair);
+
+  <span style="color: #7f007f;">CREATE</span> <span style="color: #da70d6;">OPERATOR</span> ~&gt; (LEFTARG = <span style="color: #228b22;">text</span>,
+                      RIGHTARG = <span style="color: #228b22;">text</span>,
+                      <span style="color: #da70d6;">PROCEDURE</span> = pair);
+$$;
+
+<span style="color: #7f007f;">create</span> <span style="color: #da70d6;">template</span>
+   <span style="color: #7f007f;">for</span> extension pair <span style="color: #7f007f;">from</span> <span style="color: #bc8f8f;">'1.1'</span> <span style="color: #7f007f;">to</span> <span style="color: #bc8f8f;">'1.2'</span>
+<span style="color: #7f007f;">as</span> $$
+            <span style="color: #da70d6;">comment</span> <span style="color: #7f007f;">on</span> extension pair <span style="color: #7f007f;">is</span> <span style="color: #bc8f8f;">'Simple Key Value Text Type'</span>;
+$$;
+</pre>
+
+<p>Of course it's not the most realistic example when you look at the content.
+In particular the <code>1.2</code> version that only adds a comment to the extension. I
+needed another version to test the automatic upgrade path with more than one
+step though, so here we go.</p>
+
+<pre class="src">
+foo&gt; <span style="color: #da70d6;">alter</span> extension pair <span style="color: #da70d6;">update</span> <span style="color: #7f007f;">to</span> <span style="color: #bc8f8f;">'1.2'</span>;
+<span style="color: #da70d6;">ALTER</span> EXTENSION
+
+foo&gt; \dx pair
+             List <span style="color: #da70d6;">of</span> installed extensions
+ <span style="color: #da70d6;">Name</span> | <span style="color: #da70d6;">Version</span> | <span style="color: #da70d6;">Schema</span> |        Description
+<span style="color: #b22222;">------+---------+--------+----------------------------
+</span> pair | 1.2     | <span style="color: #da70d6;">public</span> | <span style="color: #da70d6;">Simple</span> <span style="color: #da70d6;">Key</span> <span style="color: #da70d6;">Value</span> <span style="color: #228b22;">Text</span> <span style="color: #da70d6;">Type</span>
+(1 <span style="color: #da70d6;">row</span>)
+
+foo&gt; \dx+ pair
+     Objects <span style="color: #7f007f;">in</span> extension "pair"
+          <span style="color: #da70d6;">Object</span> Description
+<span style="color: #b22222;">--------------------------------------
+</span> <span style="color: #da70d6;">function</span> pair(anyelement,anyelement)
+ <span style="color: #da70d6;">function</span> pair(anyelement,<span style="color: #228b22;">text</span>)
+ <span style="color: #da70d6;">function</span> pair(<span style="color: #228b22;">text</span>,anyelement)
+ <span style="color: #da70d6;">function</span> pair(<span style="color: #228b22;">text</span>,<span style="color: #228b22;">text</span>)
+ <span style="color: #da70d6;">operator</span> ~&gt;(anyelement,anyelement)
+ <span style="color: #da70d6;">operator</span> ~&gt;(anyelement,<span style="color: #228b22;">text</span>)
+ <span style="color: #da70d6;">operator</span> ~&gt;(<span style="color: #228b22;">text</span>,anyelement)
+ <span style="color: #da70d6;">operator</span> ~&gt;(<span style="color: #228b22;">text</span>,<span style="color: #228b22;">text</span>)
+ <span style="color: #da70d6;">type</span> pair
+(9 <span style="color: #da70d6;">rows</span>)
+</pre>
+
+<p>We did it!</p>
+
+
+<h3>Internals</h3>
+
+<p class="first">Let's have a look at those new catalogs:</p>
+
+<center>
+<p><img src="../../../images/octopus-anatomy.jpg" alt=""></p>
+</center>
+
+<center>
+<p><em>Oh, that's not quite the internals I expected...</em></p>
+</center>
+
+<p>Here we go now:</p>
+
+<pre class="src">
+foo&gt; select * from pg_extension_control;
+select * from pg_extension_control;
+-[ RECORD 1 ]--+-------
+ctlname        | pair
+ctlowner       | 32926
+ctldefault     | t
+ctlrelocatable | f
+ctlsuperuser   | f
+ctlnamespace   | public
+ctlversion     | 1.0
+ctlrequires    |
+
+foo&gt; select * from pg_extension_template;
+select * from pg_extension_template;
+-[ RECORD 1 ]-----------------------------------------------------------------
+tplname    | pair
+tplowner   | 32926
+tplversion | 1.0
+tplscript  |
+           |   CREATE TYPE pair AS ( k text, v text );
+           |
+           |   CREATE OR REPLACE FUNCTION pair(anyelement, text)
+           |   RETURNS pair LANGUAGE SQL AS 'SELECT ROW($1, $2)::pair';
+           |
+           |   CREATE OR REPLACE FUNCTION pair(text, anyelement)
+           |   RETURNS pair LANGUAGE SQL AS 'SELECT ROW($1, $2)::pair';
+           |
+           |   CREATE OR REPLACE FUNCTION pair(anyelement, anyelement)
+           |   RETURNS pair LANGUAGE SQL AS 'SELECT ROW($1, $2)::pair';
+           |
+           |   CREATE OR REPLACE FUNCTION pair(text, text)
+           |   RETURNS pair LANGUAGE SQL AS 'SELECT ROW($1, $2)::pair;';
+           |
+
+foo&gt; select * from pg_extension_uptmpl;
+select * from pg_extension_uptmpl;
+-[ RECORD 1 ]-------------------------------------------------------------
+uptname   | pair
+uptowner  | 32926
+uptfrom   | 1.0
+uptto     | 1.1
+uptscript |
+          |   CREATE OPERATOR ~&gt; (LEFTARG = text,
+          |                       RIGHTARG = anyelement,
+          |                       PROCEDURE = pair);
+          |
+          |   CREATE OPERATOR ~&gt; (LEFTARG = anyelement,
+          |                       RIGHTARG = text,
+          |                       PROCEDURE = pair);
+          |
+          |   CREATE OPERATOR ~&gt; (LEFTARG = anyelement,
+          |                       RIGHTARG = anyelement,
+          |                       PROCEDURE = pair);
+          |
+          |   CREATE OPERATOR ~&gt; (LEFTARG = text,
+          |                       RIGHTARG = text,
+          |                       PROCEDURE = pair);
+          |
+-[ RECORD 2 ]-------------------------------------------------------------
+uptname   | pair
+uptowner  | 32926
+uptfrom   | 1.1
+uptto     | 1.2
+uptscript |
+          |     comment on extension pair is 'Simple Key Value Text Type';
+          |
+</pre>
+
+<p>As you can see there's nothing too complex here, it's quite straightforward.
+We need to separate away the <em>creating</em> templates from the <em>updating</em> templates
+because we need <strong><em>unique</em></strong> keys and we can't have that on <code>NULL</code> columns.</p>
+
+<pre class="src">
+foo&gt; \d pg_extension_template
+\d pg_extension_template
+Table <span style="color: #bc8f8f;">"pg_catalog.pg_extension_template"</span>
+   Column   | Type | Modifiers
+------------+------+-----------
+ tplname    | name | not null
+ tplowner   | oid  | not null
+ tplversion | text |
+ tplscript  | text |
+Indexes:
+    <span style="color: #bc8f8f;">"pg_extension_template_name_version_index"</span> UNIQUE, btree (tplname, tplversion)
+    <span style="color: #bc8f8f;">"pg_extension_template_oid_index"</span> UNIQUE, btree (oid)
+
+foo&gt; \d pg_extension_uptmpl
+\d pg_extension_uptmpl
+Table <span style="color: #bc8f8f;">"pg_catalog.pg_extension_uptmpl"</span>
+  Column   | Type | Modifiers
+-----------+------+-----------
+ uptname   | name | not null
+ uptowner  | oid  | not null
+ uptfrom   | text |
+ uptto     | text |
+ uptscript | text |
+Indexes:
+    <span style="color: #bc8f8f;">"pg_extension_uptmpl_name_from_to_index"</span> UNIQUE, btree (uptname, uptfrom, uptto)
+    <span style="color: #bc8f8f;">"pg_extension_uptmpl_oid_index"</span> UNIQUE, btree (oid)
+</pre>
+
+
+<h3>Next steps</h3>
+
+<p class="first">Now that we have the basics in place, the patch is far from finished still.
+It needs <code>pg_dump</code> and <code>psql</code> support, support for the function
+<code>pg_available_extension_versions()</code>, implementing some <code>ALTER TEMPLATE FOR
+EXTENSION</code> commands for which I only sketched the syntax in the grammar, and
+some more infrastructure to be able to have <code>ALTER OWNER</code> and <code>ALTER RENAME</code>
+commands.</p>
+
+<center>
+<p><img src="../../../images/patch-brewing.jpg" alt=""></p>
+</center>
+
+<center>
+<p><em>Warning: patch brewing here! Syntax and other key elements will change.</em></p>
+</center>
+
+<p>All that is pretty technical though, the real thing that patch needs is some
+quality review and maybe some adjustments. I would be surprised if it didn't
+need adjustments, really. Because the way the community works, we always
+need some. That's why the PostgreSQL product is so good!</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Tue, 08 Jan 2013 17:53:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2013/01/08-Extensions-Templates.html</guid>
+</item>
+<item>
   <title>Inline Extensions</title>
   <link>http://tapoueh.org/blog/2012/12/13-Inline-Extensions.html</link>
   <description><![CDATA[<p>We've been having the <code>CREATE EXTENSION</code> feature in <a href="http://www.postgresql.org/">PostgreSQL</a> for a couple of
@@ -132,11 +444,11 @@ time when it used not to be an extension before, with the <code>CREATE EXTENSION
 <p>The <code>hstore--unpackaged--1.0.sql</code> file contains statements such as:</p>
 
 <pre class="src">
-ALTER EXTENSION hstore ADD type hstore;
-ALTER EXTENSION hstore ADD function hstore_in(cstring);
-ALTER EXTENSION hstore ADD function hstore_out(hstore);
-ALTER EXTENSION hstore ADD function hstore_recv(internal);
-ALTER EXTENSION hstore ADD function hstore_send(hstore);
+<span style="color: #da70d6;">ALTER</span> EXTENSION hstore <span style="color: #da70d6;">ADD</span> <span style="color: #da70d6;">type</span> <span style="color: #0000ff;">hstore</span>;
+<span style="color: #da70d6;">ALTER</span> EXTENSION hstore <span style="color: #da70d6;">ADD</span> <span style="color: #da70d6;">function</span> <span style="color: #0000ff;">hstore_in</span>(cstring);
+<span style="color: #da70d6;">ALTER</span> EXTENSION hstore <span style="color: #da70d6;">ADD</span> <span style="color: #da70d6;">function</span> <span style="color: #0000ff;">hstore_out</span>(hstore);
+<span style="color: #da70d6;">ALTER</span> EXTENSION hstore <span style="color: #da70d6;">ADD</span> <span style="color: #da70d6;">function</span> <span style="color: #0000ff;">hstore_recv</span>(internal);
+<span style="color: #da70d6;">ALTER</span> EXTENSION hstore <span style="color: #da70d6;">ADD</span> <span style="color: #da70d6;">function</span> <span style="color: #0000ff;">hstore_send</span>(hstore);
 </pre>
 
 <p>Opening <code>CREATE EXTENSION</code> so that it allows you to create a really <em>empty</em>
@@ -174,26 +486,26 @@ just be loosing a line in the middle of the script there is not so much I
 can do for you...</p>
 
 <pre class="src">
-CREATE EXTENSION hstore
-  WITH parameter = value, ...
-AS $$
-CREATE TYPE hstore;
+<span style="color: #7f007f;">CREATE</span> EXTENSION hstore
+  <span style="color: #7f007f;">WITH</span> <span style="color: #da70d6;">parameter</span> = <span style="color: #da70d6;">value</span>, ...
+<span style="color: #7f007f;">AS</span> $$
+<span style="color: #7f007f;">CREATE</span> <span style="color: #da70d6;">TYPE</span> <span style="color: #0000ff;">hstore</span>;
 
-CREATE FUNCTION hstore_in(cstring) RETURNS hstore
- AS 'MODULE_PATHNAME' LANGUAGE C STRICT IMMUTABLE;
+<span style="color: #7f007f;">CREATE</span> <span style="color: #da70d6;">FUNCTION</span> <span style="color: #0000ff;">hstore_in</span>(cstring) <span style="color: #da70d6;">RETURNS</span> hstore
+ <span style="color: #7f007f;">AS</span> <span style="color: #bc8f8f;">'MODULE_PATHNAME'</span> <span style="color: #da70d6;">LANGUAGE</span> <span style="color: #da70d6;">C</span> <span style="color: #da70d6;">STRICT</span> <span style="color: #da70d6;">IMMUTABLE</span>;
 
-CREATE FUNCTION hstore_out(hstore) RETURNS cstring
-AS 'MODULE_PATHNAME' LANGUAGE C STRICT IMMUTABLE;
+<span style="color: #7f007f;">CREATE</span> <span style="color: #da70d6;">FUNCTION</span> <span style="color: #0000ff;">hstore_out</span>(hstore) <span style="color: #da70d6;">RETURNS</span> cstring
+<span style="color: #7f007f;">AS</span> <span style="color: #bc8f8f;">'MODULE_PATHNAME'</span> <span style="color: #da70d6;">LANGUAGE</span> <span style="color: #da70d6;">C</span> <span style="color: #da70d6;">STRICT</span> <span style="color: #da70d6;">IMMUTABLE</span>;
 
-CREATE FUNCTION hstore_recv(internal) RETURNS hstore
-AS 'MODULE_PATHNAME' LANGUAGE C STRICT IMMUTABLE;
+<span style="color: #7f007f;">CREATE</span> <span style="color: #da70d6;">FUNCTION</span> <span style="color: #0000ff;">hstore_recv</span>(internal) <span style="color: #da70d6;">RETURNS</span> hstore
+<span style="color: #7f007f;">AS</span> <span style="color: #bc8f8f;">'MODULE_PATHNAME'</span> <span style="color: #da70d6;">LANGUAGE</span> <span style="color: #da70d6;">C</span> <span style="color: #da70d6;">STRICT</span> <span style="color: #da70d6;">IMMUTABLE</span>;
 
-CREATE FUNCTION hstore_send(hstore) RETURNS bytea
-AS 'MODULE_PATHNAME' LANGUAGE C STRICT IMMUTABLE;
+<span style="color: #7f007f;">CREATE</span> <span style="color: #da70d6;">FUNCTION</span> <span style="color: #0000ff;">hstore_send</span>(hstore) <span style="color: #da70d6;">RETURNS</span> <span style="color: #228b22;">bytea</span>
+<span style="color: #7f007f;">AS</span> <span style="color: #bc8f8f;">'MODULE_PATHNAME'</span> <span style="color: #da70d6;">LANGUAGE</span> <span style="color: #da70d6;">C</span> <span style="color: #da70d6;">STRICT</span> <span style="color: #da70d6;">IMMUTABLE</span>;
 
-CREATE TYPE hstore (
-        INTERNALLENGTH = -1, STORAGE = extended
-        INPUT = hstore_in, OUTPUT = hstore_out,
+<span style="color: #7f007f;">CREATE</span> <span style="color: #da70d6;">TYPE</span> <span style="color: #0000ff;">hstore</span> (
+        INTERNALLENGTH = -1, <span style="color: #da70d6;">STORAGE</span> = extended
+        <span style="color: #da70d6;">INPUT</span> = hstore_in, <span style="color: #da70d6;">OUTPUT</span> = hstore_out,
         RECEIVE = hstore_recv, SEND = hstore_send);
 $$;
 </pre>
