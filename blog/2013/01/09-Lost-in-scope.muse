@@ -1,0 +1,138 @@
+#author Dimitri Fontaine
+#title  Lost in scope
+#date   20130109-11:07
+#tags   Common-Lisp Scope Python Ruby Javascript
+
+Thanks to [[https://twitter.com/mickael/status/288795520179240962][Mickael]] on *twitter* I got to read an article about loosing scope
+with some common programming languages. As the blog article [[https://my.smeuh.org/al/blog/lost-in-scope][Lost in scope]]
+references *functional programming languages* and plays with both *Javascript*
+and *Erlang*, I though I had to try it out with *Common Lisp* too.
+
+	[[../../../images/lambda.png]]
+
+	*Let's have fun with lambda!*
+
+So, here we go with a simple Common Lisp attempt. The *Lost in scope* article
+begins with defining a very simple function returning a boolean value, only
+true when it's not =monday=.
+
+** Monday is special
+
+<src lang="lisp">
+(defparameter *days*
+  '(monday tuesday wednesday thursday friday saturday sunday)
+  "List of days in the week")
+
+(defun any-day-but-monday? (day)
+  "Returns a generalized boolean, true unless DAY is 'monday"
+  (member day (remove-if (lambda (day) (eq day 'monday)) *days*)))
+</src>
+
+So as you can see, in *Common Lisp* we just get away with a list of symbols
+rather than a string that we split to have a list of strings, or an array of
+strings, as in the examples with *python* and *ruby*.
+
+Now, the *generalized boolean* is either =nil= to mean false, or anything else
+to mean =true=, and in that example the return value of [[http://www.lispworks.com/documentation/HyperSpec/Body/a_member.htm][member]] is a sub-list
+that begins where the *member* was found:
+
+<src lang="lisp">
+CL-USER> (any-day-but-monday? 'monday)
+NIL
+
+CL-USER> (any-day-but-monday? 'tuesday)
+(TUESDAY WEDNESDAY THURSDAY FRIDAY SATURDAY SUNDAY)
+</src>
+
+Oh, and as we work with *Common Lisp*, we're having a real [[http://www.gigamonkeys.com/book/lather-rinse-repeat-a-tour-of-the-repl.html][REPL]] where to play
+directly with our code, no need to add *interactive* stanzas in the main
+program text file just to be able to play with it. In [[http://common-lisp.net/project/slime/][Emacs Slime]] we just
+use =C-M-x= on a *form* to have it available in the *REPL*, or =C-c C-l= to load the
+whole file we're working on.
+
+So, we see that *Common Lisp* scoping rules are silently doing the right thing
+here. Within the [[http://www.lispworks.com/documentation/HyperSpec/Body/f_rm_rm.htm][remove-if]] call we define a *lambda* function taking a single
+parameter called *day*. It so happens that this parameter is shadowing the
+*any-day-but-monday?* function parameter, and that shadowing only happens in
+the *lexical scope* of the *lambda* we are creating. For a detailed discussion
+about that concept, I would refer you to the [[http://www.cs.cmu.edu/Groups/AI/html/cltl/clm/node43.html][Scope and Extent]] chapter of
+*Common Lisp the Language, 2nd Edition*.
+
+In *Common Lisp* we have both *lexical scope* and *dynamic extents*, and a
+variable defined with *defparameter* or *defvar* or that you otherwise [[http://www.lispworks.com/documentation/HyperSpec/Body/s_declar.htm][declare]]
+*special* will have a *dynamic extent*. Hence this section title.
+
+** Closures
+
+Now, the [[https://my.smeuh.org/al/blog/lost-in-scope][lost in scope]] article tries some more at finding a solution around
+the scoping rules of the *python* and *ruby* languages, where the developer can
+not easily instruct the language about the scoping rules he wants to be
+using in a case by case way, as far as I can see.
+
+First, let's reproduce the problem by using a single variable that we bind
+in all the closures. Those are called *callbacks* in the original article, so
+I've kept using that name here.
+
+	[[../../../images/callback.jpg]]
+
+<src lang="lisp">
+(defparameter *callbacks-all-sunday*
+    (loop
+       for day in *days*
+       collect (lambda () day))
+  "loop binds DAY only once")
+</src>
+
+In that example, there's only a single variable day that we reuse throughout
+the *loop* construct, so that when the loop ends, we have a list of closures
+all refering to the same variable, and this variable, by the end of the
+loop, has =sunday= as its value.
+
+<src lang="lisp">
+CL-USER> (mapcar #'funcall *callbacks-all-sunday*)
+(SUNDAY SUNDAY SUNDAY SUNDAY SUNDAY SUNDAY SUNDAY)
+</src>
+
+** Closures, take 2
+
+Now, the way to have what we want here, that is a list of closures each
+having its own variable.
+
+<src lang="lisp">
+
+(defparameter *callbacks*
+  (mapcar (lambda (day)
+	    ;; for each day, produce a separate closure
+	    ;; around its own lexical variable day
+	    (lambda () day))
+	  *days*)
+  "A list of callbacks to return the current day...")
+</src>
+
+And there we go:
+
+<src lang="lisp">
+CL-USER> (mapcar #'funcall *callbacks*)
+(MONDAY TUESDAY WEDNESDAY THURSDAY FRIDAY SATURDAY SUNDAY)
+</src>
+
+** Conclusion
+
+Scoping rules are very important in any programming language, functional or
+not, and must be well understood by programmers. I find that once again,
+that topic has received a very deep thinking in *Common Lisp*, and the
+language is giving all the options to its developers.
+
+	[[../../../images/scope.png]]
+
+	*What are your language of choice scoping rules?*
+
+I want to stress that in *Common Lisp* the scope rules are very clearly
+defined in the standard documentation of the language. For instance, *defun*
+and *let* both introduce a lexical binding, *defvar* and *defparameter* introduce
+a *dynamic variable*.
+
+Also, as a user of the language you have the ability to *declare* any variable
+as being *special* in order to introduce yourself a *dynamic variable*. In =C= you
+can declare some variables as being *static*, which is something else and
+frown with a very different set of problems.
