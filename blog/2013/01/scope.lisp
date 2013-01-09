@@ -27,3 +27,9 @@
 	    (lambda () day))
 	  *days*)
   "A list of callbacks to return the current day...")
+
+(defparameter *loop-callbacks*
+    (loop
+       for day in *days*
+       collect (let ((d day)) (lambda () day)))
+  "loop binds DAY only once, so introduce a lexical binding")
