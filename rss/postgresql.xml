@@ -7,6 +7,197 @@
     <language>en-us</language>
     <generator>Emacs Muse</generator>
 <item>
+  <title>Automated Setup for pgloader</title>
+  <link>http://tapoueh.org/blog/2013/01/17-pgloader-auto-setup.html</link>
+  <description><![CDATA[<p>Another day, another migration from <em>MySQL</em> to <a href="http://www.postgresql.org/">PostgreSQL</a>... or at least
+that's how it feels sometimes. This time again I've been using some quite
+old scripts to help me do the migration.</p>
+
+<center>
+<p><img src="../../../images/dauphin-logo.jpg" alt=""></p>
+</center>
+
+<center>
+<p><em>That's how I feel for MySQL users</em></p>
+</center>
+
+<h3>Migrating the schema</h3>
+
+<p class="first">For the <em>schema</em> parts, I've been using <a href="http://pgfoundry.org/projects/mysql2pgsql/">mysql2pgsql</a> with success for many
+years. This tool is not complete and will do only about <em>80%</em> of the work. As
+I think that the schema should always be validated manually when doing a
+migration anyway, I happen to think that it's good news.</p>
+
+
+<h3>Getting the data out</h3>
+
+<p class="first">Then for the data parts I keep on using <a href="../../../pgsql/pgloader.html">pgloader</a>. The data is never quite
+right, and the ability to filter out what you can't readily import in a
+<em>reject</em> file proves itself a a must have here. The problems you have in the
+exported MySQL data are quite serious:</p>
+
+<center>
+<p><img src="../../../images/data-unlocked.320.png" alt=""></p>
+</center>
+
+<center>
+<p><em>Can I have my data please?</em></p>
+</center>
+
+<p>First, date formating is not compatible with what PostgreSQL expects,
+sometimes using <code>20130117143218</code> instead of what we expect: <code>2013-01-17
+14:32:18</code>, and of course even when the format is right (that seems to depend
+on the MySQL server's version), you still have to transform the <code>0000-00-00
+00:00:00</code> into <code>NULL</code>.</p>
+
+<blockquote>
+<p class="quoted">
+Before thinking about the usage of that particular date rather than
+using <code>NULL</code> when you don't have the information, you might want to
+remember that there's no <a href="http://en.wikipedia.org/wiki/0_(year)">year zero</a> in the calendar, it's year 1 BC and
+then year 1.</p>
+
+</blockquote>
+
+<p>Then, text encoding is often mixed up, even when the MySQL databases are
+said to be in <em>latin1</em> or <em>unicode</em>, you somehow always end up finding texts in
+<em>win1252</em> or some other <em>code page</em> in there.</p>
+
+<p>And of course, MySQL provides no tool to export the data to <code>CSV</code>, so you have
+to come up with your own. The <code>SELECT INTO OUTFILE</code> command on the server
+produces non conforming CSV (<code>\n</code> can appear in non-escaped field contents),
+and while the <code>mysql</code> client manual page details that it outputs <code>CSV</code> when
+stdout is not a terminal, it won't even try to quote fields or escape <code>\t</code>
+when they appear in the data.</p>
+
+<p>So, we use the <a href="https://github.com/slardiere/mysqltocsv">mysqltocsv</a> little script to export the data, and then use
+that data to feed <a href="../../../pgsql/pgloader.html">pgloader</a>.</p>
+
+
+<h3>Loading the data in</h3>
+
+<p class="first">Now, we have to write down a configuration file for pgloader to know what to
+load and where to find the data. What about generating the file from the
+database schema instead, using the query in <a href="generate-pgloader-config.sql">generate-pgloader-config.sql</a>:</p>
+
+<pre class="src">
+<span style="color: #7f007f;">with</span> reformat <span style="color: #7f007f;">as</span> (
+   <span style="color: #7f007f;">select</span> relname, attnum, attname, typname,
+          <span style="color: #7f007f;">case</span> typname
+               <span style="color: #7f007f;">when</span> <span style="color: #bc8f8f;">'timestamptz'</span>
+               <span style="color: #7f007f;">then</span> attname || <span style="color: #bc8f8f;">':mynull:timestamp'</span>
+               <span style="color: #7f007f;">when</span> <span style="color: #bc8f8f;">'date'</span>
+               <span style="color: #7f007f;">then</span> attname || <span style="color: #bc8f8f;">':mynull:date'</span>
+           <span style="color: #7f007f;">end</span> <span style="color: #7f007f;">as</span> reformat
+      <span style="color: #7f007f;">from</span> pg_class <span style="color: #da70d6;">c</span>
+           <span style="color: #7f007f;">join</span> pg_namespace n <span style="color: #7f007f;">on</span> n.oid = <span style="color: #da70d6;">c</span>.relnamespace
+           <span style="color: #7f007f;">left</span> <span style="color: #7f007f;">join</span> pg_attribute <span style="color: #da70d6;">a</span> <span style="color: #7f007f;">on</span> <span style="color: #da70d6;">c</span>.oid = <span style="color: #da70d6;">a</span>.attrelid
+           <span style="color: #7f007f;">join</span> pg_type <span style="color: #da70d6;">t</span> <span style="color: #7f007f;">on</span> <span style="color: #da70d6;">t</span>.oid = <span style="color: #da70d6;">a</span>.atttypid
+     <span style="color: #7f007f;">where</span> <span style="color: #da70d6;">c</span>.relkind = <span style="color: #bc8f8f;">'r'</span>
+           <span style="color: #7f007f;">and</span> attnum &gt; 0
+           <span style="color: #7f007f;">and</span> n.nspname = <span style="color: #bc8f8f;">'public'</span>
+),
+ config_reformat <span style="color: #7f007f;">as</span> (
+  <span style="color: #7f007f;">select</span> relname,
+         <span style="color: #bc8f8f;">'['</span>||relname||<span style="color: #bc8f8f;">']'</span> || E<span style="color: #bc8f8f;">'\n'</span> ||
+         <span style="color: #bc8f8f;">'table = '</span> || relname || E<span style="color: #bc8f8f;">' \n'</span> ||
+         <span style="color: #bc8f8f;">'filename = /path/to/csv/'</span> || relname || E<span style="color: #bc8f8f;">'.csv\n'</span> ||
+         <span style="color: #bc8f8f;">'format = csv'</span> || E<span style="color: #bc8f8f;">'\n'</span> ||
+         <span style="color: #bc8f8f;">'field_sep = \t'</span> || E<span style="color: #bc8f8f;">'\n'</span> ||
+         <span style="color: #bc8f8f;">'columns = *'</span> || E<span style="color: #bc8f8f;">' \n'</span> ||
+         <span style="color: #bc8f8f;">'reformat = '</span> || array_to_string(<span style="color: #da70d6;">array_agg</span>(reformat), <span style="color: #bc8f8f;">', '</span>)
+         || E<span style="color: #bc8f8f;">'\n'</span> <span style="color: #7f007f;">as</span> config
+    <span style="color: #7f007f;">from</span> reformat
+   <span style="color: #7f007f;">where</span> reformat <span style="color: #7f007f;">is</span> <span style="color: #7f007f;">not</span> <span style="color: #7f007f;">null</span>
+<span style="color: #7f007f;">group</span> <span style="color: #da70d6;">by</span> relname
+),
+ noreformat <span style="color: #7f007f;">as</span> (
+   <span style="color: #7f007f;">select</span> relname, bool_and(reformat <span style="color: #7f007f;">is</span> <span style="color: #7f007f;">null</span>) <span style="color: #7f007f;">as</span> noreformating
+     <span style="color: #7f007f;">from</span> reformat
+ <span style="color: #7f007f;">group</span> <span style="color: #da70d6;">by</span> relname
+),
+ config_noreformat <span style="color: #7f007f;">as</span> (
+  <span style="color: #7f007f;">select</span> relname,
+         <span style="color: #bc8f8f;">'['</span>||relname||<span style="color: #bc8f8f;">']'</span> || E<span style="color: #bc8f8f;">'\n'</span> ||
+         <span style="color: #bc8f8f;">'table = '</span> || relname || E<span style="color: #bc8f8f;">' \n'</span> ||
+         <span style="color: #bc8f8f;">'filename = /path/to/csv/'</span> || relname || E<span style="color: #bc8f8f;">'.csv\n'</span> ||
+         <span style="color: #bc8f8f;">'format = csv'</span> || E<span style="color: #bc8f8f;">'\n'</span> ||
+         <span style="color: #bc8f8f;">'field_sep = \t'</span> || E<span style="color: #bc8f8f;">'\n'</span> ||
+         <span style="color: #bc8f8f;">'columns = *'</span> || E<span style="color: #bc8f8f;">' \n'</span>
+         || E<span style="color: #bc8f8f;">'\n'</span> <span style="color: #7f007f;">as</span> config
+    <span style="color: #7f007f;">from</span> reformat <span style="color: #7f007f;">join</span> noreformat <span style="color: #7f007f;">using</span> (relname)
+   <span style="color: #7f007f;">where</span> noreformating
+<span style="color: #7f007f;">group</span> <span style="color: #da70d6;">by</span> relname
+),
+allconfs <span style="color: #7f007f;">as</span> (
+    <span style="color: #7f007f;">select</span> relname, config <span style="color: #7f007f;">from</span> config_reformat
+ <span style="color: #7f007f;">union</span> <span style="color: #7f007f;">all</span>
+    <span style="color: #7f007f;">select</span> relname, config <span style="color: #7f007f;">from</span> config_noreformat
+)
+<span style="color: #7f007f;">select</span> config
+  <span style="color: #7f007f;">from</span> allconfs
+ <span style="color: #7f007f;">where</span> relname <span style="color: #7f007f;">not</span> <span style="color: #7f007f;">in</span> (<span style="color: #bc8f8f;">'tables'</span>, <span style="color: #bc8f8f;">'wedont'</span>, <span style="color: #bc8f8f;">'wantto'</span>, <span style="color: #bc8f8f;">'load'</span>)
+ <span style="color: #7f007f;">order</span> <span style="color: #da70d6;">by</span> relname;
+</pre>
+
+<p>To work with the setup generated, you will have to prepend a global section
+for pgloader and to include a reformating module in python, that I named
+<a href="mynull.py">mynull.py</a>:</p>
+
+<pre class="src">
+<span style="color: #b22222;"># Author: Dimitri Fontaine &lt;<a href="mailto:dimitri&#64;2ndQuadrant.fr">dimitri&#64;2ndQuadrant.fr</a>&gt;
+#
+# pgloader mysql reformating module
+</span>
+<span style="color: #7f007f;">def</span> <span style="color: #0000ff;">timestamp</span>(reject, <span style="color: #da70d6;">input</span>):
+    <span style="color: #bc8f8f;">""" Reformat str as a PostgreSQL timestamp
+
+    MySQL timestamps are ok this time:  2012-12-18 23:38:12
+    But may contain the infamous all-zero date, where we want NULL.
+    """</span>
+    <span style="color: #7f007f;">if</span> <span style="color: #da70d6;">input</span> == <span style="color: #bc8f8f;">'0000-00-00 00:00:00'</span>:
+        <span style="color: #7f007f;">return</span> <span style="color: #5f9ea0;">None</span>
+
+    <span style="color: #7f007f;">return</span> <span style="color: #da70d6;">input</span>
+
+<span style="color: #7f007f;">def</span> <span style="color: #0000ff;">date</span>(reject, <span style="color: #da70d6;">input</span>):
+    <span style="color: #bc8f8f;">""" date columns can also have '0000-00-00'"""</span>
+    <span style="color: #7f007f;">if</span> <span style="color: #da70d6;">input</span> == <span style="color: #bc8f8f;">'0000-00-00'</span>:
+        <span style="color: #7f007f;">return</span> <span style="color: #5f9ea0;">None</span>
+
+    <span style="color: #7f007f;">return</span> <span style="color: #da70d6;">input</span>
+</pre>
+
+<p>Now you can launch <code>pgloader</code> and profit!</p>
+
+
+<h3>Conclusion</h3>
+
+<p class="first">There are plenty of tools to assist you migrating away from MySQL and other
+databases. When you make that decision, you're not alone, and it's easy
+enough to find people to come and help you.</p>
+
+<p>While MySQL is Open Source and is not a <em>lock in</em> from a licencing
+perspective, I still find it hard to swallow that there's no provided tools
+for getting data out in a sane format, and that so many little
+inconsistencies exist in the product with respect to data handling (try to
+have a <code>NOT NULL</code> column, then enjoy the default empty strings that have been
+put in there). So at this point, yes, I consider that moving to <a href="http://www.postgresql.org/">PostgreSQL</a>
+is a way to <em>free your data</em>:</p>
+
+<center>
+<p><img src="../../../images/free-our-open-data.jpg" alt=""></p>
+</center>
+
+<center>
+<p><em>Free your data!</em></p>
+</center>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Thu, 17 Jan 2013 14:32:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2013/01/17-pgloader-auto-setup.html</guid>
+</item>
+<item>
   <title>Extensions Templates</title>
   <link>http://tapoueh.org/blog/2013/01/08-Extensions-Templates.html</link>
   <description><![CDATA[<p>In a recent article titled <a href="../../2012/12/13-Inline-Extensions.html">Inline Extensions</a> we detailed the problem of how
