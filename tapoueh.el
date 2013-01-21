@@ -119,12 +119,9 @@ on filter.
     (replace-regexp-in-string
      "static" (concat *tapoueh-path-to-root* "static") *tapoueh-css*))
 
-(defun tapoueh-rss-index-href ()
+(defun tapoueh-rss-index ()
   "Get the relative link to the RSS feed"
-  ;; (let* ((current muse-publishing-current-output-path)
-  ;; 	 (cwd     (file-name-directory current))
-  ;; 	 (project (muse-project-of-file current)))
-  (concat "href=\"" *tapoueh-path-to-root* "rss/tapoueh.xml" "\""))
+  (concat *tapoueh-path-to-root* "rss/tapoueh.xml"))
 
 (defun tapoueh-contents ()
   "Output the link to the /contents.html page"
