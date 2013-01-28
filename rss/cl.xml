@@ -7,6 +7,92 @@
     <language>en-us</language>
     <generator>Emacs Muse</generator>
 <item>
+  <title>pgloader: what's next?</title>
+  <link>http://tapoueh.org/blog/2013/01/28-pgloader-future.html</link>
+  <description><![CDATA[<p><a href="../../../pgsql/pgloader.html">pgloader</a> is a tool to help loading data into <a href="http://www.postgresql.org/">PostgreSQL</a>, adding some error
+management to the <a href="http://www.postgresql.org/docs/9.2/interactive/sql-copy.html">COPY</a> command. <code>COPY</code> is the fast way of loading data into
+PostgreSQL and is transaction safe. That means that if a single error
+appears within your bulk of data, you will have loaded none of it. <code>pgloader</code>
+will submit the data again in smaller chunks until it's able to isolate the
+bad from the good, and then the good is loaded in.</p>
+
+<center>
+<p><img src="../../../images/PDL_Adapter-250.png" alt=""></p>
+</center>
+
+<center>
+<p><em>Not quite this kind of data loader</em></p>
+</center>
+
+<p>In a recent migration project where we freed data from MySQL into
+PostgreSQL, we used <code>pgloader</code> again. But the loading time was not fast enough
+for the service downtime window that we had here. Indeed <a href="http://www.python.org/">Python</a> is not known
+for being the fastest solution around. It's easy to use and to ship to
+production, but sometimes you not only want to be able to be efficient when
+writing code, you also need the code to actually run fast too.</p>
+
+<h3>Faster data loading</h3>
+
+<p class="first">So I began writing a little dedicated tool for that migration in <a href="http://cliki.net/">Common Lisp</a>
+which is growing on me as my personal answer to the burning question: <em>python
+2 or python 3</em>? I find <em>Common Lisp</em> to offer an even more dynamic programming
+environment, an easier language to use, and the result often has
+performances characteristics way beyond what I can get with python. Between
+<a href="http://tapoueh.org/blog/2012/07/10-solving-sudoku.html">5 times faster</a> and <a href="http://tapoueh.org/blog/2012/08/20-performance-the-easiest-way.html">121 times faster</a> in some quite stupid benchmark.</p>
+
+<p>Here, with real data, my one shot attempt has been running more than <em>twice
+as fast</em> as the python version, after about a day of programming.</p>
+
+<center>
+<p><img src="../../../images/lisp-python.png" alt=""></p>
+</center>
+
+<center>
+<p><em>See what's happening now?</em></p>
+</center>
+
+<p>The other thing here is that I've tempted to get <code>pgloader</code> work in parallel,
+but at the time I didn't know about the <a href="http://docs.python.org/3/c-api/init.html#threads">Global Interpreter Lock</a> that they
+didn't find how to remove in Python 3 still, by the way. So my threading
+attempts at making <code>pgloader</code> work in parallel are pretty useless.</p>
+
+<p>Whereas in <em>Common Lisp</em> I can just use the <a href="http://lparallel.org/">lparallel</a> lib, which exposes
+threading facilities and some <em>queueing</em> facilities as a mean to communicate
+data in between workers, and have my code easily work in parallel for real.</p>
+
+
+<h3>Compatibility</h3>
+
+<p class="first">The only drawback that I can see here is that if you've been writing your
+own <em>reformating modules</em> in python for <code>pgloader</code> (yes you can
+<a href="http://tapoueh.org/pgsql/pgloader.html#sec21">implement your own reformating module for pgloader</a>), then you would have to
+port it to <em>Common Lisp</em>. Shout me an email if that's your case.</p>
+
+
+<h3>Next version</h3>
+
+<p class="first">So, I think we're going to have a <em>pgloader 3</em> someday, that will be way
+faster than the current one, and bundle some more features: real parallel
+behavior, ability to fetch non local data (connecting to MySQL directly, or
+HTTP, S3, etc); and I'm thinking about offering a <code>COPY</code> like syntax to drive
+the loading too, while at it. Also, the ability to discover the set of data
+to load all by itself when you want to load a whole database: think of it as
+a special <em>Migration</em> mode of operations.</p>
+
+<p>Some feature requests can't be solved easily when keeping the old <code>.INI</code>
+syntax cruft, so it's high time to implement some kind of a real command
+language. I have several ideas about those, in between the <code>COPY</code> syntax and
+the <code>SQL*Loader</code> configuration format, which is both clunky and quite
+powerful, too.</p>
+
+<p>After a beginning in <code>TCL</code> and a complete rewrite in python in <code>2005</code>, it looks
+like <code>2013</code> is going to be the year of <em>pgloader 3</em>, in <em>Common Lisp</em>!</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Mon, 28 Jan 2013 10:48:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2013/01/28-pgloader-future.html</guid>
+</item>
+<item>
   <title>Lost in scope</title>
   <link>http://tapoueh.org/blog/2013/01/09-Lost-in-scope.html</link>
   <description><![CDATA[<p>Thanks to <a href="https://twitter.com/mickael/status/288795520179240962">Mickael</a> on <em>twitter</em> I got to read an article about loosing scope
