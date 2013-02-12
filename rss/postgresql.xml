@@ -7,6 +7,200 @@
     <language>en-us</language>
     <generator>Emacs Muse</generator>
 <item>
+  <title>Playing with pgloader</title>
+  <link>http://tapoueh.org/blog/2013/02/12-playing-with-pgloader.html</link>
+  <description><![CDATA[<p>While making progress with both <a href="http://wiki.postgresql.org/wiki/Event_Triggers">Event Triggers</a> and <a href="http://tapoueh.org/blog/2013/01/08-Extensions-Templates.html">Extension Templates</a>, I
+needed to make a little break. My current keeping sane mental exercise seems
+to mainly involve using <em>Common Lisp</em>, a programming language that ships with
+about all the building blocks you need.</p>
+
+<center>
+<p><img src="../../../images/made-with-lisp.png" alt=""></p>
+</center>
+
+<center>
+<p><em>Yes, that old language brings so much on the table</em></p>
+</center>
+
+<p>When using <em>Common Lisp</em>, you have an awesome interactive development
+environment where you can redefine function and objects <em>while testing them</em>.
+That means you don't have to quit the interpreter, reload the new version of
+the code and put the interactive test case together all over again after a
+change. Just evaluate the change in the interactive environement: functions
+are compiled incrementally over their previous definition, objects whose
+classes have changed are migrated live.</p>
+
+<p>See, I just said <em>objects</em> and <em>classes</em>. <em>Common Lisp</em> comes with some advanced
+<em>Object Oriented Programming</em> facilities named <a href="http://www.aiai.ed.ac.uk/~jeff/clos-guide.html">CLOS</a> and <a href="http://www.alu.org/mop/index.html">MOP</a> where the <em>Java</em> and
+<em>Python</em> and <em>C++</em> object models are just a subset of what you're being offered.
+Hint, those don't have <a href="http://en.wikipedia.org/wiki/Multiple_dispatch">Multiple Dispatch</a>.</p>
+
+<p>And you have a very sophisticated <a href="http://www.gigamonkeys.com/book/beyond-exception-handling-conditions-and-restarts.html">Condition System</a> where <em>Exceptions</em> are just
+a subset of what you can do (hint: have a look a <a href="http://www.gigamonkeys.com/book/beyond-exception-handling-conditions-and-restarts.html#restarts">restarts</a> and tell me you
+didn't wish your programming language of choice had them). And it continues
+that way for about any basic building bloc you might want to be using.</p>
+
+<h3>Loading data</h3>
+
+<p class="first">Back to <a href="http://tapoueh.org/pgsql/pgloader.html">pgloader</a> will you tell me. Right. I've been spending a couple of
+evening on hacking on the new version of pgloader in <em>Common Lisp</em>, and wanted
+to share some preliminary results.</p>
+
+<center>
+<p><img src="../../../images/toy-loader.320.jpg" alt=""></p>
+</center>
+
+<center>
+<p><em>Playing with the loader</em></p>
+</center>
+
+<p>The current status of the new <em>pgloader</em> still is pretty rough, if you're not
+used to develop in Common Lisp you might not find it ready for use yet. I'm
+still working on the internal APIs and trying to make something clean and
+easy to use for a developer, and then I will provide some external ways to
+play with it, user oriented. I missed that step once with the <em>Python</em> based
+version of the tool, I don't want to do the same errors again this time.</p>
+
+<p>So here's a test run with the current <em>pgloader</em>, on a small enough data set
+of <code>226 MB</code> of <code>CSV</code> files.</p>
+
+<pre class="src">
+time python pgloader.py -R.. --summary -Tc ../pgloader.dbname.conf
+
+Table name        |    duration |    size |  copy rows |     errors
+====================================================================
+aaaaaaaaaa_aaaa   |      2.148s |       - |      24595 |          0
+bbbbbbbbbb_bbbb...|      0.609s |       - |        326 |          0
+cccccccccc_cccc...|      2.868s |       - |      25126 |          0
+dddddddddd_dddd...|      0.638s |       - |          8 |          0
+eeeeeeeeee_eeee...|      2.874s |       - |      36825 |          0
+ffffffffff_ffffff |      0.667s |       - |        624 |          0
+gggggggggg_gggg...|      0.847s |       - |       5638 |          0
+hhh_hhhhhhh       |      9.907s |       - |     120159 |          0
+iii_iiiiiiiiiiiii |      0.574s |       - |        661 |          0
+jjjjjjj           |      6.647s |       - |      30027 |          0
+kkk_kkkkkkkkk     |      0.439s |       - |         12 |          0
+lll_llllll        |      0.308s |       - |          4 |          0
+mmmm_mmm          |      2.139s |       - |      29669 |          0
+nnnn_nnnnnn       |      8.555s |       - |     100197 |          0
+oooo_ooooo        |     13.781s |       - |      93555 |          0
+pppp_ppppppp      |      8.275s |       - |      76457 |          0
+qqqq_qqqqqqqqqqqq |      8.568s |       - |     126159 |          0
+====================================================================
+Total             |  01m09.902s |       - |     670042 |          0
+</pre>
+
+
+<h3>Streaming data</h3>
+
+<p class="first">With the new code in <em>Common Lisp</em>, I could benefit from real multi threading
+and higher level abstraction to make it easy to use: <a href="http://lparallel.org/">lparallel</a> is a lib
+providing exactly what I need here, with <em>workers</em> and <em>queues</em> to communicate
+data in between them.</p>
+
+<p>What I'm doing is that two threads are separated, one is reading the data
+from either a <code>CSV</code> file or a <em>MySQL</em> database directly, and pushing that data
+in the queue; while the other thread is pulling data from the queue and
+writing it into our <a href="http://www.postgresql.org/">PostgreSQL</a> database.</p>
+
+<pre class="src">
+CL-USER&gt; (pgloader.csv:import-database <span style="color: #bc8f8f;">"dbname"</span>
+            :csv-path-root <span style="color: #bc8f8f;">"/path/to/csv/"</span>
+            :separator #\Tab
+            :quote #\"
+            :escape <span style="color: #bc8f8f;">"\"\""</span>
+            :null-as <span style="color: #bc8f8f;">":null:"</span>)
+                    table name       read   imported     errors       time
+------------------------------  ---------  ---------  ---------  ---------
+               aaaaaaaaaa_aaaa      24595      24595          0     0.995s
+          bbbbbbbbbb_bbbbbbbbb        326        326          0     0.570s
+       cccccccccc_cccccccccccc      25126      25126          0     1.461s
+      dddddddddd_dddddddddd_dd          8          8          0     0.650s
+eeeeeeeeee_eeeeeeeeee_eeeeeeee      36825      36825          0     1.664s
+             ffffffffff_ffffff        624        624          0     0.707s
+     gggggggggg_ggggg_gggggggg       5638       5638          0     0.655s
+                   hhh_hhhhhhh     120159     120159          0     3.415s
+             iii_iiiiiiiiiiiii        661        661          0     0.420s
+                       jjjjjjj      30027      30027          0     2.743s
+                 kkk_kkkkkkkkk         12         12          0     0.327s
+                    lll_llllll          4          4          0     0.315s
+                      mmmm_mmm      29669      29669          0     1.182s
+                   nnnn_nnnnnn     100197     100197          0     2.206s
+                    oooo_ooooo      93555      93555          0     9.683s
+                  pppp_ppppppp      76457      76457          0     5.349s
+             qqqq_qqqqqqqqqqqq     126159     126159          0     2.495s
+------------------------------  ---------  ---------  ---------  ---------
+             Total import time     670042     670042          0    34.836s
+NIL
+</pre>
+
+<p>As you can see the control is still made for interactive developer usage,
+which is fine for now but will have to change down the road, when the APIs
+stabilize.</p>
+
+<p>Now, let's compare to reading directly from <em>MySQL</em>:</p>
+
+<pre class="src">
+CL-USER&gt; (pgloader.mysql:stream-database <span style="color: #bc8f8f;">"dbname"</span>)
+                    table name       read   imported     errors       time
+------------------------------  ---------  ---------  ---------  ---------
+               aaaaaaaaaa_aaaa      24595      24595          0     0.887s
+          bbbbbbbbbb_bbbbbbbbb        326        326          0     0.617s
+       cccccccccc_cccccccccccc      25126      25126          0     1.497s
+      dddddddddd_dddddddddd_dd          8          8          0     0.582s
+eeeeeeeeee_eeeeeeeeee_eeeeeeee      36825      36825          0     1.697s
+             ffffffffff_ffffff        624        624          0     0.748s
+     gggggggggg_ggggg_gggggggg       5638       5638          0     0.923s
+                   hhh_hhhhhhh     120159     120159          0     3.525s
+             iii_iiiiiiiiiiiii        661        661          0     0.449s
+                       jjjjjjj      30027      30027          0     2.546s
+                 kkk_kkkkkkkkk         12         12          0     0.330s
+                    lll_llllll          4          4          0     0.323s
+                      mmmm_mmm      29669      29669          0     1.227s
+                   nnnn_nnnnnn     100197     100197          0     2.489s
+                    oooo_ooooo      93555      93555          0     9.148s
+                  pppp_ppppppp      76457      76457          0     6.713s
+             qqqq_qqqqqqqqqqqq     126159     126159          0     4.571s
+------------------------------  ---------  ---------  ---------  ---------
+          Total streaming time     670042     670042          0    38.272s
+NIL
+</pre>
+
+<p>The <em>streaming</em> here is a tad slower than the <em>importing</em> from files. Now if you
+want to be fair when comparing those, you would have to take into account
+the time it takes to <em>export</em> the data out from its source. When doing that
+<em>export/import</em> dance, a quick test shows a timing of <code>1m4.745s</code>. Now, if we do
+an <em>export only</em> test, it runs in <code>31.822s</code>. So yes streaming is a good thing to
+have here.</p>
+
+
+<h3>Conclusion</h3>
+
+<p class="first">We just got twice as fast as the python version.</p>
+
+<p>Some will say that I'm not comparing fairly to the <em>Python</em> version of
+pgloader here, because I could have implemented the streaming facility in
+<em>Python</em> too. Well actually I did, the option are called <a href="http://tapoueh.org/pgsql/pgloader.html#sec13">section_threads</a> and
+<a href="http://tapoueh.org/pgsql/pgloader.html#sec15">split_file_reading</a>, that you can set so that a reader is pushing data into a
+set of queues and several workers are feeding each from its own queue. It
+didn't help with performances at all. Once again, read about the infamous
+<a href="http://docs.python.org/3/c-api/init.html#threads">Global Interpreter Lock</a> to understand why not.</p>
+
+<center>
+<p><img src="../../../images/lisplogo_flag_128.png" alt=""></p>
+</center>
+
+<p>So actually it's a fair comparison here where the new code is twice as fast
+as the previous one, with only some hours of hacking and before spending any
+time on optimisation. Well, apart from using a <em>producer</em>, a <em>consumer</em> and a
+<em>queue</em>, which I almost had to have for streaming in between two database
+connections anyways.</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Tue, 12 Feb 2013 11:17:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2013/02/12-playing-with-pgloader.html</guid>
+</item>
+<item>
   <title>Live Upgrading PGQ</title>
   <link>http://tapoueh.org/blog/2013/02/08-PGQ-Live-Upgrade.html</link>
   <description><![CDATA[<p>Some <a href="http://skytools.projects.pgfoundry.org/skytools-3.0/doc/">skytools</a> related new today, it's been a while. For those who where at
@@ -106,6 +300,129 @@ the database for you, you are doing some <em>batch processing</em>.</p>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Fri, 08 Feb 2013 15:52:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2013/02/08-PGQ-Live-Upgrade.html</guid>
+</item>
+<item>
+  <title>Another Great FOSDEM</title>
+  <link>http://tapoueh.org/blog/2013/02/04-Another-great-FOSDEM.html</link>
+  <description><![CDATA[<p>This year's FOSDEM has been a great edition, in particular the
+<a href="http://fosdem2013.pgconf.eu/">FOSDEM PGDAY 2013</a> was a great way to begin a 3 days marathon of talking
+about PostgreSQL with people not only from our community but also from
+plenty other Open Source communities too: users!</p>
+
+<center>
+<p><a class="image-link" href="https://fosdem.org/2013/">
+<img src="../../../images/fosdem-logo.png"></a><a class="image-link" href="http://fosdem2013.pgconf.eu/">
+<img src="../../../images/postgresql-elephant.small.png"></a></p>
+</center>
+
+<center>
+<p><em>PostgreSQL at FOSDEM made for a great event</em></p>
+</center>
+
+<p>Having had the opportunity to meet more people from those other development
+communities, I really think we should go and reach for them in their own
+conferences. About any PostgreSQL community member I've been talking about
+with about that idea seemed to agree and generally already was thinking the
+same thing. And most are already doing it, in fact...</p>
+
+<p>I had the pleasure to run two conferences there, both in the <a href="https://fosdem.org/2013/schedule/track/postgresql/">PostgreSQL devroom</a>.</p>
+
+<h3>Event Triggers</h3>
+
+<p class="first">I'm currently in the middle of implementing <em>Event Triggers</em> for PostgreSQL
+and I have been for about the last 2 years. It's a quite complex feature to
+get right and so the patch itself is complex and large, which means the
+reviewing process is complex and takes time.</p>
+
+<p>That also means that some parts of the design have already been redone
+completely at least 3 times, and that what got <em>commited</em> to the PostgreSQL
+code is nothing like what the design we decided should go in looks like.
+That's just a fact of life, maybe, but that makes for a very long
+development process.</p>
+
+<p>We're now getting to the end of it though, and this talk is showing both
+where we want to go with <em>Event Triggers</em>, where we are now and what remains
+to be done for 9.3 if we want the feature to be any useful.</p>
+
+<p>If you're interested into that development, have a look at the slide deck
+and possibly ask me some questions about what's not clear on the
+<a href="http://www.postgresql.org/list/pgsql-hackers/">pgsql-hackers</a> mailing list (preferably).</p>
+
+<center>
+<p><a class="image-link" href="../../../images/confs/Fosdem2013_Event_Triggers.pdf">
+<img src="../../../images/confs/Fosdem2013_Event_Triggers.png"></a></p>
+</center>
+
+<center>
+<p><em>Event Triggers, The Real Mess™</em></p>
+</center>
+
+<p>The other way to get summarized and clear information about Event Triggers
+is the wiki page by the same name: <a href="http://wiki.postgresql.org/wiki/Event_Triggers">Event Triggers</a>.</p>
+
+<p>You will see that while a lot has been done (internal refactoring, adding
+new infrastructure and SQL level commands, and the minimum <code>PLpgSQL</code> support);
+a lot remains to be done where the code has already been submitted several
+times, following several designs directions given by careful review on
+hackers, and still we have some choices to make.</p>
+
+
+<h3>Implementing High-Availability</h3>
+
+<p class="first">This talk is showing several ways to implement <em>High Availability</em> with
+PostgreSQL. The fact is that that term is overloaded already, and usually
+covers two very different things which are <em>Service Availability</em> and <em>Data
+Availability</em>.</p>
+
+<p>In the talk, we're showing up several techniques that you can use to address
+different set of compromises in between <em>scaling</em>, <em>load balancing</em>, <em>data
+availability</em> and <em>durability</em>, and <em>service availability</em>. The first two points
+could seem unrelated to the main topic, but <em>scaling</em> often is a simple enough
+way to achieve <em>service availability</em>... until you need to think about
+<em>sharding</em>, that is.</p>
+
+<center>
+<p><a class="image-link" href="../../../images/confs/Fosdem2013_High_Availability.pdf">
+<img src="../../../images/confs/Fosdem2013_High_Availability.640.png"></a></p>
+</center>
+
+<center>
+<p><em>Implementing High Availability of Services and Data with PostgreSQL</em></p>
+</center>
+
+<p>So the talk is all about making compromises in between them and getting to
+an architecture able to implement the choosen compromises. While the talk
+has been pretty well received, it was delivered in a 50 mins slot where we
+usually take a whole day or three when addressing that problems at a
+customer's site.</p>
+
+<p>Some parts of how to get to the right architecture for the compromises that
+are important for you can't be fully covered in that time slot, while still
+being able to actually present the techniques that we're using.</p>
+
+<p>I think it might be useful to extract a single use-case or two from that
+talk then have a full 50 mins version reduced to a single or a couple of
+very clear compromises and how to achieve them in details, rather than
+trying to present a full range of techniques and how to use them in
+different scenarios.</p>
+
+
+<h3>FOSDEM</h3>
+
+<p class="first">After having been talking with many people, it appears that for next year's
+edition I should be proposing a more general talk that aims at helping
+developpers in other communities (python, ruby, etc) discover what's in for
+them in PostgreSQL. This database is full of advanced features that are
+really easy to use, and the only problem when preparing such a talk is
+choosing the right subset...</p>
+
+<p>If you're running a local developper user group and are interested into
+learning some more about how PostgreSQL can help you in a daily basis,
+please do get in touch with me and let's schedule a presentation together!</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Mon, 04 Feb 2013 09:55:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2013/02/04-Another-great-FOSDEM.html</guid>
 </item>
 <item>
   <title>Another Great FOSDEM</title>
