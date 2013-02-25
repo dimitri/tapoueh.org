@@ -7,6 +7,164 @@
     <language>en-us</language>
     <generator>Emacs Muse</generator>
 <item>
+  <title>PostgreSQL HyperLogLog</title>
+  <link>http://tapoueh.org/blog/2013/02/25-postgresql-hyperloglog.html</link>
+  <description><![CDATA[<p>If you've been following along at home the newer statistics developments,
+you might have heard about this new
+<a href="http://research.google.com/pubs/pub40671.html">State of The Art Cardinality Estimation Algorithm</a> called <a href="http://metamarkets.com/2012/fast-cheap-and-98-right-cardinality-estimation-for-big-data/">HyperLogLog</a>. This
+technique is now available for PostgreSQL in the extension <a href="http://blog.aggregateknowledge.com/2013/02/04/open-source-release-postgresql-hll/">postgresql-hll</a>
+available at <a href="https://github.com/aggregateknowledge/postgresql-hll">https://github.com/aggregateknowledge/postgresql-hll</a> and soon
+to be in <code>debian</code>.</p>
+
+<center>
+<p><img src="../../../images/cardinality1.jpg" alt=""></p>
+</center>
+
+<center>
+<p><em>How to Compute Cardinality?</em></p>
+</center>
+
+<h3>Installing postgresql-hll</h3>
+
+<p class="first">It's as simple as <code>CREATE EXTENSION hll;</code> really, even if to get there you
+must have installed the <em>package</em> on your system. We did some packaging work
+for <code>debian</code> and the result should appear soon in a distro near you.</p>
+
+<p>Then you also need to keep your data in some table, straight from the
+documentation we can use that schema:</p>
+
+<pre class="src">
+<span style="color: #b22222;">-- Create the destination table
+</span><span style="color: #7f007f;">CREATE</span> <span style="color: #7f007f;">TABLE</span> <span style="color: #0000ff;">daily_uniques</span> (
+<span style="color: #228b22;">DATE</span>            <span style="color: #228b22;">DATE</span> <span style="color: #7f007f;">UNIQUE</span>,
+users           hll
+);
+</pre>
+
+<p>Then to add some data for which you want to know the <em>cardinality</em> of, it's as
+simple as in the following <code>UPDATE</code> statement:</p>
+
+<pre class="src">
+<span style="color: #da70d6;">UPDATE</span> daily_uniques
+   <span style="color: #da70d6;">SET</span> users = hll_add(users, hll_hash_text(<span style="color: #bc8f8f;">'123.123.123.123'</span>))
+ <span style="color: #7f007f;">WHERE</span> <span style="color: #228b22;">date</span> = <span style="color: #7f007f;">current_date</span>;
+</pre>
+
+<p>So in our example what you see is that we want to decipher how many unique
+IP addresses we saw, and we do that by first creating a <em>hash</em> of that source
+data then calling <code>hll_add()</code> with the current value and the hash result.</p>
+
+<p>The current value must be initialized using <code>hll_empty()</code>.</p>
+
+
+<h3>Concurrency</h3>
+
+<p class="first">The most awake readers among you have already spotted that: using an <code>UPDATE</code>
+on the same row over and over again is a good recipe to kill any form of
+concurrency, so you don't want to do that on your production setup unless
+you don't care about those <code>UPDATE waiting</code> piling up in your system.</p>
+
+<p>The idea is then to fill-in a queue of updates and asynchronously update the
+<code>daily_uniques</code> table from that queue, possibly using the <code>hll_add_agg</code>
+aggregate that the extension provides, so that you do only one <code>update</code> per
+batch of values to process.</p>
+
+
+<h3>∅: Empty Set and NULL</h3>
+
+<center>
+<p><img src="../../../images/EmptySet_L.gif" alt=""></p>
+</center>
+
+<center>
+<p><em>Yes there's a <a href="http://www.unicodemap.org/details/0x2205/index.html">unicode</a> entry for that, ∅</em></p>
+</center>
+
+<p>Now, what happens when the batch of new unique values you want to update
+from is itself empty? Well I would have expected <code>hll_add_agg</code> over an empty
+set to return an empty <code>hll</code> value, the same as returned by <code>hll_empty()</code>, but
+it turns out it's returning <code>NULL</code> instead.</p>
+
+<p>And then <code>hll_add(users, NULL)</code> will happily return <code>NULL</code>. So the next <code>UPDATE</code>
+is cancelling all the previous work, which is not nice. We had to cater for
+that case explicitely in the <code>UPDATE</code> query that's working from the batch of
+new values to add to our current <em>HyperLogLog</em> hash entry, and I can't resist
+to show off one of the most awesome PostgreSQL features here: <em>writable CTE</em>.</p>
+
+<pre class="src">
+<span style="color: #7f007f;">WITH</span> hll(agg) <span style="color: #7f007f;">AS</span> (
+  <span style="color: #7f007f;">SELECT</span> hll_add_agg(hll_hash_text(<span style="color: #da70d6;">value</span>)) <span style="color: #7f007f;">FROM</span> new_batch
+)
+  <span style="color: #da70d6;">UPDATE</span> daily_uniques
+     <span style="color: #da70d6;">SET</span> users = <span style="color: #7f007f;">CASE</span> <span style="color: #7f007f;">WHEN</span> hll.agg <span style="color: #7f007f;">IS</span> <span style="color: #7f007f;">NULL</span> <span style="color: #7f007f;">THEN</span> users
+                      <span style="color: #7f007f;">ELSE</span> hll_union(users, hll.agg)
+                  <span style="color: #7f007f;">END</span>
+    <span style="color: #7f007f;">FROM</span> hll
+   <span style="color: #7f007f;">WHERE</span> <span style="color: #228b22;">date</span> = <span style="color: #7f007f;">current_date</span>;
+</pre>
+
+<p>That's how you protect against an empty set being turned into a <code>NULL</code>. I
+think the real fix would need to be included in <code>postgresql-hll</code> itself, in
+making it so that the <code>hll_add_agg</code> aggregate returns <code>hll_empty()</code> on an empty
+set, and I will report that bug (with that very article as the detailed
+explanation of it).</p>
+
+
+<h3>Using postgresql-hll</h3>
+
+<p class="first">When using <code>postgresql-hll</code> on the production system, we were able to get some
+good looking numbers from our <code>daily_uniques</code> table:</p>
+
+<pre class="src">
+<span style="color: #7f007f;">with</span> stats <span style="color: #7f007f;">as</span> (
+  <span style="color: #7f007f;">select</span> <span style="color: #228b22;">date</span>, #users <span style="color: #7f007f;">as</span> daily, #hll_union_agg(users) <span style="color: #7f007f;">over</span>() <span style="color: #7f007f;">as</span> total
+    <span style="color: #7f007f;">from</span> daily_uniques
+)
+  <span style="color: #7f007f;">select</span> <span style="color: #228b22;">date</span>,
+         round(daily) <span style="color: #7f007f;">as</span> daily,
+         round((daily/total*100)::<span style="color: #228b22;">numeric</span>, 2) <span style="color: #7f007f;">as</span> percent
+    <span style="color: #7f007f;">from</span> stats
+<span style="color: #7f007f;">order</span> <span style="color: #da70d6;">by</span> <span style="color: #228b22;">date</span>;
+    <span style="color: #228b22;">date</span>    | daily  | percent
+<span style="color: #b22222;">------------+--------+---------
+</span> 2013-02-22 | 401677 |   25.19
+ 2013-02-23 | 660187 |   41.41
+ 2013-02-24 | 869980 |   54.56
+ 2013-02-25 | 154996 |    9.72
+(4 <span style="color: #da70d6;">rows</span>)
+</pre>
+
+<p>I coulnd't resist to show off two of my favorite SQL constructs in that
+example query here, which are the <a href="http://www.postgresql.org/docs/9.2/static/queries-with.html">Common Table Expressions</a> (or CTE) and
+<a href="http://www.postgresql.org/docs/9.2/static/tutorial-window.html">window functions</a>. If that <code>over()</code> clause reads strange to you, take a minute
+now and go read about it. Yes, do that now, we're waiting.</p>
+
+<p>The data here is showing that we did setup the facility in the middle of the
+first day, and that the morning's activity is quite low.</p>
+
+
+<h3>Conclusion</h3>
+
+<center>
+<p><img src="../../../images/hll-dv-estimator.png" alt=""></p>
+</center>
+
+<center>
+<p><em>The <a href="http://blog.aggregateknowledge.com/author/wwkae/">HyperLogLog DV estimator</a></em></p>
+</center>
+
+<p>When using <code>postgresql-hll</code> you need to be careful not to kill your
+application concurrency abilities, and you need to protect yourself against
+the ∅ killer too. The other thing to keep in mind is that the numbers you
+get out of the <code>hll</code> technique are estimates within a given <em>precision</em>, and you
+might want to read some more about what it means for your intended usage of
+the feature.</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Mon, 25 Feb 2013 10:23:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2013/02/25-postgresql-hyperloglog.html</guid>
+</item>
+<item>
   <title>Playing with pgloader</title>
   <link>http://tapoueh.org/blog/2013/02/12-playing-with-pgloader.html</link>
   <description><![CDATA[<p>While making progress with both <a href="http://wiki.postgresql.org/wiki/Event_Triggers">Event Triggers</a> and <a href="http://tapoueh.org/blog/2013/01/08-Extensions-Templates.html">Extension Templates</a>, I
@@ -358,6 +516,129 @@ the database for you, you are doing some <em>batch processing</em>.</p>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Fri, 08 Feb 2013 15:52:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2013/02/08-PGQ-Live-Upgrade.html</guid>
+</item>
+<item>
+  <title>Another Great FOSDEM</title>
+  <link>http://tapoueh.org/blog/2013/02/04-Another-great-FOSDEM.html</link>
+  <description><![CDATA[<p>This year's FOSDEM has been a great edition, in particular the
+<a href="http://fosdem2013.pgconf.eu/">FOSDEM PGDAY 2013</a> was a great way to begin a 3 days marathon of talking
+about PostgreSQL with people not only from our community but also from
+plenty other Open Source communities too: users!</p>
+
+<center>
+<p><a class="image-link" href="https://fosdem.org/2013/">
+<img src="../../../images/fosdem-logo.png"></a><a class="image-link" href="http://fosdem2013.pgconf.eu/">
+<img src="../../../images/postgresql-elephant.small.png"></a></p>
+</center>
+
+<center>
+<p><em>PostgreSQL at FOSDEM made for a great event</em></p>
+</center>
+
+<p>Having had the opportunity to meet more people from those other development
+communities, I really think we should go and reach for them in their own
+conferences. About any PostgreSQL community member I've been talking about
+with about that idea seemed to agree and generally already was thinking the
+same thing. And most are already doing it, in fact...</p>
+
+<p>I had the pleasure to run two conferences there, both in the <a href="https://fosdem.org/2013/schedule/track/postgresql/">PostgreSQL devroom</a>.</p>
+
+<h3>Event Triggers</h3>
+
+<p class="first">I'm currently in the middle of implementing <em>Event Triggers</em> for PostgreSQL
+and I have been for about the last 2 years. It's a quite complex feature to
+get right and so the patch itself is complex and large, which means the
+reviewing process is complex and takes time.</p>
+
+<p>That also means that some parts of the design have already been redone
+completely at least 3 times, and that what got <em>commited</em> to the PostgreSQL
+code is nothing like what the design we decided should go in looks like.
+That's just a fact of life, maybe, but that makes for a very long
+development process.</p>
+
+<p>We're now getting to the end of it though, and this talk is showing both
+where we want to go with <em>Event Triggers</em>, where we are now and what remains
+to be done for 9.3 if we want the feature to be any useful.</p>
+
+<p>If you're interested into that development, have a look at the slide deck
+and possibly ask me some questions about what's not clear on the
+<a href="http://www.postgresql.org/list/pgsql-hackers/">pgsql-hackers</a> mailing list (preferably).</p>
+
+<center>
+<p><a class="image-link" href="../../../images/confs/Fosdem2013_Event_Triggers.pdf">
+<img src="../../../images/confs/Fosdem2013_Event_Triggers.png"></a></p>
+</center>
+
+<center>
+<p><em>Event Triggers, The Real Mess™</em></p>
+</center>
+
+<p>The other way to get summarized and clear information about Event Triggers
+is the wiki page by the same name: <a href="http://wiki.postgresql.org/wiki/Event_Triggers">Event Triggers</a>.</p>
+
+<p>You will see that while a lot has been done (internal refactoring, adding
+new infrastructure and SQL level commands, and the minimum <code>PLpgSQL</code> support);
+a lot remains to be done where the code has already been submitted several
+times, following several designs directions given by careful review on
+hackers, and still we have some choices to make.</p>
+
+
+<h3>Implementing High-Availability</h3>
+
+<p class="first">This talk is showing several ways to implement <em>High Availability</em> with
+PostgreSQL. The fact is that that term is overloaded already, and usually
+covers two very different things which are <em>Service Availability</em> and <em>Data
+Availability</em>.</p>
+
+<p>In the talk, we're showing up several techniques that you can use to address
+different set of compromises in between <em>scaling</em>, <em>load balancing</em>, <em>data
+availability</em> and <em>durability</em>, and <em>service availability</em>. The first two points
+could seem unrelated to the main topic, but <em>scaling</em> often is a simple enough
+way to achieve <em>service availability</em>... until you need to think about
+<em>sharding</em>, that is.</p>
+
+<center>
+<p><a class="image-link" href="../../../images/confs/Fosdem2013_High_Availability.pdf">
+<img src="../../../images/confs/Fosdem2013_High_Availability.640.png"></a></p>
+</center>
+
+<center>
+<p><em>Implementing High Availability of Services and Data with PostgreSQL</em></p>
+</center>
+
+<p>So the talk is all about making compromises in between them and getting to
+an architecture able to implement the choosen compromises. While the talk
+has been pretty well received, it was delivered in a 50 mins slot where we
+usually take a whole day or three when addressing that problems at a
+customer's site.</p>
+
+<p>Some parts of how to get to the right architecture for the compromises that
+are important for you can't be fully covered in that time slot, while still
+being able to actually present the techniques that we're using.</p>
+
+<p>I think it might be useful to extract a single use-case or two from that
+talk then have a full 50 mins version reduced to a single or a couple of
+very clear compromises and how to achieve them in details, rather than
+trying to present a full range of techniques and how to use them in
+different scenarios.</p>
+
+
+<h3>FOSDEM</h3>
+
+<p class="first">After having been talking with many people, it appears that for next year's
+edition I should be proposing a more general talk that aims at helping
+developpers in other communities (python, ruby, etc) discover what's in for
+them in PostgreSQL. This database is full of advanced features that are
+really easy to use, and the only problem when preparing such a talk is
+choosing the right subset...</p>
+
+<p>If you're running a local developper user group and are interested into
+learning some more about how PostgreSQL can help you in a daily basis,
+please do get in touch with me and let's schedule a presentation together!</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Mon, 04 Feb 2013 09:55:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2013/02/04-Another-great-FOSDEM.html</guid>
 </item>
 <item>
   <title>Another Great FOSDEM</title>
