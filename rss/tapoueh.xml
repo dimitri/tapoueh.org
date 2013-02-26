@@ -7,6 +7,233 @@
     <language>en-us</language>
     <generator>Emacs Muse</generator>
 <item>
+  <title>HyperLogLog Unions</title>
+  <link>http://tapoueh.org/blog/2013/02/26-hll-union.html</link>
+  <description><![CDATA[<p>In the article from yesterday we talked about <a href="http://tapoueh.org/blog/2013/02/25-postgresql-hyperloglog.html">PostgreSQL HyperLogLog</a> with
+some details. The real magic of that extension has been skimmed over though,
+and needs another very small article all by itself, in case you missed it.</p>
+
+<center>
+<p><img src="../../../images/SetOperations.480.png" alt=""></p>
+</center>
+
+<center>
+<p><em>Which Set Operation do you want for counting unique values?</em></p>
+</center>
+
+<p>The first query here has the default level of magic in it, really. What
+happens is that each time we do an update of the <em>HyperLogLog</em> <em>hash</em> value, we
+update some data which are allowing us to compute its cardinality.</p>
+
+<pre class="src">
+=&gt; <span style="color: #7f007f;">select</span> <span style="color: #228b22;">date</span>,
+          #users <span style="color: #7f007f;">as</span> daily,
+          pg_column_size(users) <span style="color: #7f007f;">as</span> bytes
+     <span style="color: #7f007f;">from</span> daily_uniques
+ <span style="color: #7f007f;">order</span> <span style="color: #da70d6;">by</span> <span style="color: #228b22;">date</span>;
+    <span style="color: #228b22;">date</span>    |      daily       | bytes
+<span style="color: #b22222;">------------+------------------+-------
+</span> 2013-02-22 | 401676.779509985 |  1287
+ 2013-02-23 | 660187.271908359 |  1287
+ 2013-02-24 | 869980.029947449 |  1287
+ 2013-02-25 | 580865.296677817 |  1287
+ 2013-02-26 | 240569.492722719 |  1287
+(5 <span style="color: #da70d6;">rows</span>)
+</pre>
+
+<p>And has advertized the data is kept in a static sized data structure. The
+magic here all happens at <code>hll_add()</code> time, the function you have to call to
+update the data.</p>
+
+<p>Now on to something way more magic!</p>
+
+<center>
+<p><img src="../../../images/aggregates2.jpg" alt=""></p>
+</center>
+
+<center>
+<p><em>Are those the aggregates you're looking for?</em></p>
+</center>
+
+<pre class="src">
+=&gt; <span style="color: #7f007f;">select</span> to_char(<span style="color: #228b22;">date</span>, <span style="color: #bc8f8f;">'YYYY/MM'</span>) <span style="color: #7f007f;">as</span> <span style="color: #da70d6;">month</span>,
+          round(#hll_union_agg(users)) <span style="color: #7f007f;">as</span> monthly
+     <span style="color: #7f007f;">from</span> daily_uniques <span style="color: #7f007f;">group</span> <span style="color: #da70d6;">by</span> 1;
+  <span style="color: #da70d6;">month</span>  | monthly
+<span style="color: #b22222;">---------+---------
+</span> 2013/02 | 1960380
+(1 <span style="color: #da70d6;">row</span>)
+</pre>
+
+<p>The <em>HyperLogLog</em> data structure is allowing the implementation of an <strong><em>union</em></strong>
+algorithm that will be able to compute how many unique values you happen to
+have registered in both one day and the next. Extended in its general form,
+and doing SQL, what you get is an <em>aggregate</em> that you can use in <code>GROUP BY</code>
+constructs and <a href="http://www.postgresql.org/docs/9.2/static/tutorial-window.html">window functions</a>. Did you read about them yet?</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Tue, 26 Feb 2013 12:44:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2013/02/26-hll-union.html</guid>
+</item>
+<item>
+  <title>PostgreSQL HyperLogLog</title>
+  <link>http://tapoueh.org/blog/2013/02/25-postgresql-hyperloglog.html</link>
+  <description><![CDATA[<p>If you've been following along at home the newer statistics developments,
+you might have heard about this new
+<a href="http://research.google.com/pubs/pub40671.html">State of The Art Cardinality Estimation Algorithm</a> called <a href="http://metamarkets.com/2012/fast-cheap-and-98-right-cardinality-estimation-for-big-data/">HyperLogLog</a>. This
+technique is now available for PostgreSQL in the extension <a href="http://blog.aggregateknowledge.com/2013/02/04/open-source-release-postgresql-hll/">postgresql-hll</a>
+available at <a href="https://github.com/aggregateknowledge/postgresql-hll">https://github.com/aggregateknowledge/postgresql-hll</a> and soon
+to be in <code>debian</code>.</p>
+
+<center>
+<p><img src="../../../images/cardinality1.jpg" alt=""></p>
+</center>
+
+<center>
+<p><em>How to Compute Cardinality?</em></p>
+</center>
+
+<h3>Installing postgresql-hll</h3>
+
+<p class="first">It's as simple as <code>CREATE EXTENSION hll;</code> really, even if to get there you
+must have installed the <em>package</em> on your system. We did some packaging work
+for <code>debian</code> and the result should appear soon in a distro near you.</p>
+
+<p>Then you also need to keep your data in some table, straight from the
+documentation we can use that schema:</p>
+
+<pre class="src">
+<span style="color: #b22222;">-- Create the destination table
+</span><span style="color: #7f007f;">CREATE</span> <span style="color: #7f007f;">TABLE</span> <span style="color: #0000ff;">daily_uniques</span> (
+<span style="color: #228b22;">DATE</span>            <span style="color: #228b22;">DATE</span> <span style="color: #7f007f;">UNIQUE</span>,
+users           hll
+);
+</pre>
+
+<p>Then to add some data for which you want to know the <em>cardinality</em> of, it's as
+simple as in the following <code>UPDATE</code> statement:</p>
+
+<pre class="src">
+<span style="color: #da70d6;">UPDATE</span> daily_uniques
+   <span style="color: #da70d6;">SET</span> users = hll_add(users, hll_hash_text(<span style="color: #bc8f8f;">'123.123.123.123'</span>))
+ <span style="color: #7f007f;">WHERE</span> <span style="color: #228b22;">date</span> = <span style="color: #7f007f;">current_date</span>;
+</pre>
+
+<p>So in our example what you see is that we want to decipher how many unique
+IP addresses we saw, and we do that by first creating a <em>hash</em> of that source
+data then calling <code>hll_add()</code> with the current value and the hash result.</p>
+
+<p>The current value must be initialized using <code>hll_empty()</code>.</p>
+
+
+<h3>Concurrency</h3>
+
+<p class="first">The most awake readers among you have already spotted that: using an <code>UPDATE</code>
+on the same row over and over again is a good recipe to kill any form of
+concurrency, so you don't want to do that on your production setup unless
+you don't care about those <code>UPDATE waiting</code> piling up in your system.</p>
+
+<p>The idea is then to fill-in a queue of updates and asynchronously update the
+<code>daily_uniques</code> table from that queue, possibly using the <code>hll_add_agg</code>
+aggregate that the extension provides, so that you do only one <code>update</code> per
+batch of values to process.</p>
+
+
+<h3>∅: Empty Set and NULL</h3>
+
+<center>
+<p><img src="../../../images/EmptySet_L.gif" alt=""></p>
+</center>
+
+<center>
+<p><em>Yes there's a <a href="http://www.unicodemap.org/details/0x2205/index.html">unicode</a> entry for that, ∅</em></p>
+</center>
+
+<p>Now, what happens when the batch of new unique values you want to update
+from is itself empty? Well I would have expected <code>hll_add_agg</code> over an empty
+set to return an empty <code>hll</code> value, the same as returned by <code>hll_empty()</code>, but
+it turns out it's returning <code>NULL</code> instead.</p>
+
+<p>And then <code>hll_add(users, NULL)</code> will happily return <code>NULL</code>. So the next <code>UPDATE</code>
+is cancelling all the previous work, which is not nice. We had to cater for
+that case explicitely in the <code>UPDATE</code> query that's working from the batch of
+new values to add to our current <em>HyperLogLog</em> hash entry, and I can't resist
+to show off one of the most awesome PostgreSQL features here: <em>writable CTE</em>.</p>
+
+<pre class="src">
+<span style="color: #7f007f;">WITH</span> hll(agg) <span style="color: #7f007f;">AS</span> (
+  <span style="color: #7f007f;">SELECT</span> hll_add_agg(hll_hash_text(<span style="color: #da70d6;">value</span>)) <span style="color: #7f007f;">FROM</span> new_batch
+)
+  <span style="color: #da70d6;">UPDATE</span> daily_uniques
+     <span style="color: #da70d6;">SET</span> users = <span style="color: #7f007f;">CASE</span> <span style="color: #7f007f;">WHEN</span> hll.agg <span style="color: #7f007f;">IS</span> <span style="color: #7f007f;">NULL</span> <span style="color: #7f007f;">THEN</span> users
+                      <span style="color: #7f007f;">ELSE</span> hll_union(users, hll.agg)
+                  <span style="color: #7f007f;">END</span>
+    <span style="color: #7f007f;">FROM</span> hll
+   <span style="color: #7f007f;">WHERE</span> <span style="color: #228b22;">date</span> = <span style="color: #7f007f;">current_date</span>;
+</pre>
+
+<p>That's how you protect against an empty set being turned into a <code>NULL</code>. I
+think the real fix would need to be included in <code>postgresql-hll</code> itself, in
+making it so that the <code>hll_add_agg</code> aggregate returns <code>hll_empty()</code> on an empty
+set, and I will report that bug (with that very article as the detailed
+explanation of it).</p>
+
+
+<h3>Using postgresql-hll</h3>
+
+<p class="first">When using <code>postgresql-hll</code> on the production system, we were able to get some
+good looking numbers from our <code>daily_uniques</code> table:</p>
+
+<pre class="src">
+<span style="color: #7f007f;">with</span> stats <span style="color: #7f007f;">as</span> (
+  <span style="color: #7f007f;">select</span> <span style="color: #228b22;">date</span>, #users <span style="color: #7f007f;">as</span> daily, #hll_union_agg(users) <span style="color: #7f007f;">over</span>() <span style="color: #7f007f;">as</span> total
+    <span style="color: #7f007f;">from</span> daily_uniques
+)
+  <span style="color: #7f007f;">select</span> <span style="color: #228b22;">date</span>,
+         round(daily) <span style="color: #7f007f;">as</span> daily,
+         round((daily/total*100)::<span style="color: #228b22;">numeric</span>, 2) <span style="color: #7f007f;">as</span> percent
+    <span style="color: #7f007f;">from</span> stats
+<span style="color: #7f007f;">order</span> <span style="color: #da70d6;">by</span> <span style="color: #228b22;">date</span>;
+    <span style="color: #228b22;">date</span>    | daily  | percent
+<span style="color: #b22222;">------------+--------+---------
+</span> 2013-02-22 | 401677 |   25.19
+ 2013-02-23 | 660187 |   41.41
+ 2013-02-24 | 869980 |   54.56
+ 2013-02-25 | 154996 |    9.72
+(4 <span style="color: #da70d6;">rows</span>)
+</pre>
+
+<p>I coulnd't resist to show off two of my favorite SQL constructs in that
+example query here, which are the <a href="http://www.postgresql.org/docs/9.2/static/queries-with.html">Common Table Expressions</a> (or CTE) and
+<a href="http://www.postgresql.org/docs/9.2/static/tutorial-window.html">window functions</a>. If that <code>over()</code> clause reads strange to you, take a minute
+now and go read about it. Yes, do that now, we're waiting.</p>
+
+<p>The data here is showing that we did setup the facility in the middle of the
+first day, and that the morning's activity is quite low.</p>
+
+
+<h3>Conclusion</h3>
+
+<center>
+<p><img src="../../../images/hll-dv-estimator.png" alt=""></p>
+</center>
+
+<center>
+<p><em>The <a href="http://blog.aggregateknowledge.com/author/wwkae/">HyperLogLog DV estimator</a></em></p>
+</center>
+
+<p>When using <code>postgresql-hll</code> you need to be careful not to kill your
+application concurrency abilities, and you need to protect yourself against
+the ∅ killer too. The other thing to keep in mind is that the numbers you
+get out of the <code>hll</code> technique are estimates within a given <em>precision</em>, and you
+might want to read some more about what it means for your intended usage of
+the feature.</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Mon, 25 Feb 2013 10:23:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2013/02/25-postgresql-hyperloglog.html</guid>
+</item>
+<item>
   <title>PostgreSQL HyperLogLog</title>
   <link>http://tapoueh.org/blog/2013/02/25-postgresql-hyperloglog.html</link>
   <description><![CDATA[<p>If you've been following along at home the newer statistics developments,
