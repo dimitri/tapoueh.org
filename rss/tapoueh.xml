@@ -7,6 +7,29 @@
     <language>en-us</language>
     <generator>Emacs Muse</generator>
 <item>
+  <title>The Need For Speed</title>
+  <link>http://tapoueh.org/blog/2013/03/29-the-need-for-speed.html</link>
+  <description><![CDATA[<p>Hier se tenait la <a href="http://www.postgresql-sessions.org/en/5/start">cinquième édition</a> de la conférence organisée par <em>dalibo</em>,
+où des intervenants extérieurs sont régulièrement invités. Le thème hier
+était à la fois clair et très vaste : la performance.</p>
+
+<p>J'ai eu le plaisir de réaliser une présentation intitulée « The Need for
+Speed » dans laquelle on replace l'effort d'optimisation dans son contexte
+métier, afin de faire une étude des coûts et bénéfices et de savoir non
+seulement à quoi s'attendre mais aussi quand s'arrêter.</p>
+
+<center>
+<p><a class="image-link" href="../../../images/confs/the_need_for_speed.pdf">
+<img src="../../../images/confs/the_need_for_speed-3.png"></a></p>
+</center>
+
+<p>Merci à <em>dalibo</em> pour cette conférence !</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Fri, 29 Mar 2013 09:49:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2013/03/29-the-need-for-speed.html</guid>
+</item>
+<item>
   <title>Bulk Replication</title>
   <link>http://tapoueh.org/blog/2013/03/18-bulk-replication.html</link>
   <description><![CDATA[<p>In the previous article here we talked about how to <em>properly</em> update more
@@ -81,6 +104,176 @@ can even choose to use that for only some of the tables you are replicating.</p>
   <author>dim@tapoueh.org (Dimitri Fontaine)</author>
   <pubDate>Mon, 18 Mar 2013 14:54:00 +0100</pubDate>
   <guid isPermaLink="true">http://tapoueh.org/blog/2013/03/18-bulk-replication.html</guid>
+</item>
+<item>
+  <title>Batch Update</title>
+  <link>http://tapoueh.org/blog/2013/03/15-batch-update.html</link>
+  <description><![CDATA[<p>Performance consulting involves some tricks that you have to teach over and
+over again. One of them is that SQL tends to be so much better at dealing
+with plenty of rows in a single statement when compared to running as many
+statements, each one against a single row.</p>
+
+<center>
+<p><img src="../../../images/Home-Brewing.jpg" alt=""></p>
+</center>
+
+<center>
+<p><em>Another kind of Batch to update</em></p>
+</center>
+
+<p>So when you need to <code>UPDATE</code> a bunch of rows from a given source, remember
+that you can actually use a <code>JOIN</code> in the <em>update</em> statement. Either the source
+of data is already in the database, in which case it's as simple as using
+the <code>FROM</code> clause in the <em>update</em> statement, or it's not, and we're getting back
+to that in a minute.</p>
+
+<h3><code>UPDATE FROM</code></h3>
+
+<p class="first">It's all about using that <code>FROM</code> clause in an <em>update</em> statement, right?</p>
+
+<pre class="src">
+    <span style="color: #da70d6;">UPDATE</span> target <span style="color: #da70d6;">t</span>
+       <span style="color: #da70d6;">SET</span> counter = <span style="color: #da70d6;">t</span>.counter + s.counter,
+      <span style="color: #7f007f;">FROM</span> <span style="color: #da70d6;">source</span> s
+     <span style="color: #7f007f;">WHERE</span> <span style="color: #da70d6;">t</span>.<span style="color: #da70d6;">id</span> = s.<span style="color: #da70d6;">id</span>
+</pre>
+
+<p>Using that, you can actually update thousands of rows in our <em>target</em> table in
+a single statement, and you can't really get faster than that.</p>
+
+
+<h3>Preparing the Batch</h3>
+
+<p class="first">Now, if you happen to have the source data in your application process'
+memory, the previous bits is not doing you any good, you think. Well, the
+trick is that pushing your in-memory data into the database and then joining
+against the now local source of data is generally faster than looping in the
+application and having to do a whole network <em>round trip</em> per row.</p>
+
+<center>
+<p><img src="../../../images/round-trip.png" alt=""></p>
+</center>
+
+<center>
+<p><em>What about</em> <strong><em>that</em></strong> <em>round trip?</em></p>
+</center>
+
+<p>Let's see how it goes:</p>
+
+<pre class="src">
+<span style="color: #7f007f;">CREATE</span> <span style="color: #da70d6;">TEMP</span> <span style="color: #7f007f;">TABLE</span> <span style="color: #da70d6;">source</span>(<span style="color: #7f007f;">LIKE</span> target <span style="color: #da70d6;">INCLUDING</span> <span style="color: #7f007f;">ALL</span>) <span style="color: #7f007f;">ON</span> <span style="color: #da70d6;">COMMIT</span> <span style="color: #da70d6;">DROP</span>;
+
+<span style="color: #da70d6;">COPY</span> <span style="color: #da70d6;">source</span> <span style="color: #7f007f;">FROM</span> <span style="color: #da70d6;">STDIN</span>;
+
+<span style="color: #da70d6;">UPDATE</span> target <span style="color: #da70d6;">t</span>
+   <span style="color: #da70d6;">SET</span> counter = <span style="color: #da70d6;">t</span>.counter + s.counter,
+  <span style="color: #7f007f;">FROM</span> <span style="color: #da70d6;">source</span> s
+ <span style="color: #7f007f;">WHERE</span> <span style="color: #da70d6;">t</span>.<span style="color: #da70d6;">id</span> = s.<span style="color: #da70d6;">id</span>
+</pre>
+
+<p>As we're talking about performances, the trick here is to use the <a href="http://www.postgresql.org/docs/9.2/static/sql-copy.html">COPY</a>
+protocol to fill in the <em>temporary table</em> we just create to hold our data. So
+we're now sending the whole data set in a temporary location in the
+database, then using that as the <code>UPDATE</code> source. And that's way faster than
+doing a separate <code>UPDATE</code> statement per row in your batch, even for small
+batches.</p>
+
+<p>Also, rather than using the SQL <code>COPY</code> command, you might want to look up the
+docs of the PostgreSQL driver you are currently using in your application,
+it certainly includes some higher level facilities to deal with pushing the
+data into the streaming protocol.</p>
+
+
+<h3>Insert or Update</h3>
+
+<p class="first">And now sometime some of the rows in the batch have to be <em>updated</em> while some
+others are new and must be inserted. How do you do that? Well, PostgreSQL
+9.1 brings on the table <code>WITH</code> support for all <a href="http://www.postgresql.org/docs/9.2/static/dml.html">DML</a> queries, which means that
+you can do the following just fine:</p>
+
+<pre class="src">
+<span style="color: #7f007f;">WITH</span> upd <span style="color: #7f007f;">AS</span> (
+    <span style="color: #da70d6;">UPDATE</span> target <span style="color: #da70d6;">t</span>
+       <span style="color: #da70d6;">SET</span> counter = <span style="color: #da70d6;">t</span>.counter + s.counter,
+      <span style="color: #7f007f;">FROM</span> <span style="color: #da70d6;">source</span> s
+     <span style="color: #7f007f;">WHERE</span> <span style="color: #da70d6;">t</span>.<span style="color: #da70d6;">id</span> = s.<span style="color: #da70d6;">id</span>
+ <span style="color: #7f007f;">RETURNING</span> s.<span style="color: #da70d6;">id</span>
+)
+<span style="color: #da70d6;">INSERT</span> <span style="color: #7f007f;">INTO</span> target(<span style="color: #da70d6;">id</span>, counter)
+     <span style="color: #7f007f;">SELECT</span> <span style="color: #da70d6;">id</span>, <span style="color: #da70d6;">sum</span>(counter)
+       <span style="color: #7f007f;">FROM</span> <span style="color: #da70d6;">source</span> s <span style="color: #7f007f;">LEFT</span> <span style="color: #7f007f;">JOIN</span> upd <span style="color: #da70d6;">t</span> <span style="color: #7f007f;">USING</span>(<span style="color: #da70d6;">id</span>)
+      <span style="color: #7f007f;">WHERE</span> <span style="color: #da70d6;">t</span>.<span style="color: #da70d6;">id</span> <span style="color: #7f007f;">IS</span> <span style="color: #7f007f;">NULL</span>
+   <span style="color: #7f007f;">GROUP</span> <span style="color: #da70d6;">BY</span> s.<span style="color: #da70d6;">id</span>
+  <span style="color: #7f007f;">RETURNING</span> <span style="color: #da70d6;">t</span>.<span style="color: #da70d6;">id</span>
+</pre>
+
+<p>That query here is <em>updating</em> all the rows that are known in both the <em>target</em>
+and the <em>source</em> and returns what we took from the <em>source</em> in the operation, so
+that we can do an <em>anti-join</em> in the next step of the query, where we're
+<em>inserting</em> any row that was not taken care of in the <em>update</em> part of the
+statement.</p>
+
+<p>Note that when the batch gets to bigger size it's usually better to join
+against the <em>target</em> table in the <code>INSERT</code> statement, because that will have an
+<em>index</em> on the join key.</p>
+
+
+<h3>Concurrency patterns</h3>
+
+<p class="first">Now, you will tell me that we just solved the <code>UPSERT</code> problem. Well what
+happens if more than one transaction is trying to do the <code>WITH (UPDATE)
+INSERT</code> dance at the same time? It's a single <em>statement</em>, so it's a single
+<em>snapshot</em>. What can go wrong?</p>
+
+<center>
+<p><img src="../../../images/gophermegaphones.480.jpg" alt=""></p>
+</center>
+
+<center>
+<p><em>Concurrent processing</em></p>
+</center>
+
+<p>What happens is that as soon as the concurrent sources contain some data for
+the same <em>primary key</em>, you get a <em>duplicate key</em> error on the insert. As both
+the transactions are concurrent, they are seeing the same <em>target</em> table where
+the new data does not exists, and both will conclude that they need to
+<code>INSERT</code> the new data into the <em>target</em> table.</p>
+
+<p>There are two things that you can do to avoid the problem. The first thing
+is to make it so that you're doing only one <em>batch update</em> at any time, by
+architecting your application around that constraint. That's the most
+effective way around the problem, but not the most practical.</p>
+
+<p>The other thing you can do, is force the concurrent transactions to
+serialize one after the other, using an <a href="http://www.postgresql.org/docs/9.2/static/explicit-locking.html">explicit locking</a> statement:</p>
+
+
+<pre class="src">
+<span style="color: #da70d6;">LOCK</span> <span style="color: #7f007f;">TABLE</span> target <span style="color: #7f007f;">IN</span> <span style="color: #da70d6;">SHARE</span> <span style="color: #da70d6;">ROW</span> <span style="color: #da70d6;">EXCLUSIVE</span> <span style="color: #da70d6;">MODE</span>;
+</pre>
+
+<p>That <em>lock level</em> is not automatically acquired by any PostgreSQL command, so
+the only way it helps you is when you're doing that for every transaction
+you want to serialize. When you know you're not at risk (that is, when not
+playing the <em>insert or update</em> dance), you can omit taking that <em>lock</em>.</p>
+
+
+<h3>Conclusion</h3>
+
+<center>
+<p><a class="image-link" href="http://www.flickr.com/photos/asquarephotography/6841106459/in/photostream/">
+<img src="../../../images/stack-of-old-books.jpg"></a></p>
+</center>
+
+<p>The SQL language has its quirks, that's true. It's been made for efficient
+data processing, and with recent enough <a href="http://www.postgresql.org/about/featurematrix/">PostgreSQL releases</a> you even have
+some advanced pipelining facilities included in the language. Properly
+learning how to make the most out of that old component of your programming
+stack still makes a lot of sense today!</p>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Fri, 15 Mar 2013 10:47:00 +0100</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2013/03/15-batch-update.html</guid>
 </item>
 <item>
   <title>Batch Update</title>
