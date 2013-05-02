@@ -7,6 +7,287 @@
     <language>en-us</language>
     <generator>Emacs Muse</generator>
 <item>
+  <title>Nearest Big City</title>
+  <link>http://tapoueh.org/blog/2013/05/02-nearest-big-city.html</link>
+  <description><![CDATA[<p>In this article, we want to find the town with the greatest number of
+inhabitants near a given location.</p>
+
+<center>
+<p><img src="../../../images/global_accessibility-640.png" alt=""></p>
+</center>
+
+<h3>A very localized example</h3>
+
+<p class="first">We first need to find and import some data, and I found at the following
+place a <a href="http://www.lion1906.com/Pages/francais/utile/telechargements.html">CSV listing of french cities with coordinates and population</a> and
+some numbers of interest for the exercise here.</p>
+
+<p>To import the data set, we first need a table, then a <code>COPY</code> command:</p>
+
+<pre class="src">
+<span style="color: #fcaf3e;">CREATE</span> <span style="color: #fcaf3e;">TABLE</span> <span style="color: #729fcf;">lion1906</span> (
+  insee       <span style="color: #c17d11;">text</span>,
+  nom         <span style="color: #c17d11;">text</span>,
+  altitude    <span style="color: #c17d11;">integer</span>,
+  code_postal <span style="color: #c17d11;">text</span>,
+  longitude   <span style="color: #c17d11;">double</span> <span style="color: #c17d11;">precision</span>,
+  latitude    <span style="color: #c17d11;">double</span> <span style="color: #c17d11;">precision</span>,
+  pop99       <span style="color: #c17d11;">bigint</span>,
+  surface     <span style="color: #c17d11;">double</span> <span style="color: #c17d11;">precision</span>
+);
+
+\<span style="color: #729fcf;">copy</span> lion1906 <span style="color: #fcaf3e;">from</span> <span style="color: #73d216;">'villes.csv'</span> <span style="color: #fcaf3e;">with</span> <span style="color: #729fcf;">csv</span> <span style="color: #729fcf;">header</span> <span style="color: #729fcf;">delimiter</span> <span style="color: #73d216;">';'</span> <span style="color: #729fcf;">encoding</span> <span style="color: #73d216;">'latin1'</span>
+</pre>
+
+<p>With that data in place, we can find the 10 nearest towns of a random
+choosing of us, let's pick <em>Villeurbanne</em> which is in the region of <em>Lyon</em>.</p>
+
+<pre class="src">
+   <span style="color: #fcaf3e;">select</span> code_postal, nom, pop99
+     <span style="color: #fcaf3e;">from</span> lion1906
+ <span style="color: #fcaf3e;">order</span> <span style="color: #729fcf;">by</span> <span style="color: #c17d11;">point</span>(longitude, latitude) &lt;-&gt;
+          (<span style="color: #fcaf3e;">select</span> <span style="color: #c17d11;">point</span>(longitude, latitude)
+             <span style="color: #fcaf3e;">from</span> lion1906
+            <span style="color: #fcaf3e;">where</span> nom = <span style="color: #73d216;">'Villeurbanne'</span>)
+    <span style="color: #fcaf3e;">limit</span> 10;
+
+ code_postal |          nom           | pop99
+<span style="color: #888a85;">-------------+------------------------+--------
+</span> 69100       | Villeurbanne           | 124215
+ 69300       | Caluire-et-Cuire       |  41233
+ 69120       | Vaulx-en-Velin         |  39154
+ 69580       | Sathonay-Camp          |   4336
+ 69140       | Rillieux-la-Pape       |  28367
+ 69000       | Lyon                   | 445452
+ 69500       | Bron                   |  37369
+ 69580       | Sathonay-Village       |   1693
+ 01700       | Neyron                 |   2157
+ 69660       | Collonges-au-Mont-d<span style="color: #73d216;">'Or |   3420
+(10 rows)
+</span></pre>
+
+<p>We find Lyon in our list in there, and we want the query now to return only
+that one as it has the greatest number of inhabitants in the list:</p>
+
+<pre class="src">
+<span style="color: #fcaf3e;">with</span> neighbours <span style="color: #fcaf3e;">as</span> (
+   <span style="color: #fcaf3e;">select</span> code_postal, nom, pop99
+     <span style="color: #fcaf3e;">from</span> lion1906
+ <span style="color: #fcaf3e;">order</span> <span style="color: #729fcf;">by</span> <span style="color: #c17d11;">point</span>(longitude, latitude) &lt;-&gt;
+          (<span style="color: #fcaf3e;">select</span> <span style="color: #c17d11;">point</span>(longitude, latitude)
+             <span style="color: #fcaf3e;">from</span> lion1906 <span style="color: #fcaf3e;">where</span> nom = <span style="color: #73d216;">'Villeurbanne'</span>)
+    <span style="color: #fcaf3e;">limit</span> 10
+)
+  <span style="color: #fcaf3e;">select</span> *
+    <span style="color: #fcaf3e;">from</span> neighbours
+<span style="color: #fcaf3e;">order</span> <span style="color: #729fcf;">by</span> pop99 <span style="color: #fcaf3e;">desc</span>
+   <span style="color: #fcaf3e;">limit</span> 1;
+
+ code_postal | nom  | pop99
+<span style="color: #888a85;">-------------+------+--------
+</span> 69000       | Lyon | 445452
+(1 <span style="color: #729fcf;">row</span>)
+</pre>
+
+<p>Well, thank you PostgreSQL, that was easy!</p>
+
+<p>Note that you can actually index such queries, that's called a <em>KNN index</em>.
+PostgreSQL knows how to use some kind of indexes to fetch data matching an
+expression such as <code>ORDER BY a &lt;-&gt; b</code>, which allow you to consider a <em>KNN</em>
+search in your application.</p>
+
+
+<h3>Let's get worldwide</h3>
+
+<p class="first">The real scope of our exercise is to associate every known town in the world
+with some big city around, so let's first fetch and import some worldwide
+data this time, from
+<a href="maxmind">http://download.maxmind.com/download/worldcities/worldcitiespop.txt.gz</a>.</p>
+
+<center>
+<p><img src="../../../images/map_nearest_city_01.gif" alt=""></p>
+</center>
+
+<pre class="src">
+<span style="color: #fcaf3e;">CREATE</span> <span style="color: #fcaf3e;">TABLE</span> <span style="color: #729fcf;">maxmind_worldcities</span> (
+        country_code <span style="color: #c17d11;">text</span>,
+        city_lower <span style="color: #c17d11;">text</span>,
+        city_normal <span style="color: #c17d11;">text</span>,
+        region_code <span style="color: #c17d11;">text</span> <span style="color: #fcaf3e;">DEFAULT</span> <span style="color: #73d216;">''</span>,
+        population <span style="color: #c17d11;">INT</span> <span style="color: #fcaf3e;">DEFAULT</span> <span style="color: #73d216;">'0'</span>,
+        latitude <span style="color: #c17d11;">float8</span> <span style="color: #fcaf3e;">DEFAULT</span> <span style="color: #73d216;">'0'</span>,
+        longitude <span style="color: #c17d11;">float8</span> <span style="color: #fcaf3e;">DEFAULT</span> <span style="color: #73d216;">'0'</span>
+);
+
+\<span style="color: #729fcf;">copy</span> maxmind_worldcities <span style="color: #fcaf3e;">FROM</span> <span style="color: #73d216;">'/tmp/worldcitiespop.txt'</span> <span style="color: #fcaf3e;">WITH</span>  <span style="color: #729fcf;">DELIMITER</span> <span style="color: #73d216;">','</span> <span style="color: #729fcf;">QUOTE</span> E<span style="color: #73d216;">'\f'</span> <span style="color: #729fcf;">CSV</span> <span style="color: #729fcf;">HEADER</span> <span style="color: #729fcf;">ENCODING</span> <span style="color: #73d216;">'LATIN1'</span>;
+
+<span style="color: #729fcf;">alter</span> <span style="color: #fcaf3e;">table</span> <span style="color: #729fcf;">maxmind_worldcities</span> <span style="color: #729fcf;">add</span> <span style="color: #fcaf3e;">column</span> loc <span style="color: #c17d11;">point</span>;
+<span style="color: #729fcf;">update</span> maxmind_worldcities <span style="color: #729fcf;">set</span> loc = <span style="color: #c17d11;">point</span>(longitude, latitude);
+</pre>
+
+<p>This time you can see that I created an extra column with the <em>location</em> in
+there, so that I don't have to compute it each time I need it, like I did
+before.</p>
+
+<p>Now is the time to test that data set and hopefully fetch the same result as
+before when we only had french cities loaded:</p>
+
+<pre class="src">
+<span style="color: #fcaf3e;">with</span> neighbours <span style="color: #fcaf3e;">as</span> (
+   <span style="color: #fcaf3e;">select</span> country_code, city_lower, population
+     <span style="color: #fcaf3e;">from</span> maxmind_worldcities
+    <span style="color: #fcaf3e;">where</span> population <span style="color: #fcaf3e;">is</span> <span style="color: #fcaf3e;">not</span> <span style="color: #fcaf3e;">null</span>
+ <span style="color: #fcaf3e;">order</span> <span style="color: #729fcf;">by</span> loc &lt;-&gt;
+          (<span style="color: #fcaf3e;">select</span> loc
+             <span style="color: #fcaf3e;">from</span> maxmind_worldcities
+            <span style="color: #fcaf3e;">where</span> city_lower = <span style="color: #73d216;">'villeurbanne'</span>)
+   <span style="color: #fcaf3e;">limit</span> 10
+)
+   <span style="color: #fcaf3e;">select</span> * <span style="color: #fcaf3e;">from</span> neighbours <span style="color: #fcaf3e;">order</span> <span style="color: #729fcf;">by</span> population <span style="color: #fcaf3e;">desc</span> <span style="color: #fcaf3e;">limit</span> 1;
+
+  country_code | city_lower | population
+<span style="color: #888a85;">--------------+------------+------------
+</span> fr           | lyon       |     463700
+(1 <span style="color: #729fcf;">row</span>)
+</pre>
+
+<p>Ok, looks like we're all set for the real problem. Now we want to pick for
+each of those cities it's nearest neighboor, so here's how to do that:</p>
+
+<pre class="src">
+<span style="color: #fcaf3e;">create</span> <span style="color: #729fcf;">index</span> <span style="color: #fcaf3e;">on</span> maxmind_worldcities(country_code, region_code, city_lower);
+<span style="color: #fcaf3e;">create</span> <span style="color: #729fcf;">index</span> <span style="color: #fcaf3e;">on</span> maxmind_worldcities <span style="color: #fcaf3e;">using</span> gist(loc);
+
+<span style="color: #fcaf3e;">create</span> <span style="color: #fcaf3e;">table</span> <span style="color: #729fcf;">maxmind_neighbours</span> <span style="color: #fcaf3e;">as</span>
+  <span style="color: #fcaf3e;">select</span> country_code, region_code, city_lower,
+         (<span style="color: #fcaf3e;">with</span> neighbours <span style="color: #fcaf3e;">as</span> (
+             <span style="color: #fcaf3e;">select</span> country_code, city_lower, population
+               <span style="color: #fcaf3e;">from</span> maxmind_worldcities
+              <span style="color: #fcaf3e;">where</span> population <span style="color: #fcaf3e;">is</span> <span style="color: #fcaf3e;">not</span> <span style="color: #fcaf3e;">null</span>
+                    <span style="color: #fcaf3e;">and</span> country_code = wc.country_code
+                    <span style="color: #fcaf3e;">and</span> region_code = wc.region_code
+           <span style="color: #fcaf3e;">order</span> <span style="color: #729fcf;">by</span> loc &lt;-&gt; wc.loc
+             <span style="color: #fcaf3e;">limit</span> 10)
+             <span style="color: #fcaf3e;">select</span> city_lower
+               <span style="color: #fcaf3e;">from</span> neighbours
+           <span style="color: #fcaf3e;">order</span> <span style="color: #729fcf;">by</span> population <span style="color: #fcaf3e;">desc</span>
+              <span style="color: #fcaf3e;">limit</span> 1
+         ) <span style="color: #fcaf3e;">as</span> neighbour
+    <span style="color: #fcaf3e;">from</span> maxmind_worldcities wc ;
+</pre>
+
+<p>To be fair, I have to tell you that this query took almost 2 hours to
+complete on my laptop here, but as I'm doing that for friend and a blog
+article, I've been lazy and didn't try to optimise it. It could be using
+<code>LATERAL</code> for sure, I don't know if that would help very much with
+performances: I didn't try.</p>
+
+<p>With that in hands we can now check some cities and their <em>biggest</em>
+neighbours, as in the following query:</p>
+
+<pre class="src">
+<span style="color: #fcaf3e;">select</span> * <span style="color: #fcaf3e;">from</span> maxmind_neighbours <span style="color: #fcaf3e;">where</span> city_lower = <span style="color: #73d216;">'villeurbanne'</span>;
+ country_code | region_code |  city_lower  | neighbour
+<span style="color: #888a85;">--------------+-------------+--------------+-----------
+</span> fr           | B9          | villeurbanne | lyon
+(1 <span style="color: #729fcf;">row</span>)
+</pre>
+
+<p>And looking for New-York City suburbs I did find a <em>chinatown</em>, which is a
+pretty common smaller town name apparently:</p>
+
+<pre class="src">
+<span style="color: #fcaf3e;">select</span> * <span style="color: #fcaf3e;">from</span> maxmind_neighbours <span style="color: #fcaf3e;">where</span> city_lower = <span style="color: #73d216;">'chinatown'</span>;
+ country_code | region_code | city_lower |   neighbour
+<span style="color: #888a85;">--------------+-------------+------------+---------------
+</span> sb           | 08          | chinatown  | honiara
+ us           | CA          | chinatown  | san francisco
+ us           | DC          | chinatown  | washington
+ us           | HI          | chinatown  | honolulu
+ us           | IL          | chinatown  | chicago
+ us           | MT          | chinatown  | missoula
+ us           | NV          | chinatown  | reno
+ us           | NY          | chinatown  | <span style="color: #729fcf;">new</span> york
+(8 <span style="color: #729fcf;">rows</span>)
+</pre>
+
+
+<h3>Big Cities in the big world</h3>
+
+<center>
+<p><img src="../../../images/Old-Photos-of-Big-Cities-21.jpg" alt=""></p>
+</center>
+
+<center>
+<p><em>We might need to change some of our views</em></p>
+</center>
+
+<p>So, let's see how many smaller towns each of those random big cities have:</p>
+
+<pre class="src">
+   <span style="color: #fcaf3e;">select</span> country_code, region_code, neighbour, <span style="color: #729fcf;">count</span>(*)
+    <span style="color: #fcaf3e;">from</span> maxmind_neighbours
+   <span style="color: #fcaf3e;">where</span> neighbour <span style="color: #fcaf3e;">in</span> (<span style="color: #73d216;">'london'</span>, <span style="color: #73d216;">'new york'</span>, <span style="color: #73d216;">'moscow'</span>,
+                       <span style="color: #73d216;">'paris'</span>, <span style="color: #73d216;">'tokyo'</span>, <span style="color: #73d216;">'sao polo'</span>, <span style="color: #73d216;">'chicago'</span>)
+<span style="color: #fcaf3e;">group</span> <span style="color: #729fcf;">by</span> country_code, region_code, neighbour;
+ country_code | region_code | neighbour | <span style="color: #729fcf;">count</span>
+<span style="color: #888a85;">--------------+-------------+-----------+-------
+</span> gb           | H9          | london    |     2
+ jp           | 40          | tokyo     |   414
+ us           | NY          | <span style="color: #729fcf;">new</span> york  |   131
+ ca           | 08          | london    |    16
+ ru           | 48          | moscow    |   245
+ fr           | A8          | paris     |    16
+ us           | IL          | chicago   |    13
+(7 <span style="color: #729fcf;">rows</span>)
+</pre>
+
+<p>And now let's be fair and see where are the cities with the greatest number
+of towns nearby them, with the following query:</p>
+
+<pre class="src">
+  <span style="color: #fcaf3e;">select</span> country_code, region_code, neighbour, <span style="color: #729fcf;">count</span>(*)
+    <span style="color: #fcaf3e;">from</span> maxmind_neighbours
+   <span style="color: #fcaf3e;">where</span> neighbour <span style="color: #fcaf3e;">is</span> <span style="color: #fcaf3e;">not</span> <span style="color: #fcaf3e;">null</span>
+<span style="color: #fcaf3e;">group</span> <span style="color: #729fcf;">by</span> country_code, region_code, neighbour
+<span style="color: #fcaf3e;">order</span> <span style="color: #729fcf;">by</span> 4 <span style="color: #fcaf3e;">desc</span>
+   <span style="color: #fcaf3e;">limit</span> 25;
+
+ country_code | region_code | neighbour  | <span style="color: #729fcf;">count</span>
+<span style="color: #888a85;">--------------+-------------+------------+-------
+</span> cn           | 03          | nanchang   | 16759
+ cn           | 26          | xian       | 12864
+ <span style="color: #729fcf;">id</span>           | 18          | kupang     | 10715
+ cn           | 24          | taiyuan    | 10550
+ mm           | 11          | taunggyi   | 10253
+ <span style="color: #729fcf;">id</span>           | 38          | makasar    |  9471
+ ir           | 15          | ahvaz      |  9461
+ <span style="color: #729fcf;">id</span>           | 01          | banda aceh |  9161
+ cn           | 14          | lasa       |  8841
+ cn           | 15          | lanzhou    |  8618
+ ir           | 29          | kerman     |  8579
+ <span style="color: #729fcf;">id</span>           | 26          | medan      |  7787
+ ir           | 04          | iranshahr  |  7249
+ ir           | 07          | shiraz     |  7219
+ ma           | 55          | agadir     |  7121
+ ir           | 42          | mashhad    |  7107
+ af           | 08          | gazni      |  7011
+ ir           | 33          | tabriz     |  6586
+ cn           | 01          | hefei      |  6521
+ bd           | 81          | dhaka      |  6480
+ ir           | 08          | rasht      |  6471
+ <span style="color: #729fcf;">id</span>           | 17          | mataram    |  6467
+ <span style="color: #729fcf;">id</span>           | 33          | cilegon    |  6287
+ af           | 23          | qandahar   |  6213
+ cn           | 07          | fuzhou     |  6089
+(25 <span style="color: #729fcf;">rows</span>)
+</pre>
+]]></description>
+  <author>dim@tapoueh.org (Dimitri Fontaine)</author>
+  <pubDate>Thu, 02 May 2013 11:34:00 +0200</pubDate>
+  <guid isPermaLink="true">http://tapoueh.org/blog/2013/05/02-nearest-big-city.html</guid>
+</item>
+<item>
   <title>Emacs Conference</title>
   <link>http://tapoueh.org/blog/2013/04/02-Emacs-Conference.html</link>
   <description><![CDATA[<p>Yes it did happen, for real, in London: the <a href="http://emacsconf.herokuapp.com/">Emacs Conference</a>. It was easter
