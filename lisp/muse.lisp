@@ -101,16 +101,19 @@
 
 (defun http-uri-chararcter-p (char)
   "Allowed characters in an URI, including parameters"
-  (or (member char #.(quote (coerce "`~!@#$%^&*()-_+{}\\|;:'\"<>,./?" 'list)))
+  (or (member char #.(quote (coerce "`~!@#$%^&*()-_+{}\\|;:'\"<>,./?=" 'list)))
       (alphanumericp char)))
 
 (defrule http-localpath-and-args (* (http-uri-chararcter-p character))
   (:text t))
 
-(defrule http-uri (and "http://" hostname "/" http-localpath-and-args)
+(defrule http-protocol (and "http" (? "s") "://")
+  (:text t))
+
+(defrule http-uri (and http-protocol hostname "/" http-localpath-and-args)
   (:lambda (source)
-    (destructuring-bind ((prefix hostname) slash localpath) source
-      (concatenate 'string prefix hostname slash localpath))))
+    (destructuring-bind (proto hostname slash localpath) source
+      (concatenate 'string proto hostname slash localpath))))
 
 (defun filename-character-p (char)
   (or (member char #.(quote (coerce "/:.-_@$%^*" 'list)))
@@ -189,7 +192,7 @@
       (declare (ignore open attrs gt close))
       `(:pre ,(text source)))))
 
-(defrule body (+ (* (or paragraph title src))))
+(defrule body (* (or paragraph title src)))
 
 (defrule article (and directives body)
   (:lambda (source)
