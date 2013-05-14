@@ -22,7 +22,7 @@
 (defun not-newline (char)
   (not (eql #\newline char)))
 
-(defrule whitespace (or #\space #\tab #\newline #\linefeed))
+(defrule whitespace (or #\space #\newline #\linefeed))
 (defrule whitespaces (* whitespace))
 
 (defrule empty-line #\newline
@@ -81,7 +81,7 @@
 ;;
 (defun muse-word-p (char)
   "Non decorated words, with spaces inside"
-  (or (member char #.(quote (coerce "`~!@#$%^&()-_+{}\\|;:'\"<>,./?" 'list)))
+  (or (member char #.(quote (coerce "`~!@#$%^&()-_+{}\\|;:'\",./?" 'list)))
       (alphanumericp char)))
 
 (defrule word (+ (muse-word-p character))
@@ -128,7 +128,7 @@
       (declare (ignore open close))
       (text label))))
 
-(defrule link-target (and "[" (or filename http-uri) "]")
+(defrule link-target (and "[" (or http-uri filename) "]")
   (:lambda (source)
     (destructuring-bind (open target close) source
       (declare (ignore open close))
@@ -166,16 +166,28 @@
       (declare (ignore o1 o2 o3 c1 c2 c3))
       `(:em (:strong ,content)))))
 
-(defrule paragraph (+ (or heavy bold italics monospace link words whitespace))
+(defrule centered (and #\Tab
+		       (or heavy bold italics monospace link words)
+		       (? #\Newline))
+  (:lambda (source)
+    (destructuring-bind (tab thing nl) source
+      (declare (ignore tab nl))
+      `(:center ,thing))))
+
+(defrule paragraph (+ (or heavy bold italics monospace link words))
   (:lambda (source)
     `(:p ,@source)))
 
-(defrule title (and (+ #\*) words)
+(defrule title (and (+ #\*) non-empty-line)
   (:lambda (source)
     (destructuring-bind (stars title) source
-      `(,(intern (format nil "H~d" (length stars)) :tapoueh) ,title))))
-
-(defun any-character-p (char) (not (char= char #\<)))
+      (case (length stars)
+	(1 `(:h1 ,title))
+	(2 `(:h2 ,title))
+	(3 `(:h3 ,title))
+	(4 `(:h4 ,title))
+	(5 `(:h5 ,title))
+	(6 `(:h6 ,title))))))
 
 (defrule src-attrs-lang
     (and whitespaces "lang=\"" (+ (or #\- (alpha-char-p character))) "\"")
@@ -185,21 +197,29 @@
       (list :lang (text value)))))
 
 (defrule src (and "<src" (? src-attrs-lang) ">"
-		  (+ (any-character-p character))
+		  (+ (not "</src>"))
 		  "</src>")
   (:lambda (source)
     (destructuring-bind (open attrs gt source close) source
       (declare (ignore open attrs gt close))
       `(:pre ,(text source)))))
 
-(defrule body (* (or paragraph title src)))
+(defrule body (* (or centered paragraph title src)))
 
 (defrule article (and directives body)
   (:lambda (source)
-    (destructuring-bind (s content) source
-      (format t "~a~%" content)
-      (setf (muse-contents s) content))))
+    (destructuring-bind (document content) source
+      (setf (muse-contents document) content)
+      document)))
 
-(defun test (&optional (filename "/tmp/13-from-parser-to-compiler.muse"))
+(defun test (&key
+	       (expression 'article)
+	       (filename "/tmp/13-from-parser-to-compiler.muse")
+	       junk-allowed)
   (let ((content (slurp-file-into-string filename)))
-    (parse 'article content)))
+    (parse expression content :junk-allowed junk-allowed)))
+
+(defmethod to-html ((document muse))
+  "Produce the HTML of given Document"
+  (eval `(with-html-output-to-string (s nil :indent t)
+	   ,(muse-contents document))))
