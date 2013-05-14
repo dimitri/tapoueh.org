@@ -47,6 +47,7 @@
 (defmethod to-html ((document muse))
   "Produce the HTML of given Document"
   (eval `(with-html-output-to-string (s nil :indent t)
+	   (declare (ignore s))
 	   ,(muse-contents document))))
 
 ;;; a .muse file with the 4 directives is an "article"
