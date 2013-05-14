@@ -19,7 +19,7 @@
 			       &aux (timestamp (parse-date date)))))
   author title date timestamp tags contents)
 
-(defmethod same-document ((d1 muse) (d2 muse))
+(defmethod same-document-p ((d1 muse) (d2 muse))
   "Compare d1 and d2 slots"
   (and (equalp (muse-author d1) (muse-author d2))
        (equalp (muse-title d1) (muse-title d2))
@@ -109,7 +109,7 @@
 #+5am
 (test parse-directives
       "Test parsing directives"
-      (is (same-document
+      (is (same-document-p
 	   (parse 'directives "#author Dimitri Fontaine
 #title  from Parsing to Compiling
 #date   20130513-11:08
