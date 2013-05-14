@@ -11,8 +11,10 @@
 	       #:cl-who			; produce HTML from Muse sources
 	       #:split-sequence		; easy splitting
 	       #:fiveam			; regression testing
+	       #:cl-fad			; file and directories
 	       )
   :components ((:file "package")
-	       (:file "utils")
-               (:file "muse" :depends-on ("utils"))))
+	       (:file "utils"   :depends-on ("package"))
+               (:file "muse"    :depends-on ("utils" "package"))
+	       (:file "tapoueh" :depends-on ("muse" "utils" "package"))))
 

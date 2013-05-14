@@ -9,16 +9,32 @@
 (def-suite muse :description "Emacs Muse Parser Test Suite.")
 (in-suite muse)
 
+(defparameter *muse-pathname-type* "muse"
+  "The file extension we use to store Muse files")
+
 ;;
 ;; Document data structure, pretty loose
 ;;
 (defstruct
     (muse
-      (:constructor make-muse (&key
-			       author title date tags contents
-			       &aux (timestamp (parse-date date)))))
-  author title date timestamp tags contents)
+      (:constructor make-muse)
+      (:constructor make-muse-article (&key
+				       author title date tags desc contents
+				       &aux (timestamp (when date
+							 (parse-date date))))))
+  author title date timestamp tags desc contents)
 
+(defmethod muse-article-p ((document muse))
+  "Return a generalized boolean true when DOCUMENT is a Muse Article.
+
+   A Muse Article is a Muse Document with all the directives given, so that
+   none of the meta-data slots are nil."
+  (and (muse-author document)
+       (muse-title  document)
+       (muse-date   document)
+       (muse-tags   document)))
+
+;;; a .muse file is a "document"
 (defmethod same-document-p ((d1 muse) (d2 muse))
   "Compare d1 and d2 slots"
   (and (equalp (muse-author d1) (muse-author d2))
@@ -33,8 +49,31 @@
   (eval `(with-html-output-to-string (s nil :indent t)
 	   ,(muse-contents document))))
 
+;;; a .muse file with the 4 directives is an "article"
+(defmethod sort-articles ((a1 muse) (a2 muse)
+			  &key
+			    (test #'local-time:timestamp<)
+			    (key 'timestamp))
+  (let ((t1 (slot-value a1 key))
+	(t2 (slot-value a2 key)))
+    (when (and t1 t2)
+      (funcall test t1 t2))))
+
+(defun parse-muse-article (pathname)
+  "Parse the Muse article at PATHNAME and return a muse structure."
+  (parse 'article (slurp-file-into-string pathname)))
+
+(defun parse-muse-directives (pathname)
+  "Only parse the Muse directives, not the whole document"
+  (or (parse 'directives (slurp-file-into-string pathname) :junk-allowed t)
+      pathname))
+
+(defun muse-file-type-p (pathname)
+  "Returns a generalized boolean true when pathname extension is .muse"
+  (string= (pathname-type pathname) *muse-pathname-type*))
+
 ;;
-;; Basics, generics
+;; Now the Parsing, with first some basics
 ;;
 (defun not-newline (char)
   (not (eql #\newline char)))
@@ -76,10 +115,14 @@
 (defrule directive-tags (and "#tags" (+ (or #\Tab #\Space)))
   (:constant :tags))
 
+(defrule directive-desc (and "#desc" (+ (or #\Tab #\Space)))
+  (:constant :desc))
+
 (defrule directive-name (or directive-author
 			    directive-title
 			    directive-date
-			    directive-tags))
+			    directive-tags
+			    directive-desc))
 
 (defrule directive (and directive-name non-empty-line)
   (:lambda (source)
@@ -93,7 +136,7 @@
     (destructuring-bind (directives e) source
       (declare (ignore e))
       ;; build a plist of the directives, use that to create a struct
-      (apply #'make-muse (apply #'append directives)))))
+      (apply #'make-muse-article (apply #'append directives)))))
 
 #+5am
 (test parse-directive
@@ -116,10 +159,11 @@
 #tags   Common-Lisp Parser Emacs Muse
 
 ")
-	   (make-muse :author "Dimitri Fontaine"
-		      :title "from Parsing to Compiling"
-		      :date "20130513-11:08"
-		      :tags '("Common-Lisp" "Parser" "Emacs" "Muse")))))
+	   (make-muse-article
+	    :author "Dimitri Fontaine"
+	    :title "from Parsing to Compiling"
+	    :date "20130513-11:08"
+	    :tags '("Common-Lisp" "Parser" "Emacs" "Muse")))))
 
 ;;
 ;; Document content
@@ -129,57 +173,20 @@
   (or (member char #.(quote (coerce "`~!@#$%^&()-_+{}\\|;:'\",./?" 'list)))
       (alphanumericp char)))
 
-(defrule word (+ (muse-word-p character))
+(defrule word (+ (not (or whitespace #\Tab #\[ #\] #\< #\> #\= #\*)))
   (:text t))
 
 (defrule words (+ (or word whitespace))
   (:lambda (source)
     (apply #'concatenate 'string source)))
 
-(defrule namestring (and (alpha-char-p character)
-			 (* (or (alpha-char-p character)
-				(digit-char-p character))))
-  (:text t))
-
-(defrule hostname (and namestring (? (and "." hostname)))
-  (:text t))
-
-(defun http-uri-chararcter-p (char)
-  "Allowed characters in an URI, including parameters"
-  (or (member char #.(quote (coerce "`~!@#$%^&*()-_+{}\\|;:'\"<>,./?=" 'list)))
-      (alphanumericp char)))
-
-(defrule http-localpath-and-args (* (http-uri-chararcter-p character))
-  (:text t))
-
-(defrule http-protocol (and "http" (? "s") "://")
-  (:text t))
-
-(defrule http-uri (and http-protocol hostname "/" http-localpath-and-args)
-  (:lambda (source)
-    (destructuring-bind (proto hostname slash localpath) source
-      (concatenate 'string proto hostname slash localpath))))
-
-(defun filename-character-p (char)
-  (or (member char #.(quote (coerce "/:.-_@$%^*" 'list)))
-      (alphanumericp char)))
-
-(defrule filename (* (filename-character-p character))
-  (:text t))
-
-(defrule link-label (and "[" words "]")
-  (:lambda (source)
-    (destructuring-bind (open label close) source
-      (declare (ignore open close))
-      (text label))))
-
-(defrule link-target (and "[" (or http-uri filename) "]")
+(defrule link-part (and "[" (+ (not "]")) "]")
   (:lambda (source)
     (destructuring-bind (open target close) source
       (declare (ignore open close))
-      target)))
+      (text target))))
 
-(defrule link (and "[" link-target (? link-label) "]")
+(defrule link (and "[" link-part (? link-part) "]")
   (:lambda (source)
     (destructuring-bind (open target label close) source
       (declare (ignore open close))
@@ -203,50 +210,91 @@
 	   '(:A :HREF
 	     "https://groups.google.com/forum/?fromgroups=#!topic/comp.lang.lisp/JJxTBqf7scU"
 	     "What is symbolic compoutation?")
+	   :test #'equalp))
+      (is (tree-equal
+	   (parse 'link "[[skytools.html#slony][What does londiste lack that slony has?]]")
+	   '(:A :HREF "skytools.html#slony" "What does londiste lack that slony has?")
+	   :test #'equalp))
+      (is (tree-equal
+	   (parse 'link "[[http://forum.ubuntu-fr.org/viewtopic.php?id=218883]]")
+	   '(:IMG :SRC "http://forum.ubuntu-fr.org/viewtopic.php?id=218883")
 	   :test #'equalp)))
 
-(defrule monospace (and #\= words #\=)
+(defrule attr
+    (and whitespaces
+	 word
+	 "="
+	 (? #\")
+	 (+ (or #\- #\. (alphanumericp character)))
+	 (? #\"))
+  (:lambda (source)
+    (destructuring-bind (ws name eq lq value rq) source
+      (declare (ignore ws eq lq rq))
+      (list (read-from-string (format nil ":~a" name)) (text value)))))
+
+(defrule attrs (+ attr)
+  (:lambda (source)
+    (apply #'append source)))
+
+(defrule code (and "<code" (? attrs) ">" (+ (not "</code>")) "</code>")
+  (:lambda (source)
+    (destructuring-bind (open attrs gt code close) source
+      (declare (ignore open close))
+      `(:span :class "tt" ,@attrs ,(text code)))))
+
+(defrule monospace (and #\= (+ (not "=")) #\=)
   (:lambda (source)
     (destructuring-bind (open content close) source
       (declare (ignore open close))
-      `(:span :class "tt" ,content))))
+      `(:span :class "tt" ,(text content)))))
 
-(defrule italics (and #\* words #\*)
+(defrule italics (and #\* (+ (or link monospace words)) #\*)
   (:lambda (source)
     (destructuring-bind (open content close) source
       (declare (ignore open close))
-      `(:em ,content))))
+      `(:em ,@content))))
 
-(defrule bold (and #\* #\* words #\* #\*)
+(defrule bold (and #\* #\* (+ (or link monospace words)) #\* #\*)
   (:lambda (source)
     (destructuring-bind (open1 open2 content close1 close2) source
       (declare (ignore open1 open2 close1 close2))
-      `(:strong ,content))))
+      `(:strong ,@content))))
 
-(defrule heavy (and #\* #\* #\* words #\* #\* #\*)
+(defrule heavy (and #\* #\* #\* (+ (or link monospace words)) #\* #\* #\*)
   (:lambda (source)
     (destructuring-bind (o1 o2 o3 content c1 c2 c3) source
       (declare (ignore o1 o2 o3 c1 c2 c3))
-      `(:em (:strong ,content)))))
+      `(:em (:strong ,@content)))))
 
 #+5am
 (test parse-emphasis
       "Test *italics* and **bold** and ***heavy*** etc."
       (is (equalp (parse 'monospace "=code=")
 		  '(:span :class "tt" "code")))
+      (is (equalp (parse 'monospace "=@>=")
+		  '(:span :class "tt" "@>")))
+      (is (equalp (parse 'code "<code>=</code>")
+		  '(:span :class "tt" "=")))
+      (is (equalp
+	   (parse 'code "<code src=\"sql\">SELECT colname FROM table WHERE pk = 1234;</code>")
+
+	   '(:SPAN :CLASS "tt" :SRC "sql" "SELECT colname FROM table WHERE pk = 1234;")))
       (is (equalp (parse 'italics "*some italic words*")
 		  '(:em  "some italic words")))
+      (is (equalp (parse 'italics "*An edited version of =hstore--1.1.sql= for vertical space concerns*")))
+      '(:EM "An edited version of " (:SPAN :CLASS "tt" "hstore--1.1.sql")
+	" for vertical space concerns")
       (is (equalp (parse 'bold "**this is bold**")
 		  '(:strong "this is bold")))
       (is (equalp (parse 'heavy "***this is heavy***")
 		  '(:em (:strong "this is heavy")))))
 
-(defrule centered (and #\Tab
-		       (or heavy bold italics monospace link words)
+(defrule centered (and #\Tab (* (or #\Tab whitespace))
+		       (or heavy bold italics monospace code link words)
 		       (? #\Newline))
   (:lambda (source)
-    (destructuring-bind (tab thing nl) source
-      (declare (ignore tab nl))
+    (destructuring-bind (tab ws thing nl) source
+      (declare (ignore tab ws nl))
       `(:center ,thing))))
 
 #+5am
@@ -256,14 +304,14 @@
 		  '(:center (:em  "ahah"))))
       (is (equalp (parse 'centered "	*ahah*
 ")
-		  '(:center (:em  "ahah")))))
-
-(defun empty-string (string)
-  (and (stringp string) (string= string "")))
-
-(defrule paragraph (+ (or heavy bold italics monospace link empty-line words))
-  (:lambda (source)
-    `(:p ,@(remove-if #'empty-string source))))
+		  '(:center (:em  "ahah"))))
+      (is (equalp (parse 'centered "		       [[http://postgresqlrussia.org/articles/view/131][../../../images/Moskva_DB_Tools.v3.png]]")
+		  '(:center (:a :href "http://postgresqlrussia.org/articles/view/131"
+			     "../../../images/Moskva_DB_Tools.v3.png"))))
+      (is (equalp
+	   (parse 'centered "	*Photo by [[http://www.sai.msu.su/~megera/][Oleg Bartunov]]*")
+	   '(:CENTER
+ (:EM "Photo by " (:A :HREF "http://www.sai.msu.su/~megera/" "Oleg Bartunov"))))))
 
 (defrule title (and (+ #\*) whitespaces non-empty-line)
   (:lambda (source)
@@ -287,16 +335,7 @@
 ")
 		 '(:h3 "another  title"))))
 
-(defrule src-attrs-lang
-    (and whitespaces "lang=\"" (+ (or #\- (alpha-char-p character))) "\"")
-  (:lambda (source)
-    (destructuring-bind (ws lang value quote) source
-      (declare (ignore ws lang quote))
-      (list :lang (text value)))))
-
-(defrule src (and "<src" (? src-attrs-lang) ">"
-		  (+ (not "</src>"))
-		  "</src>")
+(defrule src (and "<src" (? attrs) ">" (+ (not "</src>")) "</src>")
   (:lambda (source)
     (destructuring-bind (open attrs gt source close) source
       (declare (ignore open attrs gt close))
@@ -305,10 +344,95 @@
 #+5am
 (test parse-src
       "Test some <src>content</src>"
-      (is (equalp (parse 'src "<src>your code snippet here</src>")
-		  '(:PRE "your code snippet here"))))
+      (is (equalp
+	   (parse 'src "<src lang=\"common-lisp\">your code snippet here</src>")
+	   '(:PRE "your code snippet here"))))
 
-(defrule body (* (or centered paragraph title src)))
+(defrule class (and "<class" (? attrs) ">" (+ (not "</class>")) "</class>")
+  (:lambda (source)
+    (destructuring-bind (open attrs gt content close) source
+      (declare (ignore open close gt))
+      `(:class ,@attrs ,(text content)))))
+
+#+5am
+(test parse-class
+      "Test some <class>content</class>"
+      (is (equalp (parse 'class "<class name=\"hack\"> </class>")
+		  '(:CLASS :NAME "hack" " "))))
+
+(defrule literal (and "<literal>" (+ (not "</literal>")) "</literal>")
+  (:lambda (source)
+    (destructuring-bind (open text close) source
+      (declare (ignore open close))
+      (text text))))
+
+#+5am
+(test parse-literal
+      "Test some <literal>content</literal>"
+      (is (equalp (parse 'literal "<literal>some content here</literal>")
+		  '"some content here"))
+      (is (equalp
+	   (parse 'literal "<literal><div class=\"plop\">hey</div></literal>")
+	   "<div class=\"plop\">hey</div>")))
+
+(defrule quote (and "<quote>" (+ (or paragraph src)) "</quote>")
+  (:lambda (source)
+    (destructuring-bind (open content close) source
+      (declare (ignore open close))
+      `(:blockquote ,@content))))
+
+#+5am
+(test parse-quote
+      "Test some <quote>content</quote>"
+      (is (equalp (parse 'quote "<quote>some content here</quote>")
+		  '(:blockquote (:p "some content here"))))
+      (is (equalp (parse 'quote "<quote>
+<src lang=\"sql\">
+SELECT * FROM planet.postgresql.org WHERE author = \"dim\";
+</src>
+</quote>")
+		  '(:BLOCKQUOTE (:P)
+ (:PRE "
+SELECT * FROM planet.postgresql.org WHERE author = \"dim\";
+")
+ (:P)))))
+
+(defrule lisp (and "<lisp>" (+ (not "</lisp>")) "</lisp>")
+  (:lambda (source)
+    (destructuring-bind (open s-exprs close) source
+      (declare (ignore open close))
+      `(:pre ,(text s-exprs)))))
+
+#+5am
+(test parse-lisp
+      "Test some <lisp>(code)</lisp>"
+      (is (equalp (parse 'lisp "<lisp>(tapoueh-current-page-url)</lisp>")
+		  '(:PRE "(tapoueh-current-page-url)"))))
+
+;;; FIXME, actually parse and include the file with the right properties
+;;; <include file="generate-pgloader-config.sql" markup="src" lang="sql">
+(defrule include (and "<include" (? attrs) ">")
+  (:lambda (source)
+    (destructuring-bind (include attrs gt) source
+      (declare (ignore include gt))
+      `(:pre (:include ,@attrs)))))
+
+(defun empty-string (string)
+  (and (stringp string) (string= string "")))
+
+(defrule paragraph (+ (or heavy bold italics monospace code link empty-line words))
+  (:lambda (source)
+    `(:p ,@(remove-if #'empty-string source))))
+
+(defrule body (* (or centered
+		     paragraph
+		     title
+		     class
+		     src
+		     literal
+		     include
+		     quote
+		     lisp)))
 
 (defrule article (and directives body)
   (:lambda (source)
