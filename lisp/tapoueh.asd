@@ -9,6 +9,7 @@
 	       #:string-case		; string-case macro
 	       #:local-time		; handle time based computing
 	       #:cl-who			; produce HTML from Muse sources
+	       #:split-sequence		; easy splitting
 	       )
   :components ((:file "package")
 	       (:file "utils")

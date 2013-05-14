@@ -67,7 +67,9 @@
 (defrule directive (and directive-name non-empty-line)
   (:lambda (source)
     (destructuring-bind (name value) source
-      (list name value))))
+      (if (eq name :tags)
+	  (list name (split-sequence #\Space value))
+	  (list name value)))))
 
 (defrule directives (and (+ directive) empty-line)
   (:lambda (source)

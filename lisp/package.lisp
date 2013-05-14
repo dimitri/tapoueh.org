@@ -10,5 +10,7 @@
 		#:htm
 		#:str
 		#:esc
-		#:fmt))
+		#:fmt)
+  (:import-from #:split-sequence
+		#:split-sequence))
 
