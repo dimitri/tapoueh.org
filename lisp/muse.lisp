@@ -176,20 +176,26 @@
       (declare (ignore tab nl))
       `(:center ,thing))))
 
-(defrule paragraph (+ (or heavy bold italics monospace link words))
-  (:lambda (source)
-    `(:p ,@source)))
+(defun empty-string (string)
+  (and (stringp string) (string= string "")))
 
-(defrule title (and (+ #\*) non-empty-line)
+(defrule paragraph (+ (or heavy bold italics monospace link empty-line words))
   (:lambda (source)
-    (destructuring-bind (stars title) source
-      (case (length stars)
-	(1 `(:h1 ,title))
-	(2 `(:h2 ,title))
-	(3 `(:h3 ,title))
-	(4 `(:h4 ,title))
-	(5 `(:h5 ,title))
-	(6 `(:h6 ,title))))))
+    `(:p ,@(remove-if #'empty-string source))))
+
+(defrule title (and (+ #\*) whitespaces non-empty-line)
+  (:lambda (source)
+    (destructuring-bind (stars ws rest) source
+      (declare (ignore ws))
+      (let ((title
+	     (remove-if (lambda (c) (member c '(#\Newline #\Linefeed))) rest)))
+	(case (length stars)
+	  (1 `(:h1 ,title))
+	  (2 `(:h2 ,title))
+	  (3 `(:h3 ,title))
+	  (4 `(:h4 ,title))
+	  (5 `(:h5 ,title))
+	  (6 `(:h6 ,title)))))))
 
 (defrule src-attrs-lang
     (and whitespaces "lang=\"" (+ (or #\- (alpha-char-p character))) "\"")
