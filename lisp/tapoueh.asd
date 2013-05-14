@@ -10,6 +10,7 @@
 	       #:local-time		; handle time based computing
 	       #:cl-who			; produce HTML from Muse sources
 	       #:split-sequence		; easy splitting
+	       #:fiveam			; regression testing
 	       )
   :components ((:file "package")
 	       (:file "utils")

@@ -1,7 +1,7 @@
 ;;;; package.lisp
 
 (defpackage #:tapoueh
-  (:use #:cl #:esrap)
+  (:use #:cl #:esrap #:fiveam)
   (:import-from #:string-case
 		#:string-case)
   (:import-from #:cl-who

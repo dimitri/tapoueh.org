@@ -6,6 +6,9 @@
 
 (in-package #:tapoueh)
 
+(def-suite muse :description "Emacs Muse Parser Test Suite.")
+(in-suite muse)
+
 ;;
 ;; Document data structure, pretty loose
 ;;
@@ -15,6 +18,20 @@
 			       author title date tags contents
 			       &aux (timestamp (parse-date date)))))
   author title date timestamp tags contents)
+
+(defmethod same-document ((d1 muse) (d2 muse))
+  "Compare d1 and d2 slots"
+  (and (equalp (muse-author d1) (muse-author d2))
+       (equalp (muse-title d1) (muse-title d2))
+       (equalp (muse-date d1) (muse-date d2))
+       (local-time:timestamp= (muse-timestamp d1) (muse-timestamp d2))
+       (tree-equal (muse-tags d1) (muse-tags d2) :test #'equal)
+       (tree-equal (muse-contents d1) (muse-contents d2) :test #'equal)))
+
+(defmethod to-html ((document muse))
+  "Produce the HTML of given Document"
+  (eval `(with-html-output-to-string (s nil :indent t)
+	   ,(muse-contents document))))
 
 ;;
 ;; Basics, generics
@@ -77,6 +94,32 @@
       (declare (ignore e))
       ;; build a plist of the directives, use that to create a struct
       (apply #'make-muse (apply #'append directives)))))
+
+#+5am
+(test parse-directive
+      "Test parsing some directive"
+      (is (equal (parse 'directive "#author dim") '(:author "dim")))
+      (is (equal (parse 'directive "#author	dim") '(:author "dim")))
+      (is (equal (parse 'directive "#title   plop") '(:title "plop")))
+      (is (tree-equal
+	   (parse 'directive "#tags   a b c")
+	   '(:tags ("a" "b" "c"))
+	   :test #'equal)))
+
+#+5am
+(test parse-directives
+      "Test parsing directives"
+      (is (same-document
+	   (parse 'directives "#author Dimitri Fontaine
+#title  from Parsing to Compiling
+#date   20130513-11:08
+#tags   Common-Lisp Parser Emacs Muse
+
+")
+	   (make-muse :author "Dimitri Fontaine"
+		      :title "from Parsing to Compiling"
+		      :date "20130513-11:08"
+		      :tags '("Common-Lisp" "Parser" "Emacs" "Muse")))))
 
 ;;
 ;; Document content
@@ -144,6 +187,24 @@
 	  `(:a :href ,target ,label)
 	  `(:img :src ,target)))))
 
+#+5am
+(test parse-link
+      "Test parsing links"
+      (is (tree-equal
+	   (parse 'link "[[../../../pgsql/pgloader.html][pgloader]]")
+	   '(:A :HREF "../../../pgsql/pgloader.html" "pgloader")
+	   :test #'equalp))
+      (is (tree-equal
+	   (parse 'link "[[../../../images/lightbulb.gif]]")
+	   '(:IMG :SRC "../../../images/lightbulb.gif")
+	   :test #'equalp))
+      (is (tree-equal
+	   (parse 'link "[[https://groups.google.com/forum/?fromgroups=#!topic/comp.lang.lisp/JJxTBqf7scU][What is symbolic compoutation?]]")
+	   '(:A :HREF
+	     "https://groups.google.com/forum/?fromgroups=#!topic/comp.lang.lisp/JJxTBqf7scU"
+	     "What is symbolic compoutation?")
+	   :test #'equalp)))
+
 (defrule monospace (and #\= words #\=)
   (:lambda (source)
     (destructuring-bind (open content close) source
@@ -168,6 +229,18 @@
       (declare (ignore o1 o2 o3 c1 c2 c3))
       `(:em (:strong ,content)))))
 
+#+5am
+(test parse-emphasis
+      "Test *italics* and **bold** and ***heavy*** etc."
+      (is (equalp (parse 'monospace "=code=")
+		  '(:span :class "tt" "code")))
+      (is (equalp (parse 'italics "*some italic words*")
+		  '(:em  "some italic words")))
+      (is (equalp (parse 'bold "**this is bold**")
+		  '(:strong "this is bold")))
+      (is (equalp (parse 'heavy "***this is heavy***")
+		  '(:em (:strong "this is heavy")))))
+
 (defrule centered (and #\Tab
 		       (or heavy bold italics monospace link words)
 		       (? #\Newline))
@@ -175,6 +248,15 @@
     (destructuring-bind (tab thing nl) source
       (declare (ignore tab nl))
       `(:center ,thing))))
+
+#+5am
+(test parse-centered
+      "Test some centered (tabulated) contents"
+      (is (equalp (parse 'centered "	*ahah*")
+		  '(:center (:em  "ahah"))))
+      (is (equalp (parse 'centered "	*ahah*
+")
+		  '(:center (:em  "ahah")))))
 
 (defun empty-string (string)
   (and (stringp string) (string= string "")))
@@ -197,6 +279,14 @@
 	  (5 `(:h5 ,title))
 	  (6 `(:h6 ,title)))))))
 
+#+5am
+(test parse-title
+      "Test parsing a title"
+      (is (equal (parse 'title "** a title") '(:h2 "a title")))
+      (is (equal (parse 'title "***   another  title
+")
+		 '(:h3 "another  title"))))
+
 (defrule src-attrs-lang
     (and whitespaces "lang=\"" (+ (or #\- (alpha-char-p character))) "\"")
   (:lambda (source)
@@ -212,6 +302,12 @@
       (declare (ignore open attrs gt close))
       `(:pre ,(text source)))))
 
+#+5am
+(test parse-src
+      "Test some <src>content</src>"
+      (is (equalp (parse 'src "<src>your code snippet here</src>")
+		  '(:PRE "your code snippet here"))))
+
 (defrule body (* (or centered paragraph title src)))
 
 (defrule article (and directives body)
@@ -220,14 +316,3 @@
       (setf (muse-contents document) content)
       document)))
 
-(defun test (&key
-	       (expression 'article)
-	       (filename "/tmp/13-from-parser-to-compiler.muse")
-	       junk-allowed)
-  (let ((content (slurp-file-into-string filename)))
-    (parse expression content :junk-allowed junk-allowed)))
-
-(defmethod to-html ((document muse))
-  "Produce the HTML of given Document"
-  (eval `(with-html-output-to-string (s nil :indent t)
-	   ,(muse-contents document))))
