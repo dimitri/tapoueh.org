@@ -12,9 +12,13 @@
 	       #:split-sequence		; easy splitting
 	       #:fiveam			; regression testing
 	       #:cl-fad			; file and directories
+	       #:cl-ppcre		; regular expressions
+	       #:hunchentoot		; web server
 	       )
   :components ((:file "package")
-	       (:file "utils"   :depends-on ("package"))
-               (:file "muse"    :depends-on ("utils" "package"))
-	       (:file "tapoueh" :depends-on ("muse" "utils" "package"))))
+	       (:file "utils"    :depends-on ("package"))
+               (:file "ssi"      :depends-on ("package"))
+               (:file "muse"     :depends-on ("utils" "package"))
+               (:file "web"      :depends-on ("utils" "package" "ssi" "muse"))
+	       (:file "tapoueh"  :depends-on ("muse" "utils" "package"))))
 

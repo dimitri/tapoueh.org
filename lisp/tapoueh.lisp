@@ -4,12 +4,6 @@
 
 (in-package #:tapoueh)
 
-(defparameter *root-directory*
-  (asdf:system-relative-pathname :tapoueh "../"))
-
-(defparameter *blog-directory*
-  (asdf:system-relative-pathname :tapoueh "../blog/"))
-
 (defun find-all-blog-articles (&key
 				 sort
 				 (parsefn #'parse-muse-directives))
