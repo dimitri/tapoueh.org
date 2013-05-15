@@ -19,10 +19,12 @@
     (muse
       (:constructor make-muse)
       (:constructor make-muse-article (&key
-				       author title date tags desc contents
+				       pathname
+				       author title date tags desc
+				       contents
 				       &aux (timestamp (when date
 							 (parse-date date))))))
-  author title date timestamp tags desc contents)
+  pathname author title date timestamp tags desc contents)
 
 (defmethod muse-article-p ((document muse))
   "Return a generalized boolean true when DOCUMENT is a Muse Article.
@@ -61,12 +63,19 @@
 
 (defun parse-muse-article (pathname)
   "Parse the Muse article at PATHNAME and return a muse structure."
-  (parse 'article (slurp-file-into-string pathname)))
+  (let ((article (parse 'article (slurp-file-into-string pathname))))
+    (setf (muse-pathname article) pathname)
+    article))
 
 (defun parse-muse-directives (pathname)
   "Only parse the Muse directives, not the whole document"
-  (or (parse 'directives (slurp-file-into-string pathname) :junk-allowed t)
-      pathname))
+  (let ((document
+	 (parse 'directives (slurp-file-into-string pathname) :junk-allowed t)))
+    (if document
+	(progn
+	  (setf (muse-pathname document) pathname)
+	  document)
+	(make-muse :pathname pathname))))
 
 (defun muse-file-type-p (pathname)
   "Returns a generalized boolean true when pathname extension is .muse"

@@ -10,6 +10,9 @@
 (defparameter *base-url* "http://tapoueh.org/"
   "Only used to publish in the headers Meta.")
 
+(defvar *muse-current-file* nil
+  "Maintained in the web.lisp hunchentoot handlers.")
+
 (def-suite ssi :description "HTML SSI Parser Test Suite.")
 (in-suite ssi)
 
@@ -20,7 +23,8 @@
 (defun replace-<lisp> (match &rest registers)
   "Eval a <lisp>(code)</lisp> code block, returns its result as a string."
   (declare (ignore match))
-  (format nil "~a" (eval (read-from-string (first registers)))))
+  (format nil "~a" (eval (let ((*package* (find-package 'tapoueh)))
+			   (read-from-string (first registers))))))
 
 (defun eval-lisp-tags (string)
   "Replace each <lisp>(code)</lisp> by the result of evaluating the code."
@@ -41,7 +45,59 @@
 ;;;
 ;;; Helper functions used in the SSI directives
 ;;;
+;;; Compatibility layer kept to be able to publish the website in a
+;;; subdirectory somewhere, for now just spit back a / based URL.
+;;;
+(defun tapoueh-style-sheet ()
+  "Return the link to the main CSS"
+  "<link rel=\"stylesheet\" type=\"text/css\"  media=\"all\" href=\"/static/styles.css\" />")
+
+(defun tapoueh-rss-index ()
+  "Get the relative link to the RSS feed"
+  "/rss/tapoueh.xml")
+
+(defun tapoueh-contents ()
+  "Output the link to the /contents.html page"
+  "/contents.html")
+
+(defun tapoueh-root-index ()
+  "Output the link to the /contents.html page"
+  "/index.html")
+
+(defun tapoueh-2ndquadrant-logo ()
+  "Get the :style-sheet property and rework the link to the CSS"
+  "<img src=\"/static/2ndQuadrant-cross.png\">")
+
+(defun tapoueh-expert-postgresql-logo ()
+  "Get the :style-sheet property and rework the link to the CSS"
+  "<img src=\"/static/expert-postgresql.png\">")
+
 (defun tapoueh-current-page-url ()
   "Get the current page full URL"
-  (concatenate 'string *base-url* )
-)
+  (format nil "http://~a~a"
+	  (hunchentoot:host)
+	  (hunchentoot:script-name*)))
+
+(defun tapoueh-extract-directive (directive-name pathname)
+  (when pathname
+    (slot-value (parse-muse-directives pathname)
+		(intern (string-upcase directive-name) :tapoueh))))
+
+(defun muse-current-file ()
+  (and (muse-p *muse-current-file*)	; could be nil
+       (muse-pathname *muse-current-file*)))
+
+(defun tapoueh-insert-previous-article ())
+(defun tapoueh-insert-next-article ())
+(defun tapoueh-insert-breadcrumb-here ())
+(defun tapoueh-insert-article-date-here ()
+  (when (muse-p *muse-current-file*)
+    (let ((stamp (muse-timestamp *muse-current-file*)))
+      (local-time:format-timestring
+       nil stamp
+       :format
+       (append '(:long-weekday ", " :long-month " " :day " " :year)
+	       (unless (and (= 0 (local-time:timestamp-hour stamp))
+			    (= 0 (local-time:timestamp-minute stamp)))
+		 '(", " :hour ":" :min)))))))
+(defun tapoueh-social-div ())

@@ -70,8 +70,9 @@
   "Expand pathname into given directory. If the PATHNAME directory is
    absolute, make it relative first so that we ensure we always get back a
    pathname under DIRECTORY."
-  (let* ((dir (string-trim '(#\/) (directory-namestring pathname)))
-	 (p   (make-pathname :directory `(:relative ,dir)
-			     :name (pathname-name pathname)
-			     :type (or type (pathname-type pathname)))))
-    (merge-pathnames p directory)))
+  (when pathname
+    (let* ((dir (string-trim '(#\/) (directory-namestring pathname)))
+	   (p   (make-pathname :directory `(:relative ,dir)
+			       :name (pathname-name pathname)
+			       :type (or type (pathname-type pathname)))))
+      (merge-pathnames p directory))))

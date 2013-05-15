@@ -33,10 +33,12 @@
 ;;
 (defun render-muse-document (pathname)
   "Parse the muse document at PATHNAME and spits out HTML"
-  (concatenate 'string
-	       (ssi-file *header*)
-	       (to-html (parse-muse-article pathname))
-	       (ssi-file *footer*)))
+  (let ((*muse-current-file* (parse-muse-article pathname)))
+    (declare (special *muse-current-file*))
+    (concatenate 'string
+		 (ssi-file *header*)
+		 (to-html *muse-current-file*)
+		 (ssi-file *footer*))))
 
 ;;
 ;; Routing helpers, figuring out what document to serve given the script
@@ -72,7 +74,9 @@
 			       (fad:pathname-as-file directory))))
 	   (make-pathname :directory (namestring as-file)
 			  :name      (file-namestring pathname)
-			  :type      *default-file-type*))))))
+			  :type      *default-file-type*))))
+    (t
+     (pathname script-name))))
 
 #+5am
 (test resource-name
@@ -116,6 +120,12 @@
 	   (expand-file-name-into (make-pathname :directory "/blog/2013/05"
 						 :name "13-from-parser-to-compiler"
 						 :type "muse")
+				  *root-directory*)))
+      (is (fad:pathname-equal
+	   (muse-source "/blog/2013/03/18-bulk-replication.html")
+	   (expand-file-name-into (make-pathname :directory "/blog/2013/03"
+						 :name "18-bulk-replication"
+						 :type "muse")
 				  *root-directory*))))
 
 ;;
@@ -124,19 +134,25 @@
 (loop
    for (prefix path) in '(("/images/"    "../images/")
 			  ("/css/"       "../css/")
+			  ("/static/"    "../static/")
 			  ("/resources/" "../resources/"))
    do (push (hunchentoot:create-folder-dispatcher-and-handler
 	     prefix
 	     (asdf:system-relative-pathname :tapoueh path))
 	    hunchentoot:*dispatch-table*))
 
-(hunchentoot:define-easy-handler (muse) ()
+(defun html-script-name (request)
+  "Arrange our muse handler to be called for any URI"
+  (declare (ignore request))
+  t)
+
+(hunchentoot:define-easy-handler (muse :uri #'html-script-name) ()
   "Catch-all handler, do the routing ourselves."
   (let* ((script-name (hunchentoot:script-name*))
-	 (muse-source (muse-source script-name)))
-    (hunchentoot:log-message* :INFO "script-name: ~a; muse-source: ~a"
-			      script-name muse-source)
-    (if (probe-file muse-source)
+	 (muse-source (muse-source script-name))
+	 *muse-current-file*)
+    (declare (special *muse-current-file*))
+    (if (and muse-source (probe-file muse-source))
 	(render-muse-document muse-source)
 
 	;; FIXME: we also serve RSS (.xml) here
@@ -150,7 +166,7 @@
   ;; didn't see how to change the existing acceptor's port...
   (setf *acceptor*
 	(make-instance 'hunchentoot:easy-acceptor
-		       :document-root *root-directory*
+		       :document-root "/tmp"
 		       :port port
 		       :access-log-destination access-log
 		       :message-log-destination message-log))
@@ -159,3 +175,9 @@
 (defun stop-web-server ()
   "Stop the hunchentoot server"
   (hunchentoot:stop *acceptor*))
+
+(defun restart-web-server ()
+  "Stop then start the web server, in case the acceptor properties need to
+   be changed."
+  (stop-web-server)
+  (start-web-server))
