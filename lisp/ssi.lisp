@@ -93,11 +93,12 @@
 (defun tapoueh-insert-article-date-here ()
   (when (muse-p *muse-current-file*)
     (let ((stamp (muse-timestamp *muse-current-file*)))
-      (local-time:format-timestring
-       nil stamp
-       :format
-       (append '(:long-weekday ", " :long-month " " :day " " :year)
-	       (unless (and (= 0 (local-time:timestamp-hour stamp))
-			    (= 0 (local-time:timestamp-minute stamp)))
-		 '(", " :hour ":" :min)))))))
+      (when stamp
+	(local-time:format-timestring
+	 nil stamp
+	 :format
+	 (append '(:long-weekday ", " :long-month " " :day " " :year)
+		 (unless (and (= 0 (local-time:timestamp-hour stamp))
+			      (= 0 (local-time:timestamp-minute stamp)))
+		   '(", " :hour ":" :min))))))))
 (defun tapoueh-social-div ())
