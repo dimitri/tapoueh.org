@@ -17,6 +17,18 @@
 (defvar *acceptor* nil "The web server")
 
 ;;
+;; Render documents, with header and footer
+;;
+(defun render-muse-document (pathname)
+  "Parse the muse document at PATHNAME and spits out HTML"
+  (let ((*muse-current-file* (maybe-parse-document pathname)))
+    (declare (special *muse-current-file*))
+    (concatenate 'string
+		 (ssi-file *header*)
+		 (to-html *muse-current-file*)
+		 (ssi-file *footer*))))
+
+;;
 ;; Routing helpers, figuring out what document to serve given the script
 ;; name in the URI.
 ;;

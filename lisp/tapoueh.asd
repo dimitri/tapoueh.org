@@ -17,11 +17,12 @@
 	       #:alexandria		; tools such as hash-table-keys, etc
 	       )
   :components ((:file "package")
-	       (:file "utils"      :depends-on ("package"))
-               (:file "ssi"        :depends-on ("package"))
-               (:file "muse"       :depends-on ("utils" "package"))
-               (:file "collection" :depends-on ("utils" "package" "ssi" "muse"))
+	       (:file "utils"       :depends-on ("package"))
+               (:file "muse"        :depends-on ("utils" "package"))
+               (:file "muse-parser" :depends-on ("muse"))
+               (:file "collection"  :depends-on ("utils" "package" "muse"))
+               (:file "ssi"         :depends-on ("package" "collection"))
                (:file "web"
 		      :depends-on ("utils" "package" "collection" "ssi" "muse"))
-	       (:file "tapoueh"  :depends-on ("package" "web"))))
+	       (:file "tapoueh"     :depends-on ("package" "web"))))
 

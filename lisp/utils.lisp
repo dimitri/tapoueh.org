@@ -49,9 +49,26 @@
 	    append (list key
 			 (parse-integer (subseq date-string start end))))))
 
+(defun muse-encode-wierd-date-string (month-name day-cruft year-string)
+  "We've been using strange date formats, e.g. \"July 3rd, 2010\"."
+  (let* ((months '("January" "February" "March"
+		   "April" "May" "June"
+		   "July" "August" "September"
+		   "October" "November" "December"))
+	 (month  (+ 1 (position month-name months :test #'equal)))
+	 (day    (parse-integer day-cruft :junk-allowed t))
+	 (year   (parse-integer year-string)))
+    (muse-encode-timestamp :year year :month month :day day)))
+
 (defun parse-date (date-string)
   "Parse the data of a Muse document"
   (cond
+    ;; We don't always have been using numbers to represent dates...
+    ((not (digit-char-p (aref date-string 0)))
+     (ppcre:register-groups-bind (month day year)
+	 ("(\\w+) ([^,]+), (\\d+)" "July 3rd, 2010")
+       (muse-encode-wierd-date-string month day year)))
+
     ;; Mainly the new format is used: 20130513-11:08
     ((= 14 (length date-string))
      (muse-parse-date-string date-string :format *new-time-format*))
