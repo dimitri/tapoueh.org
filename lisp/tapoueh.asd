@@ -14,11 +14,14 @@
 	       #:cl-fad			; file and directories
 	       #:cl-ppcre		; regular expressions
 	       #:hunchentoot		; web server
+	       #:alexandria		; tools such as hash-table-keys, etc
 	       )
   :components ((:file "package")
-	       (:file "utils"    :depends-on ("package"))
-               (:file "ssi"      :depends-on ("package"))
-               (:file "muse"     :depends-on ("utils" "package"))
-               (:file "web"      :depends-on ("utils" "package" "ssi" "muse"))
-	       (:file "tapoueh"  :depends-on ("muse" "utils" "package"))))
+	       (:file "utils"      :depends-on ("package"))
+               (:file "ssi"        :depends-on ("package"))
+               (:file "muse"       :depends-on ("utils" "package"))
+               (:file "collection" :depends-on ("utils" "package" "ssi" "muse"))
+               (:file "web"
+		      :depends-on ("utils" "package" "collection" "ssi" "muse"))
+	       (:file "tapoueh"  :depends-on ("package" "web"))))
 

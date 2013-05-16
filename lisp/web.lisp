@@ -7,18 +7,6 @@
 (def-suite web :description "Emacs Muse Parser Test Suite.")
 (in-suite web)
 
-(defparameter *root-directory*
-  (asdf:system-relative-pathname :tapoueh "../"))
-
-(defparameter *blog-directory*
-  (asdf:system-relative-pathname :tapoueh "../blog/"))
-
-(defparameter *header*
-  (asdf:system-relative-pathname :tapoueh "../static/header.html"))
-
-(defparameter *footer*
-  (asdf:system-relative-pathname :tapoueh "../static/footer.html"))
-
 (defparameter *default-file-name* "index")
 (defparameter *default-file-type* "html")
 
@@ -27,18 +15,6 @@
 (defparameter *message-log-file* "/tmp/tapoueh.log")
 
 (defvar *acceptor* nil "The web server")
-
-;;
-;; Render documents, with header and footer
-;;
-(defun render-muse-document (pathname)
-  "Parse the muse document at PATHNAME and spits out HTML"
-  (let ((*muse-current-file* (parse-muse-article pathname)))
-    (declare (special *muse-current-file*))
-    (concatenate 'string
-		 (ssi-file *header*)
-		 (to-html *muse-current-file*)
-		 (ssi-file *footer*))))
 
 ;;
 ;; Routing helpers, figuring out what document to serve given the script
