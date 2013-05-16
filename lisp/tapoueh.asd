@@ -19,9 +19,9 @@
   :components ((:file "package")
 	       (:file "utils"       :depends-on ("package"))
                (:file "muse"        :depends-on ("utils" "package"))
-               (:file "muse-parser" :depends-on ("muse"))
                (:file "collection"  :depends-on ("utils" "package" "muse"))
                (:file "ssi"         :depends-on ("package" "collection"))
+               (:file "muse-parser" :depends-on ("muse" "ssi"))
                (:file "web"
 		      :depends-on ("utils" "package" "collection" "ssi" "muse"))
 	       (:file "tapoueh"     :depends-on ("package" "web"))))

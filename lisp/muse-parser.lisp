@@ -368,15 +368,13 @@ SELECT * FROM planet.postgresql.org WHERE author = \"dim\";
 
 (defrule lisp (and "<lisp>" (+ (not "</lisp>")) "</lisp>")
   (:lambda (source)
-    (destructuring-bind (open s-exprs close) source
-      (declare (ignore open close))
-      `(:pre ,(text s-exprs)))))
+    (eval-lisp-tags (text source))))
 
 #+5am
 (test parse-lisp
       "Test some <lisp>(code)</lisp>"
-      (is (equalp (parse 'lisp "<lisp>(tapoueh-current-page-url)</lisp>")
-		  '(:PRE "(tapoueh-current-page-url)"))))
+      (is (equalp (parse 'lisp "<lisp>(tapoueh-style-sheet)</lisp>")
+		  "<link rel='stylesheet' type='text/css' media='all' href='/static/styles.css' />")))
 
 ;;; FIXME, actually parse and include the file with the right properties
 ;;; <include file="generate-pgloader-config.sql" markup="src" lang="sql">

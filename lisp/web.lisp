@@ -21,7 +21,7 @@
 ;;
 (defun render-muse-document (pathname)
   "Parse the muse document at PATHNAME and spits out HTML"
-  (let ((*muse-current-file* (maybe-parse-document pathname)))
+  (let ((*muse-current-file* (parse-muse-article pathname)))
     (declare (special *muse-current-file*))
     (concatenate 'string
 		 (ssi-file *header*)

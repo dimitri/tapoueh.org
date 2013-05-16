@@ -48,9 +48,11 @@
     ;; return the article we just added, as a muse structure
     article))
 
-(defun find-all-blog-articles ()
+(defun find-all-blog-articles (&key purge)
   "Find all .muse articles from *blog-directory*, parse them and keep them
      in a hash-table where the pathname is the key."
+  (when purge
+    (setq *blog-articles* (make-hash-table :test 'equal :size 1024)))
   (fad:walk-directory *root-directory* #'add-article :test #'muse-file-type-p)
   (compute-sorted-blog-articles-list))
 

@@ -118,3 +118,47 @@
 			      (= 0 (local-time:timestamp-minute stamp)))
 		   '(", " :hour ":" :min))))))))
 (defun tapoueh-social-div ())
+
+(defun tapoueh-insert-latest-articles (n base-directory)
+  "Insert the N latest articles found under BASE-DIRECTORY."
+  (let ((articles))
+    (fad:walk-directory (expand-file-name-into base-directory *root-directory*)
+			(lambda (pathname)
+			  (let ((doc (parse-muse-directives pathname)))
+			    (when (muse-article-p doc)
+			      (push doc articles))))
+			:test #'muse-file-type-p)
+    (setq articles
+	  (sort articles (lambda (a b)
+			   (sort-articles a b :test #'local-time:timestamp>))))
+    ;; return the N first articles
+    `(:ul
+      ,@(loop
+	   for article in articles
+	   repeat (or n 5)
+	   collect `(:li (:a :href ,(muse-pathname article)
+			     ,(muse-title article))
+			 " - "
+			 (:class :name "date" ,(muse-date article))))))))
+
+(defun tapoueh-list-blog-articles (&optional subdirs-only no-index root)
+  "Run through all subdirs from current page and list pages"
+  nil)
+
+(defun tapoueh-tags-cloud (&optional subdir)
+  "Return a tag cloud."
+  (let ((counts (make-hash-table :test #'equal)))
+    (reduce (lambda (&rest tags-args)
+	      (loop
+		 for tags in tags-args
+		 do (loop
+		       for tag in tags
+		       do (incf (gethash tag counts 0)))))
+	    (mapcar #'muse-tags
+		    (alexandria:hash-table-values *blog-articles*)))
+    `(:p
+      ,@(loop
+	   for (tag . count)
+	   in (sort (alexandria:hash-table-alist counts) #'> :key #'cdr)
+	   collect `(:a :href ,(format nil "/tags/~a" tag)
+			:style ,(format nil "font-size: ~d.0%;" count))))))
