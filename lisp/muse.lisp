@@ -342,7 +342,8 @@
 	   '(:CENTER
  (:EM "Photo by " (:A :HREF "http://www.sai.msu.su/~megera/" "Oleg Bartunov"))))))
 
-(defrule title (and (+ #\*) whitespaces non-empty-line)
+(defrule title (and (+ #\*) whitespaces (or heavy bold italics monospace link
+					    non-empty-line))
   (:lambda (source)
     (destructuring-bind (stars ws rest) source
       (declare (ignore ws))
