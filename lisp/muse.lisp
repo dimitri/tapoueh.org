@@ -97,13 +97,17 @@
 (defun not-newline (char)
   (not (eql #\newline char)))
 
+(defun not-newline-or-special (char)
+  (not (member char (list #\Newline #\[ #\] #\< #\> #\=))))
+
 (defrule whitespace (or #\space #\newline #\linefeed))
 (defrule whitespaces (* whitespace))
 
 (defrule empty-line #\newline
-  (:constant ""))
+  (:constant nil))
 
-(defrule non-empty-line (and (+ (not-newline character)) (? #\newline))
+(defrule non-empty-line (and (+ (not-newline-or-special character))
+			     (? #\newline))
   (:lambda (source)
     (destructuring-bind (text newline) source
       (declare (ignore newline))
@@ -187,17 +191,21 @@
 ;;
 ;; Document content
 ;;
-(defun muse-word-p (char)
-  "Non decorated words, with spaces inside"
-  (or (member char #.(quote (coerce "`~!@#$%^&()-_+{}\\|;:'\",./?" 'list)))
-      (alphanumericp char)))
-
 (defrule word (+ (not (or whitespace #\Tab #\[ #\] #\< #\> #\= #\*)))
   (:text t))
 
 (defrule words (+ (or word whitespace))
   (:lambda (source)
     (apply #'concatenate 'string source)))
+
+(defrule p (and (+ non-empty-line) (? empty-line))
+  (:lambda (source)
+    (destructuring-bind (lines end) source
+      (declare (ignore end))
+      `(:p ,(text (loop
+		     for (line . more?) on lines
+		     if more? append (list line #\Newline)
+		     else append (list line)))))))
 
 (defrule link-part (and "[" (+ (not "]")) "]")
   (:lambda (source)
@@ -310,9 +318,9 @@
 	   '(:SPAN :CLASS "tt" :SRC "sql" "SELECT colname FROM table WHERE pk = 1234;")))
       (is (equalp (parse 'italics "*some italic words*")
 		  '(:em  "some italic words")))
-      (is (equalp (parse 'italics "*An edited version of =hstore--1.1.sql= for vertical space concerns*")))
-      '(:EM "An edited version of " (:SPAN :CLASS "tt" "hstore--1.1.sql")
-	" for vertical space concerns")
+      (is (equalp (parse 'italics "*An edited version of =hstore--1.1.sql= for vertical space concerns*")
+		  '(:EM "An edited version of " (:SPAN :CLASS "tt" "hstore--1.1.sql")
+		    " for vertical space concerns")))
       (is (equalp (parse 'bold "**this is bold**")
 		  '(:strong "this is bold")))
       (is (equalp (parse 'heavy "***this is heavy***")
@@ -407,11 +415,11 @@
 	   (parse 'literal "<literal><div class=\"plop\">hey</div></literal>")
 	   "<div class=\"plop\">hey</div>")))
 
-(defrule quote (and "<quote>" (+ (or paragraph src)) "</quote>")
+(defrule quote (and "<quote>" (+ (or p src empty-line)) "</quote>")
   (:lambda (source)
     (destructuring-bind (open content close) source
       (declare (ignore open close))
-      `(:blockquote ,@content))))
+      `(:blockquote ,@(remove-if #'null content)))))
 
 #+5am
 (test parse-quote
@@ -423,11 +431,11 @@
 SELECT * FROM planet.postgresql.org WHERE author = \"dim\";
 </src>
 </quote>")
-		  '(:BLOCKQUOTE (:P)
- (:PRE "
+		  '(:BLOCKQUOTE
+		    (:PRE "
 SELECT * FROM planet.postgresql.org WHERE author = \"dim\";
-")
- (:P)))))
+"))
+		  )))
 
 (defrule lisp (and "<lisp>" (+ (not "</lisp>")) "</lisp>")
   (:lambda (source)
@@ -452,7 +460,7 @@ SELECT * FROM planet.postgresql.org WHERE author = \"dim\";
 (defun empty-string (string)
   (and (stringp string) (string= string "")))
 
-(defrule paragraph (+ (or heavy bold italics monospace code link empty-line words))
+(defrule paragraph (+ (or heavy bold italics monospace code link p))
   (:lambda (source)
     `(:p ,@(remove-if #'empty-string source))))
 
