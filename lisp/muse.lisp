@@ -12,6 +12,16 @@
 (defparameter *muse-pathname-type* "muse"
   "The file extension we use to store Muse files")
 
+(defparameter *image-directory*
+  (asdf:system-relative-pathname :tapoueh "../images/"))
+
+(defparameter *image-type-list*
+  (remove-if
+   #'null
+   (remove-duplicates (mapcar #'pathname-type
+			      (fad:list-directory *image-directory*))
+		      :test #'string=)))
+
 ;;
 ;; Document data structure, pretty loose
 ;;
@@ -195,12 +205,17 @@
       (declare (ignore open close))
       (text target))))
 
+(defun image-filename-p (maybe-filename)
+  "Return non-nil only when MAYBE-FILENAME has a pathname-type of an image"
+  (member (pathname-type maybe-filename) *image-type-list* :test #'string=))
+
 (defrule link (and "[" link-part (? link-part) "]")
   (:lambda (source)
     (destructuring-bind (open target label close) source
       (declare (ignore open close))
       (if label
-	  `(:a :href ,target ,label)
+	  `(:a :href ,target
+	       ,(if (image-filename-p target) `(:img :src ,label) label))
 	  `(:img :src ,target)))))
 
 #+5am
@@ -227,6 +242,11 @@
       (is (tree-equal
 	   (parse 'link "[[http://forum.ubuntu-fr.org/viewtopic.php?id=218883]]")
 	   '(:IMG :SRC "http://forum.ubuntu-fr.org/viewtopic.php?id=218883")
+	   :test #'equalp))
+      (is (tree-equal
+	   (parse 'link "[[../../../images/confs/the_need_for_speed.pdf][../../../images/confs/the_need_for_speed-3.png]]")
+	   '(:a :href "../../../images/confs/the_need_for_speed.pdf"
+	     (:img :src "../../../images/confs/the_need_for_speed-3.png"))
 	   :test #'equalp)))
 
 (defrule attr

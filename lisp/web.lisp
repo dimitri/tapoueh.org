@@ -153,10 +153,12 @@
 	 *muse-current-file*)
     (declare (special *muse-current-file*))
     (if (and muse-source (probe-file muse-source))
-	(render-muse-document muse-source)
+	(progn
+	  (hunchentoot:log-message* :INFO "rendering file '~a'" pathname)
+	  (render-muse-document muse-source))
 
 	;; FIXME: we also serve RSS (.xml) here
-	(setf (hunchentoot:return-code*) hunchentoot:+http-not-found+))))
+	(setf (hunchentoot:return-code*) hunchentoot:+HTTP-NOT-FOUND+))))
 
 (defun start-web-server (&key
 			   (port *port*)
