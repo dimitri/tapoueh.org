@@ -82,11 +82,11 @@
 
 (defun tapoueh-2ndquadrant-logo ()
   "Get the :style-sheet property and rework the link to the CSS"
-  "<img src=\"/static/2ndQuadrant-cross.png\">")
+  '(:img :src "/static/2ndQuadrant-cross.png"))
 
 (defun tapoueh-expert-postgresql-logo ()
   "Get the :style-sheet property and rework the link to the CSS"
-  "<img src=\"/static/expert-postgresql.png\">")
+  '(:img :src "/static/expert-postgresql.png"))
 
 (defun tapoueh-current-page-url ()
   "Get the current page full URL"
