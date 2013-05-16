@@ -98,7 +98,7 @@
   (not (eql #\newline char)))
 
 (defun not-newline-or-special (char)
-  (not (member char (list #\Newline #\[ #\] #\< #\> #\=))))
+  (not (member char (list #\Newline #\Tab #\[ #\] #\< #\> #\= #\*))))
 
 (defrule whitespace (or #\space #\newline #\linefeed))
 (defrule whitespaces (* whitespace))
@@ -197,15 +197,6 @@
 (defrule words (+ (or word whitespace))
   (:lambda (source)
     (apply #'concatenate 'string source)))
-
-(defrule p (and (+ non-empty-line) (? empty-line))
-  (:lambda (source)
-    (destructuring-bind (lines end) source
-      (declare (ignore end))
-      `(:p ,(text (loop
-		     for (line . more?) on lines
-		     if more? append (list line #\Newline)
-		     else append (list line)))))))
 
 (defrule link-part (and "[" (+ (not "]")) "]")
   (:lambda (source)
@@ -457,22 +448,38 @@ SELECT * FROM planet.postgresql.org WHERE author = \"dim\";
       (declare (ignore include gt))
       `(:pre (:include ,@attrs)))))
 
-(defun empty-string (string)
-  (and (stringp string) (string= string "")))
-
-(defrule paragraph (+ (or heavy bold italics monospace code link p))
+(defrule lines (and (+ non-empty-line))
   (:lambda (source)
-    `(:p ,@(remove-if #'empty-string source))))
+    (destructuring-bind (lines) source
+      (text (loop
+	       for (line . more?) on lines
+	       if more? append (list line #\Newline)
+	       else append (list line))))))
 
-(defrule body (* (or centered
-		     paragraph
-		     title
-		     class
-		     src
-		     literal
-		     include
-		     quote
-		     lisp)))
+(defrule p (+ (or lines heavy bold italics monospace code link))
+  (:lambda (source)
+    `(:p ,@source)))
+
+(defrule para (and p (* empty-line))
+  (:lambda (source)
+    (destructuring-bind (p e) source
+      (declare (ignore e))
+      p)))
+
+(defrule block (or centered
+		   para
+		   title
+		   class
+		   src
+		   literal
+		   include
+		   quote
+		   lisp
+		   empty-line))
+
+(defrule body (* block)
+  (:lambda (source)
+    (remove-if #'null source)))
 
 (defrule article (and directives body)
   (:lambda (source)
