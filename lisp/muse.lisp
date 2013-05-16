@@ -363,7 +363,9 @@
       (is (equal (parse 'title "** a title") '(:h2 "a title")))
       (is (equal (parse 'title "***   another  title
 ")
-		 '(:h3 "another  title"))))
+		 '(:h3 "another  title")))
+      (is (equal (parse 'title "** =whois dim=")
+		 '(:H2 (:SPAN :CLASS "tt" "whois dim")))))
 
 (defrule src (and "<src" (? attrs) ">" (+ (not "</src>")) "</src>")
   (:lambda (source)
