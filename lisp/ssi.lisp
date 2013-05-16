@@ -21,10 +21,18 @@
 ;; function in simple-calls mode.
 ;;
 (defun replace-<lisp> (match &rest registers)
-  "Eval a <lisp>(code)</lisp> code block, returns its result as a string."
+  "Eval a <lisp>(code)</lisp> code block, returns its result as a string.
+
+   The code can return a string, which is taken as is, or a list, which is
+   then given to the cl-who package for HTML rendering of it. Anything else
+   is post-processed with (format nil \"~a\" ...)."
   (declare (ignore match))
-  (format nil "~a" (eval (let ((*package* (find-package 'tapoueh)))
-			   (read-from-string (first registers))))))
+  (let ((result (eval (let ((*package* (find-package 'tapoueh)))
+			(read-from-string (first registers))))))
+    (typecase result
+      (string result)
+      (list   (eval `(with-html-output-to-string (s) ,result)))
+      (t      (format nil "~a" result)))))
 
 (defun eval-lisp-tags (string)
   "Replace each <lisp>(code)</lisp> by the result of evaluating the code."
@@ -36,7 +44,11 @@
       "Test parsing a Server Side Include: html with <lisp>(code)</lisp>"
       (is (string= (eval-lisp-tags "<lisp>(+ 1 2)</lisp>") "3"))
       (is (string= (eval-lisp-tags "<html><lisp>(+ 1 2)</lisp></html>")
-		   "<html>3</html>")))
+		   "<html>3</html>"))
+      (is (string= (eval-lisp-tags "<lisp>'(:a :href \"/\" \"slash\")</lisp>")
+		   "<a href='/'>slash</a>"))
+      (is (string= (eval-lisp-tags "<lisp>(tapoueh-style-sheet)</lisp>")
+		   "<link rel='stylesheet' type='text/css' media='all' href='/static/styles.css' />")))
 
 (defun ssi-file (pathname)
   "Server Side Include file at given PATHNAME, replacing <lisp> tags"
@@ -50,7 +62,11 @@
 ;;;
 (defun tapoueh-style-sheet ()
   "Return the link to the main CSS"
-  "<link rel=\"stylesheet\" type=\"text/css\"  media=\"all\" href=\"/static/styles.css\" />")
+  '(:link
+    :rel "stylesheet"
+    :type "text/css"
+    :media "all"
+    :href "/static/styles.css"))
 
 (defun tapoueh-rss-index ()
   "Get the relative link to the RSS feed"
