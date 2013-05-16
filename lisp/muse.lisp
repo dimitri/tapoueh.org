@@ -291,19 +291,23 @@
       (declare (ignore open close))
       `(:span :class "tt" ,(text content)))))
 
-(defrule italics (and #\* (+ (or link monospace words)) #\*)
+(defrule italics (and #\* (+ (or link monospace words #\Newline)) #\*)
   (:lambda (source)
     (destructuring-bind (open content close) source
       (declare (ignore open close))
       `(:em ,@content))))
 
-(defrule bold (and #\* #\* (+ (or link monospace words)) #\* #\*)
+(defrule bold (and #\* #\*
+		   (+ (or link monospace words #\Newline))
+		   #\* #\*)
   (:lambda (source)
     (destructuring-bind (open1 open2 content close1 close2) source
       (declare (ignore open1 open2 close1 close2))
       `(:strong ,@content))))
 
-(defrule heavy (and #\* #\* #\* (+ (or link monospace words)) #\* #\* #\*)
+(defrule heavy (and #\* #\* #\*
+		    (+ (or link monospace words #\Newline))
+		    #\* #\* #\*)
   (:lambda (source)
     (destructuring-bind (o1 o2 o3 content c1 c2 c3) source
       (declare (ignore o1 o2 o3 c1 c2 c3))
