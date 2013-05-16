@@ -154,7 +154,7 @@
     (declare (special *muse-current-file*))
     (if (and muse-source (probe-file muse-source))
 	(progn
-	  (hunchentoot:log-message* :INFO "rendering file '~a'" pathname)
+	  (hunchentoot:log-message* :INFO "rendering file '~a'" muse-source)
 	  (render-muse-document muse-source))
 
 	;; FIXME: we also serve RSS (.xml) here
