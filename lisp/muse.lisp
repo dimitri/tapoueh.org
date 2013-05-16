@@ -194,7 +194,7 @@
 (defrule word (+ (not (or whitespace #\Tab #\[ #\] #\< #\> #\= #\*)))
   (:text t))
 
-(defrule words (+ (or word whitespace))
+(defrule words (+ (or word #\Space #\Tab))
   (:lambda (source)
     (apply #'concatenate 'string source)))
 
@@ -208,14 +208,23 @@
   "Return non-nil only when MAYBE-FILENAME has a pathname-type of an image"
   (member (pathname-type maybe-filename) *image-type-list* :test #'string=))
 
+(defun maybe-image-tagify (string &key as-link)
+  "Turn STRING into (:img :src STRING) if it's a local image filename."
+  (if (and string
+	   (not (ppcre:all-matches "^http(s?)://" string))
+	   (image-filename-p string))
+      `(:img :src ,string)
+      (if as-link
+	  `(:a :href ,string ,string)
+	  string)))
+
 (defrule link (and "[" link-part (? link-part) "]")
   (:lambda (source)
     (destructuring-bind (open target label close) source
       (declare (ignore open close))
       (if label
-	  `(:a :href ,target
-	       ,(if (image-filename-p target) `(:img :src ,label) label))
-	  `(:img :src ,target)))))
+	  `(:a :href ,target ,(maybe-image-tagify label :as-link nil))
+	  (maybe-image-tagify target :as-link t)))))
 
 #+5am
 (test parse-link
@@ -240,12 +249,18 @@
 	   :test #'equalp))
       (is (tree-equal
 	   (parse 'link "[[http://forum.ubuntu-fr.org/viewtopic.php?id=218883]]")
-	   '(:IMG :SRC "http://forum.ubuntu-fr.org/viewtopic.php?id=218883")
+	   '(:A :HREF "http://forum.ubuntu-fr.org/viewtopic.php?id=218883"
+	     "http://forum.ubuntu-fr.org/viewtopic.php?id=218883")
 	   :test #'equalp))
       (is (tree-equal
 	   (parse 'link "[[../../../images/confs/the_need_for_speed.pdf][../../../images/confs/the_need_for_speed-3.png]]")
 	   '(:a :href "../../../images/confs/the_need_for_speed.pdf"
 	     (:img :src "../../../images/confs/the_need_for_speed-3.png"))
+	   :test #'equalp))
+      (is (tree-equal
+	   (parse 'link "[[http://commons.wikimedia.org/wiki/File:BlankMap-World-2009.PNG]]")
+	   '(:A :HREF "http://commons.wikimedia.org/wiki/File:BlankMap-World-2009.PNG"
+	     "http://commons.wikimedia.org/wiki/File:BlankMap-World-2009.PNG")
 	   :test #'equalp)))
 
 (defrule attr
@@ -318,12 +333,12 @@
 		  '(:em (:strong "this is heavy")))))
 
 (defrule centered (and #\Tab (* (or #\Tab whitespace))
-		       (or heavy bold italics monospace code link words)
+		       (+ (or heavy bold italics monospace code link words))
 		       (? #\Newline))
   (:lambda (source)
     (destructuring-bind (tab ws thing nl) source
       (declare (ignore tab ws nl))
-      `(:center ,thing))))
+      `(:center ,@thing))))
 
 #+5am
 (test parse-centered
@@ -334,15 +349,16 @@
 ")
 		  '(:center (:em  "ahah"))))
       (is (equalp (parse 'centered "		       [[http://postgresqlrussia.org/articles/view/131][../../../images/Moskva_DB_Tools.v3.png]]")
-		  '(:center (:a :href "http://postgresqlrussia.org/articles/view/131"
-			     "../../../images/Moskva_DB_Tools.v3.png"))))
+		  '(:CENTER
+		    (:A :HREF "http://postgresqlrussia.org/articles/view/131"
+		     (:IMG :SRC "../../../images/Moskva_DB_Tools.v3.png")))))
       (is (equalp
 	   (parse 'centered "	*Photo by [[http://www.sai.msu.su/~megera/][Oleg Bartunov]]*")
 	   '(:CENTER
  (:EM "Photo by " (:A :HREF "http://www.sai.msu.su/~megera/" "Oleg Bartunov"))))))
 
-(defrule title (and (+ #\*) whitespaces (or heavy bold italics monospace link
-					    non-empty-line))
+(defrule title (and (+ #\*) (+ whitespace)
+		    (or heavy bold italics monospace link non-empty-line))
   (:lambda (source)
     (destructuring-bind (stars ws rest) source
       (declare (ignore ws))
