@@ -58,6 +58,7 @@
 	(setf (hunchentoot:return-code*) hunchentoot:+HTTP-NOT-FOUND+))))
 
 (defun start-web-server (&key
+			   (document-root "/tmp")
 			   (port *port*)
 			   (access-log *access-log-file*)
 			   (message-log *message-log-file*))
@@ -66,7 +67,7 @@
 
   (setf *acceptor*
 	(make-instance 'hunchentoot:easy-acceptor
-		       :document-root "/tmp"
+		       :document-root document-root
 		       :port port
 		       :access-log-destination access-log
 		       :message-log-destination message-log))

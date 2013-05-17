@@ -5,17 +5,20 @@
     :description "Publishing System for http://tapoueh.org"
     :author "Dimitri Fontaine"
     :license "WFTPL"
-    :depends-on (#:esrap			; parser
+    :depends-on (#:esrap		; parser
 		 #:string-case		; string-case macro
 		 #:local-time		; handle time based computing
-		 #:cl-who			; produce HTML from Muse sources
-		 #:split-sequence		; easy splitting
-		 #:fiveam			; regression testing
-		 #:cl-fad			; file and directories
+		 #:cl-who		; produce HTML from Muse sources
+		 #:split-sequence	; easy splitting
+		 #:fiveam		; regression testing
+		 #:cl-fad		; file and directories
 		 #:cl-ppcre		; regular expressions
 		 #:hunchentoot		; web server
 		 #:alexandria		; tools such as hash-table-keys, etc
+		 #:uiop			; quit
+		 #:command-line-arguments
 		 )
+    ;; do NOT include tapoueh.lisp here, as it begins with #!, not lispy
     :components ((:file "package")
 		 (:file "utils"       :depends-on ("package"))
 		 (:file "muse"        :depends-on ("utils" "package"))
@@ -28,6 +31,5 @@
 						   "collection"
 						   "ssi"
 						   "url"
-						   "muse"))
-		 (:file "tapoueh"     :depends-on ("package" "web"))))
+						   "muse"))))
 
