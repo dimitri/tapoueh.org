@@ -40,7 +40,7 @@
    *blog-articles-list* version.
 
    Return the parsed article."
-  (let ((article (parse-muse-article pathname)))
+  (let ((article (muse-parse-article pathname)))
     (setf (gethash pathname *blog-articles*) article)
 
     (when re-sort-list (compute-sorted-blog-articles-list))

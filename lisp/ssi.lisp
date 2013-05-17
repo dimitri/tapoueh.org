@@ -96,7 +96,7 @@
 
 (defun tapoueh-extract-directive (directive-name pathname)
   (when pathname
-    (slot-value (parse-muse-directives pathname)
+    (slot-value (muse-parse-directives pathname)
 		(intern (string-upcase directive-name) :tapoueh))))
 
 (defun muse-current-file ()
@@ -124,7 +124,7 @@
   (let ((articles))
     (fad:walk-directory (expand-file-name-into base-directory *root-directory*)
 			(lambda (pathname)
-			  (let ((doc (parse-muse-directives pathname)))
+			  (let ((doc (muse-parse-directives pathname)))
 			    (when (muse-article-p doc)
 			      (push doc articles))))
 			:test #'muse-file-type-p)
@@ -139,7 +139,7 @@
 	   collect `(:li (:a :href ,(muse-pathname article)
 			     ,(muse-title article))
 			 " - "
-			 (:class :name "date" ,(muse-date article))))))))
+			 (:class :name "date" ,(muse-date article)))))))
 
 (defun tapoueh-list-blog-articles (&optional subdirs-only no-index root)
   "Run through all subdirs from current page and list pages"

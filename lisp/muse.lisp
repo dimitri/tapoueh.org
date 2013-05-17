@@ -74,7 +74,7 @@
     (when (and t1 t2)
       (funcall test t1 t2))))
 
-(defun parse-muse-article (pathname)
+(defun muse-parse-article (pathname)
   "Parse the Muse article at PATHNAME and return a muse structure."
   (let ((article (parse 'article (slurp-file-into-string pathname))))
     (setf (muse-pathname article) pathname)
@@ -82,7 +82,7 @@
 	  (local-time:universal-to-timestamp (file-write-date pathname)))
     article))
 
-(defun parse-muse-directives (pathname)
+(defun muse-parse-directives (pathname)
   "Only parse the Muse directives, not the whole document"
   (let ((document
 	 (parse 'directives (slurp-file-into-string pathname) :junk-allowed t)))
