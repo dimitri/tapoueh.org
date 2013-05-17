@@ -136,7 +136,7 @@
       ,@(loop
 	   for article in articles
 	   repeat (or n 5)
-	   collect `(:li (:a :href ,(muse-pathname article)
+	   collect `(:li (:a :href ,(muse-url article)
 			     ,(muse-title article))
 			 " - "
 			 (:class :name "date" ,(muse-date article)))))))

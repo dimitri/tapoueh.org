@@ -4,9 +4,6 @@
 
 (in-package #:tapoueh)
 
-(def-suite web :description "Emacs Muse Parser Test Suite.")
-(in-suite web)
-
 (defparameter *default-file-name* "index")
 (defparameter *default-file-type* "html")
 
@@ -21,100 +18,12 @@
 ;;
 (defun render-muse-document (pathname)
   "Parse the muse document at PATHNAME and spits out HTML"
-  (let ((*muse-current-file* (parse-muse-article pathname)))
+  (let ((*muse-current-file* (muse-parse-article pathname)))
     (declare (special *muse-current-file*))
     (concatenate 'string
 		 (ssi-file *header*)
 		 (to-html *muse-current-file*)
 		 (ssi-file *footer*))))
-
-;;
-;; Routing helpers, figuring out what document to serve given the script
-;; name in the URI.
-;;
-(defun pathname-from-script-name-as-directory
-    (script-name &aux (local-name (subseq script-name 1)))
-  "Given a script-name, return the directory where to find the resource"
-  (fad:pathname-as-directory (merge-pathnames local-name *root-directory*)))
-
-(defun resource-name (script-name)
-  "Return pathname of resource we should be serving, by installing the
-   filename and type defaults into the script-name from the URI.
-
-   SCRIPT-NAME must be a relative filename, not beginning with /."
-  (cond
-    ((null (pathname-name script-name))
-     ;; /blog/ --> /blog/index.html
-     (make-pathname :directory script-name
-		    :name      *default-file-name*
-		    :type      *default-file-type*))
-    ((null (pathname-type script-name))
-     (if (fad:directory-exists-p
-	  (pathname-from-script-name-as-directory script-name))
-	 ;; /blog --> /blog/index.html
-	 (make-pathname :directory (namestring (fad:pathname-as-file script-name))
-			:name      *default-file-name*
-			:type      *default-file-type*)
-	 ;; /blog/2013/05/13-from-parser-to-compiler --> add .html
-	 (let* ((pathname  (pathname script-name))
-		(directory (directory-namestring pathname))
-		(as-file   (if (string= "/" directory) directory
-			       (fad:pathname-as-file directory))))
-	   (make-pathname :directory (namestring as-file)
-			  :name      (file-namestring pathname)
-			  :type      *default-file-type*))))
-    (t
-     (pathname script-name))))
-
-#+5am
-(test resource-name
-      "Test the transformation of an URI script-name into a resource-name"
-      (is (string= (namestring (resource-name "/blog/")) "//blog//index.html"))
-      (is (string= (namestring (resource-name "/blog"))  "//blog/index.html"))
-      (is (string= (namestring (resource-name "/foo"))   "///foo.html"))
-      (is (string=
-	   (namestring (resource-name "/blog/2013/05/13-from-parser-to-compiler"))
-	   "//blog/2013/05/13-from-parser-to-compiler.html")))
-
-(defun muse-source (script-name)
-  "Return the .muse pathname to use to serve given pathname, or nil"
-  (let* ((resource-name (resource-name script-name)))
-    (expand-file-name-into resource-name *root-directory*
-			   :type *muse-pathname-type*)))
-
-#+5am
-(test muse-source
-      "Test the script-name URI parsing"
-      (is (fad:pathname-equal
-	   (muse-source "/blog")
-	   (expand-file-name-into (make-pathname :directory "blog"
-						 :name "index"
-						 :type "muse")
-				  *root-directory*)))
-      (is (fad:pathname-equal
-	   (muse-source "/blog/")
-	   (expand-file-name-into (make-pathname :directory "blog"
-						 :name "index"
-						 :type "muse")
-				  *root-directory*)))
-      (is (fad:pathname-equal
-	   (muse-source "/blog/index")
-	   (expand-file-name-into (make-pathname :directory "blog"
-						 :name "index"
-						 :type "muse")
-				  *root-directory*)))
-      (is (fad:pathname-equal
-	   (muse-source "/blog/2013/05/13-from-parser-to-compiler")
-	   (expand-file-name-into (make-pathname :directory "/blog/2013/05"
-						 :name "13-from-parser-to-compiler"
-						 :type "muse")
-				  *root-directory*)))
-      (is (fad:pathname-equal
-	   (muse-source "/blog/2013/03/18-bulk-replication.html")
-	   (expand-file-name-into (make-pathname :directory "/blog/2013/03"
-						 :name "18-bulk-replication"
-						 :type "muse")
-				  *root-directory*))))
 
 ;;
 ;; Routing proper
