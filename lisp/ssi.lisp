@@ -29,10 +29,13 @@
   (declare (ignore match))
   (let ((result (eval (let ((*package* (find-package 'tapoueh)))
 			(read-from-string (first registers))))))
-    (typecase result
-      (string result)
-      (list   (eval `(with-html-output-to-string (s) ,result)))
-      (t      (format nil "~a" result)))))
+    (if result
+	(typecase result
+	  (string result)
+	  (list   (eval `(with-html-output-to-string (s) ,result)))
+	  (t      (format nil "~a" result)))
+	;; result is null, return an empty string
+	"")))
 
 (defun eval-lisp-tags (string)
   "Replace each <lisp>(code)</lisp> by the result of evaluating the code."
