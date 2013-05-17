@@ -58,8 +58,7 @@
       (start-web-server :document-root doc-root
 			:port port
 			:access-log access-log
-			:message-log log)
-      (uiop:quit))))
+			:message-log log))))
 
 ;;; actually call the main function, too
 (main (uiop:command-line-arguments))
