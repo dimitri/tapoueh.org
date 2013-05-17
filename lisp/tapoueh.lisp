@@ -35,7 +35,7 @@
     ("log" :type string :initial-value "/tmp/tapoueh.log"
 	   :documentation "main log file")
 
-    ("access-log" :type string :initial-value "/tmp/tapoueh/parch.access.log"
+    ("access-log" :type string :initial-value "/tmp/tapoueh.access.log"
 		  :documentation "log file for http access logs")))
 
 (defun main (argv)
