@@ -41,12 +41,13 @@
 
    Return the parsed article."
   (let ((article (muse-parse-directives pathname)))
-    (setf (gethash pathname *blog-articles*) article)
+    (when (and (muse-p article) (muse-article-p article))
+      (setf (gethash pathname *blog-articles*) article)
 
-    (when re-sort-list (compute-sorted-blog-articles-list))
+      (when re-sort-list (compute-sorted-blog-articles-list))
 
-    ;; return the article we just added, as a muse structure
-    article))
+      ;; return the article we just added, as a muse structure
+      article)))
 
 (defun find-all-blog-articles (&key purge)
   "Find all .muse articles from *blog-directory*, parse them and keep them
