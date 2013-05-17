@@ -97,3 +97,14 @@
 (defun muse-file-type-p (pathname)
   "Returns a generalized boolean true when pathname extension is .muse"
   (string= (pathname-type pathname) *muse-pathname-type*))
+
+(defmethod muse-format-date ((m muse) &key long-format)
+  "Format muse-date to be displayed on the web"
+  (let ((stamp (muse-timestamp m)))
+    (when stamp
+      (local-time:format-timestring
+       nil stamp
+       :format
+       (append '(:long-weekday ", " :long-month " " :day " " :year)
+	       (when long-format
+		 '(", " :hour ":" :min)))))))

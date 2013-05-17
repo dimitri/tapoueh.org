@@ -139,7 +139,8 @@
   (let ((script-name
 	 (relative-pathname-from *root-directory* (muse-pathname m))))
     (concatenate 'string
-		 *base-url*
+		 ;; *base-url*
+		 "/"
 		 ;; we chop off the pathname-type here
 		 (directory-namestring script-name)
 		 (pathname-name script-name))))

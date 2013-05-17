@@ -62,7 +62,8 @@
 			   (access-log *access-log-file*)
 			   (message-log *message-log-file*))
   "Start the hunchentoot web server."
-  ;; didn't see how to change the existing acceptor's port...
+  (find-all-blog-articles)		; set our sorted list of articles
+
   (setf *acceptor*
 	(make-instance 'hunchentoot:easy-acceptor
 		       :document-root "/tmp"

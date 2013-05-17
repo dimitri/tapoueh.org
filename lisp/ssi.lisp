@@ -106,25 +106,63 @@
   (and (muse-p *muse-current-file*)	; could be nil
        (muse-pathname *muse-current-file*)))
 
-(defun tapoueh-insert-previous-article ())
-(defun tapoueh-insert-next-article ())
-(defun tapoueh-insert-breadcrumb-here ())
+(defun article-list-position (document)
+  "Find the position of given pathname in *blog-articles-list*"
+  (position (namestring (muse-pathname document))
+	    (mapcar #'namestring *blog-articles-list*)
+	    :test #'string=))
+
+(defun tapoueh-insert-previous-article ()
+  "Provide a link to the previous article"
+  (when (and (muse-p *muse-current-file*)
+	     (muse-article-p *muse-current-file*))
+    (let* ((pos  (article-list-position *muse-current-file*))
+	   (path (nth (- pos 1) *blog-articles-list*))
+	   (prev (when path (gethash path *blog-articles*))))
+      (when prev
+	`(:a :class "previous" :href ,(muse-url prev)
+	     ,(format nil "« ~a" (muse-title prev)))))))
+
+(defun tapoueh-insert-next-article ()
+  "Provide a link to the previous article"
+  (when (and (muse-p *muse-current-file*)
+	     (muse-article-p *muse-current-file*))
+    (let* ((pos  (article-list-position *muse-current-file*))
+	   (path (nth (+ pos 1) *blog-articles-list*))
+	   (prev (when path (gethash path *blog-articles*))))
+      (when prev
+	`(:a :class "next" :href ,(muse-url prev)
+	     ,(format nil "~a »" (muse-title prev)))))))
+
+(defun tapoueh-insert-breadcrumb-here ()
+  "path from root to current page"
+  (when (muse-p *muse-current-file*)
+    (let ((dirs
+	   (butlast
+	    (mapcar
+	     #'fad:pathname-as-directory
+	     (split-pathname
+	      (relative-pathname-from *root-directory*
+				      (muse-pathname *muse-current-file*)))))))
+      `(:div :id "breadcrumb"
+	     ,@(loop
+		  for (d . more?) on (cons "/dev/dim" dirs)
+		  for cur = *root-directory* then (expand-file-name-into d cur)
+		  for rel = "" then (relative-pathname-from *root-directory* cur)
+		  collect `(:a :href ,(concatenate 'string "/" rel)
+			       ,(namestring (fad:pathname-as-file d)))
+		  when more? collect " / ")))))
+
 (defun tapoueh-insert-article-date-here ()
   (when (muse-p *muse-current-file*)
-    (let ((stamp (muse-timestamp *muse-current-file*)))
-      (when stamp
-	(local-time:format-timestring
-	 nil stamp
-	 :format
-	 (append '(:long-weekday ", " :long-month " " :day " " :year)
-		 (unless (and (= 0 (local-time:timestamp-hour stamp))
-			      (= 0 (local-time:timestamp-minute stamp)))
-		   '(", " :hour ":" :min))))))))
+    (muse-format-date *muse-current-file*)))
+
 (defun tapoueh-social-div ())
 
 (defun tapoueh-insert-latest-articles (n base-directory)
   "Insert the N latest articles found under BASE-DIRECTORY."
-  (let ((articles))
+  (let ((articles)
+	(n (or n 5)))
     (fad:walk-directory (expand-file-name-into base-directory *root-directory*)
 			(lambda (pathname)
 			  (let ((doc (muse-parse-directives pathname)))
@@ -138,11 +176,11 @@
     `(:ul
       ,@(loop
 	   for article in articles
-	   repeat (or n 5)
+	   repeat n
 	   collect `(:li (:a :href ,(muse-url article)
 			     ,(muse-title article))
-			 " - "
-			 (:class :name "date" ,(muse-date article)))))))
+			 " "
+			 (:span :class "date" ,(muse-format-date article)))))))
 
 (defun tapoueh-list-blog-articles (&optional subdirs-only no-index root)
   "Run through all subdirs from current page and list pages"
