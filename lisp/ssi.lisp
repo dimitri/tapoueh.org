@@ -117,7 +117,7 @@
   (when (and (muse-p *muse-current-file*)
 	     (muse-article-p *muse-current-file*))
     (let* ((pos  (article-list-position *muse-current-file*))
-	   (path (nth (- pos 1) *blog-articles-list*))
+	   (path (when (> 0 pos) (nth (- pos 1) *blog-articles-list*)))
 	   (prev (when path (gethash path *blog-articles*))))
       (when prev
 	`(:a :class "previous" :href ,(muse-url prev)
