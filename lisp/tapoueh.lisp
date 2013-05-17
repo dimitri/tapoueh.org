@@ -1,4 +1,4 @@
-#! /usr/local/bin/sbcl --script
+#! /usr/bin/sbcl --script
 ;;; tapoueh.lisp
 ;;;
 ;;; The lisp software publishing http://tapoueh.org
