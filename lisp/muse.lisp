@@ -28,10 +28,11 @@
       (:constructor make-muse-article (&key
 				       pathname mod-timestamp
 				       author title date tags desc
-				       contents
+				       contents first-para image
 				       &aux (timestamp (when date
 							 (parse-date date))))))
-  pathname mod-timestamp author title date timestamp tags desc contents)
+  pathname mod-timestamp author title date timestamp tags desc
+  contents first-para image)
 
 (defmethod muse-article-p ((document muse))
   "Return a generalized boolean true when DOCUMENT is a Muse Article.
@@ -99,6 +100,18 @@
 	  document)
 	(make-muse :pathname pathname))))
 
+(defun muse-parse-chapeau (pathname)
+  "Only parse the Muse directives, not the whole document"
+  (let ((document
+	 (parse 'chapeau (slurp-file-into-string pathname) :junk-allowed t)))
+    (if document
+	(progn
+	  (setf (muse-pathname document) pathname)
+	  (setf (muse-mod-timestamp document)
+		(local-time:universal-to-timestamp (file-write-date pathname)))
+	  document)
+	(make-muse :pathname pathname))))
+
 (defun muse-file-type-p (pathname)
   "Returns a generalized boolean true when pathname extension is .muse"
   (string= (pathname-type pathname) *muse-pathname-type*))
@@ -114,10 +127,13 @@
 	       (when long-format
 		 '(", " :hour ":" :min)))))))
 
-(defmethod muse-format-article ((article muse))
+(defmethod muse-format-article ((article muse) &key with-image)
   "Return a list suitable for printing the article meta-data with cl-who"
-  `(:li (:a :href ,(muse-url article)
-	    ,(muse-title article))
-	" "
-	(:span :class "date" ,(muse-format-date article))))
-
+  (let ((link `(:a :href ,(muse-url article)
+		   ,(muse-title article)))
+	(date `(:span :class "date" ,(muse-format-date article))))
+    (if with-image
+	`(:li :class "image" (:a :href ,(muse-url article)
+				 ,(muse-image article))
+	      ,link " " ,date)
+	`(:li ,link " " ,date))))

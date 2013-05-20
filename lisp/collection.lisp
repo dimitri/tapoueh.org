@@ -70,17 +70,17 @@
   (let (articles)
     (fad:walk-directory (expand-file-name-into base-directory *root-directory*)
 			(lambda (pathname)
-			  (let ((doc (muse-parse-directives pathname)))
+			  (let ((doc (muse-parse-chapeau pathname)))
 			    (when (muse-article-p doc)
 			      (push doc articles))))
 			:test #'muse-file-type-p)
     ;; sort the articles now
     (sort articles #'muse-article-before-p)))
 
-(defun format-article-list (list)
+(defun format-article-list (list &key with-images)
   "Given a LIST of muse articles (proper muse structure), return the cl-who
    forms needed to render the list to html"
-  `(:ul
+  `(:ul ,@(when with-images '(:class "images"))
     ,@(loop
 	 for article in list
-	 collect (muse-format-article article))))
+	 collect (muse-format-article article :with-image with-images))))

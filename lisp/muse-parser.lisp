@@ -428,3 +428,16 @@ SELECT * FROM planet.postgresql.org WHERE author = \"dim\";
       (setf (muse-contents document) content)
       document)))
 
+;;
+;; Intermediate Meta Data Parsing: article chapeau
+;;
+;; That's the directives and the first paragraph and the image following the
+;; first paragraph, if any such.
+;;
+(defrule chapeau (and directives block block)
+  (:lambda (source)
+    (destructuring-bind (document first-para image) source
+      (setf (muse-first-para document) first-para)
+      (setf (muse-image document) (cadr image))	; drop the :center
+      document)))
+
