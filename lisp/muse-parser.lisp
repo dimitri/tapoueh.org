@@ -396,7 +396,7 @@ SELECT * FROM planet.postgresql.org WHERE author = \"dim\";
 	       if more? append (list line #\Newline)
 	       else append (list line))))))
 
-(defrule p (+ (or lines heavy bold italics monospace code link))
+(defrule p (+ (or lines heavy bold italics monospace code link #\Newline))
   (:lambda (source)
     `(:p ,@source)))
 
