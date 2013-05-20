@@ -63,3 +63,24 @@
     (if (or (null article) (file-newer-p article))
 	(add-article pathname :re-sort-list t)
 	article)))
+
+(defun find-blog-articles (base-directory)
+  "Find all muse articles in given BASE-DIRECTORY, return a sorted list of
+   them"
+  (let (articles)
+    (fad:walk-directory (expand-file-name-into base-directory *root-directory*)
+			(lambda (pathname)
+			  (let ((doc (muse-parse-directives pathname)))
+			    (when (muse-article-p doc)
+			      (push doc articles))))
+			:test #'muse-file-type-p)
+    ;; sort the articles now
+    (sort articles #'muse-article-before-p)))
+
+(defun format-article-list (list)
+  "Given a LIST of muse articles (proper muse structure), return the cl-who
+   forms needed to render the list to html"
+  `(:ul
+    ,@(loop
+	 for article in list
+	 collect (muse-format-article article))))

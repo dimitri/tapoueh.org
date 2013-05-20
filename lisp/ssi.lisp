@@ -161,26 +161,10 @@
 
 (defun tapoueh-insert-latest-articles (n base-directory)
   "Insert the N latest articles found under BASE-DIRECTORY."
-  (let ((articles)
+  (let ((articles (find-blog-articles base-directory))
 	(n (or n 5)))
-    (fad:walk-directory (expand-file-name-into base-directory *root-directory*)
-			(lambda (pathname)
-			  (let ((doc (muse-parse-directives pathname)))
-			    (when (muse-article-p doc)
-			      (push doc articles))))
-			:test #'muse-file-type-p)
-    (setq articles
-	  (sort articles (lambda (a b)
-			   (sort-articles a b :test #'local-time:timestamp>))))
     ;; return the N first articles
-    `(:ul
-      ,@(loop
-	   for article in articles
-	   repeat n
-	   collect `(:li (:a :href ,(muse-url article)
-			     ,(muse-title article))
-			 " "
-			 (:span :class "date" ,(muse-format-date article)))))))
+    (format-article-list (subseq (reverse articles) 0 n))))
 
 (defun tapoueh-list-blog-articles (&optional subdirs-only no-index root)
   "Run through all subdirs from current page and list pages"

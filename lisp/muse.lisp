@@ -64,6 +64,11 @@
   (eval `(with-html-output-to-string (s)
 	   ,@(muse-contents document))))
 
+(defmethod muse-article-before-p ((a1 muse) (a2 muse))
+  "Return a generalized boolean true when a1 has a date in the past of a2's"
+  (local-time:timestamp< (muse-timestamp a1)
+			 (muse-timestamp a2)))
+
 ;;; a .muse file with the 4 directives is an "article"
 (defmethod sort-articles ((a1 muse) (a2 muse)
 			  &key
@@ -108,3 +113,11 @@
        (append '(:long-weekday ", " :long-month " " :day " " :year)
 	       (when long-format
 		 '(", " :hour ":" :min)))))))
+
+(defmethod muse-format-article ((article muse))
+  "Return a list suitable for printing the article meta-data with cl-who"
+  `(:li (:a :href ,(muse-url article)
+	    ,(muse-title article))
+	" "
+	(:span :class "date" ,(muse-format-date article))))
+
