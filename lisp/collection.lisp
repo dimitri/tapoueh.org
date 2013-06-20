@@ -64,15 +64,20 @@
 	(add-article pathname :re-sort-list t)
 	article)))
 
-(defun find-blog-articles (base-directory)
+(defun find-blog-articles (base-directory &key test)
   "Find all muse articles in given BASE-DIRECTORY, return a sorted list of
-   them"
+   them. Don't even have a look at files when TEST returns true, if provided."
   (let (articles)
-    (fad:walk-directory (expand-file-name-into base-directory *root-directory*)
+    (fad:walk-directory (if (fad:pathname-absolute-p base-directory)
+			    (fad:pathname-directory-pathname base-directory)
+			    (expand-file-name-into base-directory
+						   *root-directory*))
 			(lambda (pathname)
-			  (let ((doc (muse-parse-chapeau pathname)))
-			    (when (muse-article-p doc)
-			      (push doc articles))))
+			  (when (or (null test)
+				    (funcall test pathname))
+			   (let ((doc (muse-parse-chapeau pathname)))
+			     (when (muse-article-p doc)
+			       (push doc articles)))))
 			:test #'muse-file-type-p)
     ;; sort the articles now
     (sort articles #'muse-article-before-p)))
@@ -84,3 +89,9 @@
     ,@(loop
 	 for article in list
 	 collect (muse-format-article article :with-image with-images))))
+
+(defun article-list-to-html (list &key with-images)
+  "Produce the HTML Listing of the given list of articles."
+  (concatenate 'string
+	       (eval `(with-html-output-to-string (s)
+			,(format-article-list list :with-images with-images)))))

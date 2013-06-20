@@ -18,6 +18,7 @@
 ;;
 (defun render-muse-document (pathname)
   "Parse the muse document at PATHNAME and spits out HTML"
+  (hunchentoot:log-message* :INFO "rendering file '~a'" pathname)
   (let ((*muse-current-file* (muse-parse-article pathname)))
     (declare (special *muse-current-file*))
     (concatenate 'string
@@ -43,19 +44,39 @@
   (declare (ignore request))
   t)
 
+(defun muse-index-p (pathname)
+  "Return a generalized boolean true when DOCUMENT is an Index page."
+  (and pathname (string= (pathname-name pathname) "index")))
+
+(defun render-index-page (pathname)
+  "Render an index page, which is a listing of articles"
+  (let ((*muse-current-file* (muse-parse-article pathname)))
+    (declare (special *muse-current-file*))
+    (concatenate 'string
+		 (ssi-file *header*)
+		 (article-list-to-html
+		  (find-blog-articles (directory-namestring pathname)
+				      :test (lambda (p)
+					      (not (muse-index-p p))))
+		  :with-images nil)
+		 (ssi-file *footer*))))
+
+(defun 404-page ()
+  "Return a 404 error code."
+  (setf (hunchentoot:return-code*) hunchentoot:+HTTP-NOT-FOUND+))
+
 (hunchentoot:define-easy-handler (muse :uri #'html-script-name) ()
   "Catch-all handler, do the routing ourselves."
   (let* ((script-name (hunchentoot:script-name*))
 	 (muse-source (muse-source script-name))
 	 *muse-current-file*)
     (declare (special *muse-current-file*))
-    (if (and muse-source (probe-file muse-source))
-	(progn
-	  (hunchentoot:log-message* :INFO "rendering file '~a'" muse-source)
-	  (render-muse-document muse-source))
 
-	;; FIXME: we also serve RSS (.xml) here
-	(setf (hunchentoot:return-code*) hunchentoot:+HTTP-NOT-FOUND+))))
+    (cond
+      ((null muse-source)         (404-page))
+      ((muse-index-p muse-source) (render-index-page muse-source))
+      ((probe-file muse-source)	  (render-muse-document muse-source))
+      (t                          (404-page)))))
 
 (defun start-web-server (&key
 			   (document-root "/tmp")

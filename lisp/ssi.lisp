@@ -161,10 +161,11 @@
 
 (defun tapoueh-insert-latest-articles (n base-directory)
   "Insert the N latest articles found under BASE-DIRECTORY."
-  (let ((articles (find-blog-articles base-directory))
-	(n (or n 5)))
+  (let* ((articles (find-blog-articles base-directory))
+	 (n (or n 5))
+	 (l (length articles)))
     ;; return the N first articles
-    (format-article-list (subseq (reverse articles) 0 n))))
+    (format-article-list (subseq (reverse articles) 0 (min n l)))))
 
 (defun tapoueh-list-blog-articles (&optional subdirs-only no-index root)
   "Run through all subdirs from current page and list pages"
