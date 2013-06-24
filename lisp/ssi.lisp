@@ -131,7 +131,7 @@
 	   (path (nth (+ pos 1) *blog-articles-list*))
 	   (prev (when path (gethash path *blog-articles*))))
       (when prev
-	`(:a :class "next" :href ,(muse-url prev)
+	`(:a :class "next pull-right" :href ,(muse-url prev)
 	     ,(format nil "~a »" (muse-title prev)))))))
 
 (defun tapoueh-insert-breadcrumb-here ()
@@ -144,14 +144,15 @@
 	     (split-pathname
 	      (relative-pathname-from *root-directory*
 				      (muse-pathname *muse-current-file*)))))))
-      `(:div :id "breadcrumb"
+      `(:ul :class "breadcrumb"
 	     ,@(loop
 		  for (d . more?) on (cons "/dev/dim" dirs)
 		  for cur = *root-directory* then (expand-file-name-into d cur)
 		  for rel = "" then (relative-pathname-from *root-directory* cur)
-		  collect `(:a :href ,(concatenate 'string "/" rel)
-			       ,(namestring (fad:pathname-as-file d)))
-		  when more? collect " / ")))))
+		  collect `(:li (:a :href ,(concatenate 'string "/" rel)
+				    ,(namestring (fad:pathname-as-file d)))
+				,(when more?
+				       '(:span :class "divider" "/"))))))))
 
 (defun tapoueh-insert-article-date-here ()
   (when (muse-p *muse-current-file*)
@@ -159,7 +160,12 @@
 
 (defun tapoueh-social-div ())
 
-(defun tapoueh-insert-latest-articles (n base-directory)
+(defun tapoueh-insert-latest-articles
+    (&optional n
+       (base-directory
+	(when (muse-p *muse-current-file*)
+	  (fad:pathname-as-file
+	   (directory-namestring (muse-pathname *muse-current-file*))))))
   "Insert the N latest articles found under BASE-DIRECTORY."
   (let* ((articles (find-blog-articles base-directory))
 	 (n (or n 5))

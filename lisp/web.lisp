@@ -74,7 +74,7 @@
 
     (cond
       ((null muse-source)         (404-page))
-      ((muse-index-p muse-source) (render-index-page muse-source))
+      ;; ((muse-index-p muse-source) (render-index-page muse-source))
       ((probe-file muse-source)	  (render-muse-document muse-source))
       (t                          (404-page)))))
 
