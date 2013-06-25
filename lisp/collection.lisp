@@ -64,6 +64,12 @@
 	(add-article pathname :re-sort-list t)
 	article)))
 
+(defun blog-article-pathname-p (pathname)
+  "Returns non-nil when PATHNAME could host a blog article"
+  (and pathname
+       (muse-file-type-p pathname)
+       (not (string= (pathname-name pathname) "index"))))
+
 (defun find-blog-articles (base-directory &key test)
   "Find all muse articles in given BASE-DIRECTORY, return a sorted list of
    them. Don't even have a look at files when TEST returns true, if provided."
@@ -78,7 +84,7 @@
 			   (let ((doc (muse-parse-chapeau pathname)))
 			     (when (muse-article-p doc)
 			       (push doc articles)))))
-			:test #'muse-file-type-p)
+			:test #'blog-article-pathname-p)
     ;; sort the articles now
     (sort articles #'muse-article-before-p)))
 
