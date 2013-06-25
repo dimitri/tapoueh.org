@@ -232,7 +232,7 @@
   "Run through all subdirs from current page and list pages"
   nil)
 
-(defun tapoueh-insert-tags-cloud (&optional subdir)
+(defun tapoueh-tags-cloud (&optional subdir)
   "Return a tag cloud for jQuery awesomeCloud plugin."
   (let ((counts (make-hash-table :test #'equal)))
     (reduce (lambda (&rest tags-args)
