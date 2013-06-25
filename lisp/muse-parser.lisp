@@ -308,7 +308,9 @@
   (:lambda (source)
     (destructuring-bind (open attrs gt source close) source
       (declare (ignore open attrs gt close))
-      `(:pre (:code ,(text source))))))
+      `(:pre
+	(:code
+	 ,(string-left-trim '(#\Newline #\Space #\Tab) (text source)))))))
 
 #+5am
 (test parse-src
