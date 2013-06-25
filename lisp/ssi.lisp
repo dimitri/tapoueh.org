@@ -112,27 +112,70 @@
 	    (mapcar #'namestring *blog-articles-list*)
 	    :test #'string=))
 
+(defun get-navigation-link (link title
+			    &key
+			      (class "previous")
+			      (title-format "« ~a"))
+  (when link
+    `(:a :class ,class :href ,link
+	 ,(format nil title-format title))))
+
+(defun tapoueh-list-parent-directory (script-name)
+  (let ((current-source-dir
+	 (directory-namestring (muse-source script-name))))
+    (values
+     current-source-dir
+     (remove-if-not #'fad:directory-pathname-p
+		    (fad:list-directory
+		     (fad:pathname-parent-directory current-source-dir))))))
+
+(defun tapoueh-previous-directory (&optional script-name)
+  "Provide a link to the previous directory"
+  (multiple-value-bind (current-source-dir entries)
+      (tapoueh-list-parent-directory (or script-name (hunchentoot:script-name*)))
+    (loop
+       for (a b . c) on entries
+       when (and a b (fad:pathname-equal current-source-dir b))
+       return (format nil "/~a" (relative-pathname-from *root-directory* a)))))
+
+(defun tapoueh-next-directory (&optional script-name)
+  "Provide a link to the previous directory"
+  (multiple-value-bind (current-source-dir entries)
+      (tapoueh-list-parent-directory (or script-name (hunchentoot:script-name*)))
+    (loop
+       for (a b . c) on entries
+       when (and a b (fad:pathname-equal current-source-dir a))
+       return (format nil "/~a" (relative-pathname-from *root-directory* b)))))
+
 (defun tapoueh-insert-previous-article ()
   "Provide a link to the previous article"
-  (when (and (muse-p *muse-current-file*)
-	     (muse-article-p *muse-current-file*))
-    (let* ((pos  (article-list-position *muse-current-file*))
-	   (path (when (< 0 pos) (nth (- pos 1) *blog-articles-list*)))
-	   (prev (when path (gethash path *blog-articles*))))
-      (when prev
-	`(:a :class "previous" :href ,(muse-url prev)
-	     ,(format nil "« ~a" (muse-title prev)))))))
+  (if (and (muse-p *muse-current-file*)
+	   (muse-article-p *muse-current-file*))
+      (let* ((pos  (article-list-position *muse-current-file*))
+	     (path (when (< 0 pos) (nth (- pos 1) *blog-articles-list*)))
+	     (prev (when path (gethash path *blog-articles*))))
+	(when prev
+	  (get-navigation-link (muse-url prev) (muse-title prev)
+			       :class "previous" :title-format "« ~a")))
+      ;; not an article
+      (let ((prev (tapoueh-previous-directory)))
+	(get-navigation-link prev prev
+			     :class "previous" :title-format "« ~a"))))
 
 (defun tapoueh-insert-next-article ()
   "Provide a link to the previous article"
-  (when (and (muse-p *muse-current-file*)
+  (if (and (muse-p *muse-current-file*)
 	     (muse-article-p *muse-current-file*))
     (let* ((pos  (article-list-position *muse-current-file*))
 	   (path (nth (+ pos 1) *blog-articles-list*))
 	   (prev (when path (gethash path *blog-articles*))))
       (when prev
-	`(:a :class "next pull-right" :href ,(muse-url prev)
-	     ,(format nil "~a »" (muse-title prev)))))))
+	(get-navigation-link (muse-url prev) (muse-title prev)
+			     :class "next pull-right" :title-format "~a »")))
+    ;; not an article
+    (let ((next (tapoueh-next-directory)))
+      (get-navigation-link next next
+			   :class "next pull-right" :title-format "~a »"))))
 
 (defun tapoueh-insert-breadcrumb-here ()
   "path from root to current page"
@@ -155,8 +198,12 @@
 				       '(:span :class "divider" "/"))))))))
 
 (defun tapoueh-insert-article-date-here ()
-  (when (muse-p *muse-current-file*)
-    (muse-format-date *muse-current-file*)))
+  (when (and (muse-p *muse-current-file*)
+	     (muse-date *muse-current-file*))
+    `(:div :class "date"
+	   ,(muse-format-date *muse-current-file*)
+	   " "
+	   (:i :class "icon-calendar"))))
 
 (defun tapoueh-social-div ())
 
@@ -194,3 +241,18 @@
 	   in (sort (alexandria:hash-table-alist counts) #'> :key #'cdr)
 	   collect `(:a :href ,(format nil "/tags/~a" tag)
 			:style ,(format nil "font-size: ~d.0%;" count))))))
+
+(defun tapoueh-insert-article-tags ()
+  "Return tags for the current article."
+  (when (and (muse-p *muse-current-file*)
+	     (muse-date *muse-current-file*))
+    `(:div :style "text-align: right;"
+	   (:span
+	    ,@(loop
+		 for (tag . more?) on (muse-tags *muse-current-file*)
+		 collect `(:a :href (format nil "/tags/~a" ,tag) ,tag)
+		 when more? collect ", "))
+	   " "
+	   (:i :class "icon-tags")
+	   )))
+

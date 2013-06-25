@@ -116,24 +116,40 @@
   "Returns a generalized boolean true when pathname extension is .muse"
   (string= (pathname-type pathname) *muse-pathname-type*))
 
-(defmethod muse-format-date ((m muse) &key long-format)
+(defmethod muse-format-date ((m muse) &key (format :normal))
   "Format muse-date to be displayed on the web"
   (let ((stamp (muse-timestamp m)))
     (when stamp
       (local-time:format-timestring
        nil stamp
        :format
-       (append '(:long-weekday ", " :long-month " " :day " " :year)
-	       (when long-format
-		 '(", " :hour ":" :min)))))))
+       (case format
+	 (:normal '(:long-weekday ", " :long-month " " :day " " :year))
+	 (:long   '(:long-weekday ", " :long-month " " :day " " :year
+		    ", " :hour ":" :min))
+	 (:short  '(:long-month ", " :day " " :year)))))))
 
 (defmethod muse-format-article ((article muse) &key with-image)
   "Return a list suitable for printing the article meta-data with cl-who"
-  (let ((link `(:a :href ,(muse-url article)
-		   ,(muse-title article)))
-	(date `(:span :class "date" ,(muse-format-date article))))
-    (if with-image
-	`(:li :class "image" (:a :href ,(muse-url article)
-				 ,(muse-image article))
-	      ,link " " ,date)
-	`(:li ,link " " ,date))))
+  (let* ((link `(:a :href ,(muse-url article)
+		    ,(muse-title article)))
+	 (date `(:span :class "date" ,(muse-format-date article :format :short)))
+	 (image (muse-image article))
+	 ;; if the image is itself a link, discard the link
+	 ;; (:A :HREF "https://fosdem.org/2013/"
+	 ;;     (:IMG :SRC "../../../images/fosdem.png"))
+	 (image (cond ((and (listp image)
+			    (eq :a (car image)))    (fourth image))
+
+		      ((and (listp image)
+			    (eq :img (car image)))  image)
+
+		      (t
+		       '(:img :src "/images/article2.gif")))))
+    `(:li :class "span2"
+	  (:div :class "thumbnail"
+		(:a :class "thumbnail" :href ,(muse-url article)
+		    (:img :style "width: 160px; height: 120px;"
+			  :src ,(if (listp image) (third image) image)))
+		(:h4 ,link)
+		(:div :class "date" ,date)))))

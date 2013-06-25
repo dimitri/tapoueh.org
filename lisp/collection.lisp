@@ -82,16 +82,16 @@
     ;; sort the articles now
     (sort articles #'muse-article-before-p)))
 
-(defun format-article-list (list &key with-images)
+(defun format-article-list (list)
   "Given a LIST of muse articles (proper muse structure), return the cl-who
    forms needed to render the list to html"
-  `(:ul ,@(when with-images '(:class "images"))
+  `(:ul :class "thumbnails"
     ,@(loop
 	 for article in list
-	 collect (muse-format-article article :with-image with-images))))
+	 collect (muse-format-article article))))
 
-(defun article-list-to-html (list &key with-images)
+(defun article-list-to-html (list)
   "Produce the HTML Listing of the given list of articles."
   (concatenate 'string
 	       (eval `(with-html-output-to-string (s)
-			,(format-article-list list :with-images with-images)))))
+			,(format-article-list list)))))

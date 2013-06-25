@@ -39,10 +39,16 @@
 	     (asdf:system-relative-pathname :tapoueh path))
 	    hunchentoot:*dispatch-table*))
 
-(defun html-script-name (request)
-  "Arrange our muse handler to be called for any URI"
-  (declare (ignore request))
-  t)
+(defun blog-article-p (request)
+  "Return True only when request's script-name is within /blog/"
+  (let ((script-name (hunchentoot:script-name* request)))
+    (and script-name
+	 (<= 6 (length script-name))
+	 (string= "/blog/" (subseq script-name 0 6)))))
+
+(defun muse-document-p (request)
+  "For the non-blog parts of the website"
+  (not (blog-article-p request)))
 
 (defun muse-index-p (pathname)
   "Return a generalized boolean true when DOCUMENT is an Index page."
@@ -57,15 +63,14 @@
 		 (article-list-to-html
 		  (find-blog-articles (directory-namestring pathname)
 				      :test (lambda (p)
-					      (not (muse-index-p p))))
-		  :with-images nil)
+					      (not (muse-index-p p)))))
 		 (ssi-file *footer*))))
 
 (defun 404-page ()
   "Return a 404 error code."
   (setf (hunchentoot:return-code*) hunchentoot:+HTTP-NOT-FOUND+))
 
-(hunchentoot:define-easy-handler (muse :uri #'html-script-name) ()
+(hunchentoot:define-easy-handler (blog :uri #'blog-article-p) ()
   "Catch-all handler, do the routing ourselves."
   (let* ((script-name (hunchentoot:script-name*))
 	 (muse-source (muse-source script-name))
@@ -74,7 +79,19 @@
 
     (cond
       ((null muse-source)         (404-page))
-      ;; ((muse-index-p muse-source) (render-index-page muse-source))
+      ((muse-index-p muse-source) (render-index-page muse-source))
+      ((probe-file muse-source)	  (render-muse-document muse-source))
+      (t                          (404-page)))))
+
+(hunchentoot:define-easy-handler (muse :uri #'muse-document-p) ()
+  "Catch-all handler, do the routing ourselves."
+  (let* ((script-name (hunchentoot:script-name*))
+	 (muse-source (muse-source script-name))
+	 *muse-current-file*)
+    (declare (special *muse-current-file*))
+
+    (cond
+      ((null muse-source)         (404-page))
       ((probe-file muse-source)	  (render-muse-document muse-source))
       (t                          (404-page)))))
 
