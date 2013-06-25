@@ -70,6 +70,27 @@
   "Return a 404 error code."
   (setf (hunchentoot:return-code*) hunchentoot:+HTTP-NOT-FOUND+))
 
+(hunchentoot:define-easy-handler (home :uri "/") ()
+  "Let's design an home page"
+  (ssi-include-with-header-and-footer "index.muse"))
+
+(hunchentoot:define-easy-handler (projects :uri "/projects") ()
+  "Let's design an home page"
+  (ssi-include-with-header-and-footer "projects.muse"))
+
+(hunchentoot:define-easy-handler (confs :uri "/confs") ()
+  "Let's design an home page"
+  (ssi-include-with-header-and-footer "conferences.muse"))
+
+(hunchentoot:define-easy-handler (cloud :uri "/cloud") ()
+  "A tags Cloud, the JSON data"
+  (setf (hunchentoot:content-type*) "text/plain")
+  (json:encode-json-to-string (tags-cloud)))
+
+(hunchentoot:define-easy-handler (tags :uri "/tags") ()
+  "A tags Cloud"
+  (ssi-include-with-header-and-footer "cloud.html"))
+
 (hunchentoot:define-easy-handler (blog :uri #'blog-article-p) ()
   "Catch-all handler, do the routing ourselves."
   (let* ((script-name (hunchentoot:script-name*))

@@ -57,6 +57,14 @@
   "Server Side Include file at given PATHNAME, replacing <lisp> tags"
   (eval-lisp-tags (slurp-file-into-string pathname)))
 
+(defun ssi-include-with-header-and-footer (pathname
+					   &optional (dir *root-directory*))
+  "Server Side Include given PATHNAME in ROOT directory."
+  (concatenate 'string
+	       (ssi-file *header*)
+	       (ssi-file (expand-file-name-into pathname dir))
+	       (ssi-file *footer*)))
+
 ;;;
 ;;; Helper functions used in the SSI directives
 ;;;
@@ -224,8 +232,8 @@
   "Run through all subdirs from current page and list pages"
   nil)
 
-(defun tapoueh-tags-cloud (&optional subdir)
-  "Return a tag cloud."
+(defun tapoueh-insert-tags-cloud (&optional subdir)
+  "Return a tag cloud for jQuery awesomeCloud plugin."
   (let ((counts (make-hash-table :test #'equal)))
     (reduce (lambda (&rest tags-args)
 	      (loop
@@ -239,8 +247,34 @@
       ,@(loop
 	   for (tag . count)
 	   in (sort (alexandria:hash-table-alist counts) #'> :key #'cdr)
-	   collect `(:a :href ,(format nil "/tags/~a" tag)
-			:style ,(format nil "font-size: ~d.0%;" count))))))
+	   ;; <span data-weight="14">word</span>
+	   collect `(:span :data-weight ,count ,tag
+			   ;;(:a :href ,(format nil "/tags/~a" tag) ,tag)
+			   )))))
+
+(defun tags-cloud ()
+  "Return a tags cloud data structure suitable for JQCloud"
+  (let ((counts (make-hash-table :test #'equal)))
+    (reduce (lambda (&rest tags-args)
+	      (loop
+		 for tags in tags-args
+		 do (loop
+		       for tag in tags
+		       do (incf (gethash tag counts 0)))))
+	    (mapcar #'muse-tags
+		    (alexandria:hash-table-values *blog-articles*)))
+    ;; {text: "Lorem", weight: 15},
+    ;; {text: "Ipsum", weight: 9, link: "http://jquery.com/"},
+    ;; {text: "Dolor", weight: 6},
+    ;; {text: "Sit", weight: 7},
+    ;; {text: "Amet", weight: 5}
+    ;; // ...other words
+    (loop
+       for (tag . count)
+       in (sort (alexandria:hash-table-alist counts) #'> :key #'cdr)
+       collect (list (cons :text tag)
+		     (cons :weight count)
+		     (cons :link (format nil "/tags/~a" tag))))))
 
 (defun tapoueh-insert-article-tags ()
   "Return tags for the current article."

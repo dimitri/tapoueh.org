@@ -15,6 +15,7 @@
 		 #:cl-ppcre		; regular expressions
 		 #:hunchentoot		; web server
 		 #:alexandria		; tools such as hash-table-keys, etc
+		 #:cl-json		; to output json to the web controler
 		 #:uiop			; quit
 		 #:command-line-arguments
 		 )
