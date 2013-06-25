@@ -308,7 +308,7 @@
   (:lambda (source)
     (destructuring-bind (open attrs gt source close) source
       (declare (ignore open attrs gt close))
-      `(:pre ,(text source)))))
+      `(:pre (:code ,(text source))))))
 
 #+5am
 (test parse-src
