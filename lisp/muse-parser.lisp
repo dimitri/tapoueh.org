@@ -399,7 +399,7 @@ SELECT * FROM planet.postgresql.org WHERE author = \"dim\";
   ;; ignore table of contents completely for now
   (:constant ""))
 
-(defrule lines (and (+ non-empty-line))
+(defrule lines (+ non-empty-line)
   (:lambda (lines)
     (text (loop
 	     for line in lines
