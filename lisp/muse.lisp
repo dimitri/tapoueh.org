@@ -133,23 +133,28 @@
 		    ", " :hour ":" :min))
 	 (:short  '(:long-month ", " :day " " :year)))))))
 
+(defmethod muse-extract-article-image-source ((article muse))
+  "Extract the image source from the article"
+  (let* ((image (muse-image article)))
+    ;; if the image is itself a link, discard the link
+    ;; (:A :HREF "https://fosdem.org/2013/"
+    ;;     (:IMG :SRC "../../../images/fosdem.png"))
+    (cond ((and (listp image)
+		(eq :a (car image)))    (fourth image))
+
+	  ((and (listp image)
+		(eq :img (car image)))  image)
+
+	  (t
+	   '(:img :src "/images/article2.gif")))))
+
 (defmethod muse-format-article ((article muse))
   "Return a list suitable for printing the article meta-data with cl-who"
   (let* ((link `(:a :href ,(muse-url article)
 		    ,(muse-title article)))
 	 (date `(:span :class "date" ,(muse-format-date article :format :short)))
-	 (image (muse-image article))
-	 ;; if the image is itself a link, discard the link
-	 ;; (:A :HREF "https://fosdem.org/2013/"
-	 ;;     (:IMG :SRC "../../../images/fosdem.png"))
-	 (image (cond ((and (listp image)
-			    (eq :a (car image)))    (fourth image))
-
-		      ((and (listp image)
-			    (eq :img (car image)))  image)
-
-		      (t
-		       '(:img :src "/images/article2.gif")))))
+	 (image (muse-extract-article-image-source article)))
+    (format t "~a~%" image)
     `(:li :class "span2"
 	  (:div :class "thumbnail"
 		(:a :class "thumbnail" :href ,(muse-url article)
@@ -157,3 +162,24 @@
 			  :src ,(if (listp image) (third image) image)))
 		(:h4 ,link)
 		(:div :class "date" ,date)))))
+
+(defmethod muse-format-article-with-chapeau ((article muse))
+  "Return a list suitable for printing the article meta-data with cl-who"
+  (let* ((link `(:a :href ,(muse-url article)
+		    ,(muse-title article)))
+	 (date `(:span :class "date" ,(muse-format-date article :format :short)))
+	 (image (muse-extract-article-image-source article)))
+    `(:div :class "row"
+	   (:div :class "span2" (:p "&nbsp;"))
+
+	   (:div :class "span6"
+		 (:h2 ,link)
+		 (:div :class "date" ,date))
+
+	   (:div :class "span2"
+		 (:a :class "thumbnail" :href ,(muse-url article)
+		     (:img :class "img-polaroid"
+			   :style "width: 160px; height: 120px;"
+			   :src ,(if (listp image) (third image) image))))
+
+	   (:div :class "span6" ,(muse-first-para article))))))

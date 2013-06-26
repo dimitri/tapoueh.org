@@ -67,7 +67,7 @@
     (declare (special *muse-current-file*))
     (concatenate 'string
 		 (ssi-file *header*)
-		 (article-list-to-html
+		 (article-list-to-html-with-chapeau
 		  (find-blog-articles (directory-namestring pathname)
 				      :test (lambda (p)
 					      (not (muse-index-p p)))))
@@ -92,6 +92,14 @@
 (hunchentoot:define-easy-handler (confs :uri "/confs") ()
   "Let's design a conferences page"
   (render-muse-document (muse-source "/conferences")))
+
+(hunchentoot:define-easy-handler (blog-home :uri "/blog") ()
+  "Let's design a blog home page"
+  (concatenate 'string
+	       (ssi-file *header*)
+	       (article-list-to-html-with-chapeau
+		(last (find-blog-articles *blog-directory*) 10))
+	       (ssi-file *footer*)))
 
 (hunchentoot:define-easy-handler (cloud :uri "/cloud") ()
   "A tags Cloud, the JSON data"

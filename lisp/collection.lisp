@@ -120,3 +120,17 @@
 			  :test #'blog-article-pathname-p))
     ;; sort the articles now
     (sort articles #'muse-article-before-p)))
+
+(defun format-article-list-with-chapeau (list)
+  "Produce the detailed HTML Listing of the given list of articles."
+  `(:div
+    ,@(loop
+	 for article in list
+	 collect (muse-format-article-with-chapeau article))))
+
+(defun article-list-to-html-with-chapeau (list)
+  "Produce the detailed HTML Listing of the given list of articles."
+ (concatenate 'string
+	      (eval `(with-html-output-to-string (s)
+		       ,(format-article-list-with-chapeau list)))))
+
