@@ -186,7 +186,7 @@
 	 word
 	 "="
 	 (? #\")
-	 (+ (or #\- #\. (alphanumericp character)))
+	 (+ (or #\Space #\- #\. (alphanumericp character)))
 	 (? #\"))
   (:lambda (source)
     (destructuring-bind (ws name eq lq value rq) source
@@ -346,11 +346,18 @@
 	   (parse 'literal "<literal><div class=\"plop\">hey</div></literal>")
 	   "<div class=\"plop\">hey</div>")))
 
-(defrule quote (and "<quote>" (+ (or p src empty-line)) "</quote>")
+(defrule quote (and "<quote" (? attrs) ">" (+ (or p src empty-line)) "</quote>")
   (:lambda (source)
-    (destructuring-bind (open content close) source
-      (declare (ignore open close))
-      `(:blockquote ,@(remove-if #'null content)))))
+    (destructuring-bind (quote attrs gt content unquote) source
+      (declare (ignore quote gt unquote))
+      (destructuring-bind (&key author title &allow-other-keys) attrs
+	`(:blockquote
+	  ,@(remove-if #'null content)
+	  ,(when author
+		 `(:small
+		   ,author
+		   ,@(when title
+			   (list " in " `(:cite :title ,title ,title))))))))))
 
 #+5am
 (test parse-quote
@@ -393,15 +400,22 @@ SELECT * FROM planet.postgresql.org WHERE author = \"dim\";
   (:constant ""))
 
 (defrule lines (and (+ non-empty-line))
-  (:lambda (source)
-    (destructuring-bind (lines) source
-      (text (loop
-	       for line in lines
-	       append (list line #\Newline))))))
+  (:lambda (lines)
+    (text (loop
+	     for line in lines
+	     append (list line #\Newline)))))
 
-(defrule p (+ (or lines heavy bold italics monospace code link #\Newline))
+(defrule p (and (+ (or lines
+		       (and (or heavy bold italics monospace code link)
+			    (? #\Newline))))
+		#\Newline)
   (:lambda (source)
-    `(:p ,@source)))
+    (destructuring-bind (p-list nl) source
+      (declare (ignore nl))
+      `(:p ,@(loop
+		for p in p-list
+		when (listp p) append p
+		else collect p)))))
 
 (defrule para (and p (* empty-line))
   (:lambda (source)
