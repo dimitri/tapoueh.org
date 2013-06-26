@@ -423,6 +423,21 @@ SELECT * FROM planet.postgresql.org WHERE author = \"dim\";
       (declare (ignore e))
       p)))
 
+(defrule list-text (+ (not-newline-or-special character))
+  (:text t))
+
+(defrule list-line (and #\Space #\- #\Space
+			(+ (or heavy bold italics monospace code link list-text))
+			#\Newline)
+  (:lambda (source)
+    (destructuring-bind (sp1 dash sp2 content nl) source
+      (declare (ignore sp1 dash sp2 nl))
+      `(:li ,@content))))
+
+(defrule list (and (+ list-line) (? #\Newline))
+  (:lambda (source)
+    `(:ul ,@(car source))))
+
 (defrule block (or title
 		   centered
 		   class
@@ -432,6 +447,7 @@ SELECT * FROM planet.postgresql.org WHERE author = \"dim\";
 		   quote
 		   lisp
 		   contents
+		   list
 		   para
 		   empty-line))
 
