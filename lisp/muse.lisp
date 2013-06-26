@@ -154,7 +154,6 @@
 		    ,(muse-title article)))
 	 (date `(:span :class "date" ,(muse-format-date article :format :short)))
 	 (image (muse-extract-article-image-source article)))
-    (format t "~a~%" image)
     `(:li :class "span2"
 	  (:div :class "thumbnail"
 		(:a :class "thumbnail" :href ,(muse-url article)
