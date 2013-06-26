@@ -201,13 +201,13 @@
   (:lambda (source)
     (destructuring-bind (open attrs gt code close) source
       (declare (ignore open close gt))
-      `(:code ,@attrs ,(text code)))))
+      `(:code ,@attrs ,(who:espace-string (text code))))))
 
 (defrule monospace (and #\= (+ (not "=")) #\=)
   (:lambda (source)
     (destructuring-bind (open content close) source
       (declare (ignore open close))
-      `(:code ,(text content)))))
+      `(:code ,(who:escape-string (text content))))))
 
 (defrule italics (and #\* (+ (or link monospace words #\Newline)) #\*)
   (:lambda (source)
@@ -235,19 +235,19 @@
 (test parse-emphasis
       "Test *italics* and **bold** and ***heavy*** etc."
       (is (equalp (parse 'monospace "=code=")
-		  '(:span :class "tt" "code")))
+		  '(:code "code")))
       (is (equalp (parse 'monospace "=@>=")
-		  '(:span :class "tt" "@>")))
+		  '(:code "@>")))
       (is (equalp (parse 'code "<code>=</code>")
-		  '(:span :class "tt" "=")))
+		  '(:code "=")))
       (is (equalp
 	   (parse 'code "<code src=\"sql\">SELECT colname FROM table WHERE pk = 1234;</code>")
 
-	   '(:SPAN :CLASS "tt" :SRC "sql" "SELECT colname FROM table WHERE pk = 1234;")))
+	   '(:code :SRC "sql" "SELECT colname FROM table WHERE pk = 1234;")))
       (is (equalp (parse 'italics "*some italic words*")
 		  '(:em  "some italic words")))
       (is (equalp (parse 'italics "*An edited version of =hstore--1.1.sql= for vertical space concerns*")
-		  '(:EM "An edited version of " (:SPAN :CLASS "tt" "hstore--1.1.sql")
+		  '(:EM "An edited version of " (:code "hstore--1.1.sql")
 		    " for vertical space concerns")))
       (is (equalp (parse 'bold "**this is bold**")
 		  '(:strong "this is bold")))
