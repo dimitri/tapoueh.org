@@ -79,11 +79,11 @@
 
 (hunchentoot:define-easy-handler (home :uri "/") ()
   "Let's design an home page"
-  (render-muse-document (muse-source "/")))
+  (render-muse-document (muse-source "/about")))
 
 (hunchentoot:define-easy-handler (about :uri "/about") ()
   "Let's design an home page"
-  (render-muse-document (muse-source "/")))
+  (render-muse-document (muse-source "/about")))
 
 (hunchentoot:define-easy-handler (projects :uri "/projects") ()
   "Let's design a projects page"

@@ -110,7 +110,7 @@
 	     (let* ((doc  (muse-parse-chapeau pathname))
 		    (tags (muse-tags doc)))
 	       (when (and (muse-article-p doc)
-			  (intersection query-tags tags :test #'string=))
+			  (intersection query-tags tags :test #'string-equal))
 		 (push doc articles)))))
       (fad:walk-directory (if (fad:pathname-absolute-p base-directory)
 			      (fad:pathname-directory-pathname base-directory)

@@ -133,19 +133,33 @@
   "Provide a link to the previous directory"
   (multiple-value-bind (current-source-dir entries)
       (tapoueh-list-parent-directory (or script-name (hunchentoot:script-name*)))
-    (loop
-       for (a b . c) on entries
-       when (and a b (fad:pathname-equal current-source-dir b))
-       return (format nil "/~a" (relative-pathname-from *root-directory* a)))))
+    (when (let* ((path-list (split-pathname current-source-dir))
+		 (pos       (position "blog" path-list :test #'string=)))
+	    ;; only consider blog/ sub-tree
+	    (and pos (not (= (+ 1 pos) (length path-list)))))
+      (loop
+	 for (a b . c) on entries
+	 when (and a b (fad:pathname-equal current-source-dir b))
+	 return (format nil "/~a" (relative-pathname-from *root-directory* a))))))
 
 (defun tapoueh-next-directory (&optional script-name)
   "Provide a link to the previous directory"
   (multiple-value-bind (current-source-dir entries)
       (tapoueh-list-parent-directory (or script-name (hunchentoot:script-name*)))
-    (loop
-       for (a b . c) on entries
-       when (and a b (fad:pathname-equal current-source-dir a))
-       return (format nil "/~a" (relative-pathname-from *root-directory* b)))))
+    (when (let* ((path-list (split-pathname current-source-dir))
+		 (pos       (position "blog" path-list :test #'string=)))
+	    ;; only consider blog/ sub-tree
+	    (and pos (not (= (+ 1 pos) (length path-list)))))
+      (loop
+	 for (a b . c) on entries
+	 when (and a b (fad:pathname-equal current-source-dir a))
+	 return (format nil "/~a" (relative-pathname-from *root-directory* b))))))
+
+(defun tapoueh-insert-recent-articles-title ()
+  "Conditionnaly include a title"
+  (when (and (muse-p *muse-current-file*)
+	     (muse-article-p *muse-current-file*))
+    `(:h3 :class "prevnext" "Recent Articles")))
 
 (defun tapoueh-insert-previous-article ()
   "Provide a link to the previous article"
@@ -158,14 +172,15 @@
 	  (get-navigation-link (muse-url prev) (muse-title prev)
 			       :class "previous" :title-format "« ~a")))
       ;; not an article
-      (let ((prev (tapoueh-previous-directory)))
-	(get-navigation-link prev prev
+      (let* ((prev  (tapoueh-previous-directory))
+	     (title (when prev (first (last (split-pathname prev))))))
+	(get-navigation-link prev title
 			     :class "previous" :title-format "« ~a"))))
 
 (defun tapoueh-insert-next-article ()
   "Provide a link to the previous article"
   (if (and (muse-p *muse-current-file*)
-	     (muse-article-p *muse-current-file*))
+	   (muse-article-p *muse-current-file*))
     (let* ((pos  (article-list-position *muse-current-file*))
 	   (path (nth (+ pos 1) *blog-articles-list*))
 	   (prev (when path (gethash path *blog-articles*))))
@@ -173,13 +188,15 @@
 	(get-navigation-link (muse-url prev) (muse-title prev)
 			     :class "next pull-right" :title-format "~a »")))
     ;; not an article
-    (let ((next (tapoueh-next-directory)))
-      (get-navigation-link next next
+    (let* ((next  (tapoueh-next-directory))
+	   (title (when next (first (last (split-pathname next))))))
+      (get-navigation-link next title
 			   :class "next pull-right" :title-format "~a »"))))
 
 (defun tapoueh-insert-breadcrumb-here ()
   "path from root to current page"
-  (when (muse-p *muse-current-file*)
+  (when (and (muse-p *muse-current-file*)
+	     (muse-article-p *muse-current-file*))
     (let ((dirs
 	   (butlast
 	    (mapcar
