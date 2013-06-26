@@ -182,4 +182,4 @@
 			   :style "width: 160px; height: 120px;"
 			   :src ,(if (listp image) (third image) image))))
 
-	   (:div :class "span6" ,(muse-first-para article))))))
+	   (:div :class "span6" ,(muse-first-para article)))))
