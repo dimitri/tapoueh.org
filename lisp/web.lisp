@@ -75,11 +75,11 @@
   (ssi-include-with-header-and-footer "index.muse"))
 
 (hunchentoot:define-easy-handler (projects :uri "/projects") ()
-  "Let's design an home page"
+  "Let's design a projects page"
   (ssi-include-with-header-and-footer "projects.muse"))
 
 (hunchentoot:define-easy-handler (confs :uri "/confs") ()
-  "Let's design an home page"
+  "Let's design a conferences page"
   (ssi-include-with-header-and-footer "conferences.muse"))
 
 (hunchentoot:define-easy-handler (cloud :uri "/cloud") ()
