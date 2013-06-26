@@ -384,7 +384,9 @@ SELECT * FROM planet.postgresql.org WHERE author = \"dim\";
   (:lambda (source)
     (destructuring-bind (include attrs gt) source
       (declare (ignore include gt))
-      `(:pre (:include ,@attrs)))))
+      (destructuring-bind (&key file &allow-other-keys) attrs
+	`(:pre (:code ,(slurp-file-into-string
+			(merge-pathnames file *muse-parser-cwd*))))))))
 
 (defrule contents (and "<contents" (? attrs) ">")
   ;; ignore table of contents completely for now

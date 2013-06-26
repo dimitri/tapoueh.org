@@ -19,6 +19,9 @@
 			      (fad:list-directory *image-directory*))
 		      :test #'string=)))
 
+(defvar *muse-parser-cwd* nil
+  "Muse Current Working Directory, for <include> blocks")
+
 ;;
 ;; Document data structure, pretty loose
 ;;
@@ -82,7 +85,8 @@
 
 (defun muse-parse-article (pathname)
   "Parse the Muse article at PATHNAME and return a muse structure."
-  (let ((article (parse 'article (slurp-file-into-string pathname))))
+  (let* ((*muse-parser-cwd* (directory-namestring pathname))
+	 (article (parse 'article (slurp-file-into-string pathname))))
     (setf (muse-pathname article) pathname)
     (setf (muse-mod-timestamp article)
 	  (local-time:universal-to-timestamp (file-write-date pathname)))
@@ -129,7 +133,7 @@
 		    ", " :hour ":" :min))
 	 (:short  '(:long-month ", " :day " " :year)))))))
 
-(defmethod muse-format-article ((article muse) &key with-image)
+(defmethod muse-format-article ((article muse))
   "Return a list suitable for printing the article meta-data with cl-who"
   (let* ((link `(:a :href ,(muse-url article)
 		    ,(muse-title article)))
