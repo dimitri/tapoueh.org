@@ -201,7 +201,7 @@
   (:lambda (source)
     (destructuring-bind (open attrs gt code close) source
       (declare (ignore open close gt))
-      `(:code ,@attrs ,(who:espace-string (text code))))))
+      `(:code ,@attrs ,(who:escape-string (text code))))))
 
 (defrule monospace (and #\= (+ (not "=")) #\=)
   (:lambda (source)
