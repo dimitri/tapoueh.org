@@ -201,13 +201,13 @@
   (:lambda (source)
     (destructuring-bind (open attrs gt code close) source
       (declare (ignore open close gt))
-      `(:span :class "tt" ,@attrs ,(text code)))))
+      `(:code ,@attrs ,(text code)))))
 
 (defrule monospace (and #\= (+ (not "=")) #\=)
   (:lambda (source)
     (destructuring-bind (open content close) source
       (declare (ignore open close))
-      `(:span :class "tt" ,(text content)))))
+      `(:code ,(text content)))))
 
 (defrule italics (and #\* (+ (or link monospace words #\Newline)) #\*)
   (:lambda (source)
