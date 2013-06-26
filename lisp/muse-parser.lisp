@@ -408,7 +408,7 @@ SELECT * FROM planet.postgresql.org WHERE author = \"dim\";
 (defrule p (and (+ (or lines
 		       (and (or heavy bold italics monospace code link)
 			    (? #\Newline))))
-		#\Newline)
+		(? #\Newline))
   (:lambda (source)
     (destructuring-bind (p-list nl) source
       (declare (ignore nl))
