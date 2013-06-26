@@ -101,7 +101,7 @@
   "Let's design a conferences page"
   (render-muse-document (muse-source "/conferences")))
 
-(hunchentoot:define-easy-handler (blog-home :uri "/blog") ()
+(hunchentoot:define-easy-handler (blog :uri "/blog") ()
   "Let's design a blog home page"
   (render-blog-home))
 
@@ -116,11 +116,11 @@
 	 (tag-name    (second (split-pathname script-name))))
     (concatenate 'string
 		 (ssi-file *header*)
-		 (article-list-to-html
+		 (article-list-to-html-with-chapeau
 		  (find-blog-articles-with-tag *root-directory* tag-name))
 		 (ssi-file *footer*))))
 
-(hunchentoot:define-easy-handler (blog :uri #'blog-article-p) ()
+(hunchentoot:define-easy-handler (article :uri #'blog-article-p) ()
   "Catch-all handler, do the routing ourselves."
   (let* ((script-name (hunchentoot:script-name*))
 	 (muse-source (muse-source script-name))
