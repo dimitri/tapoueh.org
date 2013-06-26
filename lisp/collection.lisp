@@ -101,3 +101,22 @@
   (concatenate 'string
 	       (eval `(with-html-output-to-string (s)
 			,(format-article-list list)))))
+
+(defun find-blog-articles-with-tag (base-directory &rest query-tags)
+  "Find all muse articles in given BASE-DIRECTORY having a #tags directive
+   that contains one of the given TAGS"
+  (let (articles)
+    (flet ((push-article (pathname)
+	     (let* ((doc  (muse-parse-chapeau pathname))
+		    (tags (muse-tags doc)))
+	       (when (and (muse-article-p doc)
+			  (intersection query-tags tags :test #'string=))
+		 (push doc articles)))))
+      (fad:walk-directory (if (fad:pathname-absolute-p base-directory)
+			      (fad:pathname-directory-pathname base-directory)
+			      (expand-file-name-into base-directory
+						     *root-directory*))
+			  #'push-article
+			  :test #'blog-article-pathname-p))
+    ;; sort the articles now
+    (sort articles #'muse-article-before-p)))

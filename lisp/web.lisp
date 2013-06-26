@@ -39,6 +39,13 @@
 	     (asdf:system-relative-pathname :tapoueh path))
 	    hunchentoot:*dispatch-table*))
 
+(defun tag-url-p (request)
+  "Return non-nil when request's script-name is within /tags/"
+  (let ((script-name (hunchentoot:script-name* request)))
+    (and script-name
+	 (<= 6 (length script-name))
+	 (string= "/tags/" (subseq script-name 0 6)))))
+
 (defun blog-article-p (request)
   "Return True only when request's script-name is within /blog/"
   (let ((script-name (hunchentoot:script-name* request)))
@@ -72,24 +79,34 @@
 
 (hunchentoot:define-easy-handler (home :uri "/") ()
   "Let's design an home page"
-  (ssi-include-with-header-and-footer "index.muse"))
+  (render-muse-document (muse-source "/")))
+
+(hunchentoot:define-easy-handler (about :uri "/about") ()
+  "Let's design an home page"
+  (render-muse-document (muse-source "/")))
 
 (hunchentoot:define-easy-handler (projects :uri "/projects") ()
   "Let's design a projects page"
-  (ssi-include-with-header-and-footer "projects.muse"))
+  (render-muse-document (muse-source "/projects")))
 
 (hunchentoot:define-easy-handler (confs :uri "/confs") ()
   "Let's design a conferences page"
-  (ssi-include-with-header-and-footer "conferences.muse"))
+  (render-muse-document (muse-source "/conferences")))
 
 (hunchentoot:define-easy-handler (cloud :uri "/cloud") ()
   "A tags Cloud, the JSON data"
   (setf (hunchentoot:content-type*) "text/plain")
   (json:encode-json-to-string (tags-cloud)))
 
-(hunchentoot:define-easy-handler (tags :uri "/tags") ()
-  "A tags Cloud"
-  (ssi-include-with-header-and-footer "cloud.html"))
+(hunchentoot:define-easy-handler (tags :uri #'tag-url-p) ()
+  "Catch-all handler, do the routing ourselves."
+  (let* ((script-name (hunchentoot:script-name*))
+	 (tag-name    (second (split-pathname script-name))))
+    (concatenate 'string
+		 (ssi-file *header*)
+		 (article-list-to-html
+		  (find-blog-articles-with-tag *root-directory* tag-name))
+		 (ssi-file *footer*))))
 
 (hunchentoot:define-easy-handler (blog :uri #'blog-article-p) ()
   "Catch-all handler, do the routing ourselves."

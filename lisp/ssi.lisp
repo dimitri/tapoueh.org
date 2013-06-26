@@ -57,14 +57,6 @@
   "Server Side Include file at given PATHNAME, replacing <lisp> tags"
   (eval-lisp-tags (slurp-file-into-string pathname)))
 
-(defun ssi-include-with-header-and-footer (pathname
-					   &optional (dir *root-directory*))
-  "Server Side Include given PATHNAME in ROOT directory."
-  (concatenate 'string
-	       (ssi-file *header*)
-	       (ssi-file (expand-file-name-into pathname dir))
-	       (ssi-file *footer*)))
-
 ;;;
 ;;; Helper functions used in the SSI directives
 ;;;
