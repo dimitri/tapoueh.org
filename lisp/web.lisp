@@ -73,13 +73,21 @@
 					      (not (muse-index-p p)))))
 		 (ssi-file *footer*))))
 
+(defun render-blog-home (&optional (n 10))
+  "Produce the main blog article listing page."
+  (concatenate 'string
+	       (ssi-file *header*)
+	       (article-list-to-html-with-chapeau
+		(last (find-blog-articles *blog-directory*) n))
+	       (ssi-file *footer*)))
+
 (defun 404-page ()
   "Return a 404 error code."
   (setf (hunchentoot:return-code*) hunchentoot:+HTTP-NOT-FOUND+))
 
 (hunchentoot:define-easy-handler (home :uri "/") ()
   "Let's design an home page"
-  (render-muse-document (muse-source "/about")))
+  (render-blog-home))
 
 (hunchentoot:define-easy-handler (about :uri "/about") ()
   "Let's design an home page"
@@ -95,11 +103,7 @@
 
 (hunchentoot:define-easy-handler (blog-home :uri "/blog") ()
   "Let's design a blog home page"
-  (concatenate 'string
-	       (ssi-file *header*)
-	       (article-list-to-html-with-chapeau
-		(last (find-blog-articles *blog-directory*) 10))
-	       (ssi-file *footer*)))
+  (render-blog-home))
 
 (hunchentoot:define-easy-handler (cloud :uri "/cloud") ()
   "A tags Cloud, the JSON data"
