@@ -78,7 +78,7 @@
   (concatenate 'string
 	       (ssi-file *header*)
 	       (article-list-to-html-with-chapeau
-		(last (find-blog-articles *blog-directory*) n))
+		(reverse (last (find-blog-articles *blog-directory*) n)))
 	       (ssi-file *footer*)))
 
 (defun 404-page ()
