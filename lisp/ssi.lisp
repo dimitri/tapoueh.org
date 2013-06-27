@@ -290,12 +290,6 @@
   (when (and (muse-p *muse-current-file*)
 	     (muse-date *muse-current-file*))
     `(:div :style "text-align: right;"
-	   (:span
-	    ,@(loop
-		 for (tag . more?) on (muse-tags *muse-current-file*)
-		 collect `(:a :href (format nil "/tags/~a" ,tag) ,tag)
-		 when more? collect ", "))
-	   " "
-	   (:i :class "icon-tags")
-	   )))
+	   (:span ,@(muse-format-tags *muse-current-file*)) " "
+	   (:i :class "icon-tags"))))
 

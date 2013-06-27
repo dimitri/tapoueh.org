@@ -151,6 +151,13 @@
 		    ", " :hour ":" :min))
 	 (:short  '(:long-month ", " :day " " :year)))))))
 
+(defmethod muse-format-tags ((m muse))
+  "Format muse-tags to be displayed on the web"
+  (loop
+     for (tag . more?) on (muse-tags m)
+     collect `(:a :href (format nil "/tags/~a" ,tag) ,tag)
+     when more? collect ", "))
+
 (defmethod muse-extract-article-image-source ((article muse))
   "Extract the image source from the article"
   (let* ((tags  (muse-tags article))
