@@ -29,7 +29,6 @@ all over the code base: modularity violation, big time.
 
 ## TODO
 
-  - RSS generation (per tag)
   - review navigation
   - add the breadcrumb to per-year and per-month listings
   - sitemap.xml
