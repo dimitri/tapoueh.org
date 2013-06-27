@@ -70,24 +70,53 @@
        (muse-file-type-p pathname)
        (not (string= (pathname-name pathname) "index"))))
 
-(defun find-blog-articles (base-directory &key test)
+;;;
+;;; Find articles and return a sorted list of them
+;;;
+(defun find-blog-articles (base-directory
+			   &key (parse-fn #'muse-parse-chapeau))
   "Find all muse articles in given BASE-DIRECTORY, return a sorted list of
    them. Don't even have a look at files when TEST returns true, if provided."
   (let (articles)
-    (fad:walk-directory (if (fad:pathname-absolute-p base-directory)
-			    (fad:pathname-directory-pathname base-directory)
-			    (expand-file-name-into base-directory
-						   *root-directory*))
-			(lambda (pathname)
-			  (when (or (null test)
-				    (funcall test pathname))
-			   (let ((doc (muse-parse-chapeau pathname)))
-			     (when (muse-article-p doc)
-			       (push doc articles)))))
-			:test #'blog-article-pathname-p)
+    (flet ((push-article (pathname)
+	     (let ((doc (funcall parse-fn pathname)))
+	       (when (muse-article-p doc)
+		 (push doc articles)))))
+      ;; walk on-disk directories to find articles
+      (fad:walk-directory (if (fad:pathname-absolute-p base-directory)
+			      (fad:pathname-directory-pathname base-directory)
+			      (expand-file-name-into base-directory
+						     *root-directory*))
+			  #'push-article
+			  :test #'blog-article-pathname-p)
+      ;; sort the articles now
+      (sort articles #'muse-article-before-p))))
+
+(defun find-blog-articles-with-tag (base-directory query-tags
+				    &key (parse-fn #'muse-parse-chapeau))
+  "Find all muse articles in given BASE-DIRECTORY having a #tags directive
+   that contains one of the given TAGS"
+  (let ((query-tags (if (stringp query-tags) (list query-tags) query-tags))
+	articles)
+    (flet ((push-article (pathname)
+	     (let* ((doc  (funcall parse-fn pathname))
+		    (tags (muse-tags doc)))
+	       (when (and (muse-article-p doc)
+			  (intersection query-tags tags :test #'string-equal))
+		 (push doc articles)))))
+      ;; walk on-disk directories to find articles
+      (fad:walk-directory (if (fad:pathname-absolute-p base-directory)
+			      (fad:pathname-directory-pathname base-directory)
+			      (expand-file-name-into base-directory
+						     *root-directory*))
+			  #'push-article
+			  :test #'blog-article-pathname-p))
     ;; sort the articles now
     (sort articles #'muse-article-before-p)))
 
+;;;
+;;; Format list of articles
+;;;
 (defun format-article-list (list)
   "Given a LIST of muse articles (proper muse structure), return the cl-who
    forms needed to render the list to html"
@@ -102,25 +131,9 @@
 	       (eval `(with-html-output-to-string (s)
 			,(format-article-list list)))))
 
-(defun find-blog-articles-with-tag (base-directory &rest query-tags)
-  "Find all muse articles in given BASE-DIRECTORY having a #tags directive
-   that contains one of the given TAGS"
-  (let (articles)
-    (flet ((push-article (pathname)
-	     (let* ((doc  (muse-parse-chapeau pathname))
-		    (tags (muse-tags doc)))
-	       (when (and (muse-article-p doc)
-			  (intersection query-tags tags :test #'string-equal))
-		 (push doc articles)))))
-      (fad:walk-directory (if (fad:pathname-absolute-p base-directory)
-			      (fad:pathname-directory-pathname base-directory)
-			      (expand-file-name-into base-directory
-						     *root-directory*))
-			  #'push-article
-			  :test #'blog-article-pathname-p))
-    ;; sort the articles now
-    (sort articles #'muse-article-before-p)))
-
+;;;
+;;; Article list with chapeau
+;;;
 (defun format-article-list-with-chapeau (list)
   "Produce the detailed HTML Listing of the given list of articles."
   `(:div
@@ -134,3 +147,29 @@
 	      (eval `(with-html-output-to-string (s)
 		       ,(format-article-list-with-chapeau list)))))
 
+;;; RSS
+(defun format-article-list-as-rss (list
+				   &key
+				     (title       "tail -f /dev/dim")
+				     (link        "http://tapoueh.org/blog")
+				     (description "Dimitri Fontaine's blog")
+				     (language    "en-us"))
+  "Produce an RSS listing of the given list of articles"
+  (let ((cl-who:*prologue* "<?xml version=\"1.0\" encoding=\"utf-8\"?>"))
+    `(:rss
+      :version "2.0"
+      (:channel
+       (:title ,title)
+       (:link ,link)
+       (:description ,description)
+       (:language ,language)
+       (:generator "Emacs Muse and Tapoueh's Common Lisp")
+       ,@(loop
+	    for article in list
+	    collect (muse-format-article-as-rss article))))))
+
+(defun article-list-to-rss (list)
+  "Produce a RSS feed from the given list of articles"
+  (concatenate 'string
+	       (eval `(with-html-output-to-string (s)
+			,(format-article-list-as-rss list)))))

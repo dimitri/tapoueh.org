@@ -149,7 +149,9 @@
 	 (:normal '(:long-weekday ", " :long-month " " :day " " :year))
 	 (:long   '(:long-weekday ", " :long-month " " :day " " :year
 		    ", " :hour ":" :min))
-	 (:short  '(:long-month ", " :day " " :year)))))))
+	 (:short  '(:long-month ", " :day " " :year))
+	 (:rss    '(:short-weekday ", " :day " " :short-month " " :year
+		    " " :hour ":" :min ":00 " :gmt-offset)))))))
 
 (defmethod muse-format-tags ((m muse))
   "Format muse-tags to be displayed on the web"
@@ -217,3 +219,17 @@
 
 	   (:div :class "span6" ,(muse-first-para article)))))
 
+(defmethod muse-format-article-as-rss ((article muse))
+  "Return a list suitable for printing the article as a RSS form with cl-who"
+  (let* ((title  (muse-title article))
+	 (url    (muse-url article :with-base-url t :with-file-type "html"))
+	 (date   (muse-format-date article :format :rss))
+	 (author "dim@tapoueh.org (Dimitri Fontaine)"))
+    ;; (desc   (concatenate 'string "<![CDATA[" (to-html article) "]]>"))
+    `(:item
+      (:title ,title)
+      (:link ,url)
+      (:description (str "<![CDATA[") ,@(muse-contents article) (str "]]>"))
+      (:author ,author)
+      (:pubDate ,date)
+      (:guid :isPermaLink "true" ,url))))

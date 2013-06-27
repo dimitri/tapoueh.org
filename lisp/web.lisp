@@ -68,9 +68,7 @@
     (concatenate 'string
 		 (ssi-file *header*)
 		 (article-list-to-html-with-chapeau
-		  (find-blog-articles (directory-namestring pathname)
-				      :test (lambda (p)
-					      (not (muse-index-p p)))))
+		  (find-blog-articles (directory-namestring pathname)))
 		 (ssi-file *footer*))))
 
 (defun render-blog-home (&optional (n 10))
