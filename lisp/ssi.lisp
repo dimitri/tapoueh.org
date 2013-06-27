@@ -204,6 +204,7 @@
 			      (if muse-url-p (butlast dirs) dirs))))
     (when (or muse-url-p blog-url-p)
       `(:ul :class "breadcrumb"
+	    (:li (:span :class "divider" (:i :class "icon-sitemap")))
 	    ,@(loop
 		 for (d . more?) on (cons "/dev/dim" dirs)
 		 for cur = *root-directory* then (expand-file-name-into d cur)
