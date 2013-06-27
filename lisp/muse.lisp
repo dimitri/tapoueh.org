@@ -207,7 +207,7 @@
 
 	   (:div :class "span6"
 		 (:h2 ,link)
-		 (:div :class "date" ,date))
+		 (:div :class "date" (:i :class "icon-calendar") " " ,date))
 
 	   (:div :class "span2"
 		 (:a :class "thumbnail" :href ,(muse-url article)
@@ -216,3 +216,4 @@
 			   :src ,(if (listp image) (third image) image))))
 
 	   (:div :class "span6" ,(muse-first-para article)))))
+
