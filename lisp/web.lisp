@@ -39,19 +39,25 @@
 	     (asdf:system-relative-pathname :tapoueh path))
 	    hunchentoot:*dispatch-table*))
 
+(defun url-within-p (prefix request)
+  "Returns non-nil if the script-name begins with /section/"
+  (let* ((script-name (hunchentoot:script-name* request))
+	 (len         (length prefix)))
+    (and script-name
+	 (<= len (length script-name))
+	 (string= prefix (subseq script-name 0 len)))))
+
 (defun tag-url-p (request)
   "Return non-nil when request's script-name is within /tags/"
-  (let ((script-name (hunchentoot:script-name* request)))
-    (and script-name
-	 (<= 6 (length script-name))
-	 (string= "/tags/" (subseq script-name 0 6)))))
+  (url-within-p "/tags/" request))
 
 (defun blog-article-p (request)
   "Return True only when request's script-name is within /blog/"
-  (let ((script-name (hunchentoot:script-name* request)))
-    (and script-name
-	 (<= 6 (length script-name))
-	 (string= "/blog/" (subseq script-name 0 6)))))
+  (url-within-p "/blog/" request))
+
+(defun rss-url-p (request)
+  "Return non-nil when request's script-name is within /rss/"
+  (url-within-p "/rss/" request))
 
 (defun muse-document-p (request)
   "For the non-blog parts of the website"
@@ -108,8 +114,23 @@
   (setf (hunchentoot:content-type*) "text/plain")
   (json:encode-json-to-string (tags-cloud)))
 
+(hunchentoot:define-easy-handler (rss :uri #'rss-url-p) ()
+  "Render a RSS content for articles tagged with given tag"
+  (setf (hunchentoot:content-type*) "application/rss+xml")
+  (let* ((script-name (hunchentoot:script-name*))
+	 ;; filter out the type (.xml) for backward compatibility
+	 (tag-name    (pathname-name (second (split-pathname script-name)))))
+    (article-list-to-rss
+     (reverse
+      (if (string= tag-name "tapoueh")
+	  ;; /rss/tapoueh.xml is the catch-all RSS feed
+	  (find-blog-articles *blog-directory* :parse-fn #'muse-parse-article)
+	  (find-blog-articles-with-tag *blog-directory* tag-name
+				       ;; the RSS stream contains the full article
+				       :parse-fn #'muse-parse-article))))))
+
 (hunchentoot:define-easy-handler (tags :uri #'tag-url-p) ()
-  "Catch-all handler, do the routing ourselves."
+  "Render a list of articles tagged with given tag"
   (let* ((script-name (hunchentoot:script-name*))
 	 (tag-name    (second (split-pathname script-name))))
     (concatenate 'string
@@ -119,7 +140,7 @@
 		 (ssi-file *footer*))))
 
 (hunchentoot:define-easy-handler (article :uri #'blog-article-p) ()
-  "Catch-all handler, do the routing ourselves."
+  "Render a blog article"
   (let* ((script-name (hunchentoot:script-name*))
 	 (muse-source (muse-source script-name))
 	 *muse-current-file*)
