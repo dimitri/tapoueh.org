@@ -32,4 +32,5 @@ all over the code base: modularity violation, big time.
   - sitemap.xml
   - static website compiler
   - social networking: tweet this, g+1
-  - expert-postgresql.fr
+  - update conferences page
+  - blog about something
