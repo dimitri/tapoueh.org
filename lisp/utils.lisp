@@ -93,3 +93,16 @@
 			       :name (pathname-name pathname)
 			       :type (or type (pathname-type pathname)))))
       (merge-pathnames p directory))))
+
+;;
+;; File dependency prevent us from putting that in url.lisp because we want
+;; to be able to use it both from ssi.lisp and web.lisp
+;;
+(defun url-within-p (prefix &key request script-name)
+  "Returns non-nil if the script-name begins with /section/"
+  (let* ((script-name (or script-name
+			  (hunchentoot:script-name* request)))
+	 (len         (length prefix)))
+    (and script-name
+	 (<= len (length script-name))
+	 (string= prefix (subseq script-name 0 len)))))

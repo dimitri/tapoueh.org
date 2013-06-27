@@ -39,25 +39,17 @@
 	     (asdf:system-relative-pathname :tapoueh path))
 	    hunchentoot:*dispatch-table*))
 
-(defun url-within-p (prefix request)
-  "Returns non-nil if the script-name begins with /section/"
-  (let* ((script-name (hunchentoot:script-name* request))
-	 (len         (length prefix)))
-    (and script-name
-	 (<= len (length script-name))
-	 (string= prefix (subseq script-name 0 len)))))
-
 (defun tag-url-p (request)
   "Return non-nil when request's script-name is within /tags/"
-  (url-within-p "/tags/" request))
+  (url-within-p "/tags/" :request request))
 
 (defun blog-article-p (request)
   "Return True only when request's script-name is within /blog/"
-  (url-within-p "/blog/" request))
+  (url-within-p "/blog/" :request request))
 
 (defun rss-url-p (request)
   "Return non-nil when request's script-name is within /rss/"
-  (url-within-p "/rss/" request))
+  (url-within-p "/rss/" :request request))
 
 (defun muse-document-p (request)
   "For the non-blog parts of the website"
@@ -88,6 +80,31 @@
 (defun 404-page ()
   "Return a 404 error code."
   (setf (hunchentoot:return-code*) hunchentoot:+HTTP-NOT-FOUND+))
+
+(hunchentoot:define-easy-handler (article :uri #'blog-article-p) ()
+  "Render a blog article"
+  (let* ((script-name (hunchentoot:script-name*))
+	 (muse-source (muse-source script-name))
+	 *muse-current-file*)
+    (declare (special *muse-current-file*))
+
+    (cond
+      ((null muse-source)         (404-page))
+      ((muse-index-p muse-source) (render-index-page muse-source))
+      ((probe-file muse-source)	  (render-muse-document muse-source))
+      (t                          (404-page)))))
+
+(hunchentoot:define-easy-handler (muse :uri #'muse-document-p) ()
+  "Catch-all handler, do the routing ourselves."
+  (let* ((script-name (hunchentoot:script-name*))
+	 (muse-source (muse-source script-name))
+	 *muse-current-file*)
+    (declare (special *muse-current-file*))
+
+    (cond
+      ((null muse-source)         (404-page))
+      ((probe-file muse-source)	  (render-muse-document muse-source))
+      (t                          (404-page)))))
 
 (hunchentoot:define-easy-handler (home :uri "/") ()
   "Let's design an home page"
@@ -138,31 +155,6 @@
 		 (article-list-to-html-with-chapeau
 		  (find-blog-articles-with-tag *root-directory* tag-name))
 		 (ssi-file *footer*))))
-
-(hunchentoot:define-easy-handler (article :uri #'blog-article-p) ()
-  "Render a blog article"
-  (let* ((script-name (hunchentoot:script-name*))
-	 (muse-source (muse-source script-name))
-	 *muse-current-file*)
-    (declare (special *muse-current-file*))
-
-    (cond
-      ((null muse-source)         (404-page))
-      ((muse-index-p muse-source) (render-index-page muse-source))
-      ((probe-file muse-source)	  (render-muse-document muse-source))
-      (t                          (404-page)))))
-
-(hunchentoot:define-easy-handler (muse :uri #'muse-document-p) ()
-  "Catch-all handler, do the routing ourselves."
-  (let* ((script-name (hunchentoot:script-name*))
-	 (muse-source (muse-source script-name))
-	 *muse-current-file*)
-    (declare (special *muse-current-file*))
-
-    (cond
-      ((null muse-source)         (404-page))
-      ((probe-file muse-source)	  (render-muse-document muse-source))
-      (t                          (404-page)))))
 
 (defun start-web-server (&key
 			   (document-root "/tmp")

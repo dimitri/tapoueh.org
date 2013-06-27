@@ -193,26 +193,25 @@
       (get-navigation-link next title
 			   :class "next pull-right" :title-format "~a »"))))
 
-(defun tapoueh-insert-breadcrumb-here ()
+(defun tapoueh-insert-breadcrumb-here (&optional script-name)
   "path from root to current page"
-  (when (and (muse-p *muse-current-file*)
-	     (muse-article-p *muse-current-file*))
-    (let ((dirs
-	   (butlast
-	    (mapcar
-	     #'fad:pathname-as-directory
-	     (split-pathname
-	      (relative-pathname-from *root-directory*
-				      (muse-pathname *muse-current-file*)))))))
+  (let* ((script-name (or script-name (hunchentoot:script-name*)))
+	 (blog-url-p  (url-within-p "/blog/" :script-name script-name))
+	 (muse-url-p  (and (muse-p *muse-current-file*)
+			   (muse-article-p *muse-current-file*)))
+	 (dirs        (split-pathname script-name))
+	 (dirs        (mapcar #'fad:pathname-as-directory
+			      (if muse-url-p (butlast dirs) dirs))))
+    (when (or muse-url-p blog-url-p)
       `(:ul :class "breadcrumb"
-	     ,@(loop
-		  for (d . more?) on (cons "/dev/dim" dirs)
-		  for cur = *root-directory* then (expand-file-name-into d cur)
-		  for rel = "" then (relative-pathname-from *root-directory* cur)
-		  collect `(:li (:a :href ,(concatenate 'string "/" rel)
-				    ,(namestring (fad:pathname-as-file d)))
-				,(when more?
-				       '(:span :class "divider" "/"))))))))
+	    ,@(loop
+		 for (d . more?) on (cons "/dev/dim" dirs)
+		 for cur = *root-directory* then (expand-file-name-into d cur)
+		 for rel = "" then (relative-pathname-from *root-directory* cur)
+		 collect `(:li (:a :href ,(concatenate 'string "/" rel)
+				   ,(namestring (fad:pathname-as-file d)))
+			       ,(when more?
+				      '(:span :class "divider" "/"))))))))
 
 (defun tapoueh-insert-article-date-here ()
   (when (and (muse-p *muse-current-file*)
