@@ -13,6 +13,10 @@
 (defvar *muse-current-file* nil
   "Maintained in the web.lisp hunchentoot handlers.")
 
+(defvar *host* "tapoueh.org" "Service hostname")
+(defvar *script-name* nil "script-name part of the URL currently requested")
+
+
 (def-suite ssi :description "HTML SSI Parser Test Suite.")
 (in-suite ssi)
 
@@ -93,9 +97,7 @@
 
 (defun tapoueh-current-page-url ()
   "Get the current page full URL"
-  (format nil "http://~a~a"
-	  (hunchentoot:host)
-	  (hunchentoot:script-name*)))
+  (format nil "http://~a~a" *host* *script-name*))
 
 (defun tapoueh-extract-directive (directive-name pathname)
   (when pathname
@@ -129,10 +131,10 @@
 		    (fad:list-directory
 		     (fad:pathname-parent-directory current-source-dir))))))
 
-(defun tapoueh-previous-directory (&optional script-name)
+(defun tapoueh-previous-directory (&optional (script-name *script-name*))
   "Provide a link to the previous directory"
   (multiple-value-bind (current-source-dir entries)
-      (tapoueh-list-parent-directory (or script-name (hunchentoot:script-name*)))
+      (tapoueh-list-parent-directory script-name)
     (when (let* ((path-list (split-pathname current-source-dir))
 		 (pos       (position "blog" path-list :test #'string=)))
 	    ;; only consider blog/ sub-tree
@@ -142,10 +144,10 @@
 	 when (and a b (fad:pathname-equal current-source-dir b))
 	 return (format nil "/~a" (relative-pathname-from *root-directory* a))))))
 
-(defun tapoueh-next-directory (&optional script-name)
+(defun tapoueh-next-directory (&optional (script-name *script-name*))
   "Provide a link to the previous directory"
   (multiple-value-bind (current-source-dir entries)
-      (tapoueh-list-parent-directory (or script-name (hunchentoot:script-name*)))
+      (tapoueh-list-parent-directory script-name)
     (when (let* ((path-list (split-pathname current-source-dir))
 		 (pos       (position "blog" path-list :test #'string=)))
 	    ;; only consider blog/ sub-tree
@@ -193,9 +195,9 @@
       (get-navigation-link next title
 			   :class "next pull-right" :title-format "~a »"))))
 
-(defun tapoueh-insert-breadcrumb-here (&optional script-name)
+(defun tapoueh-insert-breadcrumb-here (&optional (script-name *script-name*))
   "path from root to current page"
-  (let* ((script-name (or script-name (hunchentoot:script-name*)))
+  (let* ((script-name script-name)
 	 (blog-url-p  (url-within-p "/blog/" :script-name script-name))
 	 (muse-url-p  (and (muse-p *muse-current-file*)
 			   (muse-article-p *muse-current-file*)))
@@ -241,26 +243,6 @@
   "Run through all subdirs from current page and list pages"
   nil)
 
-(defun tapoueh-tags-cloud (&optional subdir)
-  "Return a tag cloud for jQuery awesomeCloud plugin."
-  (let ((counts (make-hash-table :test #'equal)))
-    (reduce (lambda (&rest tags-args)
-	      (loop
-		 for tags in tags-args
-		 do (loop
-		       for tag in tags
-		       do (incf (gethash tag counts 0)))))
-	    (mapcar #'muse-tags
-		    (alexandria:hash-table-values *blog-articles*)))
-    `(:p
-      ,@(loop
-	   for (tag . count)
-	   in (sort (alexandria:hash-table-alist counts) #'> :key #'cdr)
-	   ;; <span data-weight="14">word</span>
-	   collect `(:span :data-weight ,count ,tag
-			   ;;(:a :href ,(format nil "/tags/~a" tag) ,tag)
-			   )))))
-
 (defun tags-cloud ()
   "Return a tags cloud data structure suitable for JQCloud"
   (let ((counts (make-hash-table :test #'equal)))
@@ -272,12 +254,6 @@
 		       do (incf (gethash tag counts 0)))))
 	    (mapcar #'muse-tags
 		    (alexandria:hash-table-values *blog-articles*)))
-    ;; {text: "Lorem", weight: 15},
-    ;; {text: "Ipsum", weight: 9, link: "http://jquery.com/"},
-    ;; {text: "Dolor", weight: 6},
-    ;; {text: "Sit", weight: 7},
-    ;; {text: "Amet", weight: 5}
-    ;; // ...other words
     (loop
        for (tag . count)
        in (sort (alexandria:hash-table-alist counts) #'> :key #'cdr)

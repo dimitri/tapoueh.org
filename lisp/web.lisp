@@ -4,6 +4,9 @@
 
 (in-package #:tapoueh)
 
+(defparameter *articles-per-index* 5
+  "How many articles fit in a default index page")
+
 (defparameter *default-file-name* "index")
 (defparameter *default-file-type* "html")
 
@@ -16,15 +19,57 @@
 ;;
 ;; Render documents, with header and footer
 ;;
-(defun render-muse-document (pathname)
+(defun render-muse-document (&optional (*script-name* *script-name*))
   "Parse the muse document at PATHNAME and spits out HTML"
-  (hunchentoot:log-message* :INFO "rendering file '~a'" pathname)
-  (let ((*muse-current-file* (muse-parse-article pathname)))
-    (declare (special *muse-current-file*))
+  (let* ((pathname            (muse-source *script-name*))
+	 (*muse-current-file* (muse-parse-article pathname)))
     (concatenate 'string
 		 (ssi-file *header*)
 		 (to-html *muse-current-file*)
 		 (ssi-file *footer*))))
+
+(defun render-index-page (&optional (*script-name* *script-name*))
+  "Produce a listing of articles for a given index location"
+  (let* ((pathname            (muse-source *script-name*)))
+    (concatenate 'string
+		 (ssi-file *header*)
+		 (article-list-to-html-with-chapeau
+		  (find-blog-articles (directory-namestring pathname)))
+		 (ssi-file *footer*))))
+
+(defun render-reversed-index-page (&optional (n *articles-per-index*))
+  "Produce the main blog article listing page."
+  (concatenate 'string
+	       (ssi-file *header*)
+	       (article-list-to-html-with-chapeau
+		(reverse (last (find-blog-articles *blog-directory*) n)))
+	       (ssi-file *footer*)))
+
+(defun render-tag-cloud ()
+  "Produce our tags cloud"
+  (json:encode-json-to-string (tags-cloud)))
+
+(defun render-tag-listing (&optional (*script-name* *script-name*))
+  "Produce a listing of articles for given tag"
+  (let ((tag-name (second (split-pathname *script-name*))))
+    (concatenate 'string
+		 (ssi-file *header*)
+		 (article-list-to-html-with-chapeau
+		  (find-blog-articles-with-tag *blog-directory* tag-name))
+		 (ssi-file *footer*))))
+
+(defun render-rss-feed (&optional (*script-name* *script-name*))
+  "Produce the RSS feed for the given tag, or all articles"
+  ;; filter out the type (.xml) for backward compatibility
+  (let ((tag-name (pathname-name (second (split-pathname *script-name*)))))
+    (article-list-to-rss
+     (reverse
+      (if (string= tag-name "tapoueh")
+	  ;; /rss/tapoueh.xml is the catch-all RSS feed
+	  (find-blog-articles *blog-directory* :parse-fn #'muse-parse-article)
+	  (find-blog-articles-with-tag *blog-directory* tag-name
+				       ;; the RSS stream contains the full article
+				       :parse-fn #'muse-parse-article))))))
 
 ;;
 ;; Routing proper
@@ -51,110 +96,74 @@
   "Return non-nil when request's script-name is within /rss/"
   (url-within-p "/rss/" :request request))
 
+(defun pathname-is-blog-index-p (pathname)
+  "Return non-nil when PATHNAME is a blog index page"
+  (and
+   ;; blog indexes are dynamically generated content
+   ;; in other parts of the website, indexes are documents
+   (member "blog" (split-pathname pathname) :test #'string=)
+   (string= (pathname-name pathname) "index")))
+
 (defun muse-document-p (request)
-  "For the non-blog parts of the website"
-  (not (blog-article-p request)))
+  "Return non-nil when requested to serve an existing .muse file"
+  (declare (ignore request))		; hunchentoot API
+  (let ((pathname (muse-source (hunchentoot:script-name*))))
+    (and pathname
+	 (not (pathname-is-blog-index-p pathname))
+	 (probe-file pathname))))
 
-(defun muse-index-p (pathname)
-  "Return a generalized boolean true when DOCUMENT is an Index page."
-  (and pathname (string= (pathname-name pathname) "index")))
-
-(defun render-index-page (pathname)
-  "Render an index page, which is a listing of articles"
-  (let ((*muse-current-file* (muse-parse-article pathname)))
-    (declare (special *muse-current-file*))
-    (concatenate 'string
-		 (ssi-file *header*)
-		 (article-list-to-html-with-chapeau
-		  (find-blog-articles (directory-namestring pathname)))
-		 (ssi-file *footer*))))
-
-(defun render-blog-home (&optional (n 10))
-  "Produce the main blog article listing page."
-  (concatenate 'string
-	       (ssi-file *header*)
-	       (article-list-to-html-with-chapeau
-		(reverse (last (find-blog-articles *blog-directory*) n)))
-	       (ssi-file *footer*)))
+(defun blog-index-p (request)
+  "Return non-nil when DOCUMENT is an Index page."
+  (declare (ignore request))		; hunchentoot API
+  (let ((pathname (muse-source (hunchentoot:script-name*))))
+    (pathname-is-blog-index-p pathname)))
 
 (defun 404-page ()
   "Return a 404 error code."
   (setf (hunchentoot:return-code*) hunchentoot:+HTTP-NOT-FOUND+))
 
-(hunchentoot:define-easy-handler (article :uri #'blog-article-p) ()
-  "Render a blog article"
-  (let* ((script-name (hunchentoot:script-name*))
-	 (muse-source (muse-source script-name))
-	 *muse-current-file*)
-    (declare (special *muse-current-file*))
+(hunchentoot:define-easy-handler (document :uri #'muse-document-p) ()
+  "Render a Muse document that we have the source of."
+  (let ((*script-name* (hunchentoot:script-name*))
+	(*host*        (hunchentoot:host)))
+    (render-muse-document)))
 
-    (cond
-      ((null muse-source)         (404-page))
-      ((muse-index-p muse-source) (render-index-page muse-source))
-      ((probe-file muse-source)	  (render-muse-document muse-source))
-      (t                          (404-page)))))
-
-(hunchentoot:define-easy-handler (muse :uri #'muse-document-p) ()
-  "Catch-all handler, do the routing ourselves."
-  (let* ((script-name (hunchentoot:script-name*))
-	 (muse-source (muse-source script-name))
-	 *muse-current-file*)
-    (declare (special *muse-current-file*))
-
-    (cond
-      ((null muse-source)         (404-page))
-      ((probe-file muse-source)	  (render-muse-document muse-source))
-      (t                          (404-page)))))
+(hunchentoot:define-easy-handler (blog-index :uri #'blog-index-p) ()
+  "Render an Index Page at the given location."
+  (let* ((*script-name* (hunchentoot:script-name*))
+	 (*host*        (hunchentoot:host)))
+    (render-index-page)))
 
 (hunchentoot:define-easy-handler (home :uri "/") ()
-  "Let's design an home page"
-  (render-blog-home))
-
-(hunchentoot:define-easy-handler (about :uri "/about") ()
-  "Let's design an home page"
-  (render-muse-document (muse-source "/about")))
-
-(hunchentoot:define-easy-handler (projects :uri "/projects") ()
-  "Let's design a projects page"
-  (render-muse-document (muse-source "/projects")))
-
-(hunchentoot:define-easy-handler (confs :uri "/confs") ()
-  "Let's design a conferences page"
-  (render-muse-document (muse-source "/conferences")))
+  "Let's design an home page..."
+  (let ((*script-name* (hunchentoot:script-name*))
+	(*host*        (hunchentoot:host)))
+    (render-reversed-index-page)))
 
 (hunchentoot:define-easy-handler (blog :uri "/blog") ()
-  "Let's design a blog home page"
-  (render-blog-home))
+  "The blog home page is all dynamic, not based on a Muse file."
+  ;; XXX: that could be a very simple SSI Muse document?
+  (let ((*script-name* (hunchentoot:script-name*))
+	(*host*        (hunchentoot:host)))
+    (render-reversed-index-page)))
 
 (hunchentoot:define-easy-handler (cloud :uri "/cloud") ()
   "A tags Cloud, the JSON data"
   (setf (hunchentoot:content-type*) "text/plain")
-  (json:encode-json-to-string (tags-cloud)))
+  (render-tag-cloud))
 
 (hunchentoot:define-easy-handler (rss :uri #'rss-url-p) ()
   "Render a RSS content for articles tagged with given tag"
   (setf (hunchentoot:content-type*) "application/rss+xml")
-  (let* ((script-name (hunchentoot:script-name*))
-	 ;; filter out the type (.xml) for backward compatibility
-	 (tag-name    (pathname-name (second (split-pathname script-name)))))
-    (article-list-to-rss
-     (reverse
-      (if (string= tag-name "tapoueh")
-	  ;; /rss/tapoueh.xml is the catch-all RSS feed
-	  (find-blog-articles *blog-directory* :parse-fn #'muse-parse-article)
-	  (find-blog-articles-with-tag *blog-directory* tag-name
-				       ;; the RSS stream contains the full article
-				       :parse-fn #'muse-parse-article))))))
+  (let* ((*script-name* (hunchentoot:script-name*))
+	 (*host*        (hunchentoot:host)))
+    (render-rss-feed)))
 
 (hunchentoot:define-easy-handler (tags :uri #'tag-url-p) ()
   "Render a list of articles tagged with given tag"
-  (let* ((script-name (hunchentoot:script-name*))
-	 (tag-name    (second (split-pathname script-name))))
-    (concatenate 'string
-		 (ssi-file *header*)
-		 (article-list-to-html-with-chapeau
-		  (find-blog-articles-with-tag *root-directory* tag-name))
-		 (ssi-file *footer*))))
+  (let* ((*script-name* (hunchentoot:script-name*))
+	 (*host*        (hunchentoot:host)))
+    (render-tag-listing)))
 
 (defun start-web-server (&key
 			   (document-root "/tmp")
