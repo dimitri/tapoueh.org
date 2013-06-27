@@ -19,6 +19,24 @@
 			      (fad:list-directory *image-directory*))
 		      :test #'string=)))
 
+(defparameter *article-default-image* "/images/article2.gif"
+  "Full URL of the default image to use in article listings.")
+
+(defparameter *article-default-image-for-tag*
+  '(("Conferences"  . "/images/conferences.jpg")
+    ("pgcon"        . "/images/conferences.jpg")
+    ("debian"       . "/images/debian-logo.png")
+    ("catalogs"     . "/images/library-card-catalogs.small.jpg")
+    ("tricks"       . "/images/tips-and-tricks.jpg")
+    ("Skytools"     . "/images/londiste_logo.gif")
+    ("PostgreSQLFr" . "/images/postgresqlfr-logo.png")
+    ("pgloader"     . "/images/toy-loader.320.jpg")
+    ("PostgreSQL"   . "/images/postgresql-elephant.small.png")
+    ("Common-Lisp"  . "/images/made-with-lisp.png")
+    ("El-Get"       . "/images/el-get.big.png")
+    ("Emacs"        . "/images/emacs-logo.png"))
+  "An alist of default image for article listings, by tag")
+
 (defvar *muse-parser-cwd* nil
   "Muse Current Working Directory, for <include> blocks")
 
@@ -135,18 +153,27 @@
 
 (defmethod muse-extract-article-image-source ((article muse))
   "Extract the image source from the article"
-  (let* ((image (muse-image article)))
-    ;; if the image is itself a link, discard the link
-    ;; (:A :HREF "https://fosdem.org/2013/"
-    ;;     (:IMG :SRC "../../../images/fosdem.png"))
-    (cond ((and (listp image)
-		(eq :a (car image)))    (fourth image))
+  (let* ((tags  (muse-tags article))
+	 (image (muse-image article)))
+    (labels ((image-link-p (image)
+	       (and (listp image) (eq :img (car image))))
+	     (image-link-or-nil (image)
+	       (when (image-link-p image) image)))
+      ;; if the image is itself a link, discard the link
+      ;; (:A :HREF "https://fosdem.org/2013/"
+      ;;     (:IMG :SRC "../../../images/fosdem.png"))
+      (or (cond ((and (listp image)
+		      (eq :a (car image)))    (image-link-or-nil (fourth image)))
+		((image-link-p image)         image))
 
-	  ((and (listp image)
-		(eq :img (car image)))  image)
+	  ;; grab the main article tag image if we have one
+	  (loop
+	     for (tag . image-file) in *article-default-image-for-tag*
+	     when (member tag tags :test #'string-equal)
+	     return `(:img :src ,image-file))
 
-	  (t
-	   '(:img :src "/images/article2.gif")))))
+	  ;; default to the global default
+	  `(:img :src ,*article-default-image*)))))
 
 (defmethod muse-format-article ((article muse))
   "Return a list suitable for printing the article meta-data with cl-who"
