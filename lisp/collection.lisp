@@ -255,9 +255,7 @@
     (flet ((write-index-file (pathname)
 	     (let* ((url  (blog-index-script-name pathname))
 		    (html (if (string= "/blog/" url)
-			      (progn
-				(format t "PLOP~%")
-				(render-reversed-index-page url documents 7))
+			      (render-reversed-index-page url documents 7)
 			      (render-index-page url))))
 	       (incf count)
 	       (write-html-file html url :name "index" :verbose verbose))))
