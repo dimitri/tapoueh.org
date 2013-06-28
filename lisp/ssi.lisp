@@ -195,13 +195,12 @@
       (get-navigation-link next title
 			   :class "next pull-right" :title-format "~a »"))))
 
-(defun tapoueh-insert-breadcrumb-here (&optional (script-name *script-name*))
+(defun tapoueh-insert-breadcrumb-here (&optional (*script-name* *script-name*))
   "path from root to current page"
-  (let* ((script-name script-name)
-	 (blog-url-p  (url-within-p "/blog/" :script-name script-name))
+  (let* ((blog-url-p  (url-within-p "/blog/" :script-name *script-name*))
 	 (muse-url-p  (and (muse-p *muse-current-file*)
 			   (muse-article-p *muse-current-file*)))
-	 (dirs        (split-pathname script-name))
+	 (dirs        (split-pathname *script-name*))
 	 (dirs        (mapcar #'fad:pathname-as-directory
 			      (if muse-url-p (butlast dirs) dirs))))
     (when (or muse-url-p blog-url-p)

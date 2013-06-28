@@ -19,56 +19,64 @@
 ;;
 ;; Render documents, with header and footer
 ;;
-(defun render-muse-document (&optional (*script-name* *script-name*))
+(defun render-muse-document (&key article
+			       (*script-name* (or *script-name*
+						  (muse-url article))))
   "Parse the muse document at PATHNAME and spits out HTML"
-  (let* ((pathname            (muse-source *script-name*))
-	 (*muse-current-file* (muse-parse-article pathname)))
+  (let* ((pathname            (if article (muse-pathname article)
+				  (muse-source *script-name*)))
+	 (*muse-current-file* (or article
+				  (muse-parse-article pathname))))
     (concatenate 'string
 		 (ssi-file *header*)
 		 (to-html *muse-current-file*)
 		 (ssi-file *footer*))))
 
-(defun render-index-page (&optional (*script-name* *script-name*))
+(defun render-index-page (&optional (*script-name* *script-name*) article-list)
   "Produce a listing of articles for a given index location"
   (let* ((pathname            (muse-source *script-name*)))
     (concatenate 'string
 		 (ssi-file *header*)
 		 (article-list-to-html-with-chapeau
-		  (find-blog-articles (directory-namestring pathname)))
+		  (or article-list
+		      (find-blog-articles (directory-namestring pathname))))
 		 (ssi-file *footer*))))
 
-(defun render-reversed-index-page (&optional (n *articles-per-index*))
+(defun render-reversed-index-page (&optional
+				     (*script-name* *script-name*)
+				     article-list
+				     (n *articles-per-index*))
   "Produce the main blog article listing page."
   (concatenate 'string
 	       (ssi-file *header*)
 	       (article-list-to-html-with-chapeau
-		(reverse (last (find-blog-articles *blog-directory*) n)))
+		(reverse (last (or article-list
+				   (find-blog-articles *blog-directory*)) n)))
 	       (ssi-file *footer*)))
 
 (defun render-tag-cloud ()
   "Produce our tags cloud"
   (json:encode-json-to-string (tags-cloud)))
 
-(defun render-tag-listing (&optional (*script-name* *script-name*))
+(defun render-tag-listing (&optional (*script-name* *script-name*) article-list)
   "Produce a listing of articles for given tag"
   (let ((tag-name (second (split-pathname *script-name*))))
     (concatenate 'string
 		 (ssi-file *header*)
 		 (article-list-to-html-with-chapeau
-		  (find-blog-articles-with-tag *blog-directory* tag-name))
+		  (or article-list
+		      (find-blog-articles-with-tag *blog-directory* tag-name)))
 		 (ssi-file *footer*))))
 
-(defun render-rss-feed (&optional (*script-name* *script-name*))
+(defun render-rss-feed (&optional (*script-name* *script-name*) article-list)
   "Produce the RSS feed for the given tag, or all articles"
   ;; filter out the type (.xml) for backward compatibility
   (let ((tag-name (pathname-name (second (split-pathname *script-name*)))))
     (article-list-to-rss
      (reverse
-      (if (string= tag-name "tapoueh")
-	  ;; /rss/tapoueh.xml is the catch-all RSS feed
-	  (find-blog-articles *blog-directory* :parse-fn #'muse-parse-article)
+      (or article-list
+	  ;; the RSS stream should contain the full article
 	  (find-blog-articles-with-tag *blog-directory* tag-name
-				       ;; the RSS stream contains the full article
 				       :parse-fn #'muse-parse-article))))))
 
 ;;
@@ -138,14 +146,14 @@
   "Let's design an home page..."
   (let ((*script-name* (hunchentoot:script-name*))
 	(*host*        (hunchentoot:host)))
-    (render-reversed-index-page)))
+    (render-reversed-index-page "/blog/")))
 
 (hunchentoot:define-easy-handler (blog :uri "/blog") ()
   "The blog home page is all dynamic, not based on a Muse file."
   ;; XXX: that could be a very simple SSI Muse document?
   (let ((*script-name* (hunchentoot:script-name*))
 	(*host*        (hunchentoot:host)))
-    (render-reversed-index-page)))
+    (render-reversed-index-page "/blog/")))
 
 (hunchentoot:define-easy-handler (cloud :uri "/cloud") ()
   "A tags Cloud, the JSON data"

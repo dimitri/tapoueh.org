@@ -83,14 +83,14 @@
 ;;
 ;; pathname routines
 ;;
-(defun expand-file-name-into (pathname directory &key type)
+(defun expand-file-name-into (pathname directory &key name type)
   "Expand pathname into given directory. If the PATHNAME directory is
    absolute, make it relative first so that we ensure we always get back a
    pathname under DIRECTORY."
   (when pathname
     (let* ((dir (string-trim '(#\/) (directory-namestring pathname)))
 	   (p   (make-pathname :directory `(:relative ,dir)
-			       :name (pathname-name pathname)
+			       :name (or name (pathname-name pathname))
 			       :type (or type (pathname-type pathname)))))
       (merge-pathnames p directory))))
 
@@ -106,3 +106,46 @@
     (and script-name
 	 (<= len (length script-name))
 	 (string= prefix (subseq script-name 0 len)))))
+
+;;;
+;;; Timing Macro
+;;;
+(defun elapsed-time-since (start)
+  "Return how many seconds ticked between START and now"
+  (/ (- (get-internal-real-time) start)
+     internal-time-units-per-second))
+
+(defmacro timing (&body forms)
+  "return both how much real time was spend in body and its result"
+  (let ((start (gensym))
+	(end (gensym))
+	(result (gensym)))
+    `(let* ((,start (get-internal-real-time))
+	    (,result (progn ,@forms))
+	    (,end (get-internal-real-time)))
+       (values
+	,result
+	(float (/ (- ,end ,start) internal-time-units-per-second))))))
+
+(defun replace-symbols-recursively (code symbols)
+  "Walk CODE to replace symbols as given in the SYMBOLS alist."
+  (loop
+     for s-exp in code
+     when (listp s-exp) collect (replace-symbols-recursively s-exp symbols)
+     else collect (if (symbolp s-exp)
+		      (destructuring-bind (before . after)
+			  (or (assoc s-exp symbols) (cons nil nil))
+			(if before after s-exp))
+		      s-exp)))
+
+(defmacro displaying-time ((fmt &rest bindings) &body forms)
+  "display on *standard-output* how much time it took to execute body"
+  (let* ((result   (gensym))
+	 (timing   (gensym))
+	 (bindings
+	  (replace-symbols-recursively bindings `((result . ,result)
+						  (timing . ,timing)))))
+    `(multiple-value-bind (,result ,timing)
+	 (timing ,@forms)
+       (format t ,fmt ,@bindings)
+       ,result)))
