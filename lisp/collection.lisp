@@ -316,7 +316,9 @@
 	  (displaying-time ("parsed ~d docs in ~ds~%" (length result) timing)
 	    (find-muse-documents)))
 	 (blog-articles
-	  (remove-if-not #'muse-article-p all-documents)))
+	  (displaying-time ("parsed chapeau of ~d blog articles in ~ds~%"
+			    (length result) timing)
+	    (find-blog-articles *blog-directory*))))
 
     (displaying-time ("compiled the home page in ~ds~%" timing)
       (compile-home-page :documents blog-articles :verbose verbose))
@@ -331,7 +333,7 @@
       (compile-blog-indexes :documents blog-articles :verbose verbose))
 
     (displaying-time ("compiled ~d tag listings in ~ds~%" result timing)
-      (compile-tags-lists :documents all-documents :verbose verbose))
+      (compile-tags-lists :documents blog-articles :verbose verbose))
 
     (displaying-time ("compiled ~d rss feeds in ~ds~%" result timing)
       (compile-rss-feeds :documents all-documents :verbose verbose))))
