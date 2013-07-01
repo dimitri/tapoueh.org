@@ -229,7 +229,7 @@
     (ensure-directories-exist (directory-namestring dest))
     (with-open-file (s dest
 		       :direction :output
-		       :if-exists :overwrite
+		       :if-exists :supersede
 		       :if-does-not-exist :create
 		       :external-format :utf-8)
       (write-string html s))))
