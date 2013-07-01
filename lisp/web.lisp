@@ -154,7 +154,7 @@
 	(*host*        (hunchentoot:host)))
     (render-reversed-index-page "/blog/")))
 
-(hunchentoot:define-easy-handler (cloud :uri "/cloud") ()
+(hunchentoot:define-easy-handler (cloud :uri "/cloud.json") ()
   "A tags Cloud, the JSON data"
   (setf (hunchentoot:content-type*) "text/plain")
   (render-tag-cloud))
