@@ -247,8 +247,9 @@
     (loop
        for document in documents
        do (setf (gethash (muse-pathname document) *blog-articles*) document))
-    (write-html-file (render-tag-cloud) "/"
-		     :name "cloud" :type "json" :verbose verbose)
+
+    (let ((json (render-tag-cloud)))
+      (write-html-file json "/" :name "cloud" :type "json" :verbose verbose))
     ;; return how many documents where processed
     (hash-table-count *blog-articles*)))
 
