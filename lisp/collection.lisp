@@ -240,6 +240,18 @@
 	(html (render-reversed-index-page "/" documents)))
     (write-html-file html url :name "index" :verbose verbose)))
 
+(defun compile-tags-cloud (&key documents verbose)
+  "Compile the cloud tags JSON file."
+  (let ((*blog-articles* (make-hash-table :test 'equal :size 1024)))
+    ;; fill-in the hash table
+    (loop
+       for document in documents
+       do (setf (gethash (muse-pathname document) *blog-articles*) document))
+    (write-html-file (render-tag-cloud) "/"
+		     :name "cloud" :type "json" :verbose verbose)
+    ;; return how many documents where processed
+    (hash-table-count *blog-articles*)))
+
 (defun compile-site-documents (&key documents verbose)
   "Compile to *HTML-DIRECTORY* all the muse documents from *ROOT-DIRECTORY*."
   (loop
@@ -308,6 +320,9 @@
 
     (displaying-time ("compiled the home page in ~ds~%" timing)
       (compile-home-page :documents blog-articles :verbose verbose))
+
+    (displaying-time ("compiled the tags cloud in ~ds~%" timing)
+      (compile-tags-cloud :documents blog-articles :verbose verbose))
 
     (displaying-time ("compiled ~d documents in ~d secs~%" result timing)
       (compile-site-documents :documents all-documents :verbose verbose))

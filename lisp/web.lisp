@@ -84,7 +84,6 @@
 ;;
 (loop
    for (prefix path) in '(("/images/"    "../images/")
-			  ("/css/"       "../css/")
 			  ("/static/"    "../static/")
 			  ("/resources/" "../resources/"))
    do (push (hunchentoot:create-folder-dispatcher-and-handler
