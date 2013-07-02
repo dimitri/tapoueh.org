@@ -113,7 +113,9 @@
   (loop
      for tag in (mapcar #'string-downcase tags)
      do (let* ((url  (format nil "/rss/~a" tag))
-	       (rss (render-rss-feed url (articles-tagged tag documents))))
+	       (docs (sort (articles-tagged tag documents)
+			   #'muse-article-before-p))
+	       (rss  (render-rss-feed url docs)))
 	  (write-html-file rss url :name tag :type "xml" :verbose verbose))
      ;; return how many files we wrote
      count tag))
@@ -147,5 +149,5 @@
       (compile-tags-lists :documents blog-articles :verbose verbose))
 
     (displaying-time ("compiled ~d rss feeds in ~ds~%" result timing)
-      (compile-rss-feeds :documents blog-articles :verbose verbose))))
+      (compile-rss-feeds :documents all-documents :verbose verbose))))
 
