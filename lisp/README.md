@@ -30,4 +30,7 @@ all over the code base: modularity violation, big time.
 ## TODO
 
   - update conferences page
+  - make one source page per conference, one article per conference for the
+    /conferences page to look like an index? maybe the tags/conferences is
+    all there's
   - blog about something
