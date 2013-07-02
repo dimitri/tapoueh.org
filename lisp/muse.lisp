@@ -227,7 +227,7 @@
 	 (author "dim@tapoueh.org (Dimitri Fontaine)"))
     ;; (desc   (concatenate 'string "<![CDATA[" (to-html article) "]]>"))
     `(:item
-      (:title ,title)
+      (:title ,(who:escape-string title))
       (:link ,url)
       (:description (str "<![CDATA[") ,@(muse-contents article) (str "]]>"))
       (:author ,author)

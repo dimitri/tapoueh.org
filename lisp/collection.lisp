@@ -189,7 +189,7 @@
     `(:rss
       :version "2.0"
       (:channel
-       (:title ,title)
+       (:title ,(who:escape-string title))
        (:link ,link)
        (:description ,description)
        (:language ,language)
@@ -337,5 +337,5 @@
       (compile-tags-lists :documents blog-articles :verbose verbose))
 
     (displaying-time ("compiled ~d rss feeds in ~ds~%" result timing)
-      (compile-rss-feeds :documents all-documents :verbose verbose))))
+      (compile-rss-feeds :documents blog-articles :verbose verbose))))
 
