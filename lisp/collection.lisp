@@ -298,6 +298,7 @@
 
 (defun compile-rss-feeds (&key documents verbose
 			    (tags '("tapoueh"
+				    "common-lisp"
 				    "postgresql"
 				    "postgresqlfr"
 				    "emacs"
