@@ -268,3 +268,17 @@
 	   (:span ,@(muse-format-tags *muse-current-file*)) " "
 	   (:i :class "icon-tags"))))
 
+(defun tapoueh-insert-article-tag-image-here ()
+  "Return the main tag image for the current article"
+  (when (and (muse-p *muse-current-file*)
+	     (muse-date *muse-current-file*))
+    (let* ((image (muse-extract-article-image-source *muse-current-file*))
+	   (ifile (third image))
+	   (tag   (string-downcase
+		   (car (rassoc ifile *article-default-image-for-tag*
+				:test #'string=)))))
+      `(:div :class "span2" :style "padding-left: 25%; margin-top: 1em;"
+	     (:a :class "thumbnail" :href ,(format nil "/tags/~a" tag)
+		 (:img :class "img-polaroid"
+		       :style "width: 160px; height: 120px;"
+		       :src ,(if (listp image) (third image) image)))))))
