@@ -120,6 +120,30 @@
      ;; return how many files we wrote
      count tag))
 
+(defun compile-sitemap (&key documents verbose)
+  "Compile a sitemap to *HTML-DIRECTORY*."
+  (let* ((cl-who:*prologue* "<?xml version=\"1.0\" encoding=\"utf-8\"?>")
+	 (sitemap
+	 `(:urlset
+	   :xmlns "http://www.sitemaps.org/schemas/sitemap/0.9"
+	   :|xmlns:xsi| "http://www.w3.org/2001/XMLSchema-instance"
+	   :|xsi:schemaLocation| "http://www.sitemaps.org/schemas/sitemap/0.9"
+	   ,@(loop
+		for doc in documents
+		collect `(:url
+			  :log ,(muse-url doc :with-base-url t)
+			  :lastmod ,(local-time:format-timestring nil
+				     (local-time:universal-to-timestamp
+				      (file-write-date (muse-pathname doc)))
+				     :format
+				     '(:year :day :month "-" :hour ":" :min))
+			  :changefreq "weekly"))))
+	(url "/"))
+    (write-html-file (eval `(with-html-output-to-string (s) ,sitemap)) url
+		     :name "sitemap" :type "xml" :verbose verbose)
+    ;; return how many documents are included in the sitemap
+    (length sitemap)))
+
 (defun compile-articles (&key verbose)
   "Output all the articles found in *ROOT-DIRECTORY* into *HTML-DIRECTORY*."
   (let* ((all-documents
@@ -149,5 +173,8 @@
       (compile-tags-lists :documents blog-articles :verbose verbose))
 
     (displaying-time ("compiled ~d rss feeds in ~ds~%" result timing)
-      (compile-rss-feeds :documents all-documents :verbose verbose))))
+      (compile-rss-feeds :documents all-documents :verbose verbose))
+
+    (displaying-time ("compiled the sitemap in ~ds~%" timing)
+      (compile-sitemap :documents all-documents :verbose verbose))))
 

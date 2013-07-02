@@ -29,7 +29,5 @@ all over the code base: modularity violation, big time.
 
 ## TODO
 
-  - sitemap.xml
-  - /tags/index.html
   - update conferences page
   - blog about something

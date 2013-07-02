@@ -151,7 +151,8 @@
 		    ", " :hour ":" :min))
 	 (:short  '(:long-month ", " :day " " :year))
 	 (:rss    '(:short-weekday ", " :day " " :short-month " " :year
-		    " " :hour ":" :min ":00 " :gmt-offset)))))))
+		    " " :hour ":" :min ":00 " :gmt-offset))
+	 (:sitemap '(:year :day :month "-" :hour ":" :min)))))))
 
 (defmethod muse-format-tags ((m muse))
   "Format muse-tags to be displayed on the web"
