@@ -277,8 +277,25 @@
 	   (tag   (string-downcase
 		   (car (rassoc ifile *article-default-image-for-tag*
 				:test #'string=)))))
-      `(:div :class "span2" :style "padding-left: 25%; margin-top: 1em;"
+      `(:div :class "span2 pull-left"
 	     (:a :class "thumbnail" :href ,(format nil "/tags/~a" tag)
 		 (:img :class "img-polaroid"
 		       :style "width: 160px; height: 120px;"
 		       :src ,(if (listp image) (third image) image)))))))
+
+(defun tapoueh-insert-social-div-here ()
+  "Return the <div> code for the Tweet this and G+1 elements"
+  (when (and (muse-p *muse-current-file*)
+	     (muse-date *muse-current-file*))
+    `(:div :id "social" :class "span1 pull-right social"
+	   (:ul
+	    (:li (:|g:plusone|
+		   :size "tall"
+		   :href ,(muse-url *muse-current-file* :with-base-url t)))
+	    (:li (:a :href "http://twitter.com/share"
+		     :class "twitter-share-button"
+		     :data-via "tapoueh"
+		     :data-count "vertical"
+		     "Tweet")
+		 (:script :type "text/javascript"
+			  :src "http://platform.twitter.com/widgets.js"))))))x
