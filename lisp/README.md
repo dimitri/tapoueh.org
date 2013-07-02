@@ -30,7 +30,7 @@ all over the code base: modularity violation, big time.
 ## TODO
 
   - sitemap.xml
-  - static website compiler
+  - /tags/index.html
   - social networking: tweet this, g+1
   - update conferences page
   - blog about something

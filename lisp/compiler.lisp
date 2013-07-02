@@ -76,6 +76,15 @@
     ;; return how many indexes we just built
     count))
 
+(defun compile-blog-archives (&key documents verbose)
+  "Compile to *HTML-DIRECTORY* the whole blog archives page."
+  (let* ((url  "/blog")
+	 (len  (length documents))
+	 (html (render-reversed-index-page url documents len)))
+    (write-html-file html url :name "archives" :verbose verbose)
+    ;; return how many documents we included
+    len))
+
 (defun compile-tags-lists (&key documents verbose)
   "Compile to *HTML-DIRECTORY* all the per-tag articles listings."
   (let ((tags))
@@ -124,6 +133,9 @@
 
     (displaying-time ("compiled the tags cloud in ~ds~%" timing)
       (compile-tags-cloud :documents blog-articles :verbose verbose))
+
+    (displaying-time ("compiled the blog archives page in ~ds~%" timing)
+      (compile-blog-archives :documents blog-articles :verbose verbose))
 
     (displaying-time ("compiled ~d documents in ~d secs~%" result timing)
       (compile-site-documents :documents all-documents :verbose verbose))
