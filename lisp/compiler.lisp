@@ -132,11 +132,14 @@
 		for doc in documents
 		collect `(:url
 			  :log ,(muse-url doc :with-base-url t)
-			  :lastmod ,(local-time:format-timestring nil
-				     (local-time:universal-to-timestamp
-				      (file-write-date (muse-pathname doc)))
-				     :format
-				     '(:year :day :month "-" :hour ":" :min))
+			  :lastmod
+			  ,(multiple-value-bind
+				(second minute hour day month year dow dst-p tz)
+			      (decode-universal-time
+			       (file-write-date (muse-pathname doc)))
+			    (declare (ignore second dow dst-p tz))
+			    (format nil "~d~2,'0d~2,'0d-~2,'0d:~2,'0d"
+				    year month day hour minute))
 			  :changefreq "weekly"))))
 	(url "/"))
     (write-html-file (eval `(with-html-output-to-string (s) ,sitemap)) url
