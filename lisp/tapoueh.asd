@@ -24,6 +24,7 @@
 		 (:file "utils"       :depends-on ("package"))
 		 (:file "muse"        :depends-on ("utils" "package"))
 		 (:file "collection"  :depends-on ("utils" "package" "muse"))
+		 (:file "compiler"    :depends-on ("collection"))
 		 (:file "ssi"         :depends-on ("package" "collection"))
 		 (:file "muse-parser" :depends-on ("muse" "ssi"))
 		 (:file "url"         :depends-on ("muse" "ssi" "collection"))

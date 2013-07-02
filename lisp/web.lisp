@@ -38,8 +38,9 @@
     (concatenate 'string
 		 (ssi-file *header*)
 		 (article-list-to-html-with-chapeau
-		  (or article-list
-		      (find-blog-articles (directory-namestring pathname))))
+		  (reverse
+		   (or article-list
+		       (find-blog-articles (directory-namestring pathname)))))
 		 (ssi-file *footer*))))
 
 (defun render-reversed-index-page (&optional
