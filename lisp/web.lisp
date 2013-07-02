@@ -155,6 +155,15 @@
 	(*host*        (hunchentoot:host)))
     (render-reversed-index-page "/blog/")))
 
+(hunchentoot:define-easy-handler (blog :uri "/blog/archives.html") ()
+  "The blog home page is all dynamic, not based on a Muse file."
+  ;; XXX: that could be a very simple SSI Muse document?
+  (let* ((*script-name* (hunchentoot:script-name*))
+	 (*host*        (hunchentoot:host))
+	 (articles      (find-blog-articles *blog-directory*))
+	 (len           (length articles)))
+    (render-reversed-index-page "/blog/" articles len)))
+
 (hunchentoot:define-easy-handler (cloud :uri "/cloud.json") ()
   "A tags Cloud, the JSON data"
   (setf (hunchentoot:content-type*) "text/plain")
