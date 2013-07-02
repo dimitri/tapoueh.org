@@ -68,6 +68,11 @@
 	(add-article pathname :re-sort-list t)
 	article)))
 
+(defun maybe-add-article-to-list (pathname)
+  "Lookup pathname in *BLOG-ARTICLES* and add its article if not found."
+  (unless (gethash pathname *blog-articles*)
+    (add-article pathname :re-sort-list t)))
+
 ;;;
 ;;; Find articles and return a sorted list of them
 ;;;

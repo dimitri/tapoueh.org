@@ -6,39 +6,41 @@
 (defvar tapoueh-base-dir "/Users/dim/dev/tapoueh.org/")
 (defvar tapoueh-base-url "http://localhost:8042/")
 
+(defun tapoueh-current-url ()
+  "Return the URL of the current file, or NIL if not under tapoueh-base-dir"
+  (let* ((path   (buffer-file-name))
+	 (match  (string-match (concat "^" tapoueh-base-dir "\\(.*\\)") path))
+	 (script (when match (match-string 1 path)))
+	 (url    (when script (concat tapoueh-base-url script))))
+    url))
+
 ;;;
 ;;; Facilities
 ;;;
 (defun tapoueh-insert-muse-headers ()
   "insert headers in a new Muse file"
   (interactive)
-  (let* ((project (muse-project-of-file (muse-current-file)))
-	 (pname   (car project)))
-    (when (string= pname "tapoueh.org")
-	(beginning-of-buffer)
-	(unless
-	    (or (bound-and-true-p muse-publishing-current-file)
-		(and (buffer-file-name)
-		     (file-exists-p (buffer-file-name))
-		     (tapoueh-extract-directive "title" (muse-current-file))))
-	  (message "New Muse File: %s" (muse-current-file))
-	  (let ((title (read-string "Article Title: ")))
-	    (insert "#author Dimitri Fontaine\n"
-		    (format "#title  %s\n" title)
-		    (format "#date   %s\n" (format-time-string "%Y%m%d-%R"))
-		    "#tags   \n"
-		    "\n"))))))
+  (when (tapoueh-current-url)
+    (beginning-of-buffer)
+    (unless
+	(or (bound-and-true-p muse-publishing-current-file)
+	    (and (buffer-file-name)
+		 (file-exists-p (buffer-file-name))
+		 (tapoueh-extract-directive "title" (muse-current-file))))
+      (message "New Muse File: %s" (muse-current-file))
+      (let ((title (read-string "Article Title: ")))
+	(insert "#author Dimitri Fontaine\n"
+		(format "#title  %s\n" title)
+		(format "#date   %s\n" (format-time-string "%Y%m%d-%R"))
+		"#tags   \n"
+		"\n")))))
 
 (add-hook 'muse-mode-hook 'tapoueh-insert-muse-headers)
 
 (defun tapoueh-open-in-browser ()
   "Open current article in a browser"
   (interactive)
-  (let* ((path   (buffer-file-name))
-	 (match  (string-match (concat "^" tapoueh-base-dir "\\(.*\\)") path))
-	 (script (match-string 1 path))
-	 (url    (concat tapoueh-base-url script)))
-    (browse-url url)))
+  (browse-url (tapoueh-current-url)))
 
 (define-key muse-mode-map (kbd "C-c C-v") 'tapoueh-open-in-browser)
 

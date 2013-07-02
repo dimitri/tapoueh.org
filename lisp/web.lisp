@@ -27,6 +27,7 @@
 				  (muse-source *script-name*)))
 	 (*muse-current-file* (or article
 				  (muse-parse-article pathname))))
+    (maybe-add-article-to-list pathname)
     (concatenate 'string
 		 (ssi-file *header*)
 		 (to-html *muse-current-file*)
