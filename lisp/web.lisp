@@ -65,8 +65,9 @@
     (concatenate 'string
 		 (ssi-file *header*)
 		 (article-list-to-html-with-chapeau
-		  (or article-list
-		      (find-blog-articles-with-tag *blog-directory* tag-name)))
+		  (reverse
+		   (or article-list
+		       (find-blog-articles-with-tag *blog-directory* tag-name))))
 		 (ssi-file *footer*))))
 
 (defun render-rss-feed (&optional (*script-name* *script-name*) article-list)
