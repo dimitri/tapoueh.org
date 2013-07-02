@@ -146,13 +146,13 @@
        nil stamp
        :format
        (case format
-	 (:normal '(:long-weekday ", " :long-month " " :day " " :year))
-	 (:long   '(:long-weekday ", " :long-month " " :day " " :year
-		    ", " :hour ":" :min))
-	 (:short  '(:long-month ", " :day " " :year))
-	 (:rss    '(:short-weekday ", " :day " " :short-month " " :year
-		    " " :hour ":" :min ":00 " :gmt-offset))
-	 (:sitemap '(:year :day :month "-" :hour ":" :min)))))))
+	 (:normal '(:long-weekday ", " :long-month " " (:day 2) " " :year))
+	 (:long   '(:long-weekday ", " :long-month " " (:day 2) " " :year
+		    ", " (:hour 2) ":" (:min 2)))
+	 (:short  '(:long-month ", " (:day 2) " " :year))
+	 (:rss    '(:short-weekday ", " (:day 2) " " :short-month " " :year
+		    " " (:hour 2) ":" (:min 2) ":00 " :gmt-offset))
+	 (:sitemap '(:year (:day 2) (:month 2) "-" (:hour 2) ":" (:min 2))))))))
 
 (defmethod muse-format-tags ((m muse))
   "Format muse-tags to be displayed on the web"
