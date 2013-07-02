@@ -258,7 +258,7 @@
        in (sort (alexandria:hash-table-alist counts) #'> :key #'cdr)
        collect (list (cons :text tag)
 		     (cons :weight count)
-		     (cons :link (format nil "/tags/~a" tag))))))
+		     (cons :link (format nil "/tags/~a" (string-downcase tag)))))))
 
 (defun tapoueh-insert-article-tags ()
   "Return tags for the current article."
