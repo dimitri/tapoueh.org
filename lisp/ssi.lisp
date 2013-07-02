@@ -274,11 +274,12 @@
 	     (muse-date *muse-current-file*))
     (let* ((image (muse-extract-article-image-source *muse-current-file*))
 	   (ifile (third image))
-	   (tag   (string-downcase
-		   (car (rassoc ifile *article-default-image-for-tag*
-				:test #'string=)))))
+	   (tag
+	    (car (rassoc ifile *article-default-image-for-tag* :test #'string=))))
       `(:div :class "span2 pull-left"
-	     (:a :class "thumbnail" :href ,(format nil "/tags/~a" tag)
+	     (:a :class "thumbnail"
+		 :href ,(if tag (format nil "/tags/~a" (string-downcase tag))
+			    "/blog/archives.html")
 		 (:img :class "img-polaroid"
 		       :style "width: 160px; height: 120px;"
 		       :src ,(if (listp image) (third image) image)))))))
