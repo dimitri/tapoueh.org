@@ -298,4 +298,4 @@
 		     :data-count "vertical"
 		     "Tweet")
 		 (:script :type "text/javascript"
-			  :src "http://platform.twitter.com/widgets.js"))))))x
+			  :src "http://platform.twitter.com/widgets.js"))))))
