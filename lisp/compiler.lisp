@@ -78,7 +78,7 @@
 
 (defun compile-blog-archives (&key documents verbose)
   "Compile to *HTML-DIRECTORY* the whole blog archives page."
-  (let* ((url  "/blog")
+  (let* ((url  "/blog/")
 	 (len  (length documents))
 	 (html (render-reversed-index-page url documents len)))
     (write-html-file html url :name "archives" :verbose verbose)
