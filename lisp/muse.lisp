@@ -160,8 +160,9 @@
 	     nil stamp :format (cdr (assoc format *timestring-formats*))))))
     (when string
       (if (eq format :rss)
-	  ;; get rid of the + before the timezone for RSS formating
-	  (format nil "~{~a~}" (split-sequence:split-sequence #\+ string))
+	  ;; re-format the timezone for RSS formating: +02:00 -> +0200
+	  (let ((splits (split-sequence:split-sequence #\: string)))
+	    (format nil "~{~a~^:~}~{~a~}" (butlast splits) (last splits)))
 	  string))))
 
 (defmethod muse-format-tags ((m muse))
