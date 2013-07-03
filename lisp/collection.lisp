@@ -191,10 +191,9 @@
 				     (description "Dimitri Fontaine's blog")
 				     (language    "en-us"))
   "Produce an RSS listing of the given list of articles"
-  (let ((cl-who:*prologue*
-	 "<rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\">"))
+  (let ((cl-who:*prologue* "<?xml version=\"1.0\" encoding=\"utf-8\"?>"))
     `(:rss
-      :version "2.0"
+      :version "2.0" :|xmlns:atom| "http://www.w3.org/2005/Atom"
       (:channel
        (:title ,(who:escape-string title))
        (:link ,link)
