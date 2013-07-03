@@ -210,6 +210,8 @@
 
 (defun article-list-to-rss (list &key (tag "tapoueh"))
   "Produce a RSS feed from the given list of articles"
-  (concatenate 'string
-	       (eval `(with-html-output-to-string (s)
-			,(format-article-list-as-rss list :tag tag)))))
+  (let ((cl-who:*html-empty-tags*
+	 (cons :|atom:link| cl-who:*html-empty-tags*)))
+    (concatenate 'string
+		 (eval `(with-html-output-to-string (s)
+			  ,(format-article-list-as-rss list :tag tag))))))

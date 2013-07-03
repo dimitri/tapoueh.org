@@ -141,20 +141,28 @@
   "Returns a generalized boolean true when pathname extension is .muse"
   (string= (pathname-type pathname) *muse-pathname-type*))
 
+(defvar *timestring-formats*
+  '((:normal  . (:long-weekday ", " :long-month " " (:day 2) " " :year))
+    (:long    . (:long-weekday ", " :long-month " " (:day 2) " " :year
+		 ", " (:hour 2) ":" (:min 2)))
+    (:short   . (:long-month ", " (:day 2) " " :year))
+    (:rss     . (:short-weekday ", " (:day 2) " " :short-month " " :year " "
+		 (:hour 2) ":" (:min 2) ":" (:sec 2) " " :gmt-offset))
+    (:sitemap . (:year (:day 2) (:month 2) "-" (:hour 2) ":" (:min 2))))
+  "List of timestamp formats we know about")
+
 (defmethod muse-format-date ((m muse) &key (format :normal))
   "Format muse-date to be displayed on the web"
-  (let ((stamp (muse-timestamp m)))
-    (when stamp
-      (local-time:format-timestring
-       nil stamp
-       :format
-       (case format
-	 (:normal '(:long-weekday ", " :long-month " " (:day 2) " " :year))
-	 (:long   '(:long-weekday ", " :long-month " " (:day 2) " " :year
-		    ", " (:hour 2) ":" (:min 2)))
-	 (:short  '(:long-month ", " (:day 2) " " :year))
-	 (:rss    local-time:+rfc-1123-format+)
-	 (:sitemap '(:year (:day 2) (:month 2) "-" (:hour 2) ":" (:min 2))))))))
+  (let* ((stamp (muse-timestamp m))
+	 (string
+	  (when stamp
+	    (local-time:format-timestring
+	     nil stamp :format (cdr (assoc format *timestring-formats*))))))
+    (when string
+      (if (eq format :rss)
+	  ;; get rid of the + before the timezone for RSS formating
+	  (format nil "~{~a~}" (split-sequence:split-sequence #\+ string))
+	  string))))
 
 (defmethod muse-format-tags ((m muse))
   "Format muse-tags to be displayed on the web"
