@@ -291,4 +291,4 @@
       (:author ,author)
       ;; easiest way to respect the case here
       (str "<pubDate>") ,date (str "</pubDate>")
-      (str "<guid isPermaLink=\"true\">") ,date (str "</guid>"))))
+      (str "<guid isPermaLink=\"true\">") ,url (str "</guid>"))))
