@@ -7,9 +7,6 @@
 
 (in-package #:tapoueh)
 
-(defparameter *base-url* "http://tapoueh.org/"
-  "Only used to publish in the headers Meta.")
-
 (defvar *muse-current-file* nil
   "Maintained in the web.lisp hunchentoot handlers.")
 

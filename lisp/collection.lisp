@@ -186,11 +186,13 @@
 (defun format-article-list-as-rss (list
 				   &key
 				     (title       "tail -f /dev/dim")
+				     (tag         "tapoueh")
 				     (link        "http://tapoueh.org/blog")
 				     (description "Dimitri Fontaine's blog")
 				     (language    "en-us"))
   "Produce an RSS listing of the given list of articles"
-  (let ((cl-who:*prologue* "<?xml version=\"1.0\" encoding=\"utf-8\"?>"))
+  (let ((cl-who:*prologue*
+	 "<rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\">"))
     `(:rss
       :version "2.0"
       (:channel
@@ -199,12 +201,16 @@
        (:description ,description)
        (:language ,language)
        (:generator "Emacs Muse and Tapoueh's Common Lisp")
+       (:|atom:link|
+	 :href ,(format nil "~arss/~a.xml" *base-url* tag)
+	 :ref "self"
+	 :type "application/rss+xml")
        ,@(loop
 	    for article in list
 	    collect (muse-format-article-as-rss article))))))
 
-(defun article-list-to-rss (list)
+(defun article-list-to-rss (list &key (tag "tapoueh"))
   "Produce a RSS feed from the given list of articles"
   (concatenate 'string
 	       (eval `(with-html-output-to-string (s)
-			,(format-article-list-as-rss list)))))
+			,(format-article-list-as-rss list :tag tag)))))

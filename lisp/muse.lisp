@@ -6,6 +6,9 @@
 
 (in-package #:tapoueh)
 
+(defparameter *base-url* "http://tapoueh.org/"
+  "Used in the headers Meta tags and in the RSS feeds.")
+
 (defparameter *muse-pathname-type* "muse"
   "The file extension we use to store Muse files")
 
@@ -219,6 +222,51 @@
 
 	   (:div :class "span6" ,(muse-first-para article)))))
 
+(defun relative-href-to-absolute (script-name href)
+  "Transform relative HREF found at SCRIPT-NAME into an absolute reference."
+  (if (not (string= ".." (subseq href 0 2)))
+      href
+      (let* ((cwd         (butlast (split-pathname script-name)))
+	     (relpaths    (split-pathname href)))
+	(loop
+	   for dest = (reverse cwd) then (cdr dest)
+	   for (p . rest) on relpaths
+	   until (not (string= p ".."))
+	   finally (return
+		     (format nil "~a~{~a~^/~}"
+			     *base-url*
+			     (append (reverse dest) (list p) rest)))))))
+
+(defmethod muse-contents-with-absolute-hrefs ((article muse))
+  "Return the muse contents after having replaced all relative hrefs with
+   absolute ones, using *BASE-URL*"
+  (labels ((convert-html-tag (a-form tag)
+	     "Convert an HTML tag's URL, tag is e.g. :href or :src"
+	     (loop
+		for convert-p = nil then (eq attr tag)
+		for attr in a-form
+		when convert-p
+		collect (relative-href-to-absolute (muse-url article) attr)
+		;; beware of (:a :href "../..." (:img :src "../..."))
+		else collect (if (listp attr) (walk-contents (list attr)) attr)))
+
+	   (walk-contents (contents)
+	     "Walk the muse contents"
+	     (loop
+		for element in contents
+		collect (cond
+			  ((and (listp element) (eql (car element) :a))
+			   (convert-html-tag element :href))
+
+			  ((and (listp element) (eql (car element) :img))
+			   (convert-html-tag element :src))
+
+			  ((listp element)
+			   (walk-contents element))
+
+			  (t element)))))
+    (walk-contents (muse-contents article))))
+
 (defmethod muse-format-article-as-rss ((article muse))
   "Return a list suitable for printing the article as a RSS form with cl-who"
   (let* ((title  (muse-title article))
@@ -229,7 +277,10 @@
     `(:item
       (:title ,(who:escape-string title))
       (:link ,url)
-      (:description (str "<![CDATA[") ,@(muse-contents article) (str "]]>"))
+      (:description (str "<![CDATA[")
+		    ,@(muse-contents-with-absolute-hrefs article)
+		    (str "]]>"))
       (:author ,author)
-      (:pubDate ,date)
-      (:guid :isPermaLink "true" ,url))))
+      ;; easiest way to respect the case here
+      (str "<pubDate>") ,date (str "</pubDate>")
+      (str "<guid isPermaLink=\"true\">") ,date (str "</guid>"))))

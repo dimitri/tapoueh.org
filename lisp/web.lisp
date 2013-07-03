@@ -80,7 +80,8 @@
       (or article-list
 	  ;; the RSS stream should contain the full article
 	  (find-blog-articles-with-tag *blog-directory* tag-name
-				       :parse-fn #'muse-parse-article))))))
+				       :parse-fn #'muse-parse-article)))
+     :tag tag-name)))
 
 ;;
 ;; Routing proper
