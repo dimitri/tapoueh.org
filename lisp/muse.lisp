@@ -150,8 +150,7 @@
 	 (:long   '(:long-weekday ", " :long-month " " (:day 2) " " :year
 		    ", " (:hour 2) ":" (:min 2)))
 	 (:short  '(:long-month ", " (:day 2) " " :year))
-	 (:rss    '(:short-weekday ", " (:day 2) " " :short-month " " :year
-		    " " (:hour 2) ":" (:min 2) ":00 " :gmt-offset))
+	 (:rss    local-time:+rfc-1123-format+)
 	 (:sitemap '(:year (:day 2) (:month 2) "-" (:hour 2) ":" (:min 2))))))))
 
 (defmethod muse-format-tags ((m muse))
