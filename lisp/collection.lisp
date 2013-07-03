@@ -205,7 +205,7 @@
 	    collect (muse-format-article-as-rss article))
        (:|atom:link|
 	 :href ,(format nil "~arss/~a.xml" *base-url* tag)
-	 :ref "self"
+	 :rel "self"
 	 :type "application/rss+xml")))))
 
 (defun article-list-to-rss (list &key (tag "tapoueh"))
