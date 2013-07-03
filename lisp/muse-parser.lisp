@@ -310,7 +310,8 @@
       (declare (ignore open attrs gt close))
       `(:pre
 	(:code
-	 ,(string-left-trim '(#\Newline #\Space #\Tab) (text source)))))))
+	 ,(string-left-trim '(#\Newline #\Space #\Tab)
+			    (who:escape-string (text source))))))))
 
 #+5am
 (test parse-src
@@ -392,8 +393,9 @@ SELECT * FROM planet.postgresql.org WHERE author = \"dim\";
     (destructuring-bind (include attrs gt) source
       (declare (ignore include gt))
       (destructuring-bind (&key file &allow-other-keys) attrs
-	`(:pre (:code ,(slurp-file-into-string
-			(merge-pathnames file *muse-parser-cwd*))))))))
+	`(:pre (:code ,(who:escape-string
+			(slurp-file-into-string
+			 (merge-pathnames file *muse-parser-cwd*)))))))))
 
 (defrule contents (and "<contents" (? attrs) ">")
   ;; ignore table of contents completely for now
