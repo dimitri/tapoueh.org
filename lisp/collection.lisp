@@ -200,13 +200,13 @@
        (:description ,description)
        (:language ,language)
        (:generator "Emacs Muse and Tapoueh's Common Lisp")
+       ,@(loop
+	    for article in list
+	    collect (muse-format-article-as-rss article))
        (:|atom:link|
 	 :href ,(format nil "~arss/~a.xml" *base-url* tag)
 	 :ref "self"
-	 :type "application/rss+xml")
-       ,@(loop
-	    for article in list
-	    collect (muse-format-article-as-rss article))))))
+	 :type "application/rss+xml")))))
 
 (defun article-list-to-rss (list &key (tag "tapoueh"))
   "Produce a RSS feed from the given list of articles"
