@@ -1,0 +1,98 @@
+#author Dimitri Fontaine
+#title  Archiving data as fast as possible
+#date   20130705-15:30
+#tags   PostgreSQL Replication Catalogs
+
+In a recent article here we've been talking about how do do [[/blog/2013/03/15-batch-update][Batch Updates]] in
+a very efficient way, using the *Writable CTE* features available in
+PostgreSQL 9.1. I sometime read how [[http://www.postgresql.org/docs/current/interactive/queries-with.html][Common Table Expressions]] changed the
+life of fellow DBAs and developers, and would say that *Writable CTE* are at
+least the same boost again.
+
+	[[../../../images/pipeline.png]]
+
+	*Writable CTEs allow to easily implement data processing pipelines*
+
+In the case of archiving data into side tables the pipeline we're talking
+about aims to move data out of a table (that's a =DELETE=) then store it on
+the destination (*archiving*) table, and that's an =INSERT=:
+
+<src lang="sql">
+WITH archive AS (
+    DELETE FROM source WHERE ...
+ RETURNING s.id
+)
+INSERT INTO target(id, counter)
+     SELECT * FROM archive;
+</src>
+
+That's probably the most efficient way to move data around in PostgreSQL
+when the source and target tables are within the same database. If not, then
+I can't wait to play with the [[http://www.postgresql.org/docs/9.3/static/postgres-fdw.html][Postgres Foreign Data Wrapper]] in 9.3, that
+should allow to send the data directly with the same query.
+
+Now, if you have foreign keys to deal with, the trick is to embed all the
+related statements in the right ordering into a single transaction... and
+that's about it. For archiving data remotely though, it's a little more
+complex as we need to control two transactions in the right way™, and that
+is a topic for another article later. The transactional model to follow
+though is the one implemented in [[/tags/pgq][PGQ]] already, so at least we know how to do
+things.
+
+About performances of that simple method, let me say that it's fast enough
+that you can actually find yourself pusing loads of =WAL= data down to your
+[[http://www.postgresql.org/docs/current/static/hot-standby.html][Hot Standby server]]. If the system is already very highly loaded, then a way
+to *throttle* the impact is needed.
+
+The way to fix that problem that I've been using is to check the *lag* in
+between the Hot Standby you're interested into and the primary server by
+running that query periodically:
+
+<src lang="sql">
+select pg_current_xlog_location() as current, replay_location as replay
+  from pg_stat_replication
+ where application_name = 'standby-name';
+</src>
+
+Be aware that any replication client that you use will show up in the
+=pg_stat_replication= view, and that includes [[http://www.postgresql.org/docs/current/static/app-pgbasebackup.html][pg_basebackup]] and
+[[http://www.postgresql.org/docs/current/static/app-pgreceivexlog.html][pg_receivexlog]]:
+
+<src lang="sql>
+# select application_name, pg_current_xlog_location(),
+         sent_location, replay_location
+    from pg_stat_replication;
+ application_name | pg_current_xlog_location | sent_location  | replay_location 
+------------------+--------------------------+----------------+-----------------
+ pg_receivexlog   | 18C85/55DCA900           | 18C85/55DAEC20 | {NULL}
+ standby-name     | 18C85/55DCA900           | 18C85/55DCA900 | 18C76/4B327D0
+(2 lignes)
+</src>
+
+Then in between loops of running the =WITH archive AS (DELETE ...) INSERT=
+query, when the lag is higher than your arbitrary threshold, just pause
+until it's back under control. That part I've implemented with a very simple
+buzy loop around the previous query and a 1 second wait.
+
+Now, to make sense of the returned data you can use the function
+[[http://www.postgresql.org/docs/9.2/static/functions-admin.html#FUNCTIONS-ADMIN-BACKUP-TABLE][pg_xlog_location_diff]] as of 9.2. If you're still using 9.1, then you can
+replicate its implementation in your client application code, it's simple
+enough to do so. Here's a [[/tags/common-lisp][Common Lisp]] version of it:
+
+<src lang="common-lisp">
+(defun pg-xlog-location-diff (loc1 loc2)
+  "Compute the difference between WAL locations as WAL bytes.
+
+   Locations are expected with the XLOG position format 163A8/210598E8.
+   Computation from PostgreSQL sources of pg_xlog_location_diff as in
+   src/backend/access/transam/xlogfuncs.c "
+  (flet ((parse-location (pos)
+	   (let ((shift #.(expt 2 32)))
+	     (destructuring-bind (hi lo)
+		 (split-sequence:split-sequence #\/ pos)
+	       (+ (* shift (parse-integer hi :radix 16))
+		  (parse-integer lo :radix 16))))))
+    (- (parse-location loc1) (parse-location loc2))))
+</src>
+
+Exercice for the reader: write a PL version of it with your PL of choice.
