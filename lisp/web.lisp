@@ -65,7 +65,7 @@
 	       (to-html (muse-parse-article *conferences*))
 	       (article-list-to-html-with-chapeau
 		(or article-list
-		    (find-blog-articles *blog-directory*)))
+		    (find-blog-articles *confs-directory*)))
 	       (ssi-file *footer*)))
 
 (defun render-tag-cloud ()

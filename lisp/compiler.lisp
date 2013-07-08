@@ -109,8 +109,8 @@
   "Compile to *HTML-DIRECTORY* the conferences index page."
   (let* ((url  "/conferences")
 	 (len  (length documents))
-	 (html (render-confs-index-page url documents)))
-    (write-html-file html url :name "confs" :verbose verbose)
+	 (html (render-confs-index-page url (reverse documents))))
+    (write-html-file html url :name "conferences" :verbose verbose)
     ;; return how many documents we included
     len))
 
