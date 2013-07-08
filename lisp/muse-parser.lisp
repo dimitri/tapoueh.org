@@ -6,6 +6,9 @@
 
 (in-package #:tapoueh)
 
+(defparameter *include-src-lang* nil
+  "Do we want to include :class \"lang\" markup in code blocks.")
+
 (def-suite muse :description "Emacs Muse Parser Test Suite.")
 (in-suite muse)
 
@@ -304,21 +307,31 @@
       (is (equal (parse 'title "** =whois dim=")
 		 '(:H2 (:SPAN :CLASS "tt" "whois dim")))))
 
+(defun muse-lang-to-highlight-js-lang (lang)
+  "Convert a Muse lang=... attribute to what highlight.js expects"
+  (cond ((string= "common-lisp" lang) "lisp")
+	(t lang)))
+
 (defrule src (and "<src" (? attrs) ">" (+ (not "</src>")) "</src>")
   (:lambda (source)
     (destructuring-bind (open attrs gt source close) source
-      (declare (ignore open attrs gt close))
-      `(:pre
-	(:code
-	 ,(string-left-trim '(#\Newline #\Space #\Tab)
-			    (who:escape-string (text source))))))))
+      (declare (ignore open gt close))
+      (destructuring-bind (&key lang &allow-other-keys)
+	  attrs
+	(let ((lang
+	       (when *include-src-lang*
+		 `(:class ,(muse-lang-to-highlight-js-lang lang)))))
+	  `(:pre
+	    (:code ,@lang
+		   ,(string-left-trim '(#\Newline #\Space #\Tab)
+				      (who:escape-string (text source))))))))))
 
 #+5am
 (test parse-src
       "Test some <src>content</src>"
       (is (equalp
 	   (parse 'src "<src lang=\"common-lisp\">your code snippet here</src>")
-	   '(:PRE "your code snippet here"))))
+	   '(:PRE (:code "your code snippet here")))))
 
 (defrule class (and "<class" (? attrs) ">" (+ (not "</class>")) "</class>")
   (:lambda (source)
