@@ -1,6 +1,9 @@
 ;;;
 ;;; Compile into a static website
 ;;;
+
+(in-package #:tapoueh)
+
 (defun blog-index-script-name (pathname &optional (root *blog-directory*))
   "Return the /blog/path/to/index url from given PATHNAME"
   (concatenate 'string
