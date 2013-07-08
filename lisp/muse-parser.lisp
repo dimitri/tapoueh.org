@@ -280,19 +280,19 @@
  (:EM "Photo by " (:A :HREF "http://www.sai.msu.su/~megera/" "Oleg Bartunov"))))))
 
 (defrule title (and (+ #\*) (+ whitespace)
-		    (or heavy bold italics monospace link non-empty-line))
+		    (* (or heavy bold italics monospace link non-empty-line)))
   (:lambda (source)
     (destructuring-bind (stars ws rest) source
       (declare (ignore ws))
       (let ((title
 	     (remove-if (lambda (c) (member c '(#\Newline #\Linefeed))) rest)))
 	(case (length stars)
-	  (1 `(:h1 ,title))
-	  (2 `(:h2 ,title))
-	  (3 `(:h3 ,title))
-	  (4 `(:h4 ,title))
-	  (5 `(:h5 ,title))
-	  (6 `(:h6 ,title)))))))
+	  (1 `(:h1 ,@title))
+	  (2 `(:h2 ,@title))
+	  (3 `(:h3 ,@title))
+	  (4 `(:h4 ,@title))
+	  (5 `(:h5 ,@title))
+	  (6 `(:h6 ,@title)))))))
 
 #+5am
 (test parse-title
