@@ -12,7 +12,7 @@
 	 (match  (string-match (concat "^" tapoueh-base-dir "\\(.*\\)") path))
 	 (script (when match (match-string 1 path)))
 	 (url    (when script (concat tapoueh-base-url script))))
-    url))
+    (file-name-sans-extension url)))
 
 ;;;
 ;;; Facilities
