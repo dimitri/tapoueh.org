@@ -64,8 +64,8 @@
 	       (ssi-file *header*)
 	       (to-html (muse-parse-article *conferences*))
 	       (article-list-to-html-with-chapeau
-		(reverse (or article-list
-			     (find-blog-articles *blog-directory*))))
+		(or article-list
+		    (find-blog-articles *blog-directory*)))
 	       (ssi-file *footer*)))
 
 (defun render-tag-cloud ()
@@ -181,9 +181,8 @@
 	(*host*        (hunchentoot:host)))
     (render-confs-index-page
      "/confs"
-     (reverse
-      (find-muse-documents :base-directory *confs-directory*
-			   :parse-fn #'muse-parse-chapeau)))))
+     (find-muse-documents :base-directory *confs-directory*
+			  :parse-fn #'muse-parse-chapeau))))
 
 (hunchentoot:define-easy-handler (blog :uri "/blog/archives.html") ()
   "The blog home page is all dynamic, not based on a Muse file."

@@ -105,6 +105,15 @@
        ;; return how many files we wrote
        count tag)))
 
+(defun compile-conf-index (&key documents verbose)
+  "Compile to *HTML-DIRECTORY* the conferences index page."
+  (let* ((url  "/confs")
+	 (len  (length documents))
+	 (html (render-confs-index-page url documents)))
+    (write-html-file html url :name "confs" :verbose verbose)
+    ;; return how many documents we included
+    len))
+
 (defun compile-rss-feeds (&key documents verbose
 			    (tags '("tapoueh"
 				    "common-lisp"
@@ -158,7 +167,11 @@
 	 (blog-articles
 	  (displaying-time ("parsed chapeau of ~d blog articles in ~ds~%"
 			    (length result) timing)
-	    (find-blog-articles *blog-directory*))))
+	    (find-blog-articles *blog-directory*)))
+	 (conf-articles
+	  (displaying-time ("parsed chapeau of ~d confs articles in ~ds~%"
+			    (length result) timing)
+	    (find-blog-articles *confs-directory*))))
 
     (displaying-time ("compiled the home page in ~ds~%" timing)
       (compile-home-page :documents blog-articles :verbose verbose))
@@ -174,6 +187,9 @@
 
     (displaying-time ("compiled ~d blog indexes in ~ds~%" result timing)
       (compile-blog-indexes :documents blog-articles :verbose verbose))
+
+    (displaying-time ("compiled confs listing in ~ds~%" timing)
+      (compile-conf-index :documents conf-articles :verbose verbose))
 
     (displaying-time ("compiled ~d tag listings in ~ds~%" result timing)
       (compile-tags-lists :documents blog-articles :verbose verbose))
