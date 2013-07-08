@@ -174,13 +174,13 @@
 	(*host*        (hunchentoot:host)))
     (render-reversed-index-page "/blog/")))
 
-(hunchentoot:define-easy-handler (blog :uri "/confs") ()
+(hunchentoot:define-easy-handler (blog :uri "/conferences") ()
   "The confs page is all dynamic, not based on a Muse file."
   ;; XXX: that could be a very simple SSI Muse document?
   (let ((*script-name* (hunchentoot:script-name*))
 	(*host*        (hunchentoot:host)))
     (render-confs-index-page
-     "/confs"
+     "/conferences"
      (find-muse-documents :base-directory *confs-directory*
 			  :parse-fn #'muse-parse-chapeau))))
 

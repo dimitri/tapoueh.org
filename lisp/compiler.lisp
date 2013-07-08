@@ -107,7 +107,7 @@
 
 (defun compile-conf-index (&key documents verbose)
   "Compile to *HTML-DIRECTORY* the conferences index page."
-  (let* ((url  "/confs")
+  (let* ((url  "/conferences")
 	 (len  (length documents))
 	 (html (render-confs-index-page url documents)))
     (write-html-file html url :name "confs" :verbose verbose)
