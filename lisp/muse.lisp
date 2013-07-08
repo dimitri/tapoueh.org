@@ -51,11 +51,11 @@
       (:constructor make-muse)
       (:constructor make-muse-article (&key
 				       pathname mod-timestamp
-				       author title date tags desc
+				       author title date city tags desc
 				       contents first-para image
 				       &aux (timestamp (when date
 							 (parse-date date))))))
-  pathname mod-timestamp author title date timestamp tags desc
+  pathname mod-timestamp author title date city timestamp tags desc
   contents first-para image)
 
 (defmethod muse-article-p ((document muse))
@@ -260,13 +260,21 @@
   (let* ((link `(:a :href ,(muse-url article)
 		    ,(muse-title article)))
 	 (date `(:span :class "date" ,(muse-format-date article :format :short)))
-	 (image (muse-extract-article-image-source article)))
+	 (image (muse-extract-article-image-source article))
+	 (city  (muse-city article))
+	 (div.city
+	  (when city
+	    `(:div :class "date"
+		   (:i :class "icon-map-marker") " "
+		   (:a :href (google-maps-url-for ,city) ,city)))))
+
     `(:div :class "row"
 	   (:div :class "span2" (:p "&nbsp;"))
 
 	   (:div :class "span6"
 		 (:h2 ,link)
-		 (:div :class "date" (:i :class "icon-calendar") " " ,date))
+		 (:div :class "date" (:i :class "icon-calendar") " " ,date)
+		 ,div.city)
 
 	   (:div :class "span2"
 		 (:a :class "thumbnail" :href ,(muse-url article)

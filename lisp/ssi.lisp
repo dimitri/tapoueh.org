@@ -154,16 +154,20 @@
 	 when (and a b (fad:pathname-equal current-source-dir a))
 	 return (format nil "/~a" (relative-pathname-from *root-directory* b))))))
 
+(defun blog-article-with-recent-articles-p ()
+  "Return non-nil when we want to display a Recent Articles section."
+  (and (not (url-within-p "/confs/" :script-name *script-name*))
+	     (muse-p *muse-current-file*)
+	     (muse-article-p *muse-current-file*)))
+
 (defun tapoueh-insert-recent-articles-title ()
   "Conditionnaly include a title"
-  (when (and (muse-p *muse-current-file*)
-	     (muse-article-p *muse-current-file*))
+  (when (blog-article-with-recent-articles-p)
     `(:h3 :class "prevnext" "Recent Articles")))
 
 (defun tapoueh-insert-previous-article ()
   "Provide a link to the previous article"
-  (if (and (muse-p *muse-current-file*)
-	   (muse-article-p *muse-current-file*))
+  (if (blog-article-with-recent-articles-p)
       (let* ((pos  (article-list-position *muse-current-file*))
 	     (path (when (< 0 pos) (nth (- pos 1) *blog-articles-list*)))
 	     (prev (when path (gethash path *blog-articles*))))
@@ -178,8 +182,7 @@
 
 (defun tapoueh-insert-next-article ()
   "Provide a link to the previous article"
-  (if (and (muse-p *muse-current-file*)
-	   (muse-article-p *muse-current-file*))
+  (if (blog-article-with-recent-articles-p)
     (let* ((pos  (article-list-position *muse-current-file*))
 	   (path (nth (+ pos 1) *blog-articles-list*))
 	   (prev (when path (gethash path *blog-articles*))))
@@ -192,15 +195,16 @@
       (get-navigation-link next title
 			   :class "next pull-right" :title-format "~a »"))))
 
-(defun tapoueh-insert-breadcrumb-here (&optional (*script-name* *script-name*))
+(defun tapoueh-insert-breadcrumb-here ()
   "path from root to current page"
   (let* ((blog-url-p  (url-within-p "/blog/" :script-name *script-name*))
+	 (conf-url-p  (url-within-p "/confs/" :script-name *script-name*))
 	 (muse-url-p  (and (muse-p *muse-current-file*)
 			   (muse-article-p *muse-current-file*)))
 	 (dirs        (split-pathname *script-name*))
 	 (dirs        (mapcar #'fad:pathname-as-directory
 			      (if muse-url-p (butlast dirs) dirs))))
-    (when (or muse-url-p blog-url-p)
+    (when (and (not conf-url-p) (or muse-url-p blog-url-p))
       `(:ul :class "breadcrumb"
 	    (:li (:span :class "divider" (:i :class "icon-sitemap")))
 	    ,@(loop
@@ -257,13 +261,25 @@
 		     (cons :weight count)
 		     (cons :link (format nil "/tags/~a" (string-downcase tag)))))))
 
+
 (defun tapoueh-insert-article-tags ()
   "Return tags for the current article."
   (when (and (muse-p *muse-current-file*)
 	     (muse-date *muse-current-file*))
     `(:div :style "text-align: right;"
 	   (:span ,@(muse-format-tags *muse-current-file*)) " "
-	   (:i :class "icon-tags"))))
+	   ,(when (muse-tags *muse-current-file*)
+		  `(:i :class "icon-tags")))))
+
+(defun tapoueh-insert-article-city ()
+  "Return city link for the current article."
+  (when (and (muse-p *muse-current-file*)
+	     (muse-date *muse-current-file*))
+    (let ((city (muse-city *muse-current-file*)))
+      (when city
+	`(:div :style "text-align: right;"
+	       (:a :href ,(google-maps-url-for city) ,city) " "
+	       (:i :class "icon-map-marker"))))))
 
 (defun tapoueh-insert-article-tag-image-here ()
   "Return the main tag image for the current article"

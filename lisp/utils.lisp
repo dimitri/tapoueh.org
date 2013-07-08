@@ -149,3 +149,11 @@
 	 (timing ,@forms)
        (format t ,fmt ,@bindings)
        ,result)))
+
+;;;
+;;; Others
+;;;
+(defun google-maps-url-for (search-terms)
+  "Return a suitable URL for the Google Maps service"
+  (let ((query (cl-ppcre:regex-replace-all " " search-terms "+")))
+   (format nil "http://maps.google.com/maps?q=~a&z=5" query)))

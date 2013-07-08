@@ -56,6 +56,18 @@
 				   (find-blog-articles *blog-directory*)) n)))
 	       (ssi-file *footer*)))
 
+(defun render-confs-index-page (&optional
+				  (*script-name* *script-name*)
+				  article-list)
+  "Produce the main blog article listing page."
+  (concatenate 'string
+	       (ssi-file *header*)
+	       (to-html (muse-parse-article *conferences*))
+	       (article-list-to-html-with-chapeau
+		(reverse (or article-list
+			     (find-blog-articles *blog-directory*))))
+	       (ssi-file *footer*)))
+
 (defun render-tag-cloud ()
   "Produce our tags cloud"
   (json:encode-json-to-string (tags-cloud)))
@@ -107,6 +119,10 @@
   "Return non-nil when request's script-name is within /rss/"
   (url-within-p "/rss/" :request request))
 
+(defun conf-url-p (request)
+  "Return non-nil when request's script-name is within /rss/"
+  (url-within-p "/confs/" :request request))
+
 (defun pathname-is-blog-index-p (pathname)
   "Return non-nil when PATHNAME is a blog index page"
   (and
@@ -157,6 +173,17 @@
   (let ((*script-name* (hunchentoot:script-name*))
 	(*host*        (hunchentoot:host)))
     (render-reversed-index-page "/blog/")))
+
+(hunchentoot:define-easy-handler (blog :uri "/confs") ()
+  "The confs page is all dynamic, not based on a Muse file."
+  ;; XXX: that could be a very simple SSI Muse document?
+  (let ((*script-name* (hunchentoot:script-name*))
+	(*host*        (hunchentoot:host)))
+    (render-confs-index-page
+     "/confs"
+     (reverse
+      (find-muse-documents :base-directory *confs-directory*
+			   :parse-fn #'muse-parse-chapeau)))))
 
 (hunchentoot:define-easy-handler (blog :uri "/blog/archives.html") ()
   "The blog home page is all dynamic, not based on a Muse file."

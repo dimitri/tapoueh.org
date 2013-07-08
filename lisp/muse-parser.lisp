@@ -62,9 +62,13 @@
 (defrule directive-desc (and "#desc" (+ (or #\Tab #\Space)))
   (:constant :desc))
 
+(defrule directive-city (and "#city" (+ (or #\Tab #\Space)))
+  (:constant :city))
+
 (defrule directive-name (or directive-author
 			    directive-title
 			    directive-date
+			    directive-city
 			    directive-tags
 			    directive-desc))
 
