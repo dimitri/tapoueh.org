@@ -99,7 +99,7 @@
 ;; to be able to use it both from ssi.lisp and web.lisp
 ;;
 (defun url-within-p (prefix &key request script-name)
-  "Returns non-nil if the script-name begins with /section/"
+  "Returns non-nil if the script-name begins with PREFIX."
   (let* ((script-name (or script-name
 			  (hunchentoot:script-name* request)))
 	 (len         (length prefix)))
