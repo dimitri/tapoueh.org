@@ -185,8 +185,8 @@
   (if (blog-article-with-recent-articles-p)
     (let* ((pos  (article-list-position *muse-current-file*))
 	   (path (nth (+ pos 1) *blog-articles-list*))
-	   (prev (when path (gethash path *blog-articles*))))
-      (when prev
+	   (next (when path (gethash path *blog-articles*))))
+      (when next
 	(get-navigation-link (muse-url prev) (muse-title prev)
 			     :class "next pull-right" :title-format "~a »")))
     ;; not an article

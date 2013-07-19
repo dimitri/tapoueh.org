@@ -51,7 +51,9 @@
 
    Return the parsed article."
   (let ((article (muse-parse-directives pathname)))
-    (when (and (muse-p article) (muse-article-p article))
+    (when (and (muse-p article)
+	       (muse-article-p article)
+	       (member "blog" (split-pathname pathname) :test #'string=))
       (setf (gethash pathname *blog-articles*) article)
 
       (when re-sort-list (compute-sorted-blog-articles-list))
