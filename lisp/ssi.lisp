@@ -187,7 +187,7 @@
 	   (path (nth (+ pos 1) *blog-articles-list*))
 	   (next (when path (gethash path *blog-articles*))))
       (when next
-	(get-navigation-link (muse-url prev) (muse-title prev)
+	(get-navigation-link (muse-url next) (muse-title next)
 			     :class "next pull-right" :title-format "~a »")))
     ;; not an article
     (let* ((next  (tapoueh-next-directory))
