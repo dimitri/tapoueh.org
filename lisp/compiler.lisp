@@ -164,6 +164,9 @@
 
 (defun compile-articles (&key verbose)
   "Output all the articles found in *ROOT-DIRECTORY* into *HTML-DIRECTORY*."
+  (displaying-time ("rebuild main cache: ~d docs in ~ds~%" (length result) timing)
+    (find-all-blog-articles :purge t))
+
   (let* ((all-documents
 	  (displaying-time ("parsed ~d docs in ~ds~%" (length result) timing)
 	    (find-muse-documents)))
