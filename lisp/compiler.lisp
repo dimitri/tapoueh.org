@@ -164,50 +164,52 @@
 
 (defun compile-articles (&key verbose)
   "Output all the articles found in *ROOT-DIRECTORY* into *HTML-DIRECTORY*."
-  (displaying-time ("rebuild main cache: ~d docs in ~ds~%" (length result) timing)
+  (displaying-time ("rebuild main cache: ~25T~d docs ~45T in ~ds~%"
+		    (length result) timing)
     (find-all-blog-articles :purge t))
 
   (let* ((all-documents
-	  (displaying-time ("parsed ~d docs in ~ds~%" (length result) timing)
+	  (displaying-time ("parsed ~25T~d docs ~45T in ~ds~%"
+			    (length result) timing)
 	    (find-muse-documents)))
 
 	 (blog-articles-full
 	  (remove-if-not #'document-is-a-blog-article-p all-documents))
 
 	 (blog-articles-chapeau
-	  (displaying-time ("parsed chapeau of ~d blog articles in ~ds~%"
+	  (displaying-time ("parsed chapeau of ~25T~d blog articles ~45T in ~ds~%"
 			    (length result) timing)
 	    (find-blog-articles *blog-directory*)))
 
 	 (conf-articles-chapeau
-	  (displaying-time ("parsed chapeau of ~d confs articles in ~ds~%"
+	  (displaying-time ("parsed chapeau of ~25T~d confs articles ~45T in ~ds~%"
 			    (length result) timing)
 	    (find-blog-articles *confs-directory*))))
 
-    (displaying-time ("compiled the home page in ~ds~%" timing)
+    (displaying-time ("compiled the home page ~45T in ~ds~%" timing)
       (compile-home-page :documents blog-articles-chapeau :verbose verbose))
 
-    (displaying-time ("compiled the tags cloud in ~ds~%" timing)
+    (displaying-time ("compiled the tags cloud ~45T in ~ds~%" timing)
       (compile-tags-cloud :documents blog-articles-chapeau :verbose verbose))
 
-    (displaying-time ("compiled the blog archives page in ~ds~%" timing)
+    (displaying-time ("compiled the blog archives page ~45T in ~ds~%" timing)
       (compile-blog-archives :documents blog-articles-chapeau :verbose verbose))
 
-    (displaying-time ("compiled ~d documents in ~d secs~%" result timing)
+    (displaying-time ("compiled ~25T~d documents ~45T in ~d secs~%" result timing)
       (compile-site-documents :documents all-documents :verbose verbose))
 
-    (displaying-time ("compiled ~d blog indexes in ~ds~%" result timing)
+    (displaying-time ("compiled ~25T~d blog indexes ~45T in ~ds~%" result timing)
       (compile-blog-indexes :documents blog-articles-chapeau :verbose verbose))
 
-    (displaying-time ("compiled confs listing in ~ds~%" timing)
+    (displaying-time ("compiled confs listing ~45T in ~ds~%" timing)
       (compile-conf-index :documents conf-articles-chapeau :verbose verbose))
 
-    (displaying-time ("compiled ~d tag listings in ~ds~%" result timing)
+    (displaying-time ("compiled ~25T~d tag listings ~45T in ~ds~%" result timing)
       (compile-tags-lists :documents blog-articles-chapeau :verbose verbose))
 
-    (displaying-time ("compiled ~d rss feeds in ~ds~%" result timing)
+    (displaying-time ("compiled ~25T~d rss feeds ~45T in ~ds~%" result timing)
       (compile-rss-feeds :documents blog-articles-full :verbose verbose))
 
-    (displaying-time ("compiled the sitemap in ~ds~%" timing)
+    (displaying-time ("compiled the sitemap ~45T in ~ds~%" timing)
       (compile-sitemap :documents all-documents :verbose verbose))))
 
