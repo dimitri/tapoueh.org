@@ -114,6 +114,15 @@
     ;; return how many documents we included
     len))
 
+(defun compile-projects-index (&key pgsql emacs verbose)
+  "Compile to *HTML-DIRECTORY* the conferences index page."
+  (let* ((url  "/conferences")
+	 (len  (+ (length pgsql )(length emacs)))
+	 (html (render-projects-index-page url pgsql emacs)))
+    (write-html-file html url :name "projects" :verbose verbose)
+    ;; return how many documents we included
+    len))
+
 (defun compile-rss-feeds (&key documents verbose
 			    (tags '("tapoueh"
 				    "common-lisp"
@@ -184,7 +193,17 @@
 	 (conf-articles-chapeau
 	  (displaying-time ("parsed chapeau of ~25T~d confs articles ~45T in ~ds~%"
 			    (length result) timing)
-	    (find-blog-articles *confs-directory*))))
+	    (find-blog-articles *confs-directory*)))
+
+	 (pgsql-articles-chapeau
+	  (displaying-time ("parsed chapeau of ~25T~d pgsql articles ~45T in ~ds~%"
+			    (length result) timing)
+	    (find-muse-documents :base-directory *pgsql-directory*)))
+
+	 (emacs-articles-chapeau
+	  (displaying-time ("parsed chapeau of ~25T~d emacs articles ~45T in ~ds~%"
+			    (length result) timing)
+	    (find-muse-documents :base-directory *emacs-directory*))))
 
     (displaying-time ("compiled the home page ~45T in ~ds~%" timing)
       (compile-home-page :documents blog-articles-chapeau :verbose verbose))
@@ -203,6 +222,11 @@
 
     (displaying-time ("compiled confs listing ~45T in ~ds~%" timing)
       (compile-conf-index :documents conf-articles-chapeau :verbose verbose))
+
+    (displaying-time ("compiled projects listing ~45T in ~ds~%" timing)
+      (compile-projects-index :pgsql pgsql-articles-chapeau
+                              :emacs emacs-articles-chapeau
+                              :verbose verbose))
 
     (displaying-time ("compiled ~25T~d tag listings ~45T in ~ds~%" result timing)
       (compile-tags-lists :documents blog-articles-chapeau :verbose verbose))

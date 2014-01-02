@@ -68,6 +68,23 @@
 		    (find-blog-articles *confs-directory*)))
 	       (ssi-file *footer*)))
 
+(defun render-projects-index-page (&optional (*script-name* *script-name*)
+                                     pgsql-article-list
+                                     emacs-article-list)
+  "Produce the projects page, with two sections, PostgreSQL and Emacs."
+  (concatenate 'string
+               (ssi-file *header*)
+	       (to-html (muse-parse-article *projects*))
+               (to-html (muse-parse-article *pgsql*))
+               (article-list-to-html-with-chapeau
+                (or pgsql-article-list
+                    (find-muse-documents :base-directory *pgsql-directory*)))
+               (to-html (muse-parse-article *emacs*))
+               (article-list-to-html-with-chapeau
+		(or emacs-article-list
+                    (find-muse-documents :base-directory *emacs-directory*)))
+               (ssi-file *footer*)))
+
 (defun render-tag-cloud ()
   "Produce our tags cloud"
   (json:encode-json-to-string (tags-cloud)))
@@ -174,16 +191,6 @@
 	(*host*        (hunchentoot:host)))
     (render-reversed-index-page "/blog/")))
 
-(hunchentoot:define-easy-handler (blog :uri "/conferences") ()
-  "The confs page is all dynamic, not based on a Muse file."
-  ;; XXX: that could be a very simple SSI Muse document?
-  (let ((*script-name* (hunchentoot:script-name*))
-	(*host*        (hunchentoot:host)))
-    (render-confs-index-page
-     "/conferences"
-     (find-muse-documents :base-directory *confs-directory*
-			  :parse-fn #'muse-parse-chapeau))))
-
 (hunchentoot:define-easy-handler (blog :uri "/blog/archives.html") ()
   "The blog home page is all dynamic, not based on a Muse file."
   ;; XXX: that could be a very simple SSI Muse document?
@@ -210,6 +217,28 @@
   (let* ((*script-name* (hunchentoot:script-name*))
 	 (*host*        (hunchentoot:host)))
     (render-tag-listing)))
+
+(hunchentoot:define-easy-handler (blog :uri "/conferences") ()
+  "The confs page is all dynamic, not based on a Muse file."
+  ;; XXX: that could be a very simple SSI Muse document?
+  (let ((*script-name* (hunchentoot:script-name*))
+	(*host*        (hunchentoot:host)))
+    (render-confs-index-page
+     "/conferences"
+     (find-muse-documents :base-directory *confs-directory*
+			  :parse-fn #'muse-parse-chapeau))))
+
+(hunchentoot:define-easy-handler (blog :uri "/projects") ()
+  "The confs page is all dynamic, not based on a Muse file."
+  ;; XXX: that could be a very simple SSI Muse document?
+  (let ((*script-name* (hunchentoot:script-name*))
+	(*host*        (hunchentoot:host)))
+    (render-projects-index-page
+     "/projects"
+     (find-muse-documents :base-directory *pgsql-directory*
+			  :parse-fn #'muse-parse-chapeau)
+     (find-muse-documents :base-directory *emacs-directory*
+			  :parse-fn #'muse-parse-chapeau))))
 
 (defun start-web-server (&key
 			   (document-root "/tmp")
