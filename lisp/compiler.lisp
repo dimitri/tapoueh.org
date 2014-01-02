@@ -198,12 +198,14 @@
 	 (pgsql-articles-chapeau
 	  (displaying-time ("parsed chapeau of ~25T~d pgsql articles ~45T in ~ds~%"
 			    (length result) timing)
-	    (find-muse-documents :base-directory *pgsql-directory*)))
+	    (find-muse-documents :base-directory *pgsql-directory*
+                                 :parse-fn #'muse-parse-chapeau)))
 
 	 (emacs-articles-chapeau
 	  (displaying-time ("parsed chapeau of ~25T~d emacs articles ~45T in ~ds~%"
 			    (length result) timing)
-	    (find-muse-documents :base-directory *emacs-directory*))))
+	    (find-muse-documents :base-directory *emacs-directory*
+                                 :parse-fn #'muse-parse-chapeau))))
 
     (displaying-time ("compiled the home page ~45T in ~ds~%" timing)
       (compile-home-page :documents blog-articles-chapeau :verbose verbose))
