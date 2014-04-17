@@ -26,7 +26,8 @@
   "Full URL of the default image to use in article listings.")
 
 (defparameter *article-default-image-for-tag*
-  '(("Conferences"  . "/images/conferences.jpg")
+  '(("Meetup"       . "/images/the-eiffel-tower-and-the-elephant-by-fremiet-jules-ernest-renoux.640.jpg")
+    ("Conferences"  . "/images/conferences.jpg")
     ("pgcon"        . "/images/conferences.jpg")
     ("debian"       . "/images/debian-logo.png")
     ("catalogs"     . "/images/library-card-catalogs.small.jpg")
