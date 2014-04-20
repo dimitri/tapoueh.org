@@ -157,3 +157,27 @@
   "Return a suitable URL for the Google Maps service"
   (let ((query (cl-ppcre:regex-replace-all " " search-terms "+")))
    (format nil "http://maps.google.com/maps?q=~a&z=5" query)))
+
+
+;;;
+;;; Images and thumbnails
+;;;
+(defun thumbnail (script-name &optional (dir "thumbnails"))
+  "Prepare a thumbnail for SCRIPT-NAME, an image URL that begins with /images/"
+  (let* ((components (split-sequence:split-sequence #\/ script-name))
+         (thumbnail  (format nil "~{/~a~}" (append (list dir)
+                                                   (cddr components))))
+         (thumbdir   (format nil "~a~{~a~^/~}/"
+                             *html-directory*
+                             (append (list dir) (butlast (cddr components)))))
+         (source     (namestring
+                      (merge-pathnames (subseq script-name 1) *root-directory*)))
+         (target     (namestring
+                      (merge-pathnames (subseq thumbnail 1) *html-directory*)))
+         (command    (format nil "convert -geometry 160x120 ~s ~s" source target)))
+    (ensure-directories-exist thumbdir)
+    (when (or (not (probe-file target))
+              (< (file-write-date target)
+                 (file-write-date source)))
+      (uiop:run-program command))
+    thumbnail))

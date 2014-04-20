@@ -116,12 +116,16 @@
 ;; Routing proper
 ;;
 (loop
-   for (prefix path) in '(("/images/"    "../images/")
-			  ("/static/"    "../static/")
-			  ("/resources/" "../resources/"))
+   for (prefix path) in `(("/images/"     "../images/")
+                          ("/thumbnails/" ,(merge-pathnames "thumbnails/"
+                                                            *html-directory*))
+			  ("/static/"     "../static/")
+			  ("/resources/"  "../resources/"))
    do (push (hunchentoot:create-folder-dispatcher-and-handler
 	     prefix
-	     (asdf:system-relative-pathname :tapoueh path))
+	     (typecase path
+               (pathname path)
+               (string   (asdf:system-relative-pathname :tapoueh path))))
 	    hunchentoot:*dispatch-table*))
 
 (defun tag-url-p (request)

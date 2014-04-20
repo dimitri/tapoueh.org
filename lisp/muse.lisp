@@ -262,6 +262,15 @@
 		    ,(muse-title article)))
 	 (date `(:span :class "date" ,(muse-format-date article :format :short)))
 	 (image (muse-extract-article-image-source article))
+         (thumb (thumbnail
+                 ;; absolute url includes *base-url* (http:// etc)
+                 (let ((url (relative-href-to-absolute
+                             (muse-url article)
+                             (if (listp image) (third image) image))))
+                   (if (and (< (length *base-url*) (length url))
+                            (string= *base-url* url :end2 (length *base-url*)))
+                       (subseq url (+ (length *base-url*) -1))
+                       url))))
 	 (city  (muse-city article))
 	 (div.city
 	  (when city
@@ -281,7 +290,7 @@
 		 (:a :class "thumbnail" :href ,(muse-url article)
 		     (:img :class "img-polaroid"
 			   :style "width: 160px; height: 120px;"
-			   :src ,(if (listp image) (third image) image))))
+			   :src ,thumb)))
 
 	   (:div :class "span6"
 		 ,(get-absolute-hrefs (muse-first-para article)

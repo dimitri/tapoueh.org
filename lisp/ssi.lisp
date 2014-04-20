@@ -285,8 +285,9 @@
   "Return the main tag image for the current article"
   (when (and (muse-p *muse-current-file*)
 	     (muse-date *muse-current-file*))
-    (let* ((image (muse-extract-article-image-source *muse-current-file*))
-	   (ifile (third image))
+    (let* ((image     (muse-extract-article-image-source *muse-current-file*))
+	   (ifile     (if (listp image) (third image) image))
+           (thumbnail (thumbnail ifile))
 	   (tag
 	    (car (rassoc ifile *article-default-image-for-tag* :test #'string=))))
       `(:div :class "span2 pull-left"
@@ -295,7 +296,7 @@
 			    "/blog/archives.html")
 		 (:img :class "img-polaroid"
 		       :style "width: 160px; height: 120px;"
-		       :src ,(if (listp image) (third image) image)))))))
+		       :src ,thumbnail))))))
 
 (defun tapoueh-insert-social-div-here ()
   "Return the <div> code for the Tweet this and G+1 elements"
