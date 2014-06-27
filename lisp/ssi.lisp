@@ -314,3 +314,9 @@
 		     "Tweet")
 		 (:script :type "text/javascript"
 			  :src "http://platform.twitter.com/widgets.js"))))))
+
+(defun tapoueh-list-articles-tagged (tag-name)
+  "Produce a listing of articles for given tag"
+  (article-list-to-html-with-chapeau
+   (reverse
+    (find-blog-articles-with-tag *blog-directory* tag-name))))
