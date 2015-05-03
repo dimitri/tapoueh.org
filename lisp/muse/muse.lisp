@@ -301,20 +301,26 @@
    absolute ones, using *BASE-URL*"
   (get-absolute-hrefs (muse-contents article) (muse-url article)))
 
-(defmethod muse-format-article-as-rss ((article muse))
+(defmethod muse-format-article-as-rss ((article muse) stream)
   "Return a list suitable for printing the article as a RSS form with cl-who"
   (let* ((title  (muse-title article))
 	 (url    (muse-url article :with-base-url t :with-file-type "html"))
 	 (date   (muse-format-date article :format :rss))
-	 (author "dim@tapoueh.org (Dimitri Fontaine)"))
-    ;; (desc   (concatenate 'string "<![CDATA[" (to-html article) "]]>"))
-    `(:item
-      (:title ,(who:escape-string title))
-      (:link ,url)
-      (:description (str "<![CDATA[")
-		    ,@(muse-contents-with-absolute-hrefs article)
-		    (str "]]>"))
-      (:author ,author)
-      ;; easiest way to respect the case here
-      (str "<pubDate>") ,date (str "</pubDate>")
-      (str "<guid isPermaLink=\"true\">") ,url (str "</guid>"))))
+	 (author "dim@tapoueh.org (Dimitri Fontaine)")
+
+         (cl-who:*html-empty-tags*
+          (cons :|atom:link| cl-who:*html-empty-tags*)))
+    (with-html-output (s stream :indent t)
+      (htm
+       (:item
+        (:title (str (who:escape-string title)))
+        (:link (str url))
+        (:description (str "<![CDATA[")
+                      (str
+                       (eval `(with-html-output-to-string (x)
+                                ,@(muse-contents-with-absolute-hrefs article))))
+                      (str "]]>"))
+        (:author (str author))
+        ;; easiest way to respect the case here
+        (str "<pubDate>") (str date) (str "</pubDate>")
+        (str "<guid isPermaLink=\"true\">") (str url) (str "</guid>"))))))

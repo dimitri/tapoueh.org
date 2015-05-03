@@ -206,7 +206,7 @@
 		       ,(format-article-list-with-chapeau list)))))
 
 ;;; RSS
-(defun format-article-list-as-rss (list
+(defun format-article-list-as-rss (stream list
 				   &key
 				     (title       "tail -f /dev/dim")
 				     (tag         "tapoueh")
@@ -214,27 +214,27 @@
 				     (description "Dimitri Fontaine's blog")
 				     (language    "en-us"))
   "Produce an RSS listing of the given list of articles"
-  (let ((cl-who:*prologue* "<?xml version=\"1.0\" encoding=\"utf-8\"?>"))
-    `(:rss
-      :version "2.0" :|xmlns:atom| "http://www.w3.org/2005/Atom"
-      (:channel
-       (:title ,(who:escape-string title))
-       (:link ,link)
-       (:description ,description)
-       (:language ,language)
-       (:generator "Emacs Muse and Tapoueh's Common Lisp")
-       (:|atom:link|
-	 :href ,(format nil "~arss/~a.xml" *base-url* tag)
-	 :rel "self"
-	 :type "application/rss+xml")
-       ,@(loop
-	    for article in list
-	    collect (muse-format-article-as-rss article))))))
+  (format stream "<?xml version=\"1.0\" encoding=\"utf-8\"?>
+<rss version='2.0' xmlns:atom='http://www.w3.org/2005/Atom'>
+ <channel>
+   <title>~a</title>
+   <link>~a</link>
+   <description>~a</description>
+   <language>~a</language>
+   <generator>Emacs Muse and Tapoueh's Common Lisp</generator>
+   <atom:link href='http://tapoueh.org/rss/~a.xml'
+               rel='self'
+              type='application/rss+xml' />~%"
+          title link description language tag)
+  (loop
+     for article in list
+     do (progn
+          (muse-format-article-as-rss article stream)
+          (format stream "~%")))
+  (format stream "~& </channel>~%</rss>"))
 
-(defun article-list-to-rss (list &key (tag "tapoueh"))
+(defun article-list-to-rss (stream list &key (tag "tapoueh"))
   "Produce a RSS feed from the given list of articles"
   (let ((cl-who:*html-empty-tags*
 	 (cons :|atom:link| cl-who:*html-empty-tags*)))
-    (concatenate 'string
-		 (eval `(with-html-output-to-string (s)
-			  ,(format-article-list-as-rss list :tag tag))))))
+    (format-article-list-as-rss stream list :tag tag)))

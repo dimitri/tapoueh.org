@@ -31,6 +31,22 @@
 		       :external-format :utf-8)
       (write-string html s))))
 
+(defmacro with-html-file ((stream localname &key verbose name (type "html"))
+                          &body body)
+  "Run body within opened STREAM to the LOCALNAME file."
+  (let ((dest (gensym "with-html-file-dest-")))
+    `(let ((,dest (expand-file-name-into ,localname *html-directory*
+                                         :name ,name
+                                         :type ,type)))
+       (when ,verbose (format t "~a~%" ,dest))
+       (ensure-directories-exist (directory-namestring ,dest))
+       (with-open-file (,stream ,dest
+                                :direction :output
+                                :if-exists :supersede
+                                :if-does-not-exist :create
+                                :external-format :utf-8)
+         ,@body))))
+
 (defun compile-home-page (&key documents verbose)
   "Compile to *HTML-DIRECTORY* this site's home page"
   (let ((url "/")
@@ -135,9 +151,9 @@
      for tag in (mapcar #'string-downcase tags)
      do (let* ((url  (format nil "/rss/~a" tag))
 	       (docs (sort (articles-tagged tag documents)
-			   #'muse-article-before-p))
-	       (rss  (render-rss-feed url docs)))
-	  (write-html-file rss url :name tag :type "xml" :verbose verbose))
+			   #'muse-article-before-p)))
+          (with-html-file (stream url :name tag :type "xml" :verbose verbose)
+            (render-rss-feed stream url docs)))
      ;; return how many files we wrote
      count tag))
 
