@@ -47,5 +47,5 @@
                (:file "compiler"     :depends-on ("collection" "render-pages" "ssi"))
                (:file "url"          :depends-on ("ssi" "collection"))
                (:file "web"          :depends-on ("collection" "ssi" "url"))))
-     (:file "tapoueh" :depends-on ("package" "lib" "utils" "muse" "config"))))
+     (:file "tapoueh" :depends-on ("package" "lib" "utils" "muse" "config" "src"))))
 
