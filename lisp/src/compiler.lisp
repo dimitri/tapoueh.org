@@ -232,7 +232,7 @@
     (displaying-time ("compiled the blog archives page ~45T in ~ds~%" timing)
       (compile-blog-archives :documents blog-articles-chapeau :verbose verbose))
 
-    (displaying-time ("compiled ~25T~d documents ~45T in ~d secs~%" result timing)
+    (displaying-time ("compiled ~25T~d documents ~45T in ~ds~%" result timing)
       (compile-site-documents :documents all-documents :verbose verbose))
 
     (displaying-time ("compiled ~25T~d blog indexes ~45T in ~ds~%" result timing)

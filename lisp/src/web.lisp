@@ -4,11 +4,8 @@
 
 (in-package #:tapoueh)
 
-(defparameter *port* 8042)
-(defparameter *access-log-file* "/tmp/tapoueh-access.log")
-(defparameter *message-log-file* "/tmp/tapoueh.log")
-
 (defvar *acceptor* nil "The web server")
+(defvar *server-is-running* nil)
 
 (defvar *routes*
   (compile-routes
@@ -33,12 +30,7 @@
    (:GET    "/conferences"                          'serve-confs-index-page)
    (:GET    "/confs/:year/:month/:filename"         'serve-muse-document)
 
-
-   ;; (:GET    "/images/*"                             'serve-static-resource)
-   ;; (:GET    "/thumbnails/*"                         'serve-static-resource)
-   ;; (:GET    "/static/*"                             'serve-static-resource)
-   ;; (:GET    "/resources/*"                          'serve-static-resource)
-   ))
+   (:GET    "/status"                               'serve-server-status)))
 
 
 ;;;
@@ -108,29 +100,34 @@
   (setf (hunchentoot:content-type*) "text/plain")
   (render-tag-cloud))
 
-(defun start-web-server (&key
-			   (document-root *root-directory*)
-			   (port *port*)
-			   (access-log *access-log-file*)
-			   (message-log *message-log-file*))
+(defun start-web-server (&key port root logs)
   "Start the hunchentoot web server."
+  (read-config)
   (find-all-blog-articles)		; set our sorted list of articles
 
-  (setf *acceptor* (make-instance 'simpleroutes-acceptor
-                                  :routes '*routes*
-                                  :port port
-                                  :document-root document-root
-                                  :access-log-destination access-log
-                                  :message-log-destination message-log))
+  (setf *acceptor*
+        (make-instance 'simpleroutes-acceptor
+                       :routes '*routes*
+                       :port (or port *port*)
+                       :document-root (or root *root-directory*)
+                       :access-log-destination (or logs *access-log-file*)
+                       :message-log-destination (or logs *logfile*)))
 
+  (setf *server-is-running* t)
   (hunchentoot:start *acceptor*))
 
 (defun stop-web-server ()
   "Stop the hunchentoot server"
-  (hunchentoot:stop *acceptor*))
+  (hunchentoot:stop *acceptor*)
+  (setf *acceptor* nil *server-is-running* nil))
 
 (defun restart-web-server ()
   "Stop then start the web server, in case the acceptor properties need to
    be changed."
   (stop-web-server)
   (start-web-server))
+
+(defun serve-server-status ()
+  "Return OK when the server is OK."
+  (setf (hunchentoot:content-type*) "text/plain")
+  "OK")

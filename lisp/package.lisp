@@ -26,3 +26,7 @@
            #:restart-web-server
            #:compile-articles))
 
+;;;
+;;; Package aliasing
+;;;
+(rename-package 'py-configparser 'py-configparser '(ini))

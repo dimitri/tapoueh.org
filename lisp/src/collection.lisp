@@ -5,43 +5,6 @@
 
 (in-package #:tapoueh)
 
-(defparameter *root-directory*
-  (asdf:system-relative-pathname :tapoueh "../"))
-
-(defparameter *blog-directory*
-  (asdf:system-relative-pathname :tapoueh "../blog/"))
-
-(defparameter *confs-directory*
-  (asdf:system-relative-pathname :tapoueh "../confs/"))
-
-(defparameter *pgsql-directory*
-  (asdf:system-relative-pathname :tapoueh "../pgsql/"))
-
-(defparameter *emacs-directory*
-  (asdf:system-relative-pathname :tapoueh "../emacs/"))
-
-(defparameter *html-directory*
-  "/Users/dim/dev/temp/tapoueh.org/"
-  "Where to publish the compiled static website")
-
-(defparameter *header*
-  (asdf:system-relative-pathname :tapoueh "../static/header.html"))
-
-(defparameter *footer*
-  (asdf:system-relative-pathname :tapoueh "../static/footer.html"))
-
-(defparameter *conferences*
-  (asdf:system-relative-pathname :tapoueh "../conferences.muse"))
-
-(defparameter *projects*
-  (asdf:system-relative-pathname :tapoueh "../projects.muse"))
-
-(defparameter *pgsql*
-  (asdf:system-relative-pathname :tapoueh "../pgsql.muse"))
-
-(defparameter *emacs*
-  (asdf:system-relative-pathname :tapoueh "../emacs.muse"))
-
 (defvar *blog-articles* (make-hash-table :test 'equal :size 1024)
   "Hash-table of all blog articles, keyed by their pathname.")
 
