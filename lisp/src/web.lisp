@@ -30,6 +30,8 @@
    (:GET    "/conferences"                          'serve-confs-index-page)
    (:GET    "/confs/:year/:month/:filename"         'serve-muse-document)
 
+   (:GET    "/thumbnails/.*"                        'serve-thumbnail)
+
    (:GET    "/status"                               'serve-server-status)))
 
 
@@ -99,6 +101,15 @@
 (defun serve-tag-cloud ()
   (setf (hunchentoot:content-type*) "text/plain")
   (render-tag-cloud))
+
+(defun serve-thumbnail ()
+  "Allow serving from the *HTML-DIRECTORY* when using the dynamic app."
+  (let* ((components (split-sequence:split-sequence #\/ (hunchentoot:script-name*)))
+         (pathname (format nil "~a/~a/~{~a~^/~}"
+                           *html-directory*
+                           "thumbnails"
+                           (cddr components))))
+    (hunchentoot:handle-static-file pathname)))
 
 (defun start-web-server (&key port root logs)
   "Start the hunchentoot web server."
