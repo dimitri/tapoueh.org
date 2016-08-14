@@ -1,0 +1,191 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset=utf-8 /> 
+    <meta name=viewport content="width=device-width" /> 
+    <meta name="generator" content="Emacs Muse Blog" /> 
+    <meta description="blog de Dimitri Fontaine, Expert PostgreSQL - 2ndQuadrant France" />
+    <meta property="og:title" content="tapoueh.org"/>
+    <meta property="og:type" content="non_profit"/>
+    <meta property="og:url" content="http://tapoueh.org/blog/2011/09/07-eviter-les-injections-sql"/>
+    <meta property="og:image" content="http://tapoueh.org/static/2ndQuadrant-cross.png"/>
+    <meta property="og:site_name" content="Tapoueh"/>
+    <meta property="fb:admins" content="545062436"/>
+
+    <title>Expertise PostgreSQL</title>
+    <link rel='stylesheet' type='text/css' media='all' href='/static/styles.css' />
+
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="/static/FontAwesome/css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="/static/highlight.js/styles/sunburst.css">
+    <script src="/static/highlight.js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script src="/static/jquery-1.9.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/jqcloud.css" />
+    <script type="text/javascript" src="/static/jqcloud-1.0.4.min.js"></script>
+
+    <script type="text/javascript" src="http://apis.google.com/js/plusone.js">{lang: 'fr'}</script>
+    
+  </head>
+  <body>
+
+   <div id="wrap">
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="nav-collapse collapse">
+	<p class="pull-right">
+	  <a href="http://2ndquadrant.com">
+	    <img alt="logo" src="/static/2ndQuadrant-cross.png"
+		 style="margin-right: 8px; margin-top: 4px; height: 32px;"/>
+	  </a>
+	</p>
+	<div class="navbar-inner">
+	 <a class="brand" style="margin-left: 0.2em; margin-top: -4px;"
+	    href="http://expert-postgresql.fr/">
+	  <img src="/static/expert-postgresql.png"></a>
+	 <ul class="nav">
+	  <li><a href="/blog"><i class="icon-book"></i> blog</a></li>
+	  <li><a href="/projects"><i class="icon-suitcase"></i> projects</a></li>
+	  <li><a href="/conferences"><i class="icon-plane"></i> confs</a></li>
+	  <li><a href="/about"><i class="icon-beer"></i> about</a></li>
+	  <li><a href="/rss/tapoueh.xml"><i class="icon-rss"></i> rss</a></li>
+	 </ul>
+	</div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row">
+	<div class="span4">
+	  <div><ul class='breadcrumb'><li><span class='divider'><i class='icon-sitemap'></i></span></li><li><a href='/'>/dev/dim</a><span class='divider'>/</span></li><li><a href='/blog'>blog</a><span class='divider'>/</span></li><li><a href='/blog/2011'>2011</a><span class='divider'>/</span></li><li><a href='/blog/2011/09'>09</a></li></ul></div>
+	  <div class='date'>Wednesday, September 07 2011 <i class='icon-calendar'></i></div>
+	  <div style='text-align: right;'><span><a href='/tags/postgresqlfr'>PostgreSQLFr</a></span> <i class='icon-tags'></i></div>
+	  
+
+	  <div style="margin-top: 1em;">
+	    <div class='span2 pull-left'><a class='thumbnail' href='/tags/postgresqlfr'><img class='img-polaroid' style='width: 160px; height: 120px;' src='/thumbnails/postgresqlfr-logo.png' /></a></div>
+	    <div id='social' class='span1 pull-right social'><ul><li><g:plusone size='tall' href='http://tapoueh.org/blog/2011/09/07-eviter-les-injections-sql'></g:plusone></li><li><a href='http://twitter.com/share' class='twitter-share-button' data-via='tapoueh' data-count='vertical'>Tweet</a><script type='text/javascript' src='http://platform.twitter.com/widgets.js'></script></li></ul></div>
+	  </div>
+
+	  <div id="prevnext">
+	    <h3 class='prevnext'>Recent Articles</h3>
+	    <div><a class='previous' href='/blog/2011/09/05-apt-postgresql-org'>« PostgreSQL and debian</a></div>
+	    <div><a class='next pull-right' href='/blog/2011/09/19-sortie-de-9.1'>PostgreSQL 9.1 »</a></div>
+	  </div>
+	  
+	  <div>
+	    <div id="left-tag-cloud" class="jqcloud"
+		 style="width: 300px; height: 650px; position: absolute; top: 475px;">
+	    </div>
+            <script>
+            var word_list;
+            
+            $.ajax({
+                type: 'GET',
+                url: '/cloud.json',
+                dataType: 'json',
+                success: function(response) { word_list = response; },
+                data: {},
+                async: false
+            });
+             
+            $(document).ready(function() {
+               $("#left-tag-cloud").jQCloud(word_list,
+	                {shape: "rectangular",
+	                 removeOverflowing: false});
+            });
+            </script>
+	  </div>
+
+	</div>
+
+	<div id="title" class="span8">
+	  <h1>Éviter les injections SQL</h1>
+	</div>
+	
+	<div id="content" class="span8">
+<p>Nous avons parlé la dernière fois les règles d'
+<a href='http://tapoueh.org/blog/2011/08/18-echappements-de-chaine.html'>échappement de chaînes</a> avec
+PostgreSQL, et mentionné qu'utiliser ces techniques afin de protéger les
+données insérées dans les requêtes SQL n'était pas une bonne idée dans la
+mesure où PostgreSQL offre une fonctionnalité bien plus adaptée.
+</p><p>Nous faisons face ici à un problème de sécurité très bien décrit dans le
+billet humoristique de 
+<a href='http://xkcd.com/327/'>Little Boby Tables</a>, dont je vous recommande la
+lecture. L'idée est simple, la mise en place de contre mesure fourmille de
+pièges subtils, à moins d'utiliser la solution décrite ci-après.
+</p><center><a href='http://imgs.xkcd.com/comics/exploits_of_a_mom.png'>http://imgs.xkcd.com/comics/exploits_of_a_mom.png</a></center><p>Lorsque l'on envoie une requête SQL à PostgreSQL, celle-ci contient
+pêle-mêle un mélange de mots-clés SQL et de données utilisateurs. Dans la
+requête 
+<code src='sql'>SELECT colname FROM table WHERE pk = 1234;</code>
+l'élément 
+<code>1234</code> est une donnée fournie à PostgreSQL. Lorsque l'on utilise
+d'autre types de données, on va parler de 
+<em>litéral</em>, qui peut être ou non
+<em>décoré</em>.  Un exemple ?
+</p><pre><code>=# SELECT &#039;undecorated literal&#039;, pg_typeof(&#039;undecoreted literal&#039;),
+          date &#039;today&#039;, pg_typeof(date &#039;today&#039;);
+      ?column?       | pg_typeof |    date    | pg_typeof 
+---------------------+-----------+------------+-----------
+ undecorated literal | unknown   | 2011-09-07 | date
+(1 row)
+</code></pre><p>Outre l'aspect types de données (un litéral non décoré est de type 
+<em>unknown</em>
+jusqu'à ce qu'une opération force son type, c'est ce qui permet d'avoir du
+polymorphisme dans PostgreSQL), nous voyons ici que PostgreSQL doit faire la
+différence entre le SQL lui-même et les paramètres qui le composent. Il sait
+bien sûr faire cela, il suffit d'encadrer les valeurs dans des simples
+guillemets ou bien d'utiliser la notation dite de 
+<a href='http://docs.postgresqlfr.org/9.0/sql-syntax.html#sql-syntax-dollar-quoting'>dollar quoting</a>. Mais si
+l'on ne prend pas de précautions, l'utilisateur peut terminer la séquence
+d'échappements depuis le champ de saisie du formulaire…
+</p><p><a href='http://docs.postgresql.fr/9.1/libpq.html'>libpq</a> est la librairie standard cliente de PostgreSQL et fourni des 
+<em>API</em> de
+connexion et propose une fonction 
+<a href='http://docs.postgresql.fr/9.1/libpq-exec.html#libpq-pqexecparams'>PGexecParams</a>. Cette fonction expose un
+mécanisme disponible dans le protocole de communication de PostgreSQL
+lui-même : il est possible de faire parvenir le SQL et les données qu'il
+contient dans deux parties différentes du messages plutôt que de les
+mélanger. Ainsi, le serveur n'a plus du tout à deviner où commencent et où
+terminent les données dans la requête, il lui suffit de regarder dans le
+tableau séparé contenant les données quand il en a besoin.
+</p><p>Terminées les injections SQL !
+</p><p>Note : cette fonction est exposée dans la plupart des pilotes de connexion,
+et même en PHP, dont la popularité et l'exposition me poussent à donner une
+référence plus précise : utilisez 
+<a href='http://fr2.php.net/manual/en/function.pg-query-params.php'>pg_query_params</a>, son intérêt n'est pas
+simplement syntaxique, il va jusque dans la définition des échanges de
+données entre le client (votre code PHP) et le serveur (PostgreSQL).
+</p>  </div>
+  </div>
+  </div>
+  <div id="push"></div>
+  </div>
+
+<footer>
+  <p>
+    <small>Unless otherwise specified, the contents of
+    <a href=/index.html>this website</a> are Copyright
+    &#169;&#160; 2008-2013 <a href=/about>Dimitri Fontaine</a>, and are
+    licensed for use under
+    <a href=http://creativecommons.org/licenses/by-sa/3.0/
+    rel=license><abbr title="Creative
+    Commons">CC</abbr>&#160;<abbr title=Attribution>BY</abbr>-<abbr title=Share-Alike>SA</abbr>&#160;3.0</a>.</small>
+  </p> 
+</footer> 
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-47059482-1', 'tapoueh.org');
+  ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

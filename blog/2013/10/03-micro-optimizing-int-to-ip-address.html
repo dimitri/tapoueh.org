@@ -1,0 +1,251 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset=utf-8 /> 
+    <meta name=viewport content="width=device-width" /> 
+    <meta name="generator" content="Emacs Muse Blog" /> 
+    <meta description="blog de Dimitri Fontaine, Expert PostgreSQL - 2ndQuadrant France" />
+    <meta property="og:title" content="tapoueh.org"/>
+    <meta property="og:type" content="non_profit"/>
+    <meta property="og:url" content="http://tapoueh.org/blog/2013/10/03-micro-optimizing-int-to-ip-address"/>
+    <meta property="og:image" content="http://tapoueh.org/static/2ndQuadrant-cross.png"/>
+    <meta property="og:site_name" content="Tapoueh"/>
+    <meta property="fb:admins" content="545062436"/>
+
+    <title>Expertise PostgreSQL</title>
+    <link rel='stylesheet' type='text/css' media='all' href='/static/styles.css' />
+
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="/static/FontAwesome/css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="/static/highlight.js/styles/sunburst.css">
+    <script src="/static/highlight.js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script src="/static/jquery-1.9.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/jqcloud.css" />
+    <script type="text/javascript" src="/static/jqcloud-1.0.4.min.js"></script>
+
+    <script type="text/javascript" src="http://apis.google.com/js/plusone.js">{lang: 'fr'}</script>
+    
+  </head>
+  <body>
+
+   <div id="wrap">
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="nav-collapse collapse">
+	<p class="pull-right">
+	  <a href="http://2ndquadrant.com">
+	    <img alt="logo" src="/static/2ndQuadrant-cross.png"
+		 style="margin-right: 8px; margin-top: 4px; height: 32px;"/>
+	  </a>
+	</p>
+	<div class="navbar-inner">
+	 <a class="brand" style="margin-left: 0.2em; margin-top: -4px;"
+	    href="http://expert-postgresql.fr/">
+	  <img src="/static/expert-postgresql.png"></a>
+	 <ul class="nav">
+	  <li><a href="/blog"><i class="icon-book"></i> blog</a></li>
+	  <li><a href="/projects"><i class="icon-suitcase"></i> projects</a></li>
+	  <li><a href="/conferences"><i class="icon-plane"></i> confs</a></li>
+	  <li><a href="/about"><i class="icon-beer"></i> about</a></li>
+	  <li><a href="/rss/tapoueh.xml"><i class="icon-rss"></i> rss</a></li>
+	 </ul>
+	</div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row">
+	<div class="span4">
+	  <div><ul class='breadcrumb'><li><span class='divider'><i class='icon-sitemap'></i></span></li><li><a href='/'>/dev/dim</a><span class='divider'>/</span></li><li><a href='/blog'>blog</a><span class='divider'>/</span></li><li><a href='/blog/2013'>2013</a><span class='divider'>/</span></li><li><a href='/blog/2013/10'>10</a></li></ul></div>
+	  <div class='date'>Thursday, October 03 2013 <i class='icon-calendar'></i></div>
+	  <div style='text-align: right;'><span><a href='/tags/postgresql'>PostgreSQL</a>, <a href='/tags/pgloader'>pgloader</a>, <a href='/tags/ip4r'>ip4r</a>, <a href='/tags/extensions'>Extensions</a>, <a href='/tags/common-lisp'>Common-Lisp</a></span> <i class='icon-tags'></i></div>
+	  
+
+	  <div style="margin-top: 1em;">
+	    <div class='span2 pull-left'><a class='thumbnail' href='/tags/pgloader'><img class='img-polaroid' style='width: 160px; height: 120px;' src='/thumbnails/toy-loader.320.jpg' /></a></div>
+	    <div id='social' class='span1 pull-right social'><ul><li><g:plusone size='tall' href='http://tapoueh.org/blog/2013/10/03-micro-optimizing-int-to-ip-address'></g:plusone></li><li><a href='http://twitter.com/share' class='twitter-share-button' data-via='tapoueh' data-count='vertical'>Tweet</a><script type='text/javascript' src='http://platform.twitter.com/widgets.js'></script></li></ul></div>
+	  </div>
+
+	  <div id="prevnext">
+	    <h3 class='prevnext'>Recent Articles</h3>
+	    <div><a class='previous' href='/blog/2013/10/01-loading-geolocation-data'>« Loading Geolocation Data</a></div>
+	    <div><a class='next pull-right' href='/blog/2013/10/07-Open-World-Forum'>Open World Forum Conference »</a></div>
+	  </div>
+	  
+	  <div>
+	    <div id="left-tag-cloud" class="jqcloud"
+		 style="width: 300px; height: 650px; position: absolute; top: 475px;">
+	    </div>
+            <script>
+            var word_list;
+            
+            $.ajax({
+                type: 'GET',
+                url: '/cloud.json',
+                dataType: 'json',
+                success: function(response) { word_list = response; },
+                data: {},
+                async: false
+            });
+             
+            $(document).ready(function() {
+               $("#left-tag-cloud").jQCloud(word_list,
+	                {shape: "rectangular",
+	                 removeOverflowing: false});
+            });
+            </script>
+	  </div>
+
+	</div>
+
+	<div id="title" class="span8">
+	  <h1>A Worthwile Micro Optimisation</h1>
+	</div>
+	
+	<div id="content" class="span8">
+<p>In our previous article about 
+<a href='/blog/2013/10/01-loading-geolocation-data'>Loading Geolocation Data</a>, we did load some
+data into PostgreSQL and saw the quite noticable impact of a user
+transformation. As it happens, the function that did the integer to IP
+representation was so naive as to scratch the micro optimisation itch of
+some Common Lisp hackers: thanks a lot guys, in particular 
+<a href='https://github.com/stassats'>stassats</a> who came
+up with the solution we're seeing now.
+</p><center><img src='../../../images/make-computer-faster.jpg' /></center><p>The previous code was a straight rewrite of the provided documentation in
+Common Lisp. See for yourself the docs as found at
+<a href='http://dev.maxmind.com/geoip/legacy/csv/'>http://dev.maxmind.com/geoip/legacy/csv/</a>:
+</p><pre><code>integer_ip = 2921648058
+
+o1 = int ( ipnum / 16777216 ) % 256;
+o2 = int ( ipnum / 65536    ) % 256;
+o3 = int ( ipnum / 256      ) % 256;
+o4 = int ( ipnum            ) % 256;
+
+address = ( o1, o2, o3, o4 ).join(&#039;.&#039;)
+</code></pre><p>And the code I came up with:
+</p><pre><code>(defun ip-range (start-integer-string end-integer-string)
+  &quot;Transform a couple of integers to an IP4R ip range notation.&quot;
+  (declare (inline)
+	   (optimize speed)
+	   (type string start-integer-string end-integer-string))
+  (flet ((integer-to-ip-string (int)
+	   &quot;see http://dev.maxmind.com/geoip/legacy/csv/&quot;
+	   (declare (inline) (optimize speed) (type fixnum int))
+	   (format nil &quot;~a.~a.~a.~a&quot;
+		   (mod (truncate int #. (expt 2 24)) 256)
+		   (mod (truncate int #. (expt 2 16)) 256)
+		   (mod (truncate int #. (expt 2 8)) 256)
+		   (mod int 256))))
+    (let ((ip-start (integer-to-ip-string (parse-integer start-integer-string)))
+	  (ip-end   (integer-to-ip-string (parse-integer end-integer-string))))
+      (format nil &quot;~a-~a&quot; ip-start ip-end))))
+</code></pre><p>Quite a direct naive implementation. Which is good to show what you can
+expect in a kind of a worst case, and that worst case was using 
+<em>31.546
+seconds</em> rather than 
+<em>17.425 seconds</em> when not doing any conversion. Well of
+course the python code was spending 
+<em>78.979 seconds</em> for not doing any
+conversion, but that's not the topic today.
+</p><center><img src='../../../images/ip-address.640.png' /></center><p>Let's now see one of the micro optimised solution, the one I picked among a
+list of 8 different proposal, each a little more crazy than the previous
+one:
+</p><pre><code>(declaim (inline int-to-ip))
+(defun int-to-ip (int)
+  &quot;Transform an IP as integer into its dotted notation, optimised code from
+   stassats.&quot;
+  (declare (optimize speed)
+           (type (unsigned-byte 32) int))
+  (let ((table (load-time-value
+                (let ((vec (make-array (+ 1 #xFFFF))))
+                  (loop for i to #xFFFF
+		     do (setf (aref vec i)
+			      (coerce (format nil &quot;~a.~a&quot;
+					      (ldb (byte 8 8) i)
+					      (ldb (byte 8 0) i))
+				      &#039;simple-base-string)))
+                  vec)
+                t)))
+    (declare (type (simple-array simple-base-string (*)) table))
+    (concatenate &#039;simple-base-string
+		 (aref table (ldb (byte 16 16) int))
+		 &quot;.&quot;
+		 (aref table (ldb (byte 16 0) int)))))
+
+(declaim (inline ip-range))
+(defun ip-range (start-integer-string end-integer-string)
+  &quot;Transform a couple of integers to an IP4R ip range notation.&quot;
+  (declare (optimize speed)
+	   (type string start-integer-string end-integer-string))
+  (let ((ip-start (int-to-ip (parse-integer start-integer-string)))
+	(ip-end   (int-to-ip (parse-integer end-integer-string))))
+    (concatenate &#039;simple-base-string ip-start &quot;-&quot; ip-end)))
+</code></pre><p>As usual the idea is to compute all you can in advance, here thanks to the
+<a href='http://www.lispworks.com/documentation/HyperSpec/Body/s_ld_tim.htm'>load-time-value</a> special operator that's part of the Common Lisp Standard. So
+we compute a table of all the dotted representation for a pair of two bytes,
+and we do that computation at 
+<em>load time</em>, which happens when you load the
+<em>compiled code artifact</em> you generated from your sources. Then all we have to
+do is take the upper and lower bytes, fetch their representation in our
+table, and concatenate both with a middle dot.
+</p><p>The reason why we only keep 2 bytes in the table is so that we don't require
+about 
+<em>64 GB</em> of memory to be able to transform ip addresses...
+</p><center><img src='../../../images/cpu-ram-disk.640.jpg' /></center><center><em>Even after all those years, either compute again or store in memory.</em></center><p>And what do we have now?
+</p><pre><code>&#xA0;                   table name       read   imported     errors       time
+------------------------------  ---------  ---------  ---------  ---------
+                       extract          0          0          0       1.01
+                   before load          0          0          0      0.077
+------------------------------  ---------  ---------  ---------  ---------
+              geolite.location     438386     438386          0     10.352
+                geolite.blocks    1790461    1790461          0     18.045
+------------------------------  ---------  ---------  ---------  ---------
+                       finally          0          0          0     31.108
+------------------------------  ---------  ---------  ---------  ---------
+             Total import time    2228847    2228847          0   1m0.592s
+</code></pre><p>Thanks to the optimisation, the 
+<em>two bigint as text to iprange as text</em>
+transformation now has an added cost of 
+<code>620 ms</code> with our data set. The whole
+file loading is now averaging to 
+<code>10.07841 &#xB5;s</code> per row, or just a tad more
+than 
+<em><strong>10 microseconds</strong></em> per row, transformation included this time.
+</p><p>Less than a second of added cost within a complete process taking around a
+minute, that basically means that the transformation is now free.
+</p><p>Despite what you might have read elsewhere, my experience with the Common
+Lisp Community so far really is great!
+</p>  </div>
+  </div>
+  </div>
+  <div id="push"></div>
+  </div>
+
+<footer>
+  <p>
+    <small>Unless otherwise specified, the contents of
+    <a href=/index.html>this website</a> are Copyright
+    &#169;&#160; 2008-2013 <a href=/about>Dimitri Fontaine</a>, and are
+    licensed for use under
+    <a href=http://creativecommons.org/licenses/by-sa/3.0/
+    rel=license><abbr title="Creative
+    Commons">CC</abbr>&#160;<abbr title=Attribution>BY</abbr>-<abbr title=Share-Alike>SA</abbr>&#160;3.0</a>.</small>
+  </p> 
+</footer> 
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-47059482-1', 'tapoueh.org');
+  ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

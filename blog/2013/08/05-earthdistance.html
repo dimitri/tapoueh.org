@@ -1,0 +1,367 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset=utf-8 /> 
+    <meta name=viewport content="width=device-width" /> 
+    <meta name="generator" content="Emacs Muse Blog" /> 
+    <meta description="blog de Dimitri Fontaine, Expert PostgreSQL - 2ndQuadrant France" />
+    <meta property="og:title" content="tapoueh.org"/>
+    <meta property="og:type" content="non_profit"/>
+    <meta property="og:url" content="http://tapoueh.org/blog/2013/08/05-earthdistance"/>
+    <meta property="og:image" content="http://tapoueh.org/static/2ndQuadrant-cross.png"/>
+    <meta property="og:site_name" content="Tapoueh"/>
+    <meta property="fb:admins" content="545062436"/>
+
+    <title>Expertise PostgreSQL</title>
+    <link rel='stylesheet' type='text/css' media='all' href='/static/styles.css' />
+
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="/static/FontAwesome/css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="/static/highlight.js/styles/sunburst.css">
+    <script src="/static/highlight.js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script src="/static/jquery-1.9.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/jqcloud.css" />
+    <script type="text/javascript" src="/static/jqcloud-1.0.4.min.js"></script>
+
+    <script type="text/javascript" src="http://apis.google.com/js/plusone.js">{lang: 'fr'}</script>
+    
+  </head>
+  <body>
+
+   <div id="wrap">
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="nav-collapse collapse">
+	<p class="pull-right">
+	  <a href="http://2ndquadrant.com">
+	    <img alt="logo" src="/static/2ndQuadrant-cross.png"
+		 style="margin-right: 8px; margin-top: 4px; height: 32px;"/>
+	  </a>
+	</p>
+	<div class="navbar-inner">
+	 <a class="brand" style="margin-left: 0.2em; margin-top: -4px;"
+	    href="http://expert-postgresql.fr/">
+	  <img src="/static/expert-postgresql.png"></a>
+	 <ul class="nav">
+	  <li><a href="/blog"><i class="icon-book"></i> blog</a></li>
+	  <li><a href="/projects"><i class="icon-suitcase"></i> projects</a></li>
+	  <li><a href="/conferences"><i class="icon-plane"></i> confs</a></li>
+	  <li><a href="/about"><i class="icon-beer"></i> about</a></li>
+	  <li><a href="/rss/tapoueh.xml"><i class="icon-rss"></i> rss</a></li>
+	 </ul>
+	</div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row">
+	<div class="span4">
+	  <div><ul class='breadcrumb'><li><span class='divider'><i class='icon-sitemap'></i></span></li><li><a href='/'>/dev/dim</a><span class='divider'>/</span></li><li><a href='/blog'>blog</a><span class='divider'>/</span></li><li><a href='/blog/2013'>2013</a><span class='divider'>/</span></li><li><a href='/blog/2013/08'>08</a></li></ul></div>
+	  <div class='date'>Monday, August 05 2013 <i class='icon-calendar'></i></div>
+	  <div style='text-align: right;'><span><a href='/tags/postgresql'>PostgreSQL</a>, <a href='/tags/extensions'>Extensions</a>, <a href='/tags/earthdistance'>earthdistance</a>, <a href='/tags/yesql'>YeSQL</a></span> <i class='icon-tags'></i></div>
+	  
+
+	  <div style="margin-top: 1em;">
+	    <div class='span2 pull-left'><a class='thumbnail' href='/tags/postgresql'><img class='img-polaroid' style='width: 160px; height: 120px;' src='/thumbnails/postgresql-elephant.small.png' /></a></div>
+	    <div id='social' class='span1 pull-right social'><ul><li><g:plusone size='tall' href='http://tapoueh.org/blog/2013/08/05-earthdistance'></g:plusone></li><li><a href='http://twitter.com/share' class='twitter-share-button' data-via='tapoueh' data-count='vertical'>Tweet</a><script type='text/javascript' src='http://platform.twitter.com/widgets.js'></script></li></ul></div>
+	  </div>
+
+	  <div id="prevnext">
+	    <h3 class='prevnext'>Recent Articles</h3>
+	    <div><a class='previous' href='/blog/2013/08/02-pub-names-knn'>« The Most Popular Pub Names</a></div>
+	    <div><a class='next pull-right' href='/blog/2013/08/08-MySQL-to-PostgreSQL'>Migrating from MySQL to PostgreSQL »</a></div>
+	  </div>
+	  
+	  <div>
+	    <div id="left-tag-cloud" class="jqcloud"
+		 style="width: 300px; height: 650px; position: absolute; top: 475px;">
+	    </div>
+            <script>
+            var word_list;
+            
+            $.ajax({
+                type: 'GET',
+                url: '/cloud.json',
+                dataType: 'json',
+                success: function(response) { word_list = response; },
+                data: {},
+                async: false
+            });
+             
+            $(document).ready(function() {
+               $("#left-tag-cloud").jQCloud(word_list,
+	                {shape: "rectangular",
+	                 removeOverflowing: false});
+            });
+            </script>
+	  </div>
+
+	</div>
+
+	<div id="title" class="span8">
+	  <h1>How far is the nearest pub?</h1>
+	</div>
+	
+	<div id="content" class="span8">
+<p>In our recent article about 
+<a href='/blog/2013/08/02-pub-names-knn'>The Most Popular Pub Names</a> we did have a look at
+how to find the pubs nearby, but didn't compute the 
+<strong>distance</strong> in between that
+pub and us. That's because how to compute a distance given a position on the
+earth expressed as 
+<em>longitude</em> and 
+<em>latitude</em> is not that easy. Today, we are
+going to solve that problem nonetheless, thanks to 
+<a href='http://www.postgresql.org/docs/9.2/interactive/extend-extensions.html'>PostgreSQL Extensions</a>.
+</p><center><img src='../../../images/latitude_and_longitude.jpg' /></center><center><em>Some math are required to go from (long, lat) to distance on earth</em></center><h2>The earthdistance PostgreSQL contrib</h2><p>As the maths are complex enough to easily make mistakes when implementing
+them again, we want to find an existing implementation that's been tested
+already. PostgreSQL provides several 
+<a href='http://www.postgresql.org/docs/9.2/static/contrib.html'>contrib</a> extensions, one of those is
+named 
+<a href='http://www.postgresql.org/docs/9.2/static/earthdistance.html'>earthdistance</a> and is made to solve our problem. Time to try it!
+</p><pre><code># create extension cube;
+# create extension earthdistance;
+</code></pre><p>Equiped with that extension we can now use its 
+<code>&lt;@&gt;</code> operator and compute a
+distance in miles at the surface of the earth, given points as 
+<em>(longitude,
+latitude)</em>. So I had to import our data set again with points in the right
+representation, then I could run this query:
+</p><pre><code>#  select id, name, pos,
+          round((pos &lt;@&gt; point(-0.12,51.516))::numeric, 3) as miles
+     from pubnames
+ order by pos &lt;-&gt; point(-0.12,51.516)
+    limit 10;
+     id     |          name          |           pos           | miles 
+------------+------------------------+-------------------------+-------
+   21593238 | All Bar One            | (-0.1192746,51.5163499) | 0.039
+   26848690 | The Shakespeare&#039;s Head | (-0.1194731,51.5167871) | 0.059
+  371049718 | The Newton Arms        | (-0.1209811,51.5163032) | 0.047
+  438488621 | Marquis Cornwallis     | (-0.1199612,51.5146691) | 0.092
+   21593236 | Ship Tavern            | (-0.1192378,51.5172525) | 0.093
+  312156665 | The Prince of Wales    | (-0.121732,51.5145794)  | 0.123
+  312156722 | O&#039;Neills               | (-0.1220195,51.5149538) | 0.113
+   25508632 | Friend at Hand         | (-0.1224717,51.5148694) | 0.132
+  338507304 | The Square Pig         | (-0.1191744,51.5187089) | 0.191
+ 1975855516 | Holborn Whippet        | (-0.1216925,51.5185189) | 0.189
+(10 rows)
+
+Time: 1.335 ms
+</code></pre><p>So the nearest pub is 
+<em>All Bar One</em>, 0.039 miles away, or 68.64 yards
+apparently. And we can see that adding the computation to get the distance
+in 
+<em>miles</em> didn't add that much to the query timing.
+</p><center><img src='../../../images/pubstopslondon.jpg' /></center><h2>Pubs and cities</h2><p>Just as easily as we have 
+<em>nearest</em> pubs we can also of course query for pubs
+<em>farthest</em> away from any location.
+</p><pre><code>#   select name, round((pos &lt;@&gt; point(-0.12,51.516))::numeric, 3) as miles
+      from pubnames
+  order by pos &lt;-&gt; point(-0.12,51.516) desc
+     limit 5;
+      name       |  miles  
+-----------------+---------
+ Tig Bhric       | 440.194
+ TP&#039;s            | 439.779
+ Begley&#039;s        | 439.752
+ Ventry Inn      | 438.962
+ Fisherman&#039;s Bar | 439.153
+(5 rows)
+
+Time: 74.780 ms
+</code></pre><p>Now we want to know what city are those pubs in right? With the following
+URL and using the 
+<a href='http://www.openstreetmap.org/'>Open Street Map</a> APIs, I've been able to download a list of
+cities in the same area as where the pub names were fetched in:
+<code>http://www.overpass-api.de/api/xapi?*[place=city][bbox=-10.5,49.78,1.78,59]</code>.
+</p><p>Tweaking the parser and import code at 
+<a href='https://github.com/dimitri/pubnames'>https://github.com/dimitri/pubnames</a>
+was easy, and allowed to import those city names and locations in 
+<em>0.087
+seconds of real time</em>, with the following schema:
+</p><pre><code># create table if not exists cities (id bigint, pos point, name text);
+# create index on cities using gist(pos);
+</code></pre><p>Now let's see where are those far away pubs:
+</p><pre><code>#   select name,
+          (select name from cities c order by c.pos &lt;-&gt; p.pos limit 1) as city,
+          round((pos &lt;@&gt; point(-0.12,51.516))::numeric, 3) as miles
+     from pubnames p
+ order by pos &lt;-&gt; point(-0.12,51.516) desc
+    limit 5;
+      name       |  city  |  miles  
+-----------------+--------+---------
+ Tig Bhric       | Galway | 440.194
+ TP&#039;s            | Galway | 439.779
+ Begley&#039;s        | Galway | 439.752
+ Ventry Inn      | Galway | 438.962
+ Fisherman&#039;s Bar | Cork   | 439.153
+(5 rows)
+
+Time: 686.444 ms
+</code></pre><center><img src='../../../images/ninedotslines.gif' /></center><center><em>Using <code>LATERAL</code> Joins is not a form of lateral thinking</em></center><p>As you can see we are fetching the pubs at a distance from our given point
+and then the nearest city from where the pub is. The way it's implemented
+here is called a 
+<em>correlated subquery</em>, and starting with 9.3 we will be able
+to use the 
+<a href='http://www.postgresql.org/docs/devel/static/queries-table-expressions.html#QUERIES-LATERAL'>LATERAL</a> standard join construct, as in the following example:
+</p><pre><code>#   select c.name as city, p.name,
+           round((pos &lt;@&gt; point(-0.12,51.516))::numeric, 3) as miles
+      from pubnames p,
+           lateral (select name
+                      from cities c
+                  order by c.pos &lt;-&gt; p.pos
+                     limit 1) c
+  order by pos &lt;-&gt; point(-0.12,51.516) desc
+     limit 5;
+  city  |      name       |  miles  
+--------+-----------------+---------
+ Galway | Tig Bhric       | 440.194
+ Galway | TP&#039;s            | 439.779
+ Galway | Begley&#039;s        | 439.752
+ Galway | Ventry Inn      | 438.962
+ Cork   | Fisherman&#039;s Bar | 439.153
+(5 rows)
+
+Time: 636.445 ms
+</code></pre><p>So apparently the 
+<em>bounded box</em> that we've been given
+(
+<code>[bbox=-10.5,49.78,1.78,59]</code>) includes Ireland too... and more
+importantly the query execution penalty is quite important. That's because
+the planner only know how to solve that query by doing 
+<code>Index Scan
+using cities_pos_idx on public.cities c (cost=0.14..9.60 rows=73 width=25)
+(actual time=0.016..0.016 rows=1 loops=27878)</code>, which means scanning
+the position index of the cities 27878 times (once per pubnames entry).
+</p><p>It's possible to force the planner into doing it the obvious way though:
+</p><pre><code>#   with pubs as (
+        select name, pos,
+               round((pos &lt;@&gt; point(-0.12,51.516))::numeric, 3) as miles
+          from pubnames
+      order by pos &lt;-&gt; point(-0.12,51.516) desc
+         limit 5
+    )
+    select c.name as city, p.name, p.miles
+      from pubs p, lateral (select name
+                              from cities c
+                          order by c.pos &lt;-&gt; p.pos
+                             limit 1) c;
+  city  |      name       |  miles  
+--------+-----------------+---------
+ Galway | Tig Bhric       | 440.194
+ Galway | TP&#039;s            | 439.779
+ Galway | Begley&#039;s        | 439.752
+ Galway | Ventry Inn      | 438.962
+ Cork   | Fisherman&#039;s Bar | 439.153
+(5 rows)
+
+Time: 76.467 ms
+</code></pre><center><img src='../../../images/bite-top-ten-pub-names.jpg' /></center><h2>The Most Popular Pub Names, per City</h2><p>Let's now find which cities have the highest count of pubs, considering that
+a pub is affiliated to a city if it's within 5 miles of the single point we
+have as city location in our data set.
+</p><pre><code>#   select c.name, count(cp)
+      from cities c, lateral (select name
+                                from pubnames p
+                               where (p.pos &lt;@&gt; c.pos) &lt; 5) as cp
+  group by c.name
+  order by count(cp) desc
+  limit 10;
+
+    name     | count 
+-------------+-------
+ London      |  1388
+ Westminster |  1383
+ Dublin      |   402
+ Manchester  |   306
+ Bristol     |   292
+ Leeds       |   292
+ Edinburgh   |   286
+ Liverpool   |   258
+ Nottingham  |   218
+ Glasgow     |   217
+(10 rows)
+
+Time: 562.678 ms
+</code></pre><p>If we look at a map we see that 
+<em>Westminster</em> is in fact within 
+<em>London</em> given
+our arbitrary rule of 
+<em>within 5 miles</em>, so in the next query we will simply
+filter it out. Exercise left to the reader: write a query allowing to remove
+from London's count the pubs that are actually in Westminster (when within 1
+mile of the location we have for it). Then extend that query to address any
+other situation like that in the whole data set.
+</p><center><img src='../../../images/sql-logo.png' /></center><center><em>Often the most powerful tool you have to make sense of your data...</em></center><p>And now what about the most popular pub names per city? Of course we want to
+normalize again our pub names here but only for counting: we still display
+all the names we did count.
+</p><pre><code>#   select c.name,
+           array_to_string(array_agg(distinct(cp.name) order by cp.name), &#039;, &#039;),
+           count(*)
+      from cities c,
+           lateral (select name
+                      from pubnames p
+                     where (p.pos &lt;@&gt; c.pos) &lt; 5) as cp
+     where c.name &lt;&gt; &#039;Westminster&#039;
+  group by c.name, replace(replace(cp.name, &#039;The &#039;, &#039;&#039;), &#039;And&#039;, &#039;&amp;&#039;)
+  order by count(*) desc
+     limit 10;
+
+   name   |            array_to_string             | count 
+----------+----------------------------------------+-------
+ London   | Prince of Wales, The Prince of Wales   |    15
+ London   | All Bar One                            |    12
+ London   | The Beehive                            |     8
+ London   | O&#039;Neills                               |     7
+ London   | The Crown                              |     7
+ London   | The Windmill                           |     7
+ London   | Red Lion, The Red Lion                 |     6
+ Bradford | New Inn, The New Inn                   |     6
+ London   | Coach and Horses, The Coach and Horses |     6
+ London   | The White Horse, White Horse           |     6
+(10 rows)
+
+Time: 729.866 ms
+</code></pre><h2>Conclusion</h2><p>As said in the previous article on the same theme, SQL when using 
+<a href='http://www.postgresql.org/'>PostgreSQL</a>
+is indeed quite powerful! We've been able to easily add an implementation of
+the earth distance computation from 
+<em>longitude</em> and 
+<em>latitude</em> as found in the
+<a href='http://www.postgresql.org/docs/9.2/static/earthdistance.html'>earthdistance</a> contrib extension (already packaged for your Operating System
+of choice, be sure to install 
+<em>contribs</em> by default), then to use it to solve
+some interesting problems with our data set.
+</p>  </div>
+  </div>
+  </div>
+  <div id="push"></div>
+  </div>
+
+<footer>
+  <p>
+    <small>Unless otherwise specified, the contents of
+    <a href=/index.html>this website</a> are Copyright
+    &#169;&#160; 2008-2013 <a href=/about>Dimitri Fontaine</a>, and are
+    licensed for use under
+    <a href=http://creativecommons.org/licenses/by-sa/3.0/
+    rel=license><abbr title="Creative
+    Commons">CC</abbr>&#160;<abbr title=Attribution>BY</abbr>-<abbr title=Share-Alike>SA</abbr>&#160;3.0</a>.</small>
+  </p> 
+</footer> 
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-47059482-1', 'tapoueh.org');
+  ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,372 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset=utf-8 /> 
+    <meta name=viewport content="width=device-width" /> 
+    <meta name="generator" content="Emacs Muse Blog" /> 
+    <meta description="blog de Dimitri Fontaine, Expert PostgreSQL - 2ndQuadrant France" />
+    <meta property="og:title" content="tapoueh.org"/>
+    <meta property="og:type" content="non_profit"/>
+    <meta property="og:url" content="http://tapoueh.org/blog/2012/12/13-Inline-Extensions"/>
+    <meta property="og:image" content="http://tapoueh.org/static/2ndQuadrant-cross.png"/>
+    <meta property="og:site_name" content="Tapoueh"/>
+    <meta property="fb:admins" content="545062436"/>
+
+    <title>Expertise PostgreSQL</title>
+    <link rel='stylesheet' type='text/css' media='all' href='/static/styles.css' />
+
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="/static/FontAwesome/css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="/static/highlight.js/styles/sunburst.css">
+    <script src="/static/highlight.js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script src="/static/jquery-1.9.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/jqcloud.css" />
+    <script type="text/javascript" src="/static/jqcloud-1.0.4.min.js"></script>
+
+    <script type="text/javascript" src="http://apis.google.com/js/plusone.js">{lang: 'fr'}</script>
+    
+  </head>
+  <body>
+
+   <div id="wrap">
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="nav-collapse collapse">
+	<p class="pull-right">
+	  <a href="http://2ndquadrant.com">
+	    <img alt="logo" src="/static/2ndQuadrant-cross.png"
+		 style="margin-right: 8px; margin-top: 4px; height: 32px;"/>
+	  </a>
+	</p>
+	<div class="navbar-inner">
+	 <a class="brand" style="margin-left: 0.2em; margin-top: -4px;"
+	    href="http://expert-postgresql.fr/">
+	  <img src="/static/expert-postgresql.png"></a>
+	 <ul class="nav">
+	  <li><a href="/blog"><i class="icon-book"></i> blog</a></li>
+	  <li><a href="/projects"><i class="icon-suitcase"></i> projects</a></li>
+	  <li><a href="/conferences"><i class="icon-plane"></i> confs</a></li>
+	  <li><a href="/about"><i class="icon-beer"></i> about</a></li>
+	  <li><a href="/rss/tapoueh.xml"><i class="icon-rss"></i> rss</a></li>
+	 </ul>
+	</div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row">
+	<div class="span4">
+	  <div><ul class='breadcrumb'><li><span class='divider'><i class='icon-sitemap'></i></span></li><li><a href='/'>/dev/dim</a><span class='divider'>/</span></li><li><a href='/blog'>blog</a><span class='divider'>/</span></li><li><a href='/blog/2012'>2012</a><span class='divider'>/</span></li><li><a href='/blog/2012/12'>12</a></li></ul></div>
+	  <div class='date'>Thursday, December 13 2012 <i class='icon-calendar'></i></div>
+	  <div style='text-align: right;'><span><a href='/tags/postgresql'>PostgreSQL</a>, <a href='/tags/extensions'>Extensions</a>, <a href='/tags/9.3'>9.3</a></span> <i class='icon-tags'></i></div>
+	  
+
+	  <div style="margin-top: 1em;">
+	    <div class='span2 pull-left'><a class='thumbnail' href='/tags/postgresql'><img class='img-polaroid' style='width: 160px; height: 120px;' src='/thumbnails/postgresql-elephant.small.png' /></a></div>
+	    <div id='social' class='span1 pull-right social'><ul><li><g:plusone size='tall' href='http://tapoueh.org/blog/2012/12/13-Inline-Extensions'></g:plusone></li><li><a href='http://twitter.com/share' class='twitter-share-button' data-via='tapoueh' data-count='vertical'>Tweet</a><script type='text/javascript' src='http://platform.twitter.com/widgets.js'></script></li></ul></div>
+	  </div>
+
+	  <div id="prevnext">
+	    <h3 class='prevnext'>Recent Articles</h3>
+	    <div><a class='previous' href='/blog/2012/11/22-Emacs-Ack-Mode'>« M-x ack</a></div>
+	    <div><a class='next pull-right' href='/blog/2013/01/08-Extensions-Templates'>Extensions Templates »</a></div>
+	  </div>
+	  
+	  <div>
+	    <div id="left-tag-cloud" class="jqcloud"
+		 style="width: 300px; height: 650px; position: absolute; top: 475px;">
+	    </div>
+            <script>
+            var word_list;
+            
+            $.ajax({
+                type: 'GET',
+                url: '/cloud.json',
+                dataType: 'json',
+                success: function(response) { word_list = response; },
+                data: {},
+                async: false
+            });
+             
+            $(document).ready(function() {
+               $("#left-tag-cloud").jQCloud(word_list,
+	                {shape: "rectangular",
+	                 removeOverflowing: false});
+            });
+            </script>
+	  </div>
+
+	</div>
+
+	<div id="title" class="span8">
+	  <h1>Inline Extensions</h1>
+	</div>
+	
+	<div id="content" class="span8">
+<p>We've been having the 
+<code>CREATE EXTENSION</code> feature in 
+<a href='http://www.postgresql.org/'>PostgreSQL</a> for a couple of
+releases now, so let's talk about how to go from here. The first goal of the
+extension facility has been to allow for a clean 
+<em>dump</em> and 
+<em>restore</em> process of
+<a href='http://www.postgresql.org/docs/9.2/static/contrib.html'>contrib</a> modules. As such it's been tailored to the needs of deploying files
+on the 
+<em>file system</em> because there's no escaping from that when you have to
+ship 
+<em>binary</em> and 
+<em>executable</em> files, those infamous 
+<code>.so</code>, 
+<code>.dll</code> or 
+<code>.dylib</code> things.
+</p><center><img src='../../../images/dylibbundler.png' /></center><p>Now that we have the 
+<em>Extension</em> facility though, what we see is a growing
+number of users taking advantage of it for the purpose of managing in house
+procedural code and related objects. This code can be a bunch of 
+<a href='http://www.postgresql.org/docs/9.2/static/plpgsql.html'>PLpgSQL</a> or
+<a href='http://www.postgresql.org/docs/9.2/static/plpython.html'>plpython</a> functions and as such you normaly create them directly from any
+application connection to PostgreSQL.
+</p><p>So the idea would be to allow creating 
+<em>Extensions</em> fully from a SQL command,
+including the whole set of objects it contains. More than one approach are
+possible to reach that goal, each with downsides and advantages. We will see
+them later in that document.
+</p><p>Before that though, let's first review what the extension mechanism has to
+offer to its users when there's no 
+<em>contrib like</em> module to manage.
+</p><h2>A use case for next generation extensions</h2><p>The only design goal of the 
+<code>9.1</code> PostgreSQL Extension feature has been to
+support a proper 
+<em>dump & restore</em> user experience when using 
+<em>contrib modules</em>
+such as 
+<code>hstore</code> or 
+<code>ltree</code>. Building up on that, what do 
+<em>Extensions</em> have to
+offer to non 
+<code>C</code> developpers out there? In other words, what 
+<code>CREATE EXTENSION</code>
+brings on the table that a bunch of 
+<em>loose</em> objects does not? What problems
+can we now solve?
+</p><center><img src='../../../images/multi_function_equipment.jpg' /></center><center><em>A Multi Functions Equipment, All Bundled Together</em></center><p>A way to phrase it is to say that 
+<em>Extensions</em> are user defined 
+<code>CASCADE</code>
+support. 
+<em>Extensions</em> brings extensibility to the 
+<code>pg_depend</code> PostgreSQL
+internal dependency tracking system that 
+<code>CASCADE</code> is built on. From that
+angle, 
+<em>Extensions</em> are a way to manage dependencies of 
+<em>SQL objects</em> in a way
+that allow you to manage them as a single entity.
+</p><p>One of the existing problems this helps solving is the infamous lack of
+dependency tracking between function calls. Using 
+<em>Extensions</em> when you deal
+with a set of functions acting as an API, you can at least protect that as a
+unit:
+</p><pre><code>STATEMENT: drop function public.populate_record(anyelement,hstore);
+    ERROR: cannot drop function populate_record(anyelement,hstore) because
+           extension hstore requires it
+     HINT: You can drop extension hstore instead.
+</code></pre><p>And you also have a version number and tools integration to manage
+extensions, with psql 
+<code>\dx</code> command and the equivalent feature in 
+<a href='http://www.pgadmin.org/'>pgAdmin</a>.
+Coming with your own version number management is not impossible, some do
+that already. Here it's integrated and the upgrade sequences are offered too
+(applying 
+<code>1.1--1.2</code> then 
+<code>1.2--1.3</code> automatically).
+</p><p>Let's just say that it's very easy to understand the 
+<em>traction</em> our users feel
+towards leveraging 
+<em>Extensions</em> features in order to properly manage their set
+of stored procedures and SQL objects.
+</p><h2>The <em>dump & restore</em> experience</h2><p>The common problem of all those proposals is very central to the whole idea
+of 
+<em>Extensions</em> as we know them. The goal of building them as been to fix the
+<em>restoring</em> experience when using extensions in a database, and we managed to
+do that properly for contrib likes extensions.
+</p><center><img src='../../../images/fly.tn.png' /></center><center><em>A fly in the ointment</em></center><p>When talking about 
+<em>Inline Extensions</em>, the fly in the ointment is how to
+properly manage their 
+<code>pg_dump</code> behavior. The principle we built for
+<em>Extensions</em> and that is almost unique to them is to 
+<em><strong>omit</strong></em> them in the dump
+files. The only other objects that we filter out of the dump are the one
+installed at server initialisation times, when using 
+<a href='http://www.postgresql.org/docs/9.2/static/app-initdb.html'>initdb</a>, to be found in
+the 
+<code>pg_catalog</code> and 
+<code>information_schema</code> systems' 
+<em>schema</em>.
+</p><p>At restore time, the dump file contains the 
+<code>CREATE EXTENSION</code> command so the
+PostgreSQL server will go fetch the 
+<em>control</em> and 
+<em>script</em> files on disk and
+process them, loading the database with the right set of SQL objects.
+</p><p>Now we're talking about 
+<em>Extensions</em> which we would maybe want to dump the
+objects of, so that at 
+<em>restore</em> time we don't need to find them from unknown
+external resources: the fact that the extension is 
+<em>Inline</em> means that the
+PostgreSQL server has no way to know where its content is coming from.
+</p><p>The next proposals are trying to address that problem, with more or less
+success. So far none of them is entirely sastisfying to me, even if a clear
+temporary winner as emerged on the 
+<em>hackers</em> mailing list, summarized in the
+<a href='http://archives.postgresql.org/message-id/m2fw3judug.fsf@2ndQuadrant.fr'>in-catalog Extension Scripts and Control parameters (templates?)</a> thread.
+</p><h2>Inline Extension Proposals</h2><p>Now, on to some proposals to make the best out of our all time favorite
+PostgreSQL feature, the only one that makes no sense at all by itself...
+</p><h3>Starting from an empty extension</h3><p>We already have the facility to add existing 
+<em>loose</em> objects to an extension,
+and that's exactly what we use when we create an extension for the first
+time when it used not to be an extension before, with the 
+<code>CREATE EXTENSION
+... FROM &#039;unpackaged&#039;;</code> command.
+</p><p>The 
+<code>hstore--unpackaged--1.0.sql</code> file contains statements such as:
+</p><pre><code>ALTER EXTENSION hstore ADD type hstore;
+ALTER EXTENSION hstore ADD function hstore_in(cstring);
+ALTER EXTENSION hstore ADD function hstore_out(hstore);
+ALTER EXTENSION hstore ADD function hstore_recv(internal);
+ALTER EXTENSION hstore ADD function hstore_send(hstore);
+</code></pre><p>Opening 
+<code>CREATE EXTENSION</code> so that it allows you to create a really 
+<em>empty</em>
+extension would then allow you to fill-in as you need, with as many commands
+as you want to add objects to it. The 
+<em>control</em> file properties would need to
+find their way in that design, that sure can be taken care of.
+</p><center><img src='../../../images/empty-extension.jpg' /></center><center><em>Look me, an Empty Extension!</em></center><p>The main drawback here is that there's no separation anymore in between the
+extension author, the distribution means, the DBA and the database user.
+When you want to install a third party 
+<em>Extension</em> using only SQL commands,
+you could do it with that scheme by using a big script full of one-liners
+commands.
+</p><p>So that if you screw up your 
+<em>copy/pasting</em> session (well you should maybe
+reconsider your choice of tooling at this point, but that's another topic),
+you will end up with a perfectly valid 
+<em>Extension</em> that does not contain what
+you wanted. As the end user, you have no clue about that until the first
+time using the extension fails.
+</p><h3>CREATE EXTENSION AS</h3><p>The next idea is to embed the 
+<em>Extension</em> script itself in the command, so as
+to to get a cleaner command API (in my opinion at least) and a better error
+message when the paste is wrong. Of course it your 
+<em>paste</em> problem happens to
+just be loosing a line in the middle of the script there is not so much I
+can do for you...
+</p><pre><code>CREATE EXTENSION hstore
+  WITH parameter = value, ...
+AS $$
+CREATE TYPE hstore;
+
+CREATE FUNCTION hstore_in(cstring) RETURNS hstore
+ AS &#039;MODULE_PATHNAME&#039; LANGUAGE C STRICT IMMUTABLE;
+
+CREATE FUNCTION hstore_out(hstore) RETURNS cstring
+AS &#039;MODULE_PATHNAME&#039; LANGUAGE C STRICT IMMUTABLE;
+
+CREATE FUNCTION hstore_recv(internal) RETURNS hstore
+AS &#039;MODULE_PATHNAME&#039; LANGUAGE C STRICT IMMUTABLE;
+
+CREATE FUNCTION hstore_send(hstore) RETURNS bytea
+AS &#039;MODULE_PATHNAME&#039; LANGUAGE C STRICT IMMUTABLE;
+
+CREATE TYPE hstore (
+        INTERNALLENGTH = -1, STORAGE = extended
+        INPUT = hstore_in, OUTPUT = hstore_out,
+        RECEIVE = hstore_recv, SEND = hstore_send);
+$$;
+</code></pre><center><em>An edited version of <code>hstore--1.1.sql</code> for vertical space concerns</em></center><p>I've actually proposed a patch to implement that, as you can see in the
+<a href='https://commitfest.postgresql.org/action/patch_view?id=981'>pg_dump --extension-script</a> commit fest entry. As spoiled by the commit fest
+entry title, the main problem we have with 
+<em>Inline Extensions</em> is their
+management in the seamless experience of 
+<em>dump & restore</em> that we are so happy
+to have now. More about that later, though.
+</p><h3>Extension Templates</h3><p>Another idea is to continue working from control parameters and scripts to
+install and update extensions, but to have two different places where to
+find those. Either on the server's 
+<em>File System</em> (when dealing with 
+<em>contribs</em>
+and 
+<em>shared libraries</em>, there's but a choice), or on the system catalogs.
+</p><center><img src='../../../images/templates.png' /></center><center><em>We Already Have <code>TEXT SEARCH TEMPLATE</code> After All</em></center><p>The idea would then be to have some new specific 
+<code>TEMPLATE</code> SQL Object that
+would be used to 
+<em>import</em> or 
+<em>upload</em> your control file and create and update
+scripts in the database, using nothing else than a SQL connection. Then at
+<code>CREATE EXTENSION</code> time the system would be able to work either from the file
+system or the 
+<em>template</em> catalogs.
+</p><p>One obvious problem is how to deal with a unique namespace when we split the
+sources into the file system and the database, and when the file system is
+typically maintained by using 
+<code>apt-get</code> or 
+<code>yum</code> commands.
+</p><p>Then again I would actually prefer that mechanism better than the other
+proposals if the idea was to load the file system control and scripts files
+as 
+<code>TEMPLATEs</code> themselves and then only operate 
+<em>Extensions</em> from 
+<em>Templates</em>. But
+doing that would mean getting back to the situation where we still are not
+able to devise a good, simple and robust 
+<code>pg_dump</code> policy for extensions and
+templates.
+</p><h2>Conclusion</h2><p>I hope to be finding the right solution to my long term plan in this release
+development cycle, but it looks like the right challenge to address now is
+to find the right compromise instead. Using the 
+<em>Templates</em> idea already
+brings a lot on the table, if not the whole set of features I would like to
+see.
+</p><center><img src='../../../images/building-blocks.jpg' /></center><center><em>PostgreSQL: Building on Solid Foundations</em></center><p>What would be missing mainly would be the ability for an 
+<em>Extension</em> to switch
+from being file based to being a template, either because the author decided
+to change the way he's shipping it, or because the user is switching from
+using the 
+<a href='http://pgxnclient.projects.pgfoundry.org/'>pgxn client</a> to using 
+<em>proper</em> system packages. I guess that's
+something we can see about later, though.
+</p>  </div>
+  </div>
+  </div>
+  <div id="push"></div>
+  </div>
+
+<footer>
+  <p>
+    <small>Unless otherwise specified, the contents of
+    <a href=/index.html>this website</a> are Copyright
+    &#169;&#160; 2008-2013 <a href=/about>Dimitri Fontaine</a>, and are
+    licensed for use under
+    <a href=http://creativecommons.org/licenses/by-sa/3.0/
+    rel=license><abbr title="Creative
+    Commons">CC</abbr>&#160;<abbr title=Attribution>BY</abbr>-<abbr title=Share-Alike>SA</abbr>&#160;3.0</a>.</small>
+  </p> 
+</footer> 
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-47059482-1', 'tapoueh.org');
+  ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

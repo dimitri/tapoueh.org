@@ -1,0 +1,234 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset=utf-8 /> 
+    <meta name=viewport content="width=device-width" /> 
+    <meta name="generator" content="Emacs Muse Blog" /> 
+    <meta description="blog de Dimitri Fontaine, Expert PostgreSQL - 2ndQuadrant France" />
+    <meta property="og:title" content="tapoueh.org"/>
+    <meta property="og:type" content="non_profit"/>
+    <meta property="og:url" content="http://tapoueh.org/blog/2011/06/29-multi-version-support-for-extensions"/>
+    <meta property="og:image" content="http://tapoueh.org/static/2ndQuadrant-cross.png"/>
+    <meta property="og:site_name" content="Tapoueh"/>
+    <meta property="fb:admins" content="545062436"/>
+
+    <title>Expertise PostgreSQL</title>
+    <link rel='stylesheet' type='text/css' media='all' href='/static/styles.css' />
+
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="/static/FontAwesome/css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="/static/highlight.js/styles/sunburst.css">
+    <script src="/static/highlight.js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script src="/static/jquery-1.9.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/jqcloud.css" />
+    <script type="text/javascript" src="/static/jqcloud-1.0.4.min.js"></script>
+
+    <script type="text/javascript" src="http://apis.google.com/js/plusone.js">{lang: 'fr'}</script>
+    
+  </head>
+  <body>
+
+   <div id="wrap">
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="nav-collapse collapse">
+	<p class="pull-right">
+	  <a href="http://2ndquadrant.com">
+	    <img alt="logo" src="/static/2ndQuadrant-cross.png"
+		 style="margin-right: 8px; margin-top: 4px; height: 32px;"/>
+	  </a>
+	</p>
+	<div class="navbar-inner">
+	 <a class="brand" style="margin-left: 0.2em; margin-top: -4px;"
+	    href="http://expert-postgresql.fr/">
+	  <img src="/static/expert-postgresql.png"></a>
+	 <ul class="nav">
+	  <li><a href="/blog"><i class="icon-book"></i> blog</a></li>
+	  <li><a href="/projects"><i class="icon-suitcase"></i> projects</a></li>
+	  <li><a href="/conferences"><i class="icon-plane"></i> confs</a></li>
+	  <li><a href="/about"><i class="icon-beer"></i> about</a></li>
+	  <li><a href="/rss/tapoueh.xml"><i class="icon-rss"></i> rss</a></li>
+	 </ul>
+	</div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row">
+	<div class="span4">
+	  <div><ul class='breadcrumb'><li><span class='divider'><i class='icon-sitemap'></i></span></li><li><a href='/'>/dev/dim</a><span class='divider'>/</span></li><li><a href='/blog'>blog</a><span class='divider'>/</span></li><li><a href='/blog/2011'>2011</a><span class='divider'>/</span></li><li><a href='/blog/2011/06'>06</a></li></ul></div>
+	  <div class='date'>Wednesday, June 29 2011 <i class='icon-calendar'></i></div>
+	  <div style='text-align: right;'><span><a href='/tags/postgresql'>PostgreSQL</a>, <a href='/tags/debian'>debian</a>, <a href='/tags/extensions'>Extensions</a>, <a href='/tags/release'>release</a>, <a href='/tags/ip4r'>ip4r</a>, <a href='/tags/9.1'>9.1</a></span> <i class='icon-tags'></i></div>
+	  
+
+	  <div style="margin-top: 1em;">
+	    <div class='span2 pull-left'><a class='thumbnail' href='/tags/debian'><img class='img-polaroid' style='width: 160px; height: 120px;' src='/thumbnails/debian-logo.png' /></a></div>
+	    <div id='social' class='span1 pull-right social'><ul><li><g:plusone size='tall' href='http://tapoueh.org/blog/2011/06/29-multi-version-support-for-extensions'></g:plusone></li><li><a href='http://twitter.com/share' class='twitter-share-button' data-via='tapoueh' data-count='vertical'>Tweet</a><script type='text/javascript' src='http://platform.twitter.com/widgets.js'></script></li></ul></div>
+	  </div>
+
+	  <div id="prevnext">
+	    <h3 class='prevnext'>Recent Articles</h3>
+	    <div><a class='previous' href='/blog/2011/06/20-dont-be-afraid-of-cl'>« Don't be afraid of 'cl</a></div>
+	    <div><a class='next pull-right' href='/blog/2011/07/04-pret-pour-char11'>Prêt pour CHAR(11) ? »</a></div>
+	  </div>
+	  
+	  <div>
+	    <div id="left-tag-cloud" class="jqcloud"
+		 style="width: 300px; height: 650px; position: absolute; top: 475px;">
+	    </div>
+            <script>
+            var word_list;
+            
+            $.ajax({
+                type: 'GET',
+                url: '/cloud.json',
+                dataType: 'json',
+                success: function(response) { word_list = response; },
+                data: {},
+                async: false
+            });
+             
+            $(document).ready(function() {
+               $("#left-tag-cloud").jQCloud(word_list,
+	                {shape: "rectangular",
+	                 removeOverflowing: false});
+            });
+            </script>
+	  </div>
+
+	</div>
+
+	<div id="title" class="span8">
+	  <h1>Multi-Version support for Extensions</h1>
+	</div>
+	
+	<div id="content" class="span8">
+<p>We still have this problem to solve with extensions and their packaging.
+How to best organize things so that your extension is compatible with before
+<code>9.1</code> and 
+<code>9.1</code> and following releases of 
+<a href='http://www.postgresql.org/'>PostgreSQL</a>?
+</p><p>Well, I had to do it for the 
+<a href='http://pgfoundry.org/projects/ip4r/'>ip4r</a> contribution, and I wanted the following
+to happen:
+</p><pre><code>dpkg-deb: building package `postgresql-8.3-ip4r&#039; ...
+dpkg-deb: building package `postgresql-8.4-ip4r&#039; ...
+dpkg-deb: building package `postgresql-9.0-ip4r&#039; ...
+dpkg-deb: building package `postgresql-9.1-ip4r&#039; ...
+</code></pre><p>And here's a simple enough way to achieve that.  First, you have to get your
+packaging ready the usual way, and to install the build dependencies.  Then
+realizing that 
+<code>/usr/share/postgresql-common/supported-versions</code> from the
+latest 
+<code>postgresql-common</code> package will only return 
+<code>8.3</code> in 
+<code>lenny</code> (yes, I'm
+doing some 
+<em>backporting</em> here), we have to tweak it.
+</p><pre><code>postgresql-server-dev-8.4
+postgresql-server-dev-9.0
+postgresql-server-dev-9.1
+postgresql-server-dev-all
+
+$ sudo dpkg-divert \
+--divert /usr/share/postgresql-common/supported-versions.distrib \
+--rename /usr/share/postgresql-common/supported-versions
+
+$ cat /usr/share/postgresql-common/supported-versions
+#! /bin/bash
+
+dpkg -l postgresql-server-dev-* \
+| awk -F &#039;[ -]&#039; &#039;/^ii/ &amp;&amp; ! /server-dev-all/ {print $6}&#039;
+</code></pre><p>Now we are allowed to build our extension for all those versions, so we add
+<code>9.1</code> to the 
+<code>debian/pgversions</code> file.  And 
+<code>debuild</code> will do the right thing now,
+thanks to 
+<a href='http://manpages.debian.net/cgi-bin/man.cgi?query=pg_buildext'>pg_buildext</a> from 
+<a href='http://packages.debian.org/sid/postgresql-server-dev-all'>postgresql-server-dev-all</a>.
+</p><p>The problem we face is that the built is not an 
+<a href='http://www.postgresql.org/docs/9.1/static/extend-extensions.html'>extension</a> as in 
+<code>9.1</code>, so
+things like 
+<code>\dx</code> in 
+<code>psql</code> and 
+<a href='http://www.postgresql.org/docs/9.1/static/sql-createextension.html'>CREATE EXTENSION</a> will not work out of the box.
+First, we need a control file.  Then we need to remove the transaction
+control from the install script (here, 
+<code>ip4r.sql</code>), and finally, this script
+needs to be called 
+<code>ip4r--1.05.sql</code>.  Here's how I did it:
+</p><pre><code>$ cat ip4r.control
+comment = &#039;IPv4 and IPv4 range index types&#039;
+default_version = &#039;1.05&#039;
+relocatable = yes
+
+$ cat debian/postgresql-9.1-ip4r.install
+debian/ip4r-9.1/ip4r.so usr/lib/postgresql/9.1/lib
+ip4r.control usr/share/postgresql/9.1/extension
+debian/ip4r-9.1/ip4r.sql usr/share/postgresql/9.1/extension
+
+$ cat debian/postgresql-9.1-ip4r.links
+usr/share/postgresql/9.1/extension/ip4r.sql usr/share/postgresql/9.1/extension/ip4r--1.05.sql
+</code></pre><p>Be careful not to forget to remove any and all 
+<code>BEGIN;</code> and 
+<code>COMMIT;</code> lines from
+the 
+<code>ip4r.sql</code> file, which meant that I also removed support for 
+<em>Rtree</em>, which
+is not relevant for modern versions of PostgreSQL saith the script (post
+<code>8.2</code>).  That means I'm not publishing this very work yet, but I wanted to
+share the 
+<code>debian/postgresql-9.1-extension.links</code> idea.
+</p><p>Notice that I didn't change anything about the 
+<code>.sql.in</code> make rule, so I
+didn't have to use the support for 
+<code>module_pathname</code> in the control file.
+</p><p>Now, after the usual 
+<code>debuild</code> step, I can just 
+<code>sudo debi</code> to install all the
+just build packages and 
+<code>CREATE EXTENSION</code> will run fine.  And in 
+<code>9.0</code> you get
+the old way to install it, but it still works:
+</p><pre><code>$ psql -U postgres --cluster 9.0/main -1 \
+-f /usr/share/postgresql/9.0/contrib/ip4r.sql
+&lt;lots of chatter&gt;
+
+$ psql -U postgres --cluster 9.1/main -c &#039;create extension ip4r;&#039;
+CREATE EXTENSION
+</code></pre><p>That's it :)
+</p>  </div>
+  </div>
+  </div>
+  <div id="push"></div>
+  </div>
+
+<footer>
+  <p>
+    <small>Unless otherwise specified, the contents of
+    <a href=/index.html>this website</a> are Copyright
+    &#169;&#160; 2008-2013 <a href=/about>Dimitri Fontaine</a>, and are
+    licensed for use under
+    <a href=http://creativecommons.org/licenses/by-sa/3.0/
+    rel=license><abbr title="Creative
+    Commons">CC</abbr>&#160;<abbr title=Attribution>BY</abbr>-<abbr title=Share-Alike>SA</abbr>&#160;3.0</a>.</small>
+  </p> 
+</footer> 
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-47059482-1', 'tapoueh.org');
+  ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,266 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset=utf-8 /> 
+    <meta name=viewport content="width=device-width" /> 
+    <meta name="generator" content="Emacs Muse Blog" /> 
+    <meta description="blog de Dimitri Fontaine, Expert PostgreSQL - 2ndQuadrant France" />
+    <meta property="og:title" content="tapoueh.org"/>
+    <meta property="og:type" content="non_profit"/>
+    <meta property="og:url" content="http://tapoueh.org/blog/2014/02/21-PostgreSQL-histogram"/>
+    <meta property="og:image" content="http://tapoueh.org/static/2ndQuadrant-cross.png"/>
+    <meta property="og:site_name" content="Tapoueh"/>
+    <meta property="fb:admins" content="545062436"/>
+
+    <title>Expertise PostgreSQL</title>
+    <link rel='stylesheet' type='text/css' media='all' href='/static/styles.css' />
+
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="/static/FontAwesome/css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="/static/highlight.js/styles/sunburst.css">
+    <script src="/static/highlight.js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script src="/static/jquery-1.9.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/jqcloud.css" />
+    <script type="text/javascript" src="/static/jqcloud-1.0.4.min.js"></script>
+
+    <script type="text/javascript" src="http://apis.google.com/js/plusone.js">{lang: 'fr'}</script>
+    
+  </head>
+  <body>
+
+   <div id="wrap">
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="nav-collapse collapse">
+	<p class="pull-right">
+	  <a href="http://2ndquadrant.com">
+	    <img alt="logo" src="/static/2ndQuadrant-cross.png"
+		 style="margin-right: 8px; margin-top: 4px; height: 32px;"/>
+	  </a>
+	</p>
+	<div class="navbar-inner">
+	 <a class="brand" style="margin-left: 0.2em; margin-top: -4px;"
+	    href="http://expert-postgresql.fr/">
+	  <img src="/static/expert-postgresql.png"></a>
+	 <ul class="nav">
+	  <li><a href="/blog"><i class="icon-book"></i> blog</a></li>
+	  <li><a href="/projects"><i class="icon-suitcase"></i> projects</a></li>
+	  <li><a href="/conferences"><i class="icon-plane"></i> confs</a></li>
+	  <li><a href="/about"><i class="icon-beer"></i> about</a></li>
+	  <li><a href="/rss/tapoueh.xml"><i class="icon-rss"></i> rss</a></li>
+	 </ul>
+	</div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row">
+	<div class="span4">
+	  <div><ul class='breadcrumb'><li><span class='divider'><i class='icon-sitemap'></i></span></li><li><a href='/'>/dev/dim</a><span class='divider'>/</span></li><li><a href='/blog'>blog</a><span class='divider'>/</span></li><li><a href='/blog/2014'>2014</a><span class='divider'>/</span></li><li><a href='/blog/2014/02'>02</a></li></ul></div>
+	  <div class='date'>Friday, February 21 2014 <i class='icon-calendar'></i></div>
+	  <div style='text-align: right;'><span><a href='/tags/postgresql'>PostgreSQL</a>, <a href='/tags/mongodb'>MongoDB</a>, <a href='/tags/yesql'>YeSQL</a></span> <i class='icon-tags'></i></div>
+	  
+
+	  <div style="margin-top: 1em;">
+	    <div class='span2 pull-left'><a class='thumbnail' href='/tags/postgresql'><img class='img-polaroid' style='width: 160px; height: 120px;' src='/thumbnails/postgresql-elephant.small.png' /></a></div>
+	    <div id='social' class='span1 pull-right social'><ul><li><g:plusone size='tall' href='http://tapoueh.org/blog/2014/02/21-PostgreSQL-histogram'></g:plusone></li><li><a href='http://twitter.com/share' class='twitter-share-button' data-via='tapoueh' data-count='vertical'>Tweet</a><script type='text/javascript' src='http://platform.twitter.com/widgets.js'></script></li></ul></div>
+	  </div>
+
+	  <div id="prevnext">
+	    <h3 class='prevnext'>Recent Articles</h3>
+	    <div><a class='previous' href='/blog/2014/02/17-aggregating-nba-data-PostgreSQL-vs-MongoDB'>« Aggregating NBA data, PostgreSQL vs MongoDB</a></div>
+	    <div><a class='next pull-right' href='/blog/2014/03/25-Nordic-PGDAY-2014'>Nordic PostgreSQL Day 2014 »</a></div>
+	  </div>
+	  
+	  <div>
+	    <div id="left-tag-cloud" class="jqcloud"
+		 style="width: 300px; height: 650px; position: absolute; top: 475px;">
+	    </div>
+            <script>
+            var word_list;
+            
+            $.ajax({
+                type: 'GET',
+                url: '/cloud.json',
+                dataType: 'json',
+                success: function(response) { word_list = response; },
+                data: {},
+                async: false
+            });
+             
+            $(document).ready(function() {
+               $("#left-tag-cloud").jQCloud(word_list,
+	                {shape: "rectangular",
+	                 removeOverflowing: false});
+            });
+            </script>
+	  </div>
+
+	</div>
+
+	<div id="title" class="span8">
+	  <h1>PostgreSQL, Aggregates and Histograms</h1>
+	</div>
+	
+	<div id="content" class="span8">
+<p>In our previous article 
+<a href='/blog/2014/02/17-aggregating-nba-data-PostgreSQL-vs-MongoDB'>Aggregating NBA data, PostgreSQL vs MongoDB</a> we spent
+time comparing the pretty new 
+<em>MongoDB Aggregation Framework</em> with the decades
+old SQL aggregates. Today, let's showcase more of those SQL aggregates,
+producing a nice 
+<em>histogram</em> right from our SQL console.
+</p><center><img src='../../../images/histogram.jpg' /></center><h2>PostgreSQL and Mathematics</h2><p>The other day while giving a 
+<a href='http://2ndquadrant.com/en/training/course-catalog/practical-sql/'>Practical SQL</a> training my attention drifted to
+the 
+<code>width_bucket</code> function available as part of the
+<a href='http://www.postgresql.org/docs/9.3/static/functions-math.html'>Mathematical Functions and Operators</a> PostgreSQL is offering to its fearless
+SQL users.
+</p><p>Here's what the documentation says about it:
+</p><blockquote><p>The function width_bucket(op numeric, b1 numeric, b2 numeric, count int)
+returns (as an int) the bucket to which operand would be assigned in an
+equidepth histogram with count buckets, in the range b1 to b2.
+</p><p>For example 
+<code>width_bucket(5.35, 0.024, 10.06, 5)</code> returns 
+<code>3</code>.
+</p></blockquote><p>Let's have a look at our dataset from the NBA games and statistics, and get
+back to counting 
+<em>rebounds</em> in the 
+<code>drb</code> field. A preliminary query informs us
+that we have stats ranging from 10 to 54 rebounds per team in a single game,
+a good information we can use in the following query:
+</p><pre><code>select width_bucket(drb, 10, 54, 9), count(*)
+    from team_stats
+group by 1
+order by 1;
+ width_bucket | count 
+--------------+-------
+            1 |    52
+            2 |  1363
+            3 |  8832
+            4 | 20917
+            5 | 20681
+            6 |  9166
+            7 |  2093
+            8 |   247
+            9 |    20
+           10 |     1
+(10 rows)
+</code></pre><center><img src='../../../images/calibrate.gif' /></center><center><em>We've just calibrated our games in terms of rebounds here</em></center><h2>Console Histograms</h2><p>Now, what would it take to actually be able to display the full story right
+into our 
+<code>psql</code> console, for preview before actually integrating a new diagram
+in our reporting solution? Turns out it's not very complex.
+</p><p>First, we want to avoid hard coding the range of 
+<em>rebounds</em> we're processing,
+so we are going to compute that in a first step. Then we want the 
+<em>histogram</em>
+data, which is a ordered list of ranges with a min and a max value and a
+<em>frequency</em>, which is how many games were recorded with a number or 
+<em>rebounds</em>
+within any given 
+<em>bucket</em> range. And last, we want to display something a
+little more visual than just a list of numbers:
+</p><pre><code>with drb_stats as (
+    select min(drb) as min,
+           max(drb) as max
+      from team_stats
+),
+     histogram as (
+   select width_bucket(drb, min, max, 9) as bucket,
+          int4range(min(drb), max(drb), &#039;[]&#039;) as range,
+          count(*) as freq
+     from team_stats, drb_stats
+ group by bucket
+ order by bucket
+)
+ select bucket, range, freq,
+        repeat(&#039;*&#039;, (freq::float / max(freq) over() * 30)::int) as bar
+   from histogram;
+
+ bucket |  range  | freq  |              bar               
+--------+---------+-------+--------------------------------
+      1 | [10,15) |    52 | 
+      2 | [15,20) |  1363 | **
+      3 | [20,25) |  8832 | *************
+      4 | [25,30) | 20917 | ******************************
+      5 | [30,35) | 20681 | ******************************
+      6 | [35,40) |  9166 | *************
+      7 | [40,45) |  2093 | ***
+      8 | [45,50) |   247 | 
+      9 | [50,54) |    20 | 
+     10 | [54,55) |     1 | 
+(10 rows)
+
+Time: 53.570 ms
+</code></pre><p>The query is using the 
+<a href='http://www.postgresql.org/docs/9.3/interactive/queries-with.html'>Common Table Expressions</a> 
+<code>WITH</code> syntax so that it's
+easier to read and understand, then the data-related magic happens in the
+<code>histogram</code> CTE. We use the 
+<code>width_bucket</code> function to get a 
+<em>calibration</em> number
+for each of our games, and we 
+<code>GROUP BY bucket</code> to be able to 
+<em><strong>aggregate</strong></em> the
+<em>min</em> and 
+<em>max</em> values.
+</p><p>As we're using PostgreSQL though, just having two columns with the min and
+max as separate values is not enough, what we actually need is a
+<a href='http://www.postgresql.org/docs/9.3/static/rangetypes.html'>discrete range</a> of 
+<em>rebounds</em> for each 
+<em>bucket</em>, hence using the 
+<code>int4range</code> range
+constructor function.
+</p><p>Of course, within the same 
+<code>GROUP BY</code> aggregation here it's still possible to
+<em>count</em> the number of games having a 
+<em>rebounds</em> stat within the bucket, defining
+the histogram's frequency.
+</p><p>The only remaining step then consists into hacking our way into actually
+displaying something 
+<em>visual enough</em> for a quick less-than-1-minute effort of
+data crunching, using the 
+<code>repeat</code> function which is part of
+<a href='http://www.postgresql.org/docs/9.3/static/functions-string.html'>PostgreSQL String Functions and Operators</a>. Note that we're using the
+<a href='blog/2013/08/20-Window-Functions'>Window Function</a> expression 
+<code>max(freq) over()</code> to have access the highest
+frequency value from each and every result row.
+</p><p>So... Did I mention lately?
+</p><center><img src='../../../images/220px-Postgresql_elephant.svg.png' /></center><center><em><strong>PostgreSQL is YeSQL!</strong></em></center><p>By the way, the whole scripting and data and SQL is available at
+<a href='https://github.com/dimitri/nba'>github/dimitri/nba</a>, and there's an 
+<a href='https://news.ycombinator.com/item?id=7257555'>Hacker News</a> entry to comment on the
+article if you're interested.
+</p>  </div>
+  </div>
+  </div>
+  <div id="push"></div>
+  </div>
+
+<footer>
+  <p>
+    <small>Unless otherwise specified, the contents of
+    <a href=/index.html>this website</a> are Copyright
+    &#169;&#160; 2008-2013 <a href=/about>Dimitri Fontaine</a>, and are
+    licensed for use under
+    <a href=http://creativecommons.org/licenses/by-sa/3.0/
+    rel=license><abbr title="Creative
+    Commons">CC</abbr>&#160;<abbr title=Attribution>BY</abbr>-<abbr title=Share-Alike>SA</abbr>&#160;3.0</a>.</small>
+  </p> 
+</footer> 
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-47059482-1', 'tapoueh.org');
+  ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

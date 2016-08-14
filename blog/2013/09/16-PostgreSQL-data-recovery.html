@@ -1,0 +1,591 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset=utf-8 /> 
+    <meta name=viewport content="width=device-width" /> 
+    <meta name="generator" content="Emacs Muse Blog" /> 
+    <meta description="blog de Dimitri Fontaine, Expert PostgreSQL - 2ndQuadrant France" />
+    <meta property="og:title" content="tapoueh.org"/>
+    <meta property="og:type" content="non_profit"/>
+    <meta property="og:url" content="http://tapoueh.org/blog/2013/09/16-PostgreSQL-data-recovery"/>
+    <meta property="og:image" content="http://tapoueh.org/static/2ndQuadrant-cross.png"/>
+    <meta property="og:site_name" content="Tapoueh"/>
+    <meta property="fb:admins" content="545062436"/>
+
+    <title>Expertise PostgreSQL</title>
+    <link rel='stylesheet' type='text/css' media='all' href='/static/styles.css' />
+
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="/static/FontAwesome/css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="/static/highlight.js/styles/sunburst.css">
+    <script src="/static/highlight.js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script src="/static/jquery-1.9.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/jqcloud.css" />
+    <script type="text/javascript" src="/static/jqcloud-1.0.4.min.js"></script>
+
+    <script type="text/javascript" src="http://apis.google.com/js/plusone.js">{lang: 'fr'}</script>
+    
+  </head>
+  <body>
+
+   <div id="wrap">
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="nav-collapse collapse">
+	<p class="pull-right">
+	  <a href="http://2ndquadrant.com">
+	    <img alt="logo" src="/static/2ndQuadrant-cross.png"
+		 style="margin-right: 8px; margin-top: 4px; height: 32px;"/>
+	  </a>
+	</p>
+	<div class="navbar-inner">
+	 <a class="brand" style="margin-left: 0.2em; margin-top: -4px;"
+	    href="http://expert-postgresql.fr/">
+	  <img src="/static/expert-postgresql.png"></a>
+	 <ul class="nav">
+	  <li><a href="/blog"><i class="icon-book"></i> blog</a></li>
+	  <li><a href="/projects"><i class="icon-suitcase"></i> projects</a></li>
+	  <li><a href="/conferences"><i class="icon-plane"></i> confs</a></li>
+	  <li><a href="/about"><i class="icon-beer"></i> about</a></li>
+	  <li><a href="/rss/tapoueh.xml"><i class="icon-rss"></i> rss</a></li>
+	 </ul>
+	</div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row">
+	<div class="span4">
+	  <div><ul class='breadcrumb'><li><span class='divider'><i class='icon-sitemap'></i></span></li><li><a href='/'>/dev/dim</a><span class='divider'>/</span></li><li><a href='/blog'>blog</a><span class='divider'>/</span></li><li><a href='/blog/2013'>2013</a><span class='divider'>/</span></li><li><a href='/blog/2013/09'>09</a></li></ul></div>
+	  <div class='date'>Tuesday, September 17 2013 <i class='icon-calendar'></i></div>
+	  <div style='text-align: right;'><span><a href='/tags/postgresql'>PostgreSQL</a>, <a href='/tags/recovery'>Recovery</a>, <a href='/tags/backups'>Backups</a></span> <i class='icon-tags'></i></div>
+	  
+
+	  <div style="margin-top: 1em;">
+	    <div class='span2 pull-left'><a class='thumbnail' href='/tags/postgresql'><img class='img-polaroid' style='width: 160px; height: 120px;' src='/thumbnails/postgresql-elephant.small.png' /></a></div>
+	    <div id='social' class='span1 pull-right social'><ul><li><g:plusone size='tall' href='http://tapoueh.org/blog/2013/09/16-PostgreSQL-data-recovery'></g:plusone></li><li><a href='http://twitter.com/share' class='twitter-share-button' data-via='tapoueh' data-count='vertical'>Tweet</a><script type='text/javascript' src='http://platform.twitter.com/widgets.js'></script></li></ul></div>
+	  </div>
+
+	  <div id="prevnext">
+	    <h3 class='prevnext'>Recent Articles</h3>
+	    <div><a class='previous' href='/blog/2013/09/06-pg_trgm-suggestions'>« Using trigrams against typos</a></div>
+	    <div><a class='next pull-right' href='/blog/2013/09/19-OSCD-2013'>Open World Forum 2013 »</a></div>
+	  </div>
+	  
+	  <div>
+	    <div id="left-tag-cloud" class="jqcloud"
+		 style="width: 300px; height: 650px; position: absolute; top: 475px;">
+	    </div>
+            <script>
+            var word_list;
+            
+            $.ajax({
+                type: 'GET',
+                url: '/cloud.json',
+                dataType: 'json',
+                success: function(response) { word_list = response; },
+                data: {},
+                async: false
+            });
+             
+            $(document).ready(function() {
+               $("#left-tag-cloud").jQCloud(word_list,
+	                {shape: "rectangular",
+	                 removeOverflowing: false});
+            });
+            </script>
+	  </div>
+
+	</div>
+
+	<div id="title" class="span8">
+	  <h1>PostgreSQL data recovery</h1>
+	</div>
+	
+	<div id="content" class="span8">
+<p>The following story is only interesting to read if you like it when bad
+things happen, or if you don't have a trustworthy backup policy in place. By
+trustworthy I mean that 
+<em>each backup</em> you take 
+<strong>must</strong> be tested with a test
+recovery job. Only tested backups will prove useful when you need them. So
+go read our 
+<a href='http://www.postgresql.org/docs/current/interactive/backup.html'>Backup and Restore</a> documentation chapter then learn how to setup
+<a href='http://www.pgbarman.org/'>Barman</a> for handling 
+<em>physical backups</em> and 
+<a href='http://www.postgresql.org/docs/current/interactive/continuous-archiving.html'>Point In Time Recovery</a>. Get back
+when you have proper backups, including recovery testing in place. We are
+waiting for you. Back? Ok, let's see how bad you can end up without backups,
+and how to still recover. With luck.
+</p><center><a href='http://www.pgbarman.org/'><img src='../../../images/pgbarman.png' /></a></center><center><em>Set a trustworthy backup solution, and review your policy</em></center><p>Did I mention that a 
+<em>trustworthy</em> backup solution includes automated testing
+of your ability to recover from any and all backup you've been taking? That
+might be more important than you think.
+</p><blockquote><p>This article is going to be quite long. Prepare yourself a cup of your
+favorite beaverage. 
+<em><strong>TL;DR</strong></em> PostgreSQL resilience, flexibility and tolerance
+to 
+<em>bad situations</em> is quite remarkable and allowed us to get 
+<em>some</em> data back
+in the middle of a 
+<em>destroyed</em> cluster.
+</p></blockquote><h2>The Setup</h2><p>Most of the customers I visit have already laid out a 
+<em>backup strategy</em> and
+implemented it. Most of them did implement it with custom in-house scripts.
+They hire high-skilled engineers who have been doing system administration
+for more than a decade, and who are more than able to throw a 
+<em>shell script</em>
+at the problem.
+</p><p><em>Shell scripting</em> must in hindsight be one of the most difficult things to do
+right, given how many times it turns around doing something else entirely
+than what the program author though it would. If you want another one of my
+quite bulk advices, stop doing any 
+<em>shell scripting</em> today: a 
+<em>shell</em> is a nice
+<em>interactive</em> tool, if you are doing non-interactive scripting, that's
+actually called system programming and you deserve a better tool than that.
+</p><center><img src='../../../images/a-shell-scripting-story.png' /></center><center><em>My take: shell script makes it harder to write production quality code.</em></center><p>In our very case, the customer did realize that a 
+<em>production</em> setup had been
+approved and was running live 
+<em>before</em> any backup solution was in place. Think
+about it for a minute. If you don't have 
+<em><strong>tested</strong></em> backups in place, it's not
+production ready.
+</p><p>Well, the incident was taken seriously, and the usual backup 
+<em>scripts</em>
+deployed as soon as possible. Of course, the shell scripts depended in
+non-obvious ways on some parameters (environment variables, database
+connections, database setup with special configuration tables and rows). And
+being a 
+<em>shell script</em>, not much verification that the setup was complete had
+been implemented, you see.
+</p><h2>The Horror Story</h2><p>And guess what the first thing that 
+<em>backup</em> script is doing? Of course,
+making sure enough place is available on the file system to handle the next
+backup. That's usually done by applying a 
+<em>retention policy</em> and first
+removing backups that are 
+<em>too old</em> given said policy. And this script too did
+exactly that.
+</p><p>The problem is that, as some of you already guessed (yes, I see those smiles
+trying to hide brains thinking as fast as possible to decide if the same
+thing could happen to you too), well, the script configuration had not been
+done before entering production. So the script ran without setup, and
+without much checking, began making bytes available. By removing any file
+more than 5 days old. Right. In. 
+<code>$PGDATA</code>.
+</p><h2>But recently modified are still there, right?</h2><p>Exactly, not all the files of the database system had been removed. Surely
+something can be done to recover data from a very small number of important
+tables? Let's now switch to the present tense and see about it.
+</p><center><img src='../../../images/data_loss.gif' /></center><center><em>Can you spell </em><strong>data loss</strong><em>?</em></center><p>Remember, there's no 
+<em>backups</em>. The 
+<code>archive_command</code> is set though, so that's a
+first track to consider. After that, what we can do is try to start
+PostgreSQL on a copy of the remaining 
+<code>$PGDATA</code> and massage it until it allows
+us to 
+<code>COPY</code> the data out.
+</p><h2>The desperate PITR</h2><p>The 
+<em>WAL Archive</em> is starting at the file 
+<code>000000010000000000000009</code>, which
+makes it unusable without a corresponding 
+<em>base backup</em>, which we don't have.
+Well, unless maybe if we tweak the system. We need to first edit the system
+identifier, then reset the system to only begin replaying at the file we do
+have. With some luck...
+</p><center><img src='../../../images/a-broken-clock-is-right-twice-a-day-michael-flood.640.jpg' /></center><center><em>A broken clock is still right twice a day, a broken backup never is...</em></center><p>Time to try our luck here:
+</p><pre><code>$ export PGDATA=/some/place
+$ initdb
+$ hexedit $PGDATA/global/pg_control
+$ pg_controldata
+$ xlogdump /archives/000000010000000000000009
+$ pg_resetxlog -f -l 1,9,19 -x 2126 -o 16667 $PGDATA
+$ cat &gt; $PGDATA/recovery.conf &lt;&lt;EOF
+restore_command = &#039;gunzip -c /archives/%f.gz &gt; &quot;%p&quot;&#039;
+EOF
+$ pg_ctl start
+</code></pre><p>Using the transaction data we get from reading the first archive log file we
+have with 
+<a href='https://github.com/snaga/xlogdump'>xlogdump</a> then using 
+<a href='http://www.postgresql.org/docs/current/static/app-pgresetxlog.html'>pg_resetxlog</a> and thus accepting to maybe lose
+some more data, we still can't start the system in 
+<em>archive recovery</em> mode,
+because the 
+<em>system identifier</em> is not the same in the WAL files and in the
+system's 
+<code>pg_controldata</code> output.
+</p><p>So we tweak our fresh cluster to match, by changing the first 8 bytes of the
+control file, paying attention to the byte order here. As I already had a
+Common Lisp 
+<em>REPL</em> open on my laptop, the easier for me to switch from decimal
+representation of the 
+<em>database system identifier</em> was so:
+</p><pre><code>(format nil &quot;~,,&#039; ,2:x&quot; 5923145491842547187)
+&quot;52 33 3D 71 52 3B 3D F3&quot;
+</code></pre><p>Paying attention to the byte order means that you need to edit the control
+file's first 8 bytes in reverse: 
+<code>F3 3D 3B 52 71 3D 33 52</code>. But in our case,
+no massaging seems to allow PostgreSQL to read from the archives we have.
+</p><p>On to massaging what is remaining in the old cluster then.
+</p><h2>The Promotion</h2><p>I'm usually not doing promotion in such a prominent way, but I clearly
+solved the situation thanks to my colleagues from the 24/7 support at
+2ndQuadrant, with a special mention to 
+<em><strong>Andres Freund</strong></em> for inspiration and
+tricks:
+</p><center><a href='http://2ndquadrant.com/'><img src='../../../images/2ndQuadrant-logo.640.jpg' /></a></center><center><em>We also know how to recover your data, but we first insist in proper backups</em></center><p>Oh, did I mention about proper backups and how you need to have been
+successfully testing them before you can call a service 
+<em>in production</em> or
+have any hope about your recovery abilities? I wasn't sure I did...
+</p><h2>Playing fast and loose with PostgreSQL</h2><p>The damaged cluster is not starting, for lack of important meta-data kind-of
+files. First thing missing is 
+<code>pg_filenode.map</code> in the 
+<code>global</code> directory. Using
+<code>xlogdump</code> it should be possible to recover just this file if it's been
+changed in the WAL archives we have, but that's not the case.
+</p><center><img src='../../../images/damage-case-bloat.640.jpg' /></center><center><em>Trying to salvage a damage case</em></center><h3>pg_filenode.map</h3><p>As this file is only used for shared relations and some bootstraping
+situation (you can't read current 
+<code>pg_class</code> file node from 
+<code>pg_class</code>, as the
+file mapping is the information you need to know which file to read), and
+knowing that the version on disk was older than 5 days on a cluster recently
+put into production, we can allow ourselves trying something: copy the
+<code>pg_filenode.map</code> from another fresh cluster.
+</p><p>My understanding is that this file only changes when doing heavy maintenance
+on system tables, like 
+<code>CLUSTER</code> or 
+<code>VACUUM FULL</code>, which apparently didn't get
+done here.
+</p><p>By the way, here's one of those tricks I learnt in this exercise. You can
+read the second and fourth columns as filenames in the same directory:
+</p><pre><code>od -j 8 -N $((512-8-8)) -td4 &lt; $PGDATA/global/pg_filenode.map
+</code></pre><p>So copying default 
+<code>pg_filenode.map</code> allowed us to pass that error and get to
+the next.
+</p><h3>pg_clog</h3><p>Next is the lack of some 
+<code>pg_clog</code> files. That's a little tricky because those
+binary files contain the 
+<code>commit log</code> information and are used to quickly
+decide if recent transactions are still in flight, or committed already, or
+have been rolled back. We can easily trick the system and declare that all
+transaction older than 5 days (remember the bug in the 
+<em>cleanup</em> script was
+about that, right?) have in fact been 
+<em>committed</em>. A commit in the 
+<code>CLOG</code> is a
+<code>01</code> value, and in a single byte we can stuff as many as 4 transactions'
+status.
+</p><p>Here's how to create those file from scratch, once you've noticed that
+<code>01010101</code> is in fact the ascii code for the letter 
+<code>U</code>.
+</p><pre><code>(code-char #b01010101)
+#\U
+</code></pre><p>So to create a series of clog file where all transactions have been
+committed, so that we can see the data, we can use the following command
+line:
+</p><pre><code>for c in 0000 0001 0002 0003 0004 0005 0006 0007 0008 0009 000A 000B 000C
+do
+    dd if=/dev/zero bs=256k count=1 | tr &#039;\0&#039; &#039;U&#039; &gt; $c
+done
+</code></pre><center><img src='../../../images/LRN-LNP-database.png' /></center><h3>pg_database</h3><p>The next step we are confronted to is that PostgreSQL has lost its baking
+files for the 
+<code>pg_database</code> relation and has no idea what are those
+directories in 
+<code>$PGDATA/base</code> supposed to be all about. We only have the
+numbers!
+</p><p>That said, the customer still had an history of the commands used to install
+the database server, so knew in which order the databases where created. So
+we had an OID to name mapping. How to apply it?
+</p><p>Well 
+<code>pg_database</code> is a shared catalog and the underlying file apparently
+isn't that easy to hack around, so the easiest solution is to actually hack
+the 
+<code>CREATE DATABASE</code> command and have it accepts a 
+<code>WITH OIDS</code> option (
+<code>OIDS</code> is
+already a PostgreSQL keyword, 
+<code>OID</code> is not, and we're not going to introduce
+new keywords just for that particular patch).
+</p><p>Equiped with that 
+<em><strong>hacked version of PostgreSQL</strong></em> it's then possible to use
+the new command and create the databases we need with the 
+<code>OIDS</code> we know.
+</p><p>Those 
+<code>OIDS</code> are then to be found on-disk in the file where 
+<code>pg_database</code> is
+internally stored, and we can ask the system where that file is:
+</p><pre><code>select oid, relname, pg_relation_filenode(oid)
+  from pg_class
+ where relname = &#039;pg_database&#039;;
+ oid  |   relname   | pg_relation_filenode 
+------+-------------+----------------------
+ 1262 | pg_database |                12319
+(1 row)
+</code></pre><p>Then without surprise we can see:
+</p><pre><code>$ strings $PGDATA/global/12319
+postgres
+template0
+template1
+</code></pre><p>Once that file is copied over to the (running, as it happened) damaged
+cluster, it's then possible to actually open a connection to a database. And
+that's pretty impressive. But suddenly it didn't work anymore...
+</p><h3>Sytem Indexes</h3><p>This problem was fun to diagnose. The first 
+<code>psql</code> call would be fine, but the
+second one would always complain with an error you might have never seen in
+the field. I sure didn't before.
+</p><pre><code>FATAL:  database &quot;dbname&quot; does not exists
+DETAIL:  Database OID 17838 now seems to belong to &quot;otherdbname&quot;
+</code></pre><p>Part of PostgreSQL startup is building up some caches, and for that it's
+using indexes. And we might have made a mistake, or the index is corrupted,
+but apparently there's a mismatch somewhere.
+</p><p>But your now all-time favourite development team knew that would happen to
+you and is very careful that any feature included in the software is able to
+bootstrap itself without using any indexes. Or that in bad situations the
+system knows how to resist the lack of those indexes by turning the feature
+off, which is the case for 
+<a href='http://www.postgresql.org/docs/9.3/interactive/event-triggers.html'>Event Triggers</a> for example, as you can see in the
+commit 
+<a href='http://git.postgresql.org/gitweb/?p=postgresql.git;a=commitdiff;h=cd3413ec3683918c9cb9cfb39ae5b2c32f231e8b'>cd3413ec3683918c9cb9cfb39ae5b2c32f231e8b</a>.
+</p><center><img src='../../../images/indexing-system.jpg' /></center><center><em>Another kind of indexing system</em></center><p>So yes, it is indeed possible to start 
+<a href='http://www.postgresql.org/'>PostgreSQL</a> and have that marvellous
+<em><strong>production ready</strong></em> system avoid any system indexes, for dealing with cases
+where you have reasons to think those are corrupted... or plain missing.
+</p><pre><code>$ pg_ctl start -o &quot;-P&quot;
+$ cat &gt; $PGDATA/postgresql.conf &lt;&lt;EOF
+	enable_indexscan = off
+	enable_bitmapscan = off
+	enable_indexonlyscan = off
+EOF
+$ pg_ctl reload
+</code></pre><p>While at it, we edit the 
+<code>postgresq.conf</code> and adjust some index usage related
+settings, as you can see, because this problem will certain happen outside
+of the system indexes.
+</p><blockquote><p>If you're not using (only) PostgreSQL as your database system of choice, now
+is the time to check that you can actually start those other systems when
+their internal indexes are corrupted or missing, by the way. I think that
+tells a lot about the readiness of the system for production usage, and the
+attitude of the developpers towards what happens in 
+<em>the field</em>.
+</p><p>Also note that with PostgreSQL it's then possible to rebuild those system
+indexes using the 
+<code>REINDEX</code> command.
+</p></blockquote><p>So we now have a running PostgreSQL service, servicing the data that still
+is available. Well, not quite, We have a PostgreSQL service that accepts to
+start and allows connections to a specific database.
+</p><h3>pg_proc, pg_operator, pg_cast, pg_aggregate, pg_amop and others</h3><p>The first query I did try on the new database was against 
+<code>pg_class</code> to get
+details about the available tables. The 
+<code>psql</code> command line tool is doing a
+large number of queries in order to serve the 
+<code>\d</code> output, the 
+<code>\dt</code> one is
+usable in our case.
+</p><p>To know what queries are sent to the server by 
+<a href='http://www.postgresql.org/docs/current/interactive/app-psql.html'>psql</a> commands use the 
+<code>\set
+ECHO_HIDDEN</code> toggle.
+</p><p>About any query is now complaining that the target database is missing
+files. To understand which file it is, I used the following query in a fresh
+cluster. The following example is about an error message where
+<code>base/16384/12062</code> is missing:
+</p><pre><code>select oid, relname, pg_relation_filenode(oid)
+  from pg_class
+ where pg_relation_filenode(oid) = 12062;
+ oid  | relname | pg_relation_filenode 
+------+---------+----------------------
+ 1255 | pg_proc |                12062
+(1 row)
+</code></pre><p>In our specific case, no extensions were used. Check that before taking
+action here, or at least make sure that the tables you want to try and
+recover data from are not using extensions, that would make things so much
+more complex.
+</p><p>Here we can just use default settings for most of the system catalogs: we
+are using the same set of 
+<em>functions</em>, 
+<em>operators</em>, 
+<em>casts</em>, 
+<em>aggregates</em> etc as any
+other 9.2 system, so we can directly use files created by 
+<a href='http://www.postgresql.org/docs/current/interactive/app-initdb.html'>initdb</a> and copy
+them over where the error message leads.
+</p><center><img src='../../../images/namespace1.png' /></center><h3>pg_namespace</h3><p>Some error messages are about things we should definitely not ignore. The
+content of the 
+<code>pg_namespace</code> relation was lost on about all our databases,
+and the application here were using non default schema.
+</p><p>To recover from that situation, we need to better understand how this
+relation is actually stored:
+</p><pre><code># select oid, * from pg_namespace;
+  oid  |      nspname       | nspowner |        nspacl        
+-------+--------------------+----------+----------------------
+    99 | pg_toast           |       10 | 
+ 11222 | pg_temp_1          |       10 | 
+ 11223 | pg_toast_temp_1    |       10 | 
+    11 | pg_catalog         |       10 | {dim=UC/dim,=U/dim}
+  2200 | public             |       10 | {dim=UC/dim,=UC/dim}
+ 11755 | information_schema |       10 | {dim=UC/dim,=U/dim}
+(6 rows)
+
+# copy pg_namespace to stdout with oids;
+99	pg_toast	10	\N
+11222	pg_temp_1	10	\N
+11223	pg_toast_temp_1	10	\N
+11	pg_catalog	10	{dim=UC/dim,=U/dim}
+2200	public	10	{dim=UC/dim,=UC/dim}
+11755	information_schema	10	{dim=UC/dim,=U/dim}
+</code></pre><center><img src='../../../images/data_factory.jpg' /></center><p>So it's pretty easy here, actually, when you make the right connections:
+let's import a default 
+<code>pg_namespace</code> file then append to it thanks to 
+<code>COPY
+IN</code>, being quite careful about using 
+<code>tabs</code> (well, unless you use the 
+<code>delimiter</code>
+option of course):
+</p><pre><code># copy pg_namespace from stdin with oids;
+Enter data to be copied followed by a newline.
+End with a backslash and a period on a line by itself.
+&gt;&gt; 16443	my_namespace	10	\N
+&gt;&gt; \.
+</code></pre><p>And now there's a new 
+<em>schema</em> in there with the 
+<code>OID</code> we want. Wait, how do we
+figure out the OID we need?
+</p><pre><code># select c.oid, relname, relnamespace, nspname
+    from pg_class c left join pg_namespace n on n.oid = c.relnamespace
+   where relname = &#039;bar&#039;;
+  oid  | relname | relnamespace | nspname 
+-------+---------+--------------+---------
+ 16446 | bar     |        16443 | 
+(1 row)
+</code></pre><p>So in the result of that query we have no 
+<code>nspname</code>, but we happen to know
+that the table 
+<code>bar</code> is supposed to be in the schema 
+<code>my_namespace</code>. 
+</p><p>And believe it or not, that method actually allows you to create a schema in
+a database in a running cluster. We directly are editing the catalog files
+and editing even the 
+<code>OID</code> of the rows we are injecting.
+</p><p>The reason we couldn't do that with 
+<code>pg_database</code>, if you're wondering about
+that, is that 
+<code>pg_database</code> is a shared catalog and part of the bootstrapping,
+so that it was impossible to start PostgreSQL until we fix it, and the only
+implementation of 
+<a href='http://www.postgresql.org/docs/current/interactive/sql-copy.html'>COPY</a> we have requires a running PostgreSQL instance.
+</p><h3>pg_attributes and pg_attrdef</h3><p>So now we are able to actually refer to the right relation in a SQL command,
+we should be able to dump its content right? Well, it so happens that in
+some case it's ok and in some cases it's not.
+</p><p>We are very lucky in that exercise in that 
+<code>pg_attribute</code> is not missing. We
+might have been able to rebuild it thanks to some 
+<code>pg_upgrade</code> implementation
+detail by forcing the 
+<code>OID</code> of the next table to be created and then issuing
+the right command, as given by 
+<a href='http://www.postgresql.org/docs/current/interactive/app-pgdump.html'>pg_dump</a>. By the way, did I mention about
+backups? and automated recovery tests?
+</p><center><img src='../../../images/relation-attributes.jpg' /></center><center><em>We need the data attributes</em></center><p>In some cases though, we are missing the 
+<code>pg_attrdef</code> relation, wholesale.
+That relation is used for default expressions attached to columns, as we can
+see in the following example, taken on a working database server:
+</p><pre><code># \d a
+                         Table &quot;public.a&quot;
+ Column |  Type   |                   Modifiers                    
+--------+---------+------------------------------------------------
+ id     | integer | not null default nextval(&#039;a_id_seq&#039;::regclass)
+ f1     | text    | 
+Indexes:
+    &quot;a_pkey&quot; PRIMARY KEY, btree (id)
+
+#  select adrelid, adnum, adsrc
+     from pg_attrdef
+    where adrelid = &#039;public.a&#039;::regclass;
+ adrelid | adnum |             adsrc             
+---------+-------+-------------------------------
+   16411 |     1 | nextval(&#039;a_id_seq&#039;::regclass)
+(1 row)
+
+# select attnum, atthasdef
+    from pg_attribute
+   where     attrelid = &#039;public.a&#039;::regclass
+         and atthasdef;
+ attnum | atthasdef 
+--------+-----------
+      1 | t
+(1 row)
+</code></pre><p>We need to remember that the goal here is to salvage some data out of an
+installation where lots is missing, it's not at all about being able to ever
+use that system again. Given that, what we can do here is just ignore the
+default expression of the columns, by directly updating the catalogs:
+</p><pre><code># update pg_attribute
+     set atthasdef = false
+   where attrelid = &#039;my_namespace.bar&#039;;
+</code></pre><h3>COPY the data out! now!</h3><p>At this point we are now able to actually run the 
+<code>COPY</code> command to store the
+interesting data into a plain file, that is going to be usable on another
+system for analysis.
+</p><p>Not every relation from the get go, mind you, sometime some 
+<em>default</em> catalogs
+are still missing, but in that instance of the data recovery we were able to
+replace all the missing pieces of the puzzle by just copying the underlying
+files as we did in the previous section.
+</p><h2>Conclusion</h2><p>Really, 
+<a href='http://www.postgresql.org/'>PostgreSQL</a> once again surprises me by its flexibility and
+resilience. After having tried quite hard to kill it dead, it was still
+possible to actually rebuild the 
+<em>cluster</em> into shape piecemeal and get the
+interesting data back.
+</p><center><img src='../../../images/resilience_logo.jpg' /></center><p>I should mention, maybe, that with a proper 
+<em>production setup</em> including a
+<a href='http://www.postgresql.org/docs/current/interactive/continuous-archiving.html'>Continuous Archiving and Point-in-Time Recovery</a> solution such as 
+<a href='http://www.pgbarman.org/'>pgbarman</a>,
+<a href='http://skytools.projects.pgfoundry.org/doc/walmgr.html'>walmgr</a>, 
+<a href='https://github.com/omniti-labs/omnipitr'>OmniPITR</a> or 
+<a href='https://public.commandprompt.com/projects/pitrtools/wiki'>PITRtools</a>; the recovery would have been really simple.
+</p><blockquote><p>Using an already made solution is often better because they don't just
+include 
+<em>backup</em> support, but also 
+<em><strong>recovery</strong></em> support. You don't want to figure
+out recovery at the time you need it, and you don't want to have to discover
+if your backup really is good enough to be recovered from at the time you
+need it either. You should be testing your backups, and the only test that
+counts is a recovery.
+</p></blockquote><p>It's even one of those rare cases where using 
+<a href='http://www.postgresql.org/docs/current/interactive/high-availability.html'>PostgreSQL replication</a> would
+have been a solution: the removing of the files did happen without
+PostgreSQL involved, it didn't know that was happening and wouldn't have
+replicated that to the standby.
+</p>  </div>
+  </div>
+  </div>
+  <div id="push"></div>
+  </div>
+
+<footer>
+  <p>
+    <small>Unless otherwise specified, the contents of
+    <a href=/index.html>this website</a> are Copyright
+    &#169;&#160; 2008-2013 <a href=/about>Dimitri Fontaine</a>, and are
+    licensed for use under
+    <a href=http://creativecommons.org/licenses/by-sa/3.0/
+    rel=license><abbr title="Creative
+    Commons">CC</abbr>&#160;<abbr title=Attribution>BY</abbr>-<abbr title=Share-Alike>SA</abbr>&#160;3.0</a>.</small>
+  </p> 
+</footer> 
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-47059482-1', 'tapoueh.org');
+  ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,334 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset=utf-8 /> 
+    <meta name=viewport content="width=device-width" /> 
+    <meta name="generator" content="Emacs Muse Blog" /> 
+    <meta description="blog de Dimitri Fontaine, Expert PostgreSQL - 2ndQuadrant France" />
+    <meta property="og:title" content="tapoueh.org"/>
+    <meta property="og:type" content="non_profit"/>
+    <meta property="og:url" content="http://tapoueh.org/blog/2010/02/23-getting-out-of-sql_ascii-part-2"/>
+    <meta property="og:image" content="http://tapoueh.org/static/2ndQuadrant-cross.png"/>
+    <meta property="og:site_name" content="Tapoueh"/>
+    <meta property="fb:admins" content="545062436"/>
+
+    <title>Expertise PostgreSQL</title>
+    <link rel='stylesheet' type='text/css' media='all' href='/static/styles.css' />
+
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="/static/FontAwesome/css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="/static/highlight.js/styles/sunburst.css">
+    <script src="/static/highlight.js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script src="/static/jquery-1.9.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/jqcloud.css" />
+    <script type="text/javascript" src="/static/jqcloud-1.0.4.min.js"></script>
+
+    <script type="text/javascript" src="http://apis.google.com/js/plusone.js">{lang: 'fr'}</script>
+    
+  </head>
+  <body>
+
+   <div id="wrap">
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="nav-collapse collapse">
+	<p class="pull-right">
+	  <a href="http://2ndquadrant.com">
+	    <img alt="logo" src="/static/2ndQuadrant-cross.png"
+		 style="margin-right: 8px; margin-top: 4px; height: 32px;"/>
+	  </a>
+	</p>
+	<div class="navbar-inner">
+	 <a class="brand" style="margin-left: 0.2em; margin-top: -4px;"
+	    href="http://expert-postgresql.fr/">
+	  <img src="/static/expert-postgresql.png"></a>
+	 <ul class="nav">
+	  <li><a href="/blog"><i class="icon-book"></i> blog</a></li>
+	  <li><a href="/projects"><i class="icon-suitcase"></i> projects</a></li>
+	  <li><a href="/conferences"><i class="icon-plane"></i> confs</a></li>
+	  <li><a href="/about"><i class="icon-beer"></i> about</a></li>
+	  <li><a href="/rss/tapoueh.xml"><i class="icon-rss"></i> rss</a></li>
+	 </ul>
+	</div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row">
+	<div class="span4">
+	  <div><ul class='breadcrumb'><li><span class='divider'><i class='icon-sitemap'></i></span></li><li><a href='/'>/dev/dim</a><span class='divider'>/</span></li><li><a href='/blog'>blog</a><span class='divider'>/</span></li><li><a href='/blog/2010'>2010</a><span class='divider'>/</span></li><li><a href='/blog/2010/02'>02</a></li></ul></div>
+	  <div class='date'>Tuesday, February 23 2010 <i class='icon-calendar'></i></div>
+	  <div style='text-align: right;'><span><a href='/tags/postgresql'>PostgreSQL</a>, <a href='/tags/plpgsql'>plpgsql</a>, <a href='/tags/encoding'>Encoding</a></span> <i class='icon-tags'></i></div>
+	  
+
+	  <div style="margin-top: 1em;">
+	    <div class='span2 pull-left'><a class='thumbnail' href='/tags/postgresql'><img class='img-polaroid' style='width: 160px; height: 120px;' src='/thumbnails/postgresql-elephant.small.png' /></a></div>
+	    <div id='social' class='span1 pull-right social'><ul><li><g:plusone size='tall' href='http://tapoueh.org/blog/2010/02/23-getting-out-of-sql_ascii-part-2'></g:plusone></li><li><a href='http://twitter.com/share' class='twitter-share-button' data-via='tapoueh' data-count='vertical'>Tweet</a><script type='text/javascript' src='http://platform.twitter.com/widgets.js'></script></li></ul></div>
+	  </div>
+
+	  <div id="prevnext">
+	    <h3 class='prevnext'>Recent Articles</h3>
+	    <div><a class='previous' href='/blog/2010/02/18-getting-out-of-sql_ascii-part-1'>« Getting out of SQL_ASCII, part 1</a></div>
+	    <div><a class='next pull-right' href='/blog/2010/03/04-emacs-muse-hacking'>Emacs Muse hacking »</a></div>
+	  </div>
+	  
+	  <div>
+	    <div id="left-tag-cloud" class="jqcloud"
+		 style="width: 300px; height: 650px; position: absolute; top: 475px;">
+	    </div>
+            <script>
+            var word_list;
+            
+            $.ajax({
+                type: 'GET',
+                url: '/cloud.json',
+                dataType: 'json',
+                success: function(response) { word_list = response; },
+                data: {},
+                async: false
+            });
+             
+            $(document).ready(function() {
+               $("#left-tag-cloud").jQCloud(word_list,
+	                {shape: "rectangular",
+	                 removeOverflowing: false});
+            });
+            </script>
+	  </div>
+
+	</div>
+
+	<div id="title" class="span8">
+	  <h1>Getting out of SQL_ASCII, part 2</h1>
+	</div>
+	
+	<div id="content" class="span8">
+<p>So, if you followed the previous blog entry, now you have a new database
+containing all the 
+<em>static</em> tables encoded in 
+<code>UTF-8</code> rather than
+<code>SQL_ASCII</code>. Because if it was not yet the case, you now severely distrust
+this non-encoding.
+</p><p>Now is the time to have a look at properly encoding the 
+<em>live</em> data, those
+stored in tables that continue to receive write traffic. The idea is to use
+the 
+<code>UPDATE</code> facilities of PostgreSQL to tweak the data, and too fix the
+applications so as not to continue inserting badly encoded strings in there.
+</p><h2>Finding non UTF-8 data</h2><p>First you want to find out the badly encoded data. You can do that with this
+helper function that 
+<a href='http://blog.rhodiumtoad.org.uk/'>RhodiumToad</a> gave me on IRC. I had a version from the
+archives before that, but the 
+<em>regexp</em> was hard to maintain and quote into a
+<code>PL</code> function. This is avoided by two means, first one is to have a separate
+pure 
+<code>SQL</code> function for the 
+<em>regexp</em> checking (so that you can index it should
+you need to) and the other one is to apply the regexp to 
+<code>hex</code> encoded
+data. Here we go:
+</p><pre><code>create or replace function public.utf8hex_valid(str text) 
+ returns boolean
+ language sql immutable
+as $f$
+   select $1 ~ $r$(?x)
+                  ^(?:(?:[0-7][0-9a-f])
+                     |(?:(?:c[2-9a-f]|d[0-9a-f])
+                        |e0[ab][0-9a-f]
+                        |ed[89][0-9a-f]
+                        |(?:(?:e[1-9abcef])
+                           |f0[9ab][0-9a-f]
+                           |f[1-3][89ab][0-9a-f]
+                           |f48[0-9a-f]
+                          )[89ab][0-9a-f]
+                       )[89ab][0-9a-f]
+                    )*$
+                $r$;
+$f$;
+</code></pre><p>Now some little scripting around it in order to skip intense manual and
+boring work (and see, some more catalog queries). Don't forget we will have
+to work on a per-column basis here...
+</p><pre><code>create or replace function public.check_encoding_utf8
+ (
+   IN schemaname text,
+   IN tablename  text,
+  OUT relname    text,
+  OUT attname    text,
+  OUT count      bigint
+ )
+ returns setof record
+ language plpgsql
+as $f$
+DECLARE
+  v_sql text;
+BEGIN
+  FOR relname, attname
+   IN SELECT c.relname, a.attname 
+        FROM pg_attribute a 
+             JOIN pg_class c on a.attrelid = c.oid
+             JOIN pg_namespace s on s.oid = c.relnamespace 
+	     JOIN pg_roles r on r.oid = c.relowner
+       WHERE s.nspname = schemaname
+         AND atttypid IN (25, 1043) -- text, varchar
+         AND relkind = &#039;r&#039;          -- ordinary table
+         AND r.rolname = &#039;some_specific_role&#039;
+	 AND CASE WHEN tablename IS NOT NULL
+	     	  THEN c.relname ~ tablename
+		  ELSE true
+	      END
+  LOOP
+    v_sql := &#039;SELECT count(*) &#039;
+          || &#039;  FROM ONLY &#039;|| schemaname || &#039;.&#039; || relname 
+          || &#039; WHERE NOT public.utf8hex_valid(encode(textsend(&#039; 
+          || attname
+          || &#039;), &#039;&#039;hex&#039;&#039;))&#039;;
+
+    -- RAISE NOTICE &#039;Checking: %.%&#039;, relname, attname;
+    -- RAISE NOTICE &#039;SQL: %&#039;, v_sql;
+    EXECUTE v_sql INTO count;
+    RETURN NEXT;
+  END LOOP;
+END;
+$f$; 
+</code></pre><p>Note that the 
+<code>tablename</code> is compared using the 
+<code>~</code> operator, so that's 
+<em>regexp</em>
+matching there too. Also note that I wanted only to check those tables that
+are owned by a specific role, your case may vary.
+</p><p>The way I used this function was like this:
+</p><pre><code>create table leon.check_utf8 as
+ select * 
+   from public.check_encoding_utf8();
+</code></pre><p>Then you need to take action on those lines in 
+<code>leon.check_utf8</code> table which
+have a 
+<code>count &gt; 0</code>. Rince and repeat, but you may soon realise building the
+table over and over again is costly.
+</p><h2>Cleaning up the data</h2><p>Up for some more helper tools? Unless you really want to manually fix this
+huge amount of columns where some data ain't 
+<code>UTF-8</code> compatible... here's some
+more:
+</p><pre><code>create or replace function leon.nettoyeur
+ (
+  IN  action      text,
+  IN  encoding    text,
+  IN  tablename   text,
+  IN  columname   text,
+
+  OUT orig        text,
+  OUT utf8        text
+ )
+ returns setof record
+ language plpgsql
+as $f$
+DECLARE
+  p_convert text;
+BEGIN
+  IF encoding IS NULL
+  THEN
+    p_convert := &#039;translate(&#039; 
+              || columname || &#039;, &#039; 
+              || $$&#039;\211\203\202&#039;$$ 
+              || &#039;, &#039;
+              || $$&#039;   &#039;$$
+	      || &#039;) &#039;;
+  ELSE
+    -- in 8.2, write convert using, in 8.3, the other expression
+    -- p_convert := &#039;convert(&#039; || columname || &#039; using &#039; || conversion || &#039;) &#039;;
+    p_convert := &#039;convert(textsend(&#039; || columname || &#039;), &#039;&#039;&#039;|| encoding ||&#039;&#039;&#039;, &#039;&#039;utf-8&#039;&#039; ) &#039;;
+  END IF;
+
+  IF action = &#039;select&#039;
+  THEN
+    FOR orig, utf8
+     IN EXECUTE &#039;SELECT &#039; || columname || &#039;, &#039;
+         || p_convert
+         || &#039;  FROM ONLY &#039; || tablename
+         || &#039; WHERE not public.utf8hex_valid(&#039;
+         || &#039;encode(textsend(&#039;|| columname ||&#039;), &#039;&#039;hex&#039;&#039;))&#039;
+    LOOP
+      RETURN NEXT;
+    END LOOP;
+
+  ELSIF action = &#039;update&#039;
+  THEN
+    EXECUTE &#039;UPDATE ONLY &#039; || tablename 
+         || &#039; SET &#039; || columname || &#039; = &#039; || p_convert
+         || &#039; WHERE not public.utf8hex_valid(&#039;
+         || &#039;encode(textsend(&#039;|| columname ||&#039;), &#039;&#039;hex&#039;&#039;))&#039;;
+
+    FOR orig, utf8 
+     IN SELECT * 
+          FROM leon.nettoyeur(&#039;select&#039;, encoding, tablename, columname)
+    LOOP
+      RETURN NEXT;
+    END LOOP;
+
+  ELSE
+    RAISE EXCEPTION &#039;L&#xE9;on, Nettoyeur, veut de l&#039;&#039;action.&#039;;
+
+  END IF;
+END;
+$f$;
+</code></pre><p>As you can see, this function allows to check the conversion process from a
+given supposed encoding before to actually convert the data in place. This
+is very useful as even when you're pretty sure the non-utf8 data is 
+<code>latin1</code>,
+sometime you find it's 
+<code>windows-1252</code> or such. So double check before telling
+<code>leon.nettoyeur()</code> to update your precious data!
+</p><p>Also, there's a facility to use 
+<code>translate()</code> when none of the encoding match
+your expectations. This is a skeleton just replacing invalid characters with
+a 
+<code>space</code>, tweak it at will!
+</p><h2>Conclusion</h2><p>Enjoy your clean database now, even if it still accepts new data that will
+probably not pass the checks, so we still have to be careful about that and
+re-clean every day until the migration is effective. Or maybe add a 
+<code>CHECK</code>
+clause that will reject badly encoded data...
+</p><p>In fact here we're using 
+<a href='http://wiki.postgresql.org/wiki/Londiste_Tutorial'>Londiste</a> to replicate the 
+<em>live</em> data from the old to
+the new server, and that means the replication will break each time there's
+new data written in non-utf8, as the new server is running 
+<code>8.4</code>, which by
+design ain't very forgiving. Our plan is to clean-up as we go (remove table
+from the 
+<em>subscriber</em>, fix it, add it again) and migrate as soon as possible!
+</p><p>Bonus points to those of you getting the convoluted reference :)
+</p>  </div>
+  </div>
+  </div>
+  <div id="push"></div>
+  </div>
+
+<footer>
+  <p>
+    <small>Unless otherwise specified, the contents of
+    <a href=/index.html>this website</a> are Copyright
+    &#169;&#160; 2008-2013 <a href=/about>Dimitri Fontaine</a>, and are
+    licensed for use under
+    <a href=http://creativecommons.org/licenses/by-sa/3.0/
+    rel=license><abbr title="Creative
+    Commons">CC</abbr>&#160;<abbr title=Attribution>BY</abbr>-<abbr title=Share-Alike>SA</abbr>&#160;3.0</a>.</small>
+  </p> 
+</footer> 
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-47059482-1', 'tapoueh.org');
+  ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

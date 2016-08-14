@@ -1,0 +1,454 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset=utf-8 /> 
+    <meta name=viewport content="width=device-width" /> 
+    <meta name="generator" content="Emacs Muse Blog" /> 
+    <meta description="blog de Dimitri Fontaine, Expert PostgreSQL - 2ndQuadrant France" />
+    <meta property="og:title" content="tapoueh.org"/>
+    <meta property="og:type" content="non_profit"/>
+    <meta property="og:url" content="http://tapoueh.org/blog/2014/02/17-aggregating-nba-data-PostgreSQL-vs-MongoDB"/>
+    <meta property="og:image" content="http://tapoueh.org/static/2ndQuadrant-cross.png"/>
+    <meta property="og:site_name" content="Tapoueh"/>
+    <meta property="fb:admins" content="545062436"/>
+
+    <title>Expertise PostgreSQL</title>
+    <link rel='stylesheet' type='text/css' media='all' href='/static/styles.css' />
+
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="/static/FontAwesome/css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="/static/highlight.js/styles/sunburst.css">
+    <script src="/static/highlight.js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script src="/static/jquery-1.9.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/jqcloud.css" />
+    <script type="text/javascript" src="/static/jqcloud-1.0.4.min.js"></script>
+
+    <script type="text/javascript" src="http://apis.google.com/js/plusone.js">{lang: 'fr'}</script>
+    
+  </head>
+  <body>
+
+   <div id="wrap">
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="nav-collapse collapse">
+	<p class="pull-right">
+	  <a href="http://2ndquadrant.com">
+	    <img alt="logo" src="/static/2ndQuadrant-cross.png"
+		 style="margin-right: 8px; margin-top: 4px; height: 32px;"/>
+	  </a>
+	</p>
+	<div class="navbar-inner">
+	 <a class="brand" style="margin-left: 0.2em; margin-top: -4px;"
+	    href="http://expert-postgresql.fr/">
+	  <img src="/static/expert-postgresql.png"></a>
+	 <ul class="nav">
+	  <li><a href="/blog"><i class="icon-book"></i> blog</a></li>
+	  <li><a href="/projects"><i class="icon-suitcase"></i> projects</a></li>
+	  <li><a href="/conferences"><i class="icon-plane"></i> confs</a></li>
+	  <li><a href="/about"><i class="icon-beer"></i> about</a></li>
+	  <li><a href="/rss/tapoueh.xml"><i class="icon-rss"></i> rss</a></li>
+	 </ul>
+	</div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row">
+	<div class="span4">
+	  <div><ul class='breadcrumb'><li><span class='divider'><i class='icon-sitemap'></i></span></li><li><a href='/'>/dev/dim</a><span class='divider'>/</span></li><li><a href='/blog'>blog</a><span class='divider'>/</span></li><li><a href='/blog/2014'>2014</a><span class='divider'>/</span></li><li><a href='/blog/2014/02'>02</a></li></ul></div>
+	  <div class='date'>Monday, February 17 2014 <i class='icon-calendar'></i></div>
+	  <div style='text-align: right;'><span><a href='/tags/postgresql'>PostgreSQL</a>, <a href='/tags/mongodb'>MongoDB</a>, <a href='/tags/yesql'>YeSQL</a></span> <i class='icon-tags'></i></div>
+	  
+
+	  <div style="margin-top: 1em;">
+	    <div class='span2 pull-left'><a class='thumbnail' href='/tags/postgresql'><img class='img-polaroid' style='width: 160px; height: 120px;' src='/thumbnails/postgresql-elephant.small.png' /></a></div>
+	    <div id='social' class='span1 pull-right social'><ul><li><g:plusone size='tall' href='http://tapoueh.org/blog/2014/02/17-aggregating-nba-data-PostgreSQL-vs-MongoDB'></g:plusone></li><li><a href='http://twitter.com/share' class='twitter-share-button' data-via='tapoueh' data-count='vertical'>Tweet</a><script type='text/javascript' src='http://platform.twitter.com/widgets.js'></script></li></ul></div>
+	  </div>
+
+	  <div id="prevnext">
+	    <h3 class='prevnext'>Recent Articles</h3>
+	    <div><a class='previous' href='/blog/2014/02/FOSDEM-Extensions'>« PostgreSQL FOSDEM Conference</a></div>
+	    <div><a class='next pull-right' href='/blog/2014/02/21-PostgreSQL-histogram'>PostgreSQL, Aggregates and Histograms »</a></div>
+	  </div>
+	  
+	  <div>
+	    <div id="left-tag-cloud" class="jqcloud"
+		 style="width: 300px; height: 650px; position: absolute; top: 475px;">
+	    </div>
+            <script>
+            var word_list;
+            
+            $.ajax({
+                type: 'GET',
+                url: '/cloud.json',
+                dataType: 'json',
+                success: function(response) { word_list = response; },
+                data: {},
+                async: false
+            });
+             
+            $(document).ready(function() {
+               $("#left-tag-cloud").jQCloud(word_list,
+	                {shape: "rectangular",
+	                 removeOverflowing: false});
+            });
+            </script>
+	  </div>
+
+	</div>
+
+	<div id="title" class="span8">
+	  <h1>Aggregating NBA data, PostgreSQL vs MongoDB</h1>
+	</div>
+	
+	<div id="content" class="span8">
+<p>When reading the article
+<a href='http://thecodebarbarian.wordpress.com/2014/02/14/crunching-30-years-of-nba-data-with-mongodb-aggregation/'>Crunching 30 Years of NBA Data with MongoDB Aggregation</a> I coulnd't help but
+think that we've been enjoying 
+<a href='http://www.postgresql.org/docs/current/static/tutorial-agg.html'>aggregates</a> in SQL for 3 or 4 decades already.
+When using 
+<a href='http://www.postgresql.org/'>PostgreSQL</a> it's even easy to actually add your own aggregates
+given the SQL command 
+<a href='http://www.postgresql.org/docs/current/static/sql-createaggregate.html'>create aggregate</a>.
+</p><center><img src='../../../images/postgresql-mongodb.jpg' /></center><center><em>Photo Credit: <a href='https://www.flickr.com/photos/57426425@N07/6005436411/sizes/z/'>Copyright All rights reserved by Segward Graupner</a></em></center><p>The next step after thinking how obvious the queries written in the
+mentionned article would be to express in SQL was to actually load the data
+into PostgreSQL and write the aggregate queries, of course.
+</p><h2>Loading the data</h2><p>With the help of a little bit of 
+<em>Common Lisp</em> code and using the
+<a href='https://github.com/archimag/mongo-cl-driver'>mongo-cl-driver</a> it was easy enough to parse the given 
+<a href='http://bsonspec.org/'>BSON</a> file. What was
+more complex was to actually understand enough of the data model to produce
+a relational design out of it, avoiding data redundancy as much as possible.
+</p><p>We call that step 
+<em>normalization</em> in old-style relational databases, and the
+goal of that process is to avoid 
+<em>functional dependency</em> so that the data is
+easier to understand, verify and process the data once loaded.
+</p><p>For instance, rather than have both scores from each team and a column 
+<code>won</code>
+per team, which would be a boolean but is a number in the given 
+<em>BSON</em> file,
+we store only the scores. Here's the main table definition of the stats we
+are going to be playing with, the 
+<code>game</code> table:
+</p><pre><code>create table nba.game (
+  id          serial primary key,
+  date        timestamptz,
+  host        int references nba.team(id),
+  guest       int references nba.team(id),
+  host_score  int,
+  guest_score int
+);
+</code></pre><p>As much of the aggregates in the referenced article are playing with
+statistics from teams who actually 
+<em>won</em> the game, let's create a view to
+simplify our SQL queries thereafter:
+</p><pre><code>create view winners as
+  select id,
+         date,
+         case when host_score &gt; guest_score
+              then host
+              else guest
+          end as winner
+    from game;
+</code></pre><p>If you're not doing much SQL, remember that creating such a view is common
+practice in the relational world.
+</p><center><img src='../../../images/running-aggregates.jpg' /></center><h2>Running the Aggregates</h2><p>Now that we have the extra useful view, it's possible to implement the first
+<a href='http://www.mongodb.org/'>MongoDB</a> query in SQL. First, let's have a look at the MongoDB query:
+</p><pre><code>db.games.aggregate([
+  {
+    $match : {
+      date : {
+        $gt : ISODate(&quot;1999-08-01T00:00:00Z&quot;),
+        $lt : ISODate(&quot;2000-08-01T00:00:00Z&quot;)
+      }
+    }
+  },
+  {
+    $unwind : &#039;$teams&#039;
+  },
+  {
+    $match : {
+      &#039;teams.won&#039; : 1
+    }
+  },
+  {
+    $group : {
+      _id : &#039;$teams.name&#039;,
+      wins : { $sum : 1 }
+    }
+  },
+  {
+    $sort : { wins : -1 }
+  },
+  {
+    $limit : 5
+  }
+]);
+</code></pre><p>I don't know about you, but I have quite a hard time deciphering what that
+query is actually doing, and when the explanation text talks about 
+<em>using a
+6-stage pipeline</em> my understanding is that the application developper has
+been writing the 
+<em>execution plan</em> of the query here. Let's ignore the query
+format itself, as it's obviously meant to be generated by a tool rather than
+typed by a human being.
+</p><p>Here's the same query in SQL, with the result this time:
+</p><pre><code>&#xA0; SELECT abbrev, name, count(*)
+    FROM winners JOIN team ON team.id = winners.winner
+   WHERE     date &gt; &#039;1999-08-01T00:00:00Z&#039;
+         AND date &lt; &#039;2000-08-01T00:00:00Z&#039;
+GROUP BY winner, abbrev, name
+ORDER BY count(*) DESC
+   LIMIT 5;
+
+ abbrev |          name          | count 
+--------+------------------------+-------
+ LAL    | Los Angeles Lakers     |    67
+ POR    | Portland Trail Blazers |    59
+ IND    | Indiana Pacers         |    56
+ UTA    | Utah Jazz              |    55
+ SAS    | San Antonio Spurs      |    53
+(5 rows)
+
+Time: 8.101 ms
+</code></pre><p>What we have here is a pretty basic query using a 
+<em>join</em>, a 
+<em>where</em> clause to
+restrict the data set we are playing with, a 
+<em>group by</em> clause to define which
+data to compute the aggregates against, with an 
+<em>order by</em> and a 
+<em>limit</em> clause
+for presenting the result. To be realistic, if you've ever done any SQL at
+all, then you know how to read that query because you've been writing dozens
+of similar ones.
+</p><p>Here's, as in the original article, the same query against a much larger
+data set this time, with all games of the 2000s decade:
+</p><pre><code>&#xA0;  SELECT abbrev, name, count(*)
+     FROM winners join team on team.id = winners.winner
+    WHERE     date &gt; &#039;2000-08-01T00:00:00Z&#039;
+          AND date &lt; &#039;2010-08-01T00:00:00Z&#039;
+ GROUP BY winner, abbrev, name
+ ORDER BY count(*) DESC
+    LIMIT 5;
+
+ abbrev |        name        | count 
+--------+--------------------+-------
+ SAS    | San Antonio Spurs  |   579
+ DAL    | Dallas Mavericks   |   568
+ LAL    | Los Angeles Lakers |   524
+ PHO    | Phoenix Suns       |   495
+ DET    | Detroit Pistons    |   489
+(5 rows)
+
+Time: 24.713 ms
+</code></pre><center><img src='../../../images/try_science.png' /></center><h2>Correlating stats with wins</h2><p>The goal here is to compute how often a team wins when they record more
+defensive rebounds than their opponent across the entire data set.
+</p><p>To be able to compute the percentage, we have to have a count of all
+registered games, of course. Then we are going to count how many times the
+winner team registered a greater 
+<em>team_stats.drb</em> than the loser, and 
+<em>count
+how many times</em> in SQL is usually written as a 
+<code>sum(case when &lt;condition&gt; then
+1 else 0 end)</code>, which is what we're doing here:
+</p><pre><code>select count(*) as games,
+       sum(case when ws.drb &gt; ls.drb then 1 else 0 end) as drb,
+       sum(case when ws.drb &gt; ls.drb then 1 else 0 end)::float / count(*) * 100 as pct
+  from winlose wl
+       join team w on wl.winner = w.id
+       join team l on wl.loser = l.id
+       join team_stats ws on ws.game = wl.id and ws.team = wl.winner
+       join team_stats ls on ls.game = wl.id and ls.team = wl.loser;
+
+ games |  drb  |       pct        
+-------+-------+------------------
+ 31686 | 22292 | 70.3528372151739
+(1 row)
+
+Time: 276.669 ms
+</code></pre><p>We note here than in the original MongoDB article the aggregation query is
+short of computing the 
+<em>percentage</em> directly, apparently it's been done in the
+client tool, maybe using a 
+<em>spreadsheet</em> application or something.
+</p><center><img src='../../../images/DReboundsVandy.png' /></center><h2>Defensive Rebounds and Total Rebounds Versus Win Percentage</h2><p>Next, still following on our inspirational article
+<a href='http://thecodebarbarian.wordpress.com/2014/02/14/crunching-30-years-of-nba-data-with-mongodb-aggregation/'>Crunching 30 Years of NBA Data with MongoDB Aggregation</a>, we’re going to
+compute what percentage of the time a team wins as a function of the number
+of defensive rebounds they recorded.
+</p><p>I'm not sure I understand what they achieve with averaging ones when a team
+wins and zero when a team loses, so I couldn't quite reproduce their result.
+Here's an approaching query tho:
+</p><pre><code>with game_stats as (
+    select t.id, count(*)
+      from team t join game on game.host = t.id or game.guest = t.id
+   group by t.id
+)
+select ts.team, round(avg(drb), 2) as drb,
+       round(count(*) / gs.count::numeric * 100, 2) as winpct,
+       count(*) as wins, gs.count as games
+  from team_stats ts
+       join game on game.id = ts.game
+                and game.host = ts.team
+                and game.host_score &gt; game.guest_score
+       join game_stats gs on gs.id = ts.team
+group by ts.team, gs.count;
+
+ team |  drb  | winpct | wins | games 
+------+-------+--------+------+-------
+    4 | 31.59 |  31.46 |  710 |  2257
+    7 | 32.55 |  31.89 |  720 |  2258
+   16 | 31.70 |  37.62 |  849 |  2257
+</code></pre><p>I only pasted the first few lines of the result because I'm not sure how to
+make sense of it, really.
+</p><h2>Interesting factoid</h2><p>What I find most interesting in the following 
+<em>factoid</em> proposed in the
+MongoDB article is the complete lack of the query you need to run in order
+to grab the matching data:
+</p><blockquote><p>An interesting factoid: the team that recorded the fewest defensive rebounds
+in a win was the 1995-96 Toronto Raptors, who beat the Milwaukee Bucks 93-87
+on 12/26/1995 despite recording only 14 defensive rebounds.
+</p></blockquote><p>When doing the necessary query in SQL, using a 
+<a href='http://www.postgresql.org/docs/current/static/queries-with.html'>Common Table Expression</a> (the
+<code>WITH</code> syntax) and a 
+<a href='http://www.postgresql.org/docs/9.3/static/tutorial-window.html'>Window Function</a> for good measure, we get actually 4
+different games with the minimum defensive rebounds in our history of NBA
+games, 14:
+</p><pre><code>with stats(game, team, drb, min) as (
+    select ts.game, ts.team, drb, min(drb) over ()
+      from team_stats ts
+           join winners w on w.id = ts.game and w.winner = ts.team
+)
+select game.date::date,
+       host.name || &#039; -- &#039; || host_score as host,
+       guest.name || &#039; -- &#039; || guest_score as guest,
+       stats.drb as winner_drb
+  from stats
+       join game on game.id = stats.game
+       join team host on host.id = game.host
+       join team guest on guest.id = game.guest
+ where drb = min;
+
+-[ RECORD 1 ]----------------------------
+date       | 1995-12-26
+host       | Toronto Raptors -- 93
+guest      | Milwaukee Bucks -- 87
+winner_drb | 14
+-[ RECORD 2 ]----------------------------
+date       | 1996-02-02
+host       | Golden State Warriors -- 114
+guest      | Toronto Raptors -- 111
+winner_drb | 14
+-[ RECORD 3 ]----------------------------
+date       | 1998-03-31
+host       | Vancouver Grizzlies -- 101
+guest      | Dallas Mavericks -- 104
+winner_drb | 14
+-[ RECORD 4 ]----------------------------
+date       | 2009-01-14
+host       | New York Knicks -- 128
+guest      | Washington Wizards -- 122
+winner_drb | 14
+
+Time: 126.276 ms
+</code></pre><p>To understand all there's to know about 
+<em>window functions</em>, have a look at my
+article on the topic: 
+<a href='/blog/2013/08/20-Window-Functions'>Understanding Window Functions</a>.
+</p><center><img src='../../../images/reboundsc1.640.jpg' /></center><h2>Total rebounds and wins</h2><p>The next interesting aside is the following:
+</p><blockquote><p>As an aside, the Cleveland Cavaliers beat the New York Knicks 101-97 on
+April 11, 1996, despite recording only 21 total rebounds. Inversely, the San
+Antonio Spurs lost to the Houston Rockets, 112-110, on January 4, 1992
+despite recording 75 total rebounds.
+</p></blockquote><p>Which we translate in SQL as the following query:
+</p><pre><code>with stats as (
+    select ts.game, ts.team, trb,
+           min(trb) over () as min,
+           max(trb) over () as max
+      from team_stats ts
+           join winners w on w.id = ts.game and w.winner = ts.team
+)
+select game.date::date,
+       host.name || &#039; -- &#039; || host_score as host,
+       guest.name || &#039; -- &#039; || guest_score as guest,
+       stats.trb as winner_trb
+  from stats
+       join game on game.id = stats.game
+       join team host on host.id = game.host
+       join team guest on guest.id = game.guest
+ where trb = min or trb = max;
+
+-[ RECORD 1 ]--------------------------
+date       | 1995-12-28
+host       | Dallas Mavericks -- 103
+guest      | Vancouver Grizzlies -- 101
+winner_trb | 76
+-[ RECORD 2 ]--------------------------
+date       | 1996-04-11
+host       | New York Knicks -- 97
+guest      | Cleveland Cavaliers -- 101
+winner_trb | 21
+-[ RECORD 3 ]--------------------------
+date       | 2007-01-29
+host       | Utah Jazz -- 115
+guest      | New Jersey Nets -- 116
+winner_trb | 21
+
+Time: 127.771 ms
+</code></pre><p>Again it's easy enough in SQL to have more details about the 
+<em>aside</em> presented
+in our source article, and we get a slightly different story.
+</p><h2>Conclusion</h2><p>It's quite hard for me to appreciate the work done in the 
+<em>MongoDB
+aggregation framework</em> really, when we've been enjoying advanced aggregation
+and statistics in 
+<a href='http://www.postgresql.org/'>PostgreSQL</a> for a very long time. With the addition of
+<a href='http://www.postgresql.org/docs/9.3/static/tutorial-window.html'>Window Functions</a> and 
+<a href='http://www.postgresql.org/docs/9.3/static/functions-aggregate.html#FUNCTIONS-AGGREGATE-STATISTICS-TABLE'>Aggregate Functions for Statistics</a> it's possible to
+implement advanced analysis right into your SQL queries.
+</p><p>In next PostgreSQL release the set of analytical functions is going to
+expand again with the addition of both 
+<a href='http://www.postgresql.org/docs/devel/static/functions-aggregate.html#FUNCTIONS-ORDEREDSET-TABLE'>Ordered-Set Aggregate Functions</a> (also
+known as 
+<em>inverse distribution</em> functions) and
+<a href='http://www.postgresql.org/docs/devel/static/functions-aggregate.html#FUNCTIONS-HYPOTHETICAL-TABLE'>Hypothetical-Set Aggregate Functions</a> (also known as 
+<code>WITHIN GROUP</code>).
+</p><center><img src='../../../images/sql-logo.png' /></center><center><em>PostgreSQL is YeSQL!</em></center><p>When the problem you have to solve involves analyzing data, one of the more
+advanced tooling you can find around certainly is the SQL language, in
+particular its implementation in PostgreSQL!
+</p>  </div>
+  </div>
+  </div>
+  <div id="push"></div>
+  </div>
+
+<footer>
+  <p>
+    <small>Unless otherwise specified, the contents of
+    <a href=/index.html>this website</a> are Copyright
+    &#169;&#160; 2008-2013 <a href=/about>Dimitri Fontaine</a>, and are
+    licensed for use under
+    <a href=http://creativecommons.org/licenses/by-sa/3.0/
+    rel=license><abbr title="Creative
+    Commons">CC</abbr>&#160;<abbr title=Attribution>BY</abbr>-<abbr title=Share-Alike>SA</abbr>&#160;3.0</a>.</small>
+  </p> 
+</footer> 
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-47059482-1', 'tapoueh.org');
+  ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

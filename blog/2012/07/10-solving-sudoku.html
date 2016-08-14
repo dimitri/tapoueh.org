@@ -1,0 +1,426 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset=utf-8 /> 
+    <meta name=viewport content="width=device-width" /> 
+    <meta name="generator" content="Emacs Muse Blog" /> 
+    <meta description="blog de Dimitri Fontaine, Expert PostgreSQL - 2ndQuadrant France" />
+    <meta property="og:title" content="tapoueh.org"/>
+    <meta property="og:type" content="non_profit"/>
+    <meta property="og:url" content="http://tapoueh.org/blog/2012/07/10-solving-sudoku"/>
+    <meta property="og:image" content="http://tapoueh.org/static/2ndQuadrant-cross.png"/>
+    <meta property="og:site_name" content="Tapoueh"/>
+    <meta property="fb:admins" content="545062436"/>
+
+    <title>Expertise PostgreSQL</title>
+    <link rel='stylesheet' type='text/css' media='all' href='/static/styles.css' />
+
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="/static/FontAwesome/css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="/static/highlight.js/styles/sunburst.css">
+    <script src="/static/highlight.js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script src="/static/jquery-1.9.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/jqcloud.css" />
+    <script type="text/javascript" src="/static/jqcloud-1.0.4.min.js"></script>
+
+    <script type="text/javascript" src="http://apis.google.com/js/plusone.js">{lang: 'fr'}</script>
+    
+  </head>
+  <body>
+
+   <div id="wrap">
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="nav-collapse collapse">
+	<p class="pull-right">
+	  <a href="http://2ndquadrant.com">
+	    <img alt="logo" src="/static/2ndQuadrant-cross.png"
+		 style="margin-right: 8px; margin-top: 4px; height: 32px;"/>
+	  </a>
+	</p>
+	<div class="navbar-inner">
+	 <a class="brand" style="margin-left: 0.2em; margin-top: -4px;"
+	    href="http://expert-postgresql.fr/">
+	  <img src="/static/expert-postgresql.png"></a>
+	 <ul class="nav">
+	  <li><a href="/blog"><i class="icon-book"></i> blog</a></li>
+	  <li><a href="/projects"><i class="icon-suitcase"></i> projects</a></li>
+	  <li><a href="/conferences"><i class="icon-plane"></i> confs</a></li>
+	  <li><a href="/about"><i class="icon-beer"></i> about</a></li>
+	  <li><a href="/rss/tapoueh.xml"><i class="icon-rss"></i> rss</a></li>
+	 </ul>
+	</div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row">
+	<div class="span4">
+	  <div><ul class='breadcrumb'><li><span class='divider'><i class='icon-sitemap'></i></span></li><li><a href='/'>/dev/dim</a><span class='divider'>/</span></li><li><a href='/blog'>blog</a><span class='divider'>/</span></li><li><a href='/blog/2012'>2012</a><span class='divider'>/</span></li><li><a href='/blog/2012/07'>07</a></li></ul></div>
+	  <div class='date'>Tuesday, July 10 2012 <i class='icon-calendar'></i></div>
+	  <div style='text-align: right;'><span><a href='/tags/common-lisp'>Common-Lisp</a>, <a href='/tags/sudoku'>Sudoku</a>, <a href='/tags/solver'>Solver</a>, <a href='/tags/puzzle'>Puzzle</a></span> <i class='icon-tags'></i></div>
+	  
+
+	  <div style="margin-top: 1em;">
+	    <div class='span2 pull-left'><a class='thumbnail' href='/tags/common-lisp'><img class='img-polaroid' style='width: 160px; height: 120px;' src='/thumbnails/made-with-lisp.png' /></a></div>
+	    <div id='social' class='span1 pull-right social'><ul><li><g:plusone size='tall' href='http://tapoueh.org/blog/2012/07/10-solving-sudoku'></g:plusone></li><li><a href='http://twitter.com/share' class='twitter-share-button' data-via='tapoueh' data-count='vertical'>Tweet</a><script type='text/javascript' src='http://platform.twitter.com/widgets.js'></script></li></ul></div>
+	  </div>
+
+	  <div id="prevnext">
+	    <h3 class='prevnext'>Recent Articles</h3>
+	    <div><a class='previous' href='/blog/2012/06/08-pgdayfr-lyon'>« PGDay France 2012</a></div>
+	    <div><a class='next pull-right' href='/blog/2012/08/01-autumn-conferences'>Autumn 2012 Conferences »</a></div>
+	  </div>
+	  
+	  <div>
+	    <div id="left-tag-cloud" class="jqcloud"
+		 style="width: 300px; height: 650px; position: absolute; top: 475px;">
+	    </div>
+            <script>
+            var word_list;
+            
+            $.ajax({
+                type: 'GET',
+                url: '/cloud.json',
+                dataType: 'json',
+                success: function(response) { word_list = response; },
+                data: {},
+                async: false
+            });
+             
+            $(document).ready(function() {
+               $("#left-tag-cloud").jQCloud(word_list,
+	                {shape: "rectangular",
+	                 removeOverflowing: false});
+            });
+            </script>
+	  </div>
+
+	</div>
+
+	<div id="title" class="span8">
+	  <h1>Solving Every Sudoku Puzzle</h1>
+	</div>
+	
+	<div id="content" class="span8">
+<p><a href='http://norvig.com/'>Peter Norvig</a> published a while ago a very nice article titled
+<a href='http://norvig.com/sudoku.html'>Solving Every Sudoku Puzzle</a> wherein he presents a programmatic approach to
+solving that puzzle game.
+</p><center><a href='http://en.wikipedia.org/wiki/Sudoku'><img src='../../../images/sudoku.png' /></a></center><p>The article is very well written and makes it easy to think that coming up
+with the code for such a solver is a very easy task, you apply some basic
+problem search principles and there you are. Which is partly true, in fact.
+Also, he uses 
+<code>python</code>, and that means that a lot of trivial programming
+activities are not a concern anymore, such as memory management.
+</p><p>As I've been teaching myself 
+<a href='http://www.cliki.net/Common%20Lisp'>Common Lisp</a> for some weeks now I though I would
+like to read a lisp version of his code, and the article even has a section
+titled 
+<em>Translations</em>. Unfortunately, no lisp version is available there. One
+might argue that 
+<a href='http://clojure.org/'>Clojure</a> is a decent enough lisp, but my current quest is
+all about 
+<em>Common Lisp</em> really. So I had to write one myself.
+</p><pre><code>CL-USER&gt; (sudoku:print-puzzle
+	  (sudoku:solve-grid
+&quot;530070000600195000098000060800060003400803001700020006060000280000419005000080079&quot;))
+5 3 4 | 6 7 8 | 9 1 2 
+6 7 2 | 1 9 5 | 3 4 8 
+1 9 8 | 3 4 2 | 5 6 7 
+------+-------+------
+8 5 9 | 7 6 1 | 4 2 3 
+4 2 6 | 8 5 3 | 7 9 1 
+7 1 3 | 9 2 4 | 8 5 6 
+------+-------+------
+9 6 1 | 5 3 7 | 2 8 4 
+2 8 7 | 4 1 9 | 6 3 5 
+3 4 5 | 2 8 6 | 1 7 9 
+took 1,974 microseconds (0.001974 seconds) to run.
+During that period, and with 2 available CPU cores,
+     1,894 microseconds (0.001894 seconds) were spent in user mode
+        88 microseconds (0.000088 seconds) were spent in system mode
+ 174,320 bytes of memory allocated.
+#&lt;SUDOKU::PUZZLE #x3020023BB9FD&gt;
+</code></pre><h2>Comments on the python version</h2><p>Norvig's article is very well written, I think. By that I mean that by
+reading it you're confident that you've understood the problem and how the
+solution is articulated, so you almost think you don't need to really try to
+understand the code, it's just an illustration of the text.
+</p><p>Well, not so much. When you want to port the exact same algorithm you have
+to understand exactly what the code is doing so that you're not implementing
+something else. All the more when, as I did, you want to use some other data
+structure.
+</p><p>My goal was not to rewrite the code as-is, but to try and come up with
+<em>idiomatic</em> lisp code implementing Norvig's solution. So rather than using
+<em>strings</em> and 
+<em>dictionaries</em> (in lisp, they still call them a 
+<a href='http://www.lispworks.com/documentation/lw50/CLHS/Body/f_mk_has.htm'>hash table</a>) I've
+been using more natural data structures.
+</p><p>The 
+<em>python</em> code is really not that easy to follow, full of functional
+programming veteran tricks. I mean avoiding 
+<em>exceptions</em> and simply
+returning 
+<code>False</code> whenever there's a problem, and using functions such as
+<code>all</code> and 
+<code>some</code> to manage that. It's certainly working, it's not making the
+code any easier to read.
+</p><p>To summarize, that code looks like it's been written by someone smart who
+didn't want to spend more than a couple of hours on it, and did take all
+known trustworthy shortcuts he could to achieve that goal. Quality and
+readability certainly weren't the key motive. I've been quite deceived after
+reading a very good article.
+</p><h2>Comments on the common lisp version</h2><p>Keep in mind that I'm just a 
+<em>Common Lisp</em> newbie. I've been told some good
+pieces of advice by knowledgeable people though, so with some luck my
+implementation is somewhat 
+<em>lispy</em> enough.
+</p><p>So we start by defining some data structures and low-level functions to
+build up the more complex one, so that it's easier to read and debug. The
+<em>sudoku</em> puzzle is then a grid of digits and a grid of possible values in
+places where the digits are yet unknown.
+</p><p>The way to represent that 9x9 grid is with using 
+<a href='http://www.lispworks.com/documentation/lw51/CLHS/Body/f_mk_ar.htm'>make-array</a>:
+</p><pre><code>(make-array &#039;(9 9)
+	    :element-type &#039;(integer 0 9)
+	    :initial-element 0)
+</code></pre><p>Then the possible values. I though about using a 
+<code>bit-vector</code> (and actually I
+did implement it that way), then I've been told that the 
+<em>Common Lisp</em> way to
+approach that is using 
+<a href='http://psg.com/~dlamkins/sl/chapter18.html'>2-complement integer representation</a>, as we have
+plenty of functions to operate numbers that way. I wouldn't believe that
+would make the code simpler, but in fact it really did, see:
+</p><pre><code>CL-USER&gt; #b111111111
+511
+CL-USER&gt; (logcount #b111111111)
+9
+CL-USER&gt; (logcount 511)
+9
+CL-USER&gt; (logbitp 3 #b100100100)
+NIL
+CL-USER&gt; (logbitp 2 #b100100100)
+T
+CL-USER&gt; (format nil &quot;~2r&quot; (logxor #b111111111 (ash 1 4)))
+&quot;111101111&quot;
+CL-USER&gt; (logbitp 4 (logxor #b111111111 (ash 1 4)))
+NIL
+</code></pre><p>With that in mind, we can write the following code:
+</p><pre><code>(defun count-remaining-possible-values (possible-values)
+  &quot;How many possible values are left in there?&quot;
+  ;; we could raise an empty-values condition if we get 0...
+  (logcount possible-values))
+
+(defun first-set-value (possible-values)
+  &quot;Return the index of the first set value in POSSIBLE-VALUES.&quot;
+  (+ 1 (floor (log possible-values 2))))
+
+(defun only-possible-value-is? (possible-values value)
+  &quot;Return a generalized boolean which is true when the only value found in
+   POSSIBLE-VALUES is VALUE&quot;
+  (and (logbitp (- value 1) possible-values)
+       (= 1 (logcount possible-values))))
+
+(defun list-all-possible-values (possible-values)
+  &quot;Return a list of all possible values to explore&quot;
+  (loop for i from 1 to 9
+     when (logbitp (- i 1) possible-values)
+     collect i))
+
+(defun value-is-set? (possible-values value)
+  &quot;Return a generalized boolean which is true when given VALUE is possible
+   in POSSIBLE-VALUES&quot;
+  (logbitp (- value 1) possible-values))
+
+(defun unset-possible-value (possible-values value)
+  &quot;return an integer representing POSSIBLE-VALUES with VALUE unset&quot;
+  (logxor possible-values (ash 1 (- value 1))))
+</code></pre><p>You can see here that I was also under the influence of a recent reading
+about 
+<a href='http://gar1t.com/blog/2012/06/10/solving-embarrassingly-obvious-problems-in-erlang/'>making it obvious</a>, or so called 
+<a href='http://dieswaytoofast.blogspot.fr/2012/07/erlang-why-so-many-seemingly-identical.html'>intentional programming</a>, following
+what 
+<a href='http://armstrongonsoftware.blogspot.fr/'>Joe Armstrong</a> has to say about it:
+</p><blockquote><p>  Intentional programming is a name I give to a style of programming where
+  the reader of a program can easily see what the programmer intended by
+  their code. The intention of the code should be obvious from the names of
+  the functions involved and not be inferred by analysing the structure of
+  the code. (Reading the code should) precisely expresses the intention of
+  the programmer—here no guesswork or program analysis is involved, we
+  clearly read what was intended.
+</p><small>Joe Armstrong in <cite title='Intentional Programming'>Intentional Programming</cite></small></blockquote><p>So there we go with function names such as 
+<code>count-remaining-possible-values</code>,
+that will help when reading some more complex code, as in the following, the
+meat of the solution:
+</p><pre><code>(defmethod eliminate ((puzzle puzzle) row col value)
+  &quot;Eliminate given VALUE from possible values in cell ROWxCOL of PUZZLE, and
+   propagate when needed&quot;
+  (with-slots (grid values) puzzle
+    ;; if already unset, work is already done
+    (when (value-is-set? (aref values row col) value)
+      ;; eliminate the value from the set of possible values
+      (let* ((possible-values
+	      (unset-possible-value (aref values row col) value)))
+	(setf (aref values row col) possible-values)
+
+	;; now if we&#039;re left with a single possible value
+	(when (= 1 (count-remaining-possible-values possible-values))
+	  (let ((found-value (first-set-value possible-values)))
+	    ;; update the main grid
+	    (setf (aref grid row col) found-value)
+
+	    ;; eliminate that value we just found in all peers
+	    (eliminate-value-in-peers puzzle row col found-value)))
+
+	;; now check if any unit has a single possible place for that value
+	(loop
+	   for (r . c)
+	   in (list-places-with-single-unit-solution puzzle row col value)
+	   do (assign puzzle r c value))))))
+</code></pre><p>So that lisp code is quite verbose and at 389 lines almost doubles the 201
+lines Norvig had. When clarity is part of the goal, that's hard to avoid, I
+hope I made a good case that this is not due to lisp being overly verbose by
+itself.
+</p><h2>Comments on the development environment</h2><p>Or why I even considered 
+<em>Common Lisp</em> as an interesting language for that
+kind of exercise, and some more. 
+<em>I'll have to tell about re-sharding data
+live with 16 threads and 256 databases, all in CL, someday</em>.
+</p><p>So I've been doing some 
+<em>Emacs Lisp</em> development for a while now, and the part
+that makes that so much fun is the instant reward. You write some code in
+your editor, type a key chord (usually, that's 
+<code>C-M-x runs the command
+eval-defun</code>) and your code is loaded up, ready to be tested. In 
+<em>Emacs Lisp</em>
+the test can be simply using your editor and watching the new behavior
+taking place, or playing in the 
+<code>M-x ielm</code> console. When the code is not
+ready, it crashes, and you're left in the interactive debugger, where you
+can use 
+<code>C-x C-e runs the command eval-last-sexp</code> to evaluate any expression
+in your source and see its value in the current 
+<em>debug frame</em>.
+</p><p>That way of working is a huge productivity boost, that I've been missing
+much when getting back to writing C code for PostgreSQL. I can't 
+<code>C-M-x</code> the
+current function and go write some 
+<code>SQL</code> to test it right away, I have to
+<em>compile</em> the whole source tree, then 
+<em>install</em> the new binaries, then 
+<em>restart</em>
+the test server and then open up a 
+<em>psql</em> console to interact with the new
+code. Of course I could just 
+<code>make check</code> and watch the results, but then if I
+attach a 
+<em>debugger</em> it complains that the code on-disk is more recent than the
+code in the 
+<em>core dump</em>.
+</p><p>What if you want 
+<em>Emacs Lisp</em> integrated facilities and something made for
+general programming rather than suited to building a text editor? Don't get
+me wrong, you can probably find more production ready code in 
+<em>elisp</em> than in
+many other languages, just because Emacs has been there for about 35 years.
+Editor targeted production code, though.
+</p><p>This integrated development cycle is all the same when you're using 
+<em>Common
+Lisp</em>. The awesome 
+<a href='http://common-lisp.net/project/slime/'>Superior Lisp Interaction Mode for Emacs</a> is providing
+exactly that experience. Just run 
+<code>M-x slime</code> and then as you define your code
+you can 
+<code>C-M-x</code> the function at point, see the compilation errors and warnings
+if any in the associated 
+<em>REPL</em>, and just try your code. I tend to mostly play
+in the command line, it's possible to just use 
+<code>C-x C-e</code> while typing too.
+</p><h2>Performances</h2><p>Of course we do care! After all the original article came with a quite
+detailed performance analysis with graphs and all. I won't be reproducing
+that, sorry. I'll just show you what penalty you get for using an older
+language specification, much more dynamic and with more features than
+python, and with a great, scratch that, awesome development environment.
+</p><p>Oh wait, that's the other way round, no penalty, it's actually so much
+faster!
+</p><h3>Python version perfs</h3><p>The results I got on my desktop machine are about twice as fast as in the
+original article, I guess newer machines and newer python have something to
+say for that:
+</p><pre><code>dim ~/dev/CL/sudoku python sudoku.dim.py 
+  All tests pass.
+  Solved 50 of 50 easy puzzles (avg 0.01 secs (151 Hz), max 0.01 secs).
+  Solved 95 of 95 hard puzzles (avg 0.02 secs (42 Hz), max 0.12 secs).
+  Solved 11 of 11 hardest puzzles (avg 0.01 secs (115 Hz), max 0.01 secs).
+</code></pre><p>That makes an average of 
+<code>(50*151 + 95*42 + 11*115) / (50+95+11) =
+82Hz</code>.
+</p><p>That seems pretty good, let's continue.
+</p><p>As you can see I've cut away the 
+<em>random puzzle</em> part, that's because I was
+too lazy to implement that part, which didn't seem all that interesting to
+me. If you think that's a problem and need solving, I accept patches.
+</p><h3>Common lisp version perfs</h3><p>When using 
+<a href='http://sbcl.org/'>SBCL</a> on the same machine, what I got was:
+</p><pre><code>(sudoku:solve-example-grids)
+  Solved 50 of 50 easy puzzles (avg .0021 sec (471.7 Hz), max 0.015 secs).
+  Solved 95 of 95 hard puzzles (avg .0022 sec (446.0 Hz), max 0.008 secs).
+  Solved 11 of 11 hardest puzzles (avg .0018 sec (550.0 Hz), max 0.003 secs).
+</code></pre><p>With the same way to compute the average, we now have 
+<code>461.6Hz</code>.
+</p><p>Now, that's between 3 times and more than 
+<strong>10 times faster</strong> than the python
+version (taken collection per collection), for a comparable effort, a much
+better development environment, and the same all dynamic no explicit
+compiling approach.
+</p><h2>Conclusion</h2><p>I guess I'm fond of 
+<em>Common Lisp</em>, which I already saw coming (so did you,
+right?), and now I have some public article and code to share about why :)
+</p><p>The code is hosted at 
+<a href='https://github.com/dimitri/sudoku'>https://github.com/dimitri/sudoku</a> if you're
+interested, with the necessary files to reproduce, some docs, etc.
+</p><p>Also, apart from using 
+<em>integers</em> as 
+<em>bitfields</em>, which I did more for being
+lispy than for performances, I did very little effort for optimizing the
+code. It's quite naive in this respect, yet allow me an average of 
+<code>461.6Hz</code>
+rather than 
+<code>82Hz</code>, that's 
+<em><strong>5.6 times faster</strong></em> average.
+</p><p>So yes, I will continue to invest some precious time in 
+<em>Common Lisp</em> as a
+very good interactive scripting language, and maybe more than that.
+</p>  </div>
+  </div>
+  </div>
+  <div id="push"></div>
+  </div>
+
+<footer>
+  <p>
+    <small>Unless otherwise specified, the contents of
+    <a href=/index.html>this website</a> are Copyright
+    &#169;&#160; 2008-2013 <a href=/about>Dimitri Fontaine</a>, and are
+    licensed for use under
+    <a href=http://creativecommons.org/licenses/by-sa/3.0/
+    rel=license><abbr title="Creative
+    Commons">CC</abbr>&#160;<abbr title=Attribution>BY</abbr>-<abbr title=Share-Alike>SA</abbr>&#160;3.0</a>.</small>
+  </p> 
+</footer> 
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-47059482-1', 'tapoueh.org');
+  ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

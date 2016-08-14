@@ -1,0 +1,225 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset=utf-8 /> 
+    <meta name=viewport content="width=device-width" /> 
+    <meta name="generator" content="Emacs Muse Blog" /> 
+    <meta description="blog de Dimitri Fontaine, Expert PostgreSQL - 2ndQuadrant France" />
+    <meta property="og:title" content="tapoueh.org"/>
+    <meta property="og:type" content="non_profit"/>
+    <meta property="og:url" content="http://tapoueh.org/blog/2013/08/27-auditing-changes-with-hstore"/>
+    <meta property="og:image" content="http://tapoueh.org/static/2ndQuadrant-cross.png"/>
+    <meta property="og:site_name" content="Tapoueh"/>
+    <meta property="fb:admins" content="545062436"/>
+
+    <title>Expertise PostgreSQL</title>
+    <link rel='stylesheet' type='text/css' media='all' href='/static/styles.css' />
+
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="/static/FontAwesome/css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="/static/highlight.js/styles/sunburst.css">
+    <script src="/static/highlight.js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script src="/static/jquery-1.9.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/jqcloud.css" />
+    <script type="text/javascript" src="/static/jqcloud-1.0.4.min.js"></script>
+
+    <script type="text/javascript" src="http://apis.google.com/js/plusone.js">{lang: 'fr'}</script>
+    
+  </head>
+  <body>
+
+   <div id="wrap">
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="nav-collapse collapse">
+	<p class="pull-right">
+	  <a href="http://2ndquadrant.com">
+	    <img alt="logo" src="/static/2ndQuadrant-cross.png"
+		 style="margin-right: 8px; margin-top: 4px; height: 32px;"/>
+	  </a>
+	</p>
+	<div class="navbar-inner">
+	 <a class="brand" style="margin-left: 0.2em; margin-top: -4px;"
+	    href="http://expert-postgresql.fr/">
+	  <img src="/static/expert-postgresql.png"></a>
+	 <ul class="nav">
+	  <li><a href="/blog"><i class="icon-book"></i> blog</a></li>
+	  <li><a href="/projects"><i class="icon-suitcase"></i> projects</a></li>
+	  <li><a href="/conferences"><i class="icon-plane"></i> confs</a></li>
+	  <li><a href="/about"><i class="icon-beer"></i> about</a></li>
+	  <li><a href="/rss/tapoueh.xml"><i class="icon-rss"></i> rss</a></li>
+	 </ul>
+	</div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row">
+	<div class="span4">
+	  <div><ul class='breadcrumb'><li><span class='divider'><i class='icon-sitemap'></i></span></li><li><a href='/'>/dev/dim</a><span class='divider'>/</span></li><li><a href='/blog'>blog</a><span class='divider'>/</span></li><li><a href='/blog/2013'>2013</a><span class='divider'>/</span></li><li><a href='/blog/2013/08'>08</a></li></ul></div>
+	  <div class='date'>Tuesday, August 27 2013 <i class='icon-calendar'></i></div>
+	  <div style='text-align: right;'><span><a href='/tags/postgresql'>PostgreSQL</a>, <a href='/tags/triggers'>Triggers</a>, <a href='/tags/extensions'>Extensions</a>, <a href='/tags/hstore'>hstore</a>, <a href='/tags/yesql'>YeSQL</a></span> <i class='icon-tags'></i></div>
+	  
+
+	  <div style="margin-top: 1em;">
+	    <div class='span2 pull-left'><a class='thumbnail' href='/tags/postgresql'><img class='img-polaroid' style='width: 160px; height: 120px;' src='/thumbnails/postgresql-elephant.small.png' /></a></div>
+	    <div id='social' class='span1 pull-right social'><ul><li><g:plusone size='tall' href='http://tapoueh.org/blog/2013/08/27-auditing-changes-with-hstore'></g:plusone></li><li><a href='http://twitter.com/share' class='twitter-share-button' data-via='tapoueh' data-count='vertical'>Tweet</a><script type='text/javascript' src='http://platform.twitter.com/widgets.js'></script></li></ul></div>
+	  </div>
+
+	  <div id="prevnext">
+	    <h3 class='prevnext'>Recent Articles</h3>
+	    <div><a class='previous' href='/blog/2013/08/23-parametrized-triggers'>« Trigger Parameters</a></div>
+	    <div><a class='next pull-right' href='/blog/2013/09/06-pg_trgm-suggestions'>Using trigrams against typos »</a></div>
+	  </div>
+	  
+	  <div>
+	    <div id="left-tag-cloud" class="jqcloud"
+		 style="width: 300px; height: 650px; position: absolute; top: 475px;">
+	    </div>
+            <script>
+            var word_list;
+            
+            $.ajax({
+                type: 'GET',
+                url: '/cloud.json',
+                dataType: 'json',
+                success: function(response) { word_list = response; },
+                data: {},
+                async: false
+            });
+             
+            $(document).ready(function() {
+               $("#left-tag-cloud").jQCloud(word_list,
+	                {shape: "rectangular",
+	                 removeOverflowing: false});
+            });
+            </script>
+	  </div>
+
+	</div>
+
+	<div id="title" class="span8">
+	  <h1>Auditing Changes with Hstore</h1>
+	</div>
+	
+	<div id="content" class="span8">
+<p>In a previous article about 
+<a href='/blog/2013/08/23-parametrized-triggers'>Trigger Parameters</a> we have been using the
+extension 
+<a href='http://www.postgresql.org/docs/9.2/static/hstore.html'>hstore</a> in order to compute some extra field in our records, where
+the fields used both for the computation and for storing the results were
+passed in as 
+<em>dynamic parameters</em>. Today we're going to see another 
+<em>trigger</em>
+use case for 
+<em>hstore</em>: we are going to record changes made to our tuples.
+</p><center><img src='../../../images/Audit-Conseil.jpg' /></center><h2>Comparing hstores</h2><p>One of the operators that hstore propose is the 
+<code>hstore - hstore</code> operator
+whose documentation says that it will 
+<em>delete matching pairs from left
+operand</em>.
+</p><pre><code># select &#039;f1 =&gt; a, f2 =&gt; x&#039;::hstore - &#039;f1 =&gt; b, f2 =&gt; x&#039;::hstore as diff;
+   diff    
+-----------
+ &quot;f1&quot;=&gt;&quot;a&quot;
+(1 row)
+</code></pre><p>That's what we're going to use in our 
+<em>changes auditing trigger</em> now, because
+it's pretty useful a format to understand what did change.
+</p><h2>Auditing changes with a trigger</h2><p>First we need some setup, a couple of tables to use in our worked out
+example:
+</p><pre><code>create table example
+ (
+   id   serial,
+   f1   text,
+   f2   text
+ );
+
+create table audit
+ (
+  change_date timestamptz default now(),
+  before hstore,
+  after  hstore
+ );
+</code></pre><p>The idea is to add a row in the 
+<code>audit</code> table each time it is updated, with
+the 
+<em>hstore</em> representation of the data in flight before and after the change.
+So as to avoid the problem of not being able to easily rebuild the current
+value of a row at any time in the history, we're going to store a couple of
+full 
+<em>hstore</em> representations here.
+</p><pre><code>create function audit()
+  returns trigger
+  language plpgsql
+as $$
+begin
+  INSERT INTO audit(before, after)
+       SELECT hstore(old), hstore(new);
+  return new;
+end;
+$$;
+</code></pre><center><img src='../../../images/course-de-domino-bois.jpg' /></center><center><em>I can't help but visualize triggers this way...</em></center><p>Now, we need to attach the trigger to the table which is the source of our
+events. Note that we could attach the same trigger to any table in fact, as
+the details of the 
+<code>audit</code> table has nothing specific about the 
+<code>example</code> table.
+If you want to do that, though, you will certainly want to add the name of
+the source table of the event you're processing, available from within your
+trigger as 
+<code>TG_TABLE_NAME</code>. Oh and maybe add 
+<code>TG_TABLE_SCHEMA</code> while at it!
+</p><p>Be sure to check the 
+<a href='http://www.postgresql.org/docs/current/interactive/plpgsql-trigger.html'>PL/pgSQL Trigger Procedures</a> documentation.
+</p><pre><code>create trigger audit
+      after update on example
+          for each row
+ execute procedure audit();
+</code></pre><h2>Testing it</h2><p>With that in place, let's try it out:
+</p><pre><code>insert into example(id, f1, f2) values(1, &#039;a&#039;, &#039;a&#039;);
+update example set f1 = &#039;b&#039; where id = 1;
+update example set f2 = &#039;c&#039; where id = 1;
+</code></pre><p>And here's what we can see:
+</p><center><img src='../../../images/engine-diff.jpg' /></center><center><em>Another kind of differential</em></center><pre><code># select change_date, after - before as diff from audit;
+          change_date          |   diff    
+-------------------------------+-----------
+ 2013-08-27 17:59:19.808217+02 | &quot;f1&quot;=&gt;&quot;b&quot;
+ 2013-08-27 17:59:19.808217+02 | &quot;f2&quot;=&gt;&quot;c&quot;
+(2 rows)
+</code></pre><p>The 
+<em>hstore</em> extension is really useful and versatile, and we just saw another
+use case for it!
+</p>  </div>
+  </div>
+  </div>
+  <div id="push"></div>
+  </div>
+
+<footer>
+  <p>
+    <small>Unless otherwise specified, the contents of
+    <a href=/index.html>this website</a> are Copyright
+    &#169;&#160; 2008-2013 <a href=/about>Dimitri Fontaine</a>, and are
+    licensed for use under
+    <a href=http://creativecommons.org/licenses/by-sa/3.0/
+    rel=license><abbr title="Creative
+    Commons">CC</abbr>&#160;<abbr title=Attribution>BY</abbr>-<abbr title=Share-Alike>SA</abbr>&#160;3.0</a>.</small>
+  </p> 
+</footer> 
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-47059482-1', 'tapoueh.org');
+  ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,213 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset=utf-8 /> 
+    <meta name=viewport content="width=device-width" /> 
+    <meta name="generator" content="Emacs Muse Blog" /> 
+    <meta description="blog de Dimitri Fontaine, Expert PostgreSQL - 2ndQuadrant France" />
+    <meta property="og:title" content="tapoueh.org"/>
+    <meta property="og:type" content="non_profit"/>
+    <meta property="og:url" content="http://tapoueh.org/blog/2011/08/01-parallel-pgloader"/>
+    <meta property="og:image" content="http://tapoueh.org/static/2ndQuadrant-cross.png"/>
+    <meta property="og:site_name" content="Tapoueh"/>
+    <meta property="fb:admins" content="545062436"/>
+
+    <title>Expertise PostgreSQL</title>
+    <link rel='stylesheet' type='text/css' media='all' href='/static/styles.css' />
+
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="/static/FontAwesome/css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="/static/highlight.js/styles/sunburst.css">
+    <script src="/static/highlight.js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script src="/static/jquery-1.9.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/jqcloud.css" />
+    <script type="text/javascript" src="/static/jqcloud-1.0.4.min.js"></script>
+
+    <script type="text/javascript" src="http://apis.google.com/js/plusone.js">{lang: 'fr'}</script>
+    
+  </head>
+  <body>
+
+   <div id="wrap">
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="nav-collapse collapse">
+	<p class="pull-right">
+	  <a href="http://2ndquadrant.com">
+	    <img alt="logo" src="/static/2ndQuadrant-cross.png"
+		 style="margin-right: 8px; margin-top: 4px; height: 32px;"/>
+	  </a>
+	</p>
+	<div class="navbar-inner">
+	 <a class="brand" style="margin-left: 0.2em; margin-top: -4px;"
+	    href="http://expert-postgresql.fr/">
+	  <img src="/static/expert-postgresql.png"></a>
+	 <ul class="nav">
+	  <li><a href="/blog"><i class="icon-book"></i> blog</a></li>
+	  <li><a href="/projects"><i class="icon-suitcase"></i> projects</a></li>
+	  <li><a href="/conferences"><i class="icon-plane"></i> confs</a></li>
+	  <li><a href="/about"><i class="icon-beer"></i> about</a></li>
+	  <li><a href="/rss/tapoueh.xml"><i class="icon-rss"></i> rss</a></li>
+	 </ul>
+	</div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row">
+	<div class="span4">
+	  <div><ul class='breadcrumb'><li><span class='divider'><i class='icon-sitemap'></i></span></li><li><a href='/'>/dev/dim</a><span class='divider'>/</span></li><li><a href='/blog'>blog</a><span class='divider'>/</span></li><li><a href='/blog/2011'>2011</a><span class='divider'>/</span></li><li><a href='/blog/2011/08'>08</a></li></ul></div>
+	  <div class='date'>Monday, August 01 2011 <i class='icon-calendar'></i></div>
+	  <div style='text-align: right;'><span><a href='/tags/postgresql'>PostgreSQL</a>, <a href='/tags/pgloader'>pgloader</a></span> <i class='icon-tags'></i></div>
+	  
+
+	  <div style="margin-top: 1em;">
+	    <div class='span2 pull-left'><a class='thumbnail' href='/tags/pgloader'><img class='img-polaroid' style='width: 160px; height: 120px;' src='/thumbnails/toy-loader.320.jpg' /></a></div>
+	    <div id='social' class='span1 pull-right social'><ul><li><g:plusone size='tall' href='http://tapoueh.org/blog/2011/08/01-parallel-pgloader'></g:plusone></li><li><a href='http://twitter.com/share' class='twitter-share-button' data-via='tapoueh' data-count='vertical'>Tweet</a><script type='text/javascript' src='http://platform.twitter.com/widgets.js'></script></li></ul></div>
+	  </div>
+
+	  <div id="prevnext">
+	    <h3 class='prevnext'>Recent Articles</h3>
+	    <div><a class='previous' href='/blog/2011/08/01-pgloader-en-parallele'>« pgloader en parallèle</a></div>
+	    <div><a class='next pull-right' href='/blog/2011/08/02-see-tsung-in-action'>See Tsung in action »</a></div>
+	  </div>
+	  
+	  <div>
+	    <div id="left-tag-cloud" class="jqcloud"
+		 style="width: 300px; height: 650px; position: absolute; top: 475px;">
+	    </div>
+            <script>
+            var word_list;
+            
+            $.ajax({
+                type: 'GET',
+                url: '/cloud.json',
+                dataType: 'json',
+                success: function(response) { word_list = response; },
+                data: {},
+                async: false
+            });
+             
+            $(document).ready(function() {
+               $("#left-tag-cloud").jQCloud(word_list,
+	                {shape: "rectangular",
+	                 removeOverflowing: false});
+            });
+            </script>
+	  </div>
+
+	</div>
+
+	<div id="title" class="span8">
+	  <h1>Parallel pgloader</h1>
+	</div>
+	
+	<div id="content" class="span8">
+<p>This article continues the series that began with 
+<a href='http://tapoueh.org/blog/2011/07/22-how-to-use-pgloader.html'>How To Use PgLoader</a> then
+detailed 
+<a href='http://tapoueh.org/blog/2011/07/29-how-to-setup-pgloader.html'>How to Setup pgloader</a>.  We have some more fine points to talk about
+here, today's article is about loading your data in parallel with 
+<a href='../../../pgsql/pgloader.html'>pgloader</a>.
+</p><h1>several files at a time</h1><p>Parallelism is implemented in 3 different ways in pgloader.  First, you can
+load more than one file at a time thanks to the 
+<code>max_parallel_sections</code>
+parameter, that has to be setup in the 
+<em>global section</em> of the file.
+</p><p>This setting is quite simple and already allows the most common use case.
+</p><h1>several workers per file</h1><p>The other use case is when you have huge files to load into the database.
+Then you want to be able to have more than one process reading the file at
+the same time.  Using 
+<a href='../../../pgsql/pgloader.html'>pgloader</a>, you already did the compromise to load the
+whole content in more than one transaction, so there's no further drawback
+here about having those multiple transactions per file spread to more than
+one load 
+<em>worker</em>.
+</p><p>There are basically two ways to split the work between several workers here,
+and both are implemented in pgloader.
+</p><h2>N workers, N splits of the file</h2><pre><code>section_threads    = 4
+split_file_reading = True
+</code></pre><p>Setup this way, 
+<a href='../../../pgsql/pgloader.html'>pgloader</a> will launch 4 different 
+<em>threads</em> (see the 
+<strong>caveat</strong>
+section of this article).  Each thread is then given a part of the input
+data file and will run the whole usual pgloader processing on its own.  For
+this to work you need to be able to 
+<code>seek</code> in the input stream, which might
+not always be convenient.
+</p><h2>one reader, N workers</h2><pre><code>section_threads    = 4
+split_file_reading = False
+rrqueue_size       = 5000
+</code></pre><p>With such a setup, 
+<a href='../../../pgsql/pgloader.html'>pgloader</a> will start 4 different worker 
+<em>threads</em> that will
+receive the data input in an internal 
+<a href='http://docs.python.org/library/collections.html#deque-objects'>python queue</a>.  Another active 
+<em>thread</em>
+will be responsible of reading the input file and filling the queues in a
+<em>round robin</em> fashion, but will hand all the processing of the data to each
+worker, of course.
+</p><h2>how many threads?</h2><p>If you're using a mix and match of 
+<code>max_parallel_sections</code> and 
+<code>section_threads</code>
+with 
+<code>split_file_reading</code> set to 
+<code>True</code> of 
+<code>False</code>, it's uneasy to know exactly
+how many 
+<em>threads</em> will run at any time in the loading.  How to ascertain
+which section will run in parallel when it depends on the timing of the
+loading?
+</p><p>The advice here is the usual one, don't overestimate the capabilities of
+your system unless you are in a position to check before by doing trial
+runs.
+</p><h1>caveat</h1><p>Current implementation of all the parallelism in 
+<a href='../../../pgsql/pgloader.html'>pgloader</a> has been done with
+the 
+<a href='http://docs.python.org/library/threading.html'>python threading</a> API.  While this is easy enough to use when you want to
+exchange data between threads, it's suffering from the
+<a href='http://docs.python.org/c-api/init.html#thread-state-and-the-global-interpreter-lock'>Global Interpreter Lock</a> issue.  This means that while the code is doing its
+processing in parallel, the 
+<em>runtime</em> not so much.  You might still benefit
+from the current implementation if you have hard to parse files, or custom
+reformat modules that are part of the loading bottleneck.
+</p><h1>future</h1><p>The solution would be to switch to using the newer 
+<a href='http://docs.python.org/library/multiprocessing.html'>python multiprocessing</a>
+API, and some preliminary work has been done in pgloader to allow for that.
+If you're interested in real parallel bulk loading, 
+<a href='dim (at) tapoueh (dot) org'>contact-me</a>!
+</p>  </div>
+  </div>
+  </div>
+  <div id="push"></div>
+  </div>
+
+<footer>
+  <p>
+    <small>Unless otherwise specified, the contents of
+    <a href=/index.html>this website</a> are Copyright
+    &#169;&#160; 2008-2013 <a href=/about>Dimitri Fontaine</a>, and are
+    licensed for use under
+    <a href=http://creativecommons.org/licenses/by-sa/3.0/
+    rel=license><abbr title="Creative
+    Commons">CC</abbr>&#160;<abbr title=Attribution>BY</abbr>-<abbr title=Share-Alike>SA</abbr>&#160;3.0</a>.</small>
+  </p> 
+</footer> 
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-47059482-1', 'tapoueh.org');
+  ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

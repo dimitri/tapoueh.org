@@ -1,0 +1,354 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset=utf-8 /> 
+    <meta name=viewport content="width=device-width" /> 
+    <meta name="generator" content="Emacs Muse Blog" /> 
+    <meta description="blog de Dimitri Fontaine, Expert PostgreSQL - 2ndQuadrant France" />
+    <meta property="og:title" content="tapoueh.org"/>
+    <meta property="og:type" content="non_profit"/>
+    <meta property="og:url" content="http://tapoueh.org/blog/2011/07/29-how-to-setup-pgloader"/>
+    <meta property="og:image" content="http://tapoueh.org/static/2ndQuadrant-cross.png"/>
+    <meta property="og:site_name" content="Tapoueh"/>
+    <meta property="fb:admins" content="545062436"/>
+
+    <title>Expertise PostgreSQL</title>
+    <link rel='stylesheet' type='text/css' media='all' href='/static/styles.css' />
+
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="/static/FontAwesome/css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="/static/highlight.js/styles/sunburst.css">
+    <script src="/static/highlight.js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script src="/static/jquery-1.9.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/jqcloud.css" />
+    <script type="text/javascript" src="/static/jqcloud-1.0.4.min.js"></script>
+
+    <script type="text/javascript" src="http://apis.google.com/js/plusone.js">{lang: 'fr'}</script>
+    
+  </head>
+  <body>
+
+   <div id="wrap">
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="nav-collapse collapse">
+	<p class="pull-right">
+	  <a href="http://2ndquadrant.com">
+	    <img alt="logo" src="/static/2ndQuadrant-cross.png"
+		 style="margin-right: 8px; margin-top: 4px; height: 32px;"/>
+	  </a>
+	</p>
+	<div class="navbar-inner">
+	 <a class="brand" style="margin-left: 0.2em; margin-top: -4px;"
+	    href="http://expert-postgresql.fr/">
+	  <img src="/static/expert-postgresql.png"></a>
+	 <ul class="nav">
+	  <li><a href="/blog"><i class="icon-book"></i> blog</a></li>
+	  <li><a href="/projects"><i class="icon-suitcase"></i> projects</a></li>
+	  <li><a href="/conferences"><i class="icon-plane"></i> confs</a></li>
+	  <li><a href="/about"><i class="icon-beer"></i> about</a></li>
+	  <li><a href="/rss/tapoueh.xml"><i class="icon-rss"></i> rss</a></li>
+	 </ul>
+	</div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row">
+	<div class="span4">
+	  <div><ul class='breadcrumb'><li><span class='divider'><i class='icon-sitemap'></i></span></li><li><a href='/'>/dev/dim</a><span class='divider'>/</span></li><li><a href='/blog'>blog</a><span class='divider'>/</span></li><li><a href='/blog/2011'>2011</a><span class='divider'>/</span></li><li><a href='/blog/2011/07'>07</a></li></ul></div>
+	  <div class='date'>Friday, July 29 2011 <i class='icon-calendar'></i></div>
+	  <div style='text-align: right;'><span><a href='/tags/postgresql'>PostgreSQL</a>, <a href='/tags/pgloader'>pgloader</a></span> <i class='icon-tags'></i></div>
+	  
+
+	  <div style="margin-top: 1em;">
+	    <div class='span2 pull-left'><a class='thumbnail' href='/tags/pgloader'><img class='img-polaroid' style='width: 160px; height: 120px;' src='/thumbnails/toy-loader.320.jpg' /></a></div>
+	    <div id='social' class='span1 pull-right social'><ul><li><g:plusone size='tall' href='http://tapoueh.org/blog/2011/07/29-how-to-setup-pgloader'></g:plusone></li><li><a href='http://twitter.com/share' class='twitter-share-button' data-via='tapoueh' data-count='vertical'>Tweet</a><script type='text/javascript' src='http://platform.twitter.com/widgets.js'></script></li></ul></div>
+	  </div>
+
+	  <div id="prevnext">
+	    <h3 class='prevnext'>Recent Articles</h3>
+	    <div><a class='previous' href='/blog/2011/07/29-emacs-ansi-colors'>« Emacs ANSI colors</a></div>
+	    <div><a class='next pull-right' href='/blog/2011/07/29-configurer-pgloader'>Configurer pgloader »</a></div>
+	  </div>
+	  
+	  <div>
+	    <div id="left-tag-cloud" class="jqcloud"
+		 style="width: 300px; height: 650px; position: absolute; top: 475px;">
+	    </div>
+            <script>
+            var word_list;
+            
+            $.ajax({
+                type: 'GET',
+                url: '/cloud.json',
+                dataType: 'json',
+                success: function(response) { word_list = response; },
+                data: {},
+                async: false
+            });
+             
+            $(document).ready(function() {
+               $("#left-tag-cloud").jQCloud(word_list,
+	                {shape: "rectangular",
+	                 removeOverflowing: false});
+            });
+            </script>
+	  </div>
+
+	</div>
+
+	<div id="title" class="span8">
+	  <h1>How to Setup pgloader</h1>
+	</div>
+	
+	<div id="content" class="span8">
+<p>In a previous article we detailed 
+<a href='http://tapoueh.org/blog/2011/07/22-how-to-use-pgloader.html'>how to use pgloader</a>, let's now see how to
+write the 
+<code>pgloader.conf</code> that instructs 
+<a href='http://tapoueh.org/pgsql/pgloader.html'>pgloader</a> about what to do.
+</p><p>This file is expected in the 
+<code>INI</code> format, with a 
+<em>global</em> section then one
+section per file you want to import.  The 
+<em>global</em> section defines some
+default options and how to connect to the 
+<a href='http://tapoueh.org/pgsql/index.html'>PostgreSQL</a> server.
+</p><p>The configuration setup is fully documented on the 
+<a href='http://pgloader.projects.postgresql.org/'>pgloader man page</a> that
+you can even easily find online.  As all 
+<em>unix</em> style man pages, though, it's
+more a complete reference than introductory material.  Let's review.
+</p><h1>global section</h1><p>Here's the 
+<em>global</em> section of the 
+<a href='https://github.com/dimitri/pgloader/blob/master/examples/pgloader.conf'>examples/pgloader.conf</a> file of the source
+files.  Well, some options are 
+<em>debugger</em> only options, really, so I changed
+their value so that what you see here is a better starting point.
+</p><pre><code>[pgsql]
+base = pgloader
+
+log_file            = /tmp/pgloader.log
+log_min_messages    = INFO
+client_min_messages = WARNING
+
+lc_messages         = C
+pg_option_client_encoding = &#039;utf-8&#039;
+pg_option_standard_conforming_strings = on
+pg_option_work_mem = 128MB
+
+copy_every      = 15000
+
+null         = &quot;&quot;
+empty_string = &quot;\ &quot;
+
+max_parallel_sections = 4
+</code></pre><p>You don't see all the connection setup, here 
+<code>base</code> was enough.  You might
+need to setup 
+<code>host</code>, 
+<code>port</code> and 
+<code>user</code>, and maybe even 
+<code>pass</code>, too, to be able to
+connect to the PostgreSQL server.
+</p><p>The logging options allows you to set a file where to log all 
+<code>pgloader</code>
+messages, that are categorized as either 
+<code>DEBUG</code>, 
+<code>INFO</code>, 
+<code>WARNING</code>, 
+<code>ERROR</code> or
+<code>CRITICAL</code>.  The options 
+<code>log_min_messages</code> and 
+<code>client_min_messages</code> are another
+good idea stolen from 
+<a href='http://www.postgresql.org/'>PostgreSQL</a> and allow you to setup the level of chatter
+you want to see on the interactive console (standard output and standard
+error streams) and on the log file.
+</p><p>Please note that the 
+<code>DEBUG</code> level will produce more that 3 times as many data
+as the data file you're importing.  If you're not a 
+<code>pgloader</code> contributor or
+helping them, well, 
+<em>debug</em> it, you want to avoid setting the log chatter to
+this value.
+</p><p>The 
+<code>client_encoding</code> will be 
+<a href='http://www.postgresql.org/docs/current/static/sql-set.html'>SET</a> by 
+<a href='http://tapoueh.org/pgsql/pgloader.html'>pgloader</a> on the PostgreSQL connection it
+establish.  You can now even set any parameter you want by using the
+<code>pg_option_parameter_name</code> magic settings.  Note that the command line option
+<code>--pg-options</code> (or 
+<code>-o</code> for brevity) allows you to override that.
+</p><p>Then, the 
+<code>copy_every</code> parameter is set to 
+<code>5</code> in the examples, because the test
+files are containing less than 10 lines and we want to test several 
+<em>batches</em>
+of commits when using them.  So for your real loading, stick to default
+parameters (
+<code>10 000</code> lines per 
+<code>COPY</code> command), or more.  You can play with this
+parameter, depending on the network (or local access) and disk system you're
+using you might see improvements by reducing it or enlarging it.  There's no
+so much theory of operation as empirical testing and setting here.  For a
+one-off operation, just remove the lines from the configuration.
+</p><p>The parameters 
+<code>null</code> and 
+<code>empty_string</code> are related to interpreting the data in
+the text or 
+<code>csv</code> files you have, and the documentation is quite clear about
+them.  Note that you have global setting and per-section setting too.
+</p><p>The last parameter of this example, 
+<code>max_parallel_sections</code>, is detailed later
+in the article.
+</p><h1>files section</h1><p>After the 
+<em>global</em> section come as many sections as you have file to load.
+Plus the 
+<em>template</em> sections, that are only there so that you can share a
+bunch of parameters in more than one section.  Picture a series of data file
+all of the same format, the only thing that will change is the 
+<code>filename</code>.
+Use a template section in this case!
+</p><p>Let's see an example:
+</p><pre><code>[simple_tmpl]
+template     = True
+format       = text
+datestyle    = dmy
+field_sep    = |
+trailing_sep = True
+
+[simple]
+use_template    = simple_tmpl
+table           = simple
+filename        = simple/simple.data
+columns         = a:1, b:3, c:2
+skip_head_lines = 2
+
+# those reject settings are defaults one
+reject_log   = /tmp/simple.rej.log
+reject_data  = /tmp/simple.rej
+
+[partial]
+table        = partial
+format       = text
+filename     = partial/partial.data
+field_sep    = %
+columns      = *
+only_cols    = 1-3, 5
+</code></pre><p>That's 2 of the examples from the 
+<a href='https://github.com/dimitri/pgloader/blob/master/examples/pgloader.conf'>examples/pgloader.conf</a> file, in 3 sections
+so that we see one template example.  Of course, having a single section
+using the template, it's just here for the example.
+</p><h1>data file format</h1><p>The most important setting that you have to care about is the file format.
+Your choice here is either 
+<code>text</code>, 
+<code>csv</code> or 
+<code>fixed</code>.  Mostly, what we are given
+nowadays is 
+<code>csv</code>.  You might remember having read that the nice thing about
+standards is that there's so many to choose from... well, the 
+<code>csv</code> land is
+one where it's pretty hard to find different producers that understand it
+the same way.
+</p><p>So when you fail to have pgloader load your 
+<em>mostly csv</em> files with a 
+<code>csv</code>
+setup, it's time to consider using 
+<code>text</code> instead.  The 
+<code>text</code> file format
+accept a lot of tunables to adapt to crazy situations, but is all 
+<code>python</code>
+code when the 
+<a href='http://docs.python.org/library/csv.html'>python csv module</a> is a C-coded module, more efficient.
+</p><p>If you're wondering what kind of format we're talking about here, here's the
+<a href='https://github.com/dimitri/pgloader/blob/master/examples/cluttered/cluttered.data'>cluttered pgloader example</a> for your reading pleasure, using 
+<code>^</code> (carret) as
+the field separator:
+</p><pre><code>1^some multi\
+line text with\
+newline escaping^and some other data following^
+2^and another line^clean^
+3^and\
+a last multiline\
+escaped line
+with a missing\
+escaping^just to test^
+4^\ ^empty value^
+5^^null value^
+6^multi line\
+escaped value\
+\
+with empty line\
+embeded^last line^
+</code></pre><p>And here's what we get by loading that:
+</p><pre><code>pgloader/examples$ pgloader -c pgloader.conf -s cluttered
+Table name        |    duration |    size |  copy rows |     errors 
+====================================================================
+cluttered         |      0.193s |       - |          6 |          0
+
+pgloader/examples$ psql pgloader -c &quot;table cluttered;&quot;
+ a |               b               |        c         
+---+-------------------------------+------------------
+ 1 | and some other data following | some multi
+                                   : line text with
+                                   : newline escaping
+ 2 | clean                         | and another line
+ 3 | just to test                  | and
+                                   : a last multiline
+                                   : escaped line
+                                   : with a missing
+                                   : escaping
+ 4 | empty value                   | 
+ 5 | null value                    | 
+ 6 | last line                     | multi line
+                                   : escaped value
+                                   : 
+                                   : with empty line
+                                   : embeded
+(6 rows)
+</code></pre><p>So when you have such kind of data, well, it might be that 
+<code>pgloader</code> is still
+able to help you!
+</p><p>Please refer to the 
+<a href='http://pgloader.projects.postgresql.org/'>pgloader man page</a> to know about each and every parameter
+that you can define and the values accepted, etc.  And the 
+<em>fixed</em> data format
+is to be used when you're not given a field separator but field positions in
+the file.  Yes, we still encounter those from time to time.  Who needs
+variable size storage, after all?
+</p>  </div>
+  </div>
+  </div>
+  <div id="push"></div>
+  </div>
+
+<footer>
+  <p>
+    <small>Unless otherwise specified, the contents of
+    <a href=/index.html>this website</a> are Copyright
+    &#169;&#160; 2008-2013 <a href=/about>Dimitri Fontaine</a>, and are
+    licensed for use under
+    <a href=http://creativecommons.org/licenses/by-sa/3.0/
+    rel=license><abbr title="Creative
+    Commons">CC</abbr>&#160;<abbr title=Attribution>BY</abbr>-<abbr title=Share-Alike>SA</abbr>&#160;3.0</a>.</small>
+  </p> 
+</footer> 
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-47059482-1', 'tapoueh.org');
+  ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

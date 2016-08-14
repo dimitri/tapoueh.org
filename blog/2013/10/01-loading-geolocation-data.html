@@ -1,0 +1,496 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset=utf-8 /> 
+    <meta name=viewport content="width=device-width" /> 
+    <meta name="generator" content="Emacs Muse Blog" /> 
+    <meta description="blog de Dimitri Fontaine, Expert PostgreSQL - 2ndQuadrant France" />
+    <meta property="og:title" content="tapoueh.org"/>
+    <meta property="og:type" content="non_profit"/>
+    <meta property="og:url" content="http://tapoueh.org/blog/2013/10/01-loading-geolocation-data"/>
+    <meta property="og:image" content="http://tapoueh.org/static/2ndQuadrant-cross.png"/>
+    <meta property="og:site_name" content="Tapoueh"/>
+    <meta property="fb:admins" content="545062436"/>
+
+    <title>Expertise PostgreSQL</title>
+    <link rel='stylesheet' type='text/css' media='all' href='/static/styles.css' />
+
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="/static/FontAwesome/css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="/static/highlight.js/styles/sunburst.css">
+    <script src="/static/highlight.js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script src="/static/jquery-1.9.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/jqcloud.css" />
+    <script type="text/javascript" src="/static/jqcloud-1.0.4.min.js"></script>
+
+    <script type="text/javascript" src="http://apis.google.com/js/plusone.js">{lang: 'fr'}</script>
+    
+  </head>
+  <body>
+
+   <div id="wrap">
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="nav-collapse collapse">
+	<p class="pull-right">
+	  <a href="http://2ndquadrant.com">
+	    <img alt="logo" src="/static/2ndQuadrant-cross.png"
+		 style="margin-right: 8px; margin-top: 4px; height: 32px;"/>
+	  </a>
+	</p>
+	<div class="navbar-inner">
+	 <a class="brand" style="margin-left: 0.2em; margin-top: -4px;"
+	    href="http://expert-postgresql.fr/">
+	  <img src="/static/expert-postgresql.png"></a>
+	 <ul class="nav">
+	  <li><a href="/blog"><i class="icon-book"></i> blog</a></li>
+	  <li><a href="/projects"><i class="icon-suitcase"></i> projects</a></li>
+	  <li><a href="/conferences"><i class="icon-plane"></i> confs</a></li>
+	  <li><a href="/about"><i class="icon-beer"></i> about</a></li>
+	  <li><a href="/rss/tapoueh.xml"><i class="icon-rss"></i> rss</a></li>
+	 </ul>
+	</div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row">
+	<div class="span4">
+	  <div><ul class='breadcrumb'><li><span class='divider'><i class='icon-sitemap'></i></span></li><li><a href='/'>/dev/dim</a><span class='divider'>/</span></li><li><a href='/blog'>blog</a><span class='divider'>/</span></li><li><a href='/blog/2013'>2013</a><span class='divider'>/</span></li><li><a href='/blog/2013/10'>10</a></li></ul></div>
+	  <div class='date'>Tuesday, October 01 2013 <i class='icon-calendar'></i></div>
+	  <div style='text-align: right;'><span><a href='/tags/postgresql'>PostgreSQL</a>, <a href='/tags/pgloader'>pgloader</a>, <a href='/tags/ip4r'>ip4r</a>, <a href='/tags/extensions'>Extensions</a>, <a href='/tags/common-lisp'>Common-Lisp</a></span> <i class='icon-tags'></i></div>
+	  
+
+	  <div style="margin-top: 1em;">
+	    <div class='span2 pull-left'><a class='thumbnail' href='/tags/pgloader'><img class='img-polaroid' style='width: 160px; height: 120px;' src='/thumbnails/toy-loader.320.jpg' /></a></div>
+	    <div id='social' class='span1 pull-right social'><ul><li><g:plusone size='tall' href='http://tapoueh.org/blog/2013/10/01-loading-geolocation-data'></g:plusone></li><li><a href='http://twitter.com/share' class='twitter-share-button' data-via='tapoueh' data-count='vertical'>Tweet</a><script type='text/javascript' src='http://platform.twitter.com/widgets.js'></script></li></ul></div>
+	  </div>
+
+	  <div id="prevnext">
+	    <h3 class='prevnext'>Recent Articles</h3>
+	    <div><a class='previous' href='/blog/2013/09/19-OSCD-2013'>« Open World Forum 2013</a></div>
+	    <div><a class='next pull-right' href='/blog/2013/10/03-micro-optimizing-int-to-ip-address'>A Worthwile Micro Optimisation »</a></div>
+	  </div>
+	  
+	  <div>
+	    <div id="left-tag-cloud" class="jqcloud"
+		 style="width: 300px; height: 650px; position: absolute; top: 475px;">
+	    </div>
+            <script>
+            var word_list;
+            
+            $.ajax({
+                type: 'GET',
+                url: '/cloud.json',
+                dataType: 'json',
+                success: function(response) { word_list = response; },
+                data: {},
+                async: false
+            });
+             
+            $(document).ready(function() {
+               $("#left-tag-cloud").jQCloud(word_list,
+	                {shape: "rectangular",
+	                 removeOverflowing: false});
+            });
+            </script>
+	  </div>
+
+	</div>
+
+	<div id="title" class="span8">
+	  <h1>Loading Geolocation Data</h1>
+	</div>
+	
+	<div id="content" class="span8">
+<p>As I've been mentionning in the past already, I'm currently rewriting
+pgloader from scratch in 
+<a href='/tags/common-lisp'>Common Lisp</a>. In terms of 
+<a href='http://en.wikipedia.org/wiki/Technical_debt'>technical debt</a> that's akin
+to declaring 
+<em>bankrupcy</em>, which is both sad news and good news as there's
+suddenly new hope of doing it right this time.
+</p><center><img src='../../../images/lisp-python.png' /></center><center><em>Let's dive into the python to common lisp rewrite</em></center><h2>Why rewriting pgloader?</h2><p>Several problems hinted me into doing something other than maintaining the
+code I had for 
+<a href='/projects/pgloader'>pgloader</a>.
+</p><p>First, the configuration file format was already used well beyond its
+capacities: it's quite hard to express advanced fine grained options when
+using the infamous 
+<a href='http://en.wikipedia.org/wiki/INI_file'>INI file format</a>. Continuing with python I did consider
+using the 
+<a href='http://pyparsing.wikispaces.com/'>pyparsing</a> library and even went as far as writing a prototype
+command language with it. While the lib was working great for that, at the
+time at least it wasn't available for 
+<em>Python 3</em> and not to be found in some
+OS vendors. 
+<em>pgloader</em> is available today for Debian and derivatives, RedHat
+and derivatives, FreeBSD, OpenBSD, and some more. And you can easily enough
+use it on Windows too, because it only depends on 
+<a href='http://initd.org/psycopg/'>Psycopg</a>, basically, so
+that I wanted to keep things simple for the end user. Basically, integrating
+that lib was a problem.
+</p><p>Then again, the performances were a bigger and bigger worry for me as the
+size of files one want to load into its database grew bigger. The real
+problem was not perceived as the current performance characteristics but
+rather how to improve them, and I didn't see many ways forward. The most
+obvious one was to rewrite critical parts in C, but if I need to switch away
+from python I'd rather find a better compromse than writing python modules
+in C.
+</p><p>That's in short what lead me to consider alternatives. And as I had some
+really good preliminary performances results with a programming language I
+can actually like, I decided to go with Common Lisp.
+</p><h2>A Test case</h2><p>The blog post I actually wanted to write would have been about the awesome
+<a href='https://github.com/RhodiumToad/ip4r'>ip4r</a> extension, which is about indexing IP range searches as mostly used
+nowadays in 
+<em>geoip location</em>. The first step here is to find some data to use
+and load them, and wanting to do that I realised we were lacking an
+all-integrated tool easy enough to use.
+</p><p>And that's exactly the reason why I'm working on 
+<em>pgloader</em> in the first
+place, to make it really easy to load data, converting it on the fly and all
+the jazz. And that 
+<em>ip4r</em> test case actually has been a very good excuse at
+improving what I already had.
+</p><center><img src='../../../images/toy-loader.320.jpg' /></center><h2>The new pgloader command language</h2><p>Here's the current way of doing things with the new 
+<em>pgloader</em> written in
+Common-Lisp, then I'll tell you why using a 
+<em>parser generator library</em> in that
+language is less of a burden than doing the same thing in Python:
+</p><pre><code>LOAD FROM ARCHIVE http://geolite.maxmind.com/download/geoip/database/GeoLiteCity_CSV/GeoLiteCity-latest.zip
+   INTO postgresql://dim@localhost:54393/dim
+
+BEFORE LOAD DO
+   $$ create extension if not exists ip4r; $$,
+   $$ create schema if not exists geolite; $$,
+   $$ create table if not exists geolite.location
+     (
+        locid      integer primary key,
+        country    text,
+        region     text,
+        city       text,
+        postalcode text,
+        location   point,
+        metrocode  text,
+        areacode   text
+     );
+   $$,
+   $$ create table if not exists geolite.blocks
+     (
+        iprange    ip4r,
+        locid      integer
+     );
+   $$,
+   $$ drop index if exists geolite.blocks_ip4r_idx; $$,
+   $$ truncate table geolite.blocks, geolite.location cascade; $$
+
+    LOAD CSV FROM FILENAME MATCHING ~/GeoLiteCity-Location.csv/
+             WITH ENCODING iso-8859-1
+             (
+                locId,
+                country,
+                region     null if blanks,
+                city       null if blanks,
+                postalCode null if blanks,
+                latitude,
+                longitude,
+                metroCode  null if blanks,
+                areaCode   null if blanks
+             )
+        INTO postgresql://dim@localhost:54393/ip4r?geolite.location
+             (
+                locid,country,region,city,postalCode,
+                location point using (format nil &quot;(~a,~a)&quot; longitude latitude),
+                metroCode,areaCode
+             )
+        WITH skip header = 2,
+             fields optionally enclosed by &#039;&quot;&#039;,
+             fields escaped by double-quote,
+             fields terminated by &#039;,&#039;
+
+AND LOAD CSV FROM FILENAME MATCHING ~/GeoLiteCity-Blocks.csv/
+             WITH ENCODING iso-8859-1
+             (
+                startIpNum, endIpNum, locId
+             )
+        INTO postgresql://dim@localhost:54393/ip4r?geolite.blocks
+             (
+                iprange ip4r using (ip-range startIpNum endIpNum),
+                locId
+             )
+        WITH skip header = 2,
+             fields optionally enclosed by &#039;&quot;&#039;,
+             fields escaped by double-quote,
+             fields terminated by &#039;,&#039;
+
+FINALLY DO
+   $$
+     create index blocks_ip4r_idx on geolite.blocks using gist(iprange);
+   $$;
+</code></pre><p>What you see here looks quite complex and heavy. That's because it's
+addressing the full needs, let's see about that:
+</p><ul><li>the source of the data loading is a <em>zip archive</em> that we have to download from a <em>http url</em>,</li></ul><ul><li>the <em>zip archive</em> contains a single directory entry wherein we find the data files we want to load, currently <code>GeoLiteCity_20130903</code>... as we want to be able to update the data without having to edit the command, you will note the support for matching the file name against a full path name: <code>FILENAME MATCHING ~/GeoLiteCity-Blocks.csv/</code> is applying a regular expression,</li></ul><ul><li>we want the loading process to take care about creating the database schema we're going to use, and even drop the current index if any before loading, because we know that loading the data in bulk and then creating the index is way faster than keeping the index around,</li></ul><ul><li>there's no out of band place where to register whether a field value is null in a plain text CSV file, even if technically that could be done, so we have to provide per field instructions on what a <code>NULL</code> will look like in the data itself,</li></ul><ul><li>the files we're using don't have the exact definition we want: rather than a pair of <em>double precision</em> fields for hosting the location we want a <a href='http://www.postgresql.org/docs/9.3/static/datatype-geometric.html#AEN6542'>PostgreSQL point</a> datatype column; and rather than a pair of <em>bigint</em> fields we want an <em>ip4r</em> column in PostgreSQL,</li></ul><ul><li>and of course as soon as the data loading is done we want to create the shiny <em>ip4r</em> <strong>GiST</strong> index.</li></ul><p>And as we are using an attribution licence for the data here, let me tell
+you that: This article includes 
+<strong>GeoLite</strong> data created by 
+<strong>MaxMind</strong>, available
+from 
+<a href='http://www.maxmind.com'>http://www.maxmind.com</a>.
+</p><h2>Transforming and Projecting</h2><p>The former 
+<em>pgloader</em> was capable of using dynamic python code to reformat
+fields on the fly, which was already quite good, but not up to the task
+described just above. What we really want to be able to do here is 
+<em>project</em>
+any number of fields into a 
+<em>possibly different</em> number of columns that are
+dependant on the fields.
+</p><center><img src='../../../images/huge-full-outer-join.gif' /></center><center><em>Traditionnaly used for Full Outer Join, but I liked the symbol</em></center><p>In the simplest case possible, each field ends up into a column of the same
+name, and that's still supported of course, it looks like this:
+</p><pre><code>LOAD CSV FROM FILENAME MATCHING ~/GeoLiteCity-Blocks.csv/
+         WITH ENCODING iso-8859-1
+    INTO postgresql://dim@localhost:54393/ip4r?geonumip.blocks
+    WITH skip header = 2,
+         fields optionally enclosed by &#039;\&quot;&#039;,
+         fields escaped by double-quote,
+         fields terminated by &#039;,&#039;;
+</code></pre><p>That's a very simple processing actually, with no added processing when
+reading the file.
+</p><p>In the previous example though, we're using a 
+<em>transformation</em> function that I
+included in 
+<em>pgloader</em> to transform a couple of integers into an 
+<em>iprange</em>.
+Here's the Common Lisp sources for that function:
+</p><pre><code>(defun ip-range (start-integer-string end-integer-string)
+  &quot;Transform a couple of integers to an IP4R ip range notation.&quot;
+  (declare (inline)
+	   (optimize speed)
+	   (type string start-integer-string end-integer-string))
+  (flet ((integer-to-ip-string (int)
+	   &quot;see http://dev.maxmind.com/geoip/legacy/csv/&quot;
+	   (declare (inline) (optimize speed) (type fixnum int))
+	   (format nil &quot;~a.~a.~a.~a&quot;
+		   (mod (truncate int #. (expt 2 24)) 256)
+		   (mod (truncate int #. (expt 2 16)) 256)
+		   (mod (truncate int #. (expt 2 8)) 256)
+		   (mod int 256))))
+    (let ((ip-start (integer-to-ip-string (parse-integer start-integer-string)))
+	  (ip-end   (integer-to-ip-string (parse-integer end-integer-string))))
+      (format nil &quot;~a-~a&quot; ip-start ip-end))))
+</code></pre><p>And here's how it's used:
+</p><pre><code>INTO postgresql://dim@localhost:54393/ip4r?geolite.blocks
+     (
+        iprange ip4r using (ip-range startIpNum endIpNum),
+        locId
+     )
+</code></pre><p>Internally, pgloader generates a 
+<em>lambda</em> expression to process each row, in
+that very case the expression looks like this:
+</p><pre><code>(lambda (row)
+  (destructuring-bind (startIpNum endIpNum locId) row
+    (list (pgloader.transforms::ip-range startIpNum endIpNum)
+          locId)))
+</code></pre><p>That generated lambda expression is then 
+<em><strong>compiled</strong></em> on the fly into machine
+code that is then executed for each row input. That's the kind of things
+allowing Common Lisp programmers not to resort to C.
+</p><center><img src='../../../images/lisplogo_fancy_256.png' /></center><p>Note that as in the previous 
+<em>location</em> example you can also directly write
+the Lisp expressions within the command itself:
+</p><pre><code>INTO postgresql://dim@localhost:54393/ip4r?geolite.location
+     (
+        locid,country,region,city,postalCode,
+        location point using (format nil &quot;(~a,~a)&quot; longitude latitude),
+        metroCode,areaCode
+     )
+</code></pre><h2>Simple benchmarking</h2><p>Enough presenting the software already, let's run it!
+</p><h3>Python version</h3><p>First, let's run the current python pgloader code against our dataset. Note
+that you will have to download and unzip the data yourself here, then
+prepare that kind of configuration file:
+</p><pre><code>[pgsql]
+base = pgloader
+
+log_file            = /tmp/pgloader.log
+log_min_messages    = INFO
+client_min_messages = WARNING
+
+client_encoding = &#039;latin1&#039;
+lc_messages         = C
+pg_option_standard_conforming_strings = on
+; This setting has no effect other than allowing to check option precedence
+pg_option_work_mem = 12MB
+
+copy_every      = 25000
+commit_every    = 25000
+#copy_delimiter  = %
+
+null         = &quot;&quot;
+empty_string = &quot;\ &quot;
+
+[tmpl]
+template        = True
+format          = csv
+field_sep       = ,
+skip_head_lines = 2
+
+[location]
+use_template    = tmpl
+table           = location
+filename        = /tmp/GeoLiteCity-latest/GeoLiteCity_20130903/GeoLiteCity-Location.csv
+columns         = *
+
+[blocks]
+use_template    = tmpl
+table           = blocks
+filename        = /tmp/GeoLiteCity-latest/GeoLiteCity_20130903/GeoLiteCity-Blocks.csv
+columns         = *
+skip_head_lines = 2
+</code></pre><p>And with that we can do:
+</p><pre><code>./pgloader.py -R reformat -sTv -c ~/dev/temp/pgloader.geolite.conf
+   ... edited ...
+Table name        |    duration |    size |  copy rows |     errors 
+====================================================================
+blocks            |  01m18.979s |       - |    1790461 |          0
+location          |     35.710s |       - |     438386 |          0
+====================================================================
+Total             |  01m54.713s |       - |    2228847 |          0
+</code></pre><h3>Common Lisp version, no projection</h3><p>With a command doing the same amount of work as the previous one for the
+<em>blocks</em> table (I still kept the longitude and latitude to point formating):
+</p><pre><code>&#xA0;                   table name       read   imported     errors       time
+------------------------------  ---------  ---------  ---------  ---------
+                       extract          0          0          0      1.007
+                   before load          0          0          0      0.024
+------------------------------  ---------  ---------  ---------  ---------
+             geonumip.location     438386     438386          0      8.868
+               geonumip.blocks    1790461    1790461          0     17.425
+------------------------------  ---------  ---------  ---------  ---------
+             Total import time    2228847    2228847          0    27.324s
+</code></pre><p>We can see new sections, as the command is now actually extracting the
+archive (at the size and given how many tests I wanted to do, the fetching
+step as been avoided in the tests here), then preparing the load with all
+the 
+<code>CREATE TABLE IF NOT EXISTS</code> steps, and then actually parsing the files
+and loading the data.
+</p><p>So for doing the same work, we went from nearly 
+<em><strong>2 minutes</strong></em> with the previous
+solution down to less than 
+<em><strong>30 seconds</strong></em>, including the zip archive extraction
+and the create table steps. Another way to look at it is that 
+<em>pgloader</em> here
+spent 
+<code>9.73213 &#xB5;s</code> to process each row. Yeah, less than 10 
+<em><strong>microseconds</strong></em> per
+row.
+</p><p>Declaring bankrupcy on the previous code base was maybe not the worst
+decision I made this year, finally...
+</p><p>I want to note here that the python importing code is actually using the 
+<em>csv</em>
+module for reading the files, and that module is already written in C in
+fact. So we're actually comparing python and C on the one hand to Common
+Lisp alone on the other hand.
+</p><center><img src='../../../images/made-with-lisp.png' /></center><h3>Common Lisp version with fields to columns projection</h3><p>Now, as we have some time budget left, let's have the loader actually do
+more work for us and convert on the fly to the data representation we are
+interested into:
+</p><pre><code>&#xA0;                   table name       read   imported     errors       time
+------------------------------  ---------  ---------  ---------  ---------
+                       extract          0          0          0      1.008
+                   before load          0          0          0      0.134
+------------------------------  ---------  ---------  ---------  ---------
+              geolite.location     438386     438386          0      9.521
+                geolite.blocks    1790461    1790461          0     31.546
+------------------------------  ---------  ---------  ---------  ---------
+                       finally          0          0          0     31.134
+------------------------------  ---------  ---------  ---------  ---------
+             Total import time    2228847    2228847          0  1m13.343s
+</code></pre><p>So this time with the extra work we're going from about 18 seconds up to
+about 32 seconds. The projection of integers to ip ranges is costly, but we
+are still so much ahead from the old solution than we have enough time to
+run the command 
+<code>create index blocks_ip4r_idx on geolite.blocks using
+gist(iprange);</code> and still finish about 40 seconds earlier.
+</p><p>This time 31,456,000 microseconds where spent loading 1,790,461 rows, and
+that gives us 
+<code>17.568659 &#xB5;s</code> per row in average, including the 
+<em>two bigint as
+text to iprange as text</em> transformation calls. Not too bad.
+</p><h2>Conclusion</h2><p>Earlier in the article I said I would tell you why it's ok to use a 
+<em>parser
+generator library</em> such as 
+<a href='http://nikodemus.github.io/esrap/'>esrap</a> here, whereas in the python case it was a
+burden. The first part is that we don't have the major 
+<em>platform</em> problem that
+python has with version 2 against version 3: 
+<a href='http://www.lispworks.com/documentation/HyperSpec/Front/'>the Common Lisp Specs</a> are a
+really 
+<em><strong>stable</strong></em> base to develop libs, and so even decade old untouched code
+has a really good chance to work as-is.
+</p><center><img src='../../../images/morland_a_carriers_stable2.jpg' /></center><center><em>Another kind of </em><strong>stable</strong><em>, here</em></center><p>It's also possible and should be easy enough with 
+<a href='http://www.xach.com/lisp/buildapp/'>cl-buildapp</a> to produce a
+static all-included binary image of the application so that users don't have
+to care about which programming language and libraires are used when
+developping 
+<em>pgloader</em>.
+</p><p>And of course the proficiency and interactivity of using Common Lisp is so
+much better than when using python than you almost wonder why, given the
+performances characteristics we're seeing here and in almost any other test,
+o why are so much people still using python?
+</p><h2>Can I use that new software today?</h2><p>Yes you can, be aware that it's not for the faint of heart in the current
+shape of things. Most of the development time has been spent on features
+development and testing, integration with a 
+<em>nice</em> enough command language and
+things like that, and very few consideration has been made yet to ease of
+use and advanced error management.
+</p><p>If you're a Common Lisp user already, you can fetch the code and look
+around, the 
+<em>docstrings</em> and the code generated by the 
+<em>parser</em> should help you
+figure out the API and use it. Of course, any feedback is welcome!
+</p><p>If you're not a Common Lisp user already, then the 
+<em>README.md</em> file has
+instructions to get you started with the software, and you can hack your way
+around with the command language from examples in that blog post. Proper
+documentation of the supported commands and their options is still on the
+to-do list.
+</p><p>The 
+<em>pgloader</em> software is distributed under the same Licence as PostgreSQL
+itself, a licence in between MIT and two clauses BSD ones.
+</p><p>As I don't consider the software ready for the general public (mainly
+because of the lack of proper docs), it's not yet published at the usual
+place within 
+<a href='http://github.com/dimitri'>my github repositories</a>, instead you can find it at its interm
+place: 
+<a href='http://git.tapoueh.org/?p=pgloader.git;a=summary'>http://git.tapoueh.org/?p=pgloader.git;a=summary</a>.
+</p><p>Any contributions are welcome to help polish 
+<em>pgloader</em>, have fun!
+</p>  </div>
+  </div>
+  </div>
+  <div id="push"></div>
+  </div>
+
+<footer>
+  <p>
+    <small>Unless otherwise specified, the contents of
+    <a href=/index.html>this website</a> are Copyright
+    &#169;&#160; 2008-2013 <a href=/about>Dimitri Fontaine</a>, and are
+    licensed for use under
+    <a href=http://creativecommons.org/licenses/by-sa/3.0/
+    rel=license><abbr title="Creative
+    Commons">CC</abbr>&#160;<abbr title=Attribution>BY</abbr>-<abbr title=Share-Alike>SA</abbr>&#160;3.0</a>.</small>
+  </p> 
+</footer> 
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-47059482-1', 'tapoueh.org');
+  ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>
