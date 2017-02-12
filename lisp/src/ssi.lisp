@@ -64,33 +64,106 @@
 ;;; Compatibility layer kept to be able to publish the website in a
 ;;; subdirectory somewhere, for now just spit back a / based URL.
 ;;;
+(defun get-relative-url (absolute-url &optional (script-name *script-name*))
+  "Transform ABSOLUTE-URL into a relative one to current *script-name*"
+  (if (char/= #\/ (aref absolute-url 0))
+      absolute-url
+      (let ((rel-path-list (split-pathname script-name)))
+        (apply #'concatenate 'string
+               (append
+                (loop :for dir :in rel-path-list
+                   :unless (pathname-type dir)
+                   :collect "../")
+                (list (subseq absolute-url 1)))))))
+
 (defun tapoueh-style-sheet ()
   "Return the link to the main CSS"
-  '(:link
+  `(:link
     :rel "stylesheet"
     :type "text/css"
     :media "all"
-    :href "/static/styles.css"))
+    :href ,(get-relative-url "/static/styles.css")))
 
 (defun tapoueh-rss-index ()
   "Get the relative link to the RSS feed"
-  "/rss/tapoueh.xml")
+  (get-relative-url "/rss/tapoueh.xml"))
 
 (defun tapoueh-contents ()
   "Output the link to the /contents.html page"
-  "/contents.html")
+  (get-relative-url "/contents.html"))
 
 (defun tapoueh-root-index ()
-  "Output the link to the /contents.html page"
-  "/index.html")
+  (get-relative-url "/index.html"))
+
+(defun tapoueh-blog-index ()
+  (get-relative-url "/blog/index.html"))
+
+(defun tapoueh-projects-index ()
+  (get-relative-url "/projects.html"))
+
+(defun tapoueh-confs-index ()
+  (get-relative-url "/conferences.html"))
+
+(defun tapoueh-about-index ()
+  (get-relative-url "/about.html"))
 
 (defun tapoueh-2ndquadrant-logo ()
   "Get the :style-sheet property and rework the link to the CSS"
-  '(:img :src "/static/2ndQuadrant-cross.png"))
+  `(:img :src ,(get-relative-url "/static/2ndQuadrant-cross.png")))
 
 (defun tapoueh-expert-postgresql-logo ()
   "Get the :style-sheet property and rework the link to the CSS"
-  '(:img :src "/static/expert-postgresql.png"))
+  `(:img :src ,(get-relative-url "/static/expert-postgresql.png")))
+
+(defun tapoueh-bootstrap-css ()
+  "Return the Bootstrap CSS URL, relative to *script-name*"
+  `(:link
+    :rel "stylesheet"
+    :type "text/css"
+    :medial "all"
+    :href ,(get-relative-url "/static/bootstrap/css/bootstrap.min.css")))
+
+(defun tapoueh-jquery-script ()
+  "Return the JQuery script URL, relative to *script-name*"
+  `(:script
+    :type "text/javascript"
+    :src ,(get-relative-url "/static/jquery-1.9.1.min.js")))
+
+(defun tapoueh-font-awesome-css ()
+  "Return the Bootstrap CSS URL, relative to *script-name*"
+  `(:link
+    :rel "stylesheet"
+    :type "text/css"
+    :medial "all"
+    :href ,(get-relative-url "/static/FontAwesome/css/font-awesome.min.css")))
+
+(defun tapoueh-highlight-css ()
+  "Return the Bootstrap CSS URL, relative to *script-name*"
+  `(:link
+    :rel "stylesheet"
+    :type "text/css"
+    :medial "all"
+    :href ,(get-relative-url "/static/highlight.js/styles/sunburst.css")))
+
+(defun tapoueh-jqcloud-css ()
+  "Return the JQCloud CSS URL, relative to *script-name*"
+  `(:link
+    :rel "stylesheet"
+    :type "text/css"
+    :medial "all"
+    :href ,(get-relative-url "/static/jqcloud.css")))
+
+(defun tapoueh-highlight-script ()
+  "Return the Bootstrap script URL, relative to *script-name*"
+  `(:script
+    :type "text/javascript"
+    :src ,(get-relative-url "/static/highlight.js/highlight.pack.js")))
+
+(defun tapoueh-jqcloud-script ()
+  "Return the Bootstrap script URL, relative to *script-name*"
+  `(:script
+    :type "text/javascript"
+    :src ,(get-relative-url "/static/jqcloud-1.0.4.min.js")))
 
 (defun tapoueh-current-page-url ()
   "Get the current page full URL"
@@ -116,7 +189,7 @@
 			      (class "previous")
 			      (title-format "« ~a"))
   (when link
-    `(:a :class ,class :href ,link
+    `(:a :class ,class :href ,(get-relative-url link)
 	 ,(format nil title-format title))))
 
 (defun tapoueh-list-parent-directory (script-name)
@@ -208,10 +281,12 @@
       `(:ul :class "breadcrumb"
 	    (:li (:span :class "divider" (:i :class "icon-sitemap")))
 	    ,@(loop
-		 for (d . more?) on (cons "/dev/dim" dirs)
-		 for cur = *root-directory* then (expand-file-name-into d cur)
-		 for rel = "" then (relative-pathname-from *root-directory* cur)
-		 collect `(:li (:a :href ,(concatenate 'string "/" rel)
+		 :for (d . more?) :on (cons "/dev/dim" dirs)
+		 :for cur := *root-directory* :then (expand-file-name-into d cur)
+		 :for rel := "" :then (relative-pathname-from *root-directory* cur)
+		 :collect `(:li
+                            (:a :href ,(get-relative-url
+                                        (concatenate 'string "/" rel))
 				   ,(namestring (fad:pathname-as-file d)))
 			       ,(when more?
 				      '(:span :class "divider" "/"))))))))
@@ -255,11 +330,12 @@
 	    (mapcar #'muse-tags
 		    (alexandria:hash-table-values *blog-articles*)))
     (loop
-       for (tag . count)
-       in (sort (alexandria:hash-table-alist counts) #'> :key #'cdr)
-       collect (list (cons :text tag)
-		     (cons :weight count)
-		     (cons :link (format nil "/tags/~a" (string-downcase tag)))))))
+       :for (tag . count)
+       :in (sort (alexandria:hash-table-alist counts) #'> :key #'cdr)
+       :collect (list (cons :text tag)
+                      (cons :weight count)
+                      (cons :link
+                            (format nil "/tags/~a" (string-downcase tag)))))))
 
 
 (defun tapoueh-insert-article-tags ()
@@ -292,8 +368,10 @@
 	    (car (rassoc ifile *article-default-image-for-tag* :test #'string=))))
       `(:div :class "span2 pull-left"
 	     (:a :class "thumbnail"
-		 :href ,(if tag (format nil "/tags/~a" (string-downcase tag))
-			    "/blog/archives.html")
+		 :href ,(if tag
+                            (get-relative-url
+                             (format nil "/tags/~a" (string-downcase tag)))
+			    (get-relative-url "/blog/archives.html"))
 		 (:img :class "img-polaroid"
 		       :style "width: 160px; height: 120px;"
 		       :src ,thumbnail))))))

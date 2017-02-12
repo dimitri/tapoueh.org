@@ -180,4 +180,4 @@
               (< (file-write-date target)
                  (file-write-date source)))
       (uiop:run-program command))
-    thumbnail))
+    (get-relative-url thumbnail script-name)))

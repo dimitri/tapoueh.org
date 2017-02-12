@@ -170,7 +170,8 @@
   "Format muse-tags to be displayed on the web"
   (loop
      for (tag . more?) on (muse-tags m)
-     collect `(:a :href (format nil "/tags/~a" ,(string-downcase tag)) ,tag)
+     collect `(:a :href (get-relative-url
+                         (format nil "/tags/~a" ,(string-downcase tag))) ,tag)
      when more? collect ", "))
 
 (defmethod muse-extract-article-image-source ((article muse))

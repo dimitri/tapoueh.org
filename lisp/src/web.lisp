@@ -12,6 +12,7 @@
    (:GET    ""                                      'serve-reversed-index-page)
    (:GET    "/"                                     'serve-reversed-index-page)
    (:GET    "/blog"                                 'serve-reversed-index-page)
+   (:GET    "/blog/index.html"                      'serve-reversed-index-page)
 
    (:GET    "/blog/:year"                           'serve-index-page)
    (:GET    "/blog/:year/:month"                    'serve-index-page)
@@ -21,13 +22,16 @@
    (:GET    "/tags/:tag"                            'serve-tag-listing)
 
    (:GET    "/about"                                'serve-muse-document)
+   (:GET    "/about.html"                           'serve-muse-document)
    (:GET    "/pgsql/.*"                             'serve-muse-document)
    (:GET    "/emacs/.*"                             'serve-muse-document)
 
    (:GET    "/cloud.json"                           'serve-tag-cloud)
 
    (:GET    "/projects"                             'serve-projects-index-page)
+   (:GET    "/projects.html"                        'serve-projects-index-page)
    (:GET    "/conferences"                          'serve-confs-index-page)
+   (:GET    "/conferences.html"                     'serve-confs-index-page)
    (:GET    "/confs/:year/:month/:filename"         'serve-muse-document)
 
    (:GET    "/thumbnails/.*"                        'serve-thumbnail)
