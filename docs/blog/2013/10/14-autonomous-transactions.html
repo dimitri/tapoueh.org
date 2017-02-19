@@ -1,0 +1,380 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset=utf-8 /> 
+    <meta name=viewport content="width=device-width" /> 
+    <meta name="generator" content="Emacs Muse Blog" /> 
+    <meta description="blog de Dimitri Fontaine, Expert PostgreSQL - 2ndQuadrant France" />
+    <meta property="og:title" content="tapoueh.org"/>
+    <meta property="og:type" content="non_profit"/>
+    <meta property="og:url" content="http://tapoueh.org/blog/2013/10/14-autonomous-transactions.html"/>
+    <meta property="og:image" content="http://tapoueh.org/static/2ndQuadrant-cross.png"/>
+    <meta property="og:site_name" content="Tapoueh"/>
+    <meta property="fb:admins" content="545062436"/>
+
+    <title>Expertise PostgreSQL</title>
+    <link rel='stylesheet' type='text/css' media='all' href='../../../static/styles.css' />
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/bootstrap/css/bootstrap.min.css' />
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/FontAwesome/css/font-awesome.min.css' />
+
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/highlight.js/styles/sunburst.css' />
+    <script type='text/javascript' src='../../../static/highlight.js/highlight.pack.js'></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script type='text/javascript' src='../../../static/jquery-1.9.1.min.js'></script>
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/jqcloud.css' />
+    <script type='text/javascript' src='../../../static/jqcloud-1.0.4.min.js'></script>
+
+    <!-- <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="/static/FontAwesome/css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="/static/highlight.js/styles/sunburst.css">
+    <script src="/static/highlight.js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script src="/static/jquery-1.9.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/jqcloud.css" />
+    <script type="text/javascript" src="/static/jqcloud-1.0.4.min.js"></script>
+    -->
+
+    <script type="text/javascript" src="http://apis.google.com/js/plusone.js">{lang: 'fr'}</script>
+    
+  </head>
+  <body>
+
+   <div id="wrap">
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="nav-collapse collapse">
+	<p class="pull-right">
+	  <a href="http://2ndquadrant.com">
+	    <img alt="logo" src="/static/2ndQuadrant-cross.png"
+		 style="margin-right: 8px; margin-top: 4px; height: 32px;"/>
+	  </a>
+	</p>
+	<div class="navbar-inner">
+	 <a class="brand" style="margin-left: 0.2em; margin-top: -4px;"
+	    href="http://expert-postgresql.fr/">
+	  <img src="/static/expert-postgresql.png"></a>
+	 <ul class="nav">
+	   <li><a href="../../../blog/index.html">
+               <i class="icon-book"></i> blog</a>
+           </li>
+	   <li><a href="../../../projects.html">
+               <i class="icon-suitcase"></i> projects</a>
+           </li>
+	   <li><a href="../../../conferences.html">
+               <i class="icon-plane"></i> confs</a>
+           </li>
+	   <li><a href="../../../about.html">
+               <i class="icon-beer"></i> about</a>
+           </li>
+	   <li><a href="../../../rss/tapoueh.xml">
+               <i class="icon-rss"></i> rss</a>
+           </li>
+	 </ul>
+	</div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row">
+	<div class="span4">
+	  <div><ul class='breadcrumb'><li><span class='divider'><i class='icon-sitemap'></i></span></li><li><a href='../../../'>/dev/dim</a><span class='divider'>/</span></li><li><a href='../../../blog'>blog</a><span class='divider'>/</span></li><li><a href='../../../blog/2013'>2013</a><span class='divider'>/</span></li><li><a href='../../../blog/2013/10'>10</a></li></ul></div>
+	  <div class='date'>Monday, October 14 2013 <i class='icon-calendar'></i></div>
+	  <div style='text-align: right;'><span><a href='../../../tags/postgresql'>PostgreSQL</a>, <a href='../../../tags/extensions'>Extensions</a>, <a href='../../../tags/plproxy'>plproxy</a>, <a href='../../../tags/yesql'>YeSQL</a></span> <i class='icon-tags'></i></div>
+	  
+
+	  <div style="margin-top: 1em;">
+	    <div class='span2 pull-left'><a class='thumbnail' href='../../../tags/postgresql'><img class='img-polaroid' style='width: 160px; height: 120px;' src='../../../thumbnails/postgresql-elephant.small.png' /></a></div>
+	    <div id='social' class='span1 pull-right social'><ul><li><g:plusone size='tall' href='http://tapoueh.org/blog/2013/10/14-autonomous-transactions'></g:plusone></li><li><a href='http://twitter.com/share' class='twitter-share-button' data-via='tapoueh' data-count='vertical'>Tweet</a><script type='text/javascript' src='http://platform.twitter.com/widgets.js'></script></li></ul></div>
+	  </div>
+
+	  <div id="prevnext">
+	    <h3 class='prevnext'>Recent Articles</h3>
+	    <div><a class='previous' href='../../../blog/2013/10/09-ip4r.html'>« Geolocation with PostgreSQL</a></div>
+	    <div><a class='next pull-right' href='../../../blog/2013/10/16-Interview-MariaDB-PostgreSQL.html'>An Interview about MariaDB and PostgreSQL »</a></div>
+	  </div>
+	  
+	  <div>
+	    <div id="left-tag-cloud" class="jqcloud"
+		 style="width: 300px; height: 650px; position: absolute; top: 475px;">
+	    </div>
+            <script>
+            var word_list;
+            
+            $.ajax({
+                type: 'GET',
+                url: '/cloud.json',
+                dataType: 'json',
+                success: function(response) { word_list = response; },
+                data: {},
+                async: false
+            });
+             
+            $(document).ready(function() {
+               $("#left-tag-cloud").jQCloud(word_list,
+	                {shape: "rectangular",
+	                 removeOverflowing: false});
+            });
+            </script>
+	  </div>
+
+	</div>
+
+	<div id="title" class="span8">
+	  <h1>PostgreSQL Autonomous Transaction</h1>
+	</div>
+	
+	<div id="content" class="span8">
+<p><a href='http://www.postgresql.org/'>PostgreSQL</a> is an all round impressive 
+<em>Relational DataBase Management System</em>
+which implements the SQL standard (see the very useful reference page
+<a href='http://troels.arvin.dk/db/rdbms/'>Comparison of different SQL implementations</a> for details). PostgreSQL also
+provides with unique solutions in the database market and has been leading
+innovation for some years now. Still, there's no support for 
+<em><strong>Autonomous
+Transactions</strong></em> within the server itself. Let's have a look at how to easily
+implement them with 
+<a href='http://wiki.postgresql.org/wiki/PL/Proxy'>PL/Proxy</a>.
+</p><center><img src='../../../images/autonomous-driving.640.jpg' /></center><p>In PostgreSQL we have 
+<em>pluggable languages</em>: it's possible to add support for
+programming languages to write your own 
+<em>stored procedures</em>, and the core
+server ships with support for 5 such languages: 
+<em>PL/C</em>, 
+<em>PL/SQL</em>, 
+<em>PLpgSQL</em>,
+<em>PL/perl</em>, 
+<em>PL/python</em> and 
+<em>PL/tcl</em>.
+</p><p>The 
+<em>PL/Proxy</em> procedural language is not about providing an existing
+programming language. It's about providing the user with 
+<em>remote procedure
+call</em> and 
+<em>sharding</em> facilities to spread any kind of laod in between a herd of
+PostgreSQL servers. It's a very good 
+<em>Scaling Out</em> solution, that we're going
+to use for something quite different here.
+</p><h2>Remote Procedure Calls</h2><p>Now, the main feature 
+<em>PL/proxy</em> provides and that we're going to benefit from
+today is the 
+<em>remote procedure call</em> facility: when a function is called on a
+server, proxy it to another one, calling the same function with the same
+arguments over there, and fetching the result back. Classic 
+<em>proxying</em> and
+<em>RPC</em>.
+</p><center><img src='../../../images/rpc-code-flow.png' /></center><center><em>PL/Proxy will use binary transfers when possible to avoid marshalling steps here</em></center><p>The main thing to understand with 
+<em>PL/Proxy</em> is that the remote procedure call
+happens in its own transaction, when it returns it's already been committed
+on the remote server. So there's no local control over the PL/Proxy
+transaction, if you need to 
+<code>ROLLBACK</code> locally that's too late.
+</p><p>Well, that limitation actually is a very interesting feature if what you
+want to obtain is an 
+<em><strong>Autonomous Transaction</strong></em>, because it's actually what it
+is. If you want the Autonomous Transaction to happen locally, all is needed
+is to connect the proxy back to the current database.
+</p><h2>A practical Use Case: auditing trigger</h2><p><em><strong>Autonomous Transactions</strong></em> are useful when several units of processing need to
+be done, and we want to be able to 
+<code>COMMIT</code> some of those without impacting
+the main transaction's ability to 
+<code>ROLLBACK</code>.
+</p><p>Note that with the 
+<a href='http://www.postgresql.org/docs/current/static/sql-savepoint.html'>savepoint</a> standard feature it's possible to 
+<code>ROLLBACK</code> a
+part of the processing while still issuing a 
+<code>COMMIT</code> for the overall
+transaction, so if that's what you need to do, you're already covered with a
+stock install of PostgreSQL.
+</p><center><img src='../../../images/justice-balance.jpg' /></center><p>Now, say you want to log any attempt to 
+<code>UPDATE</code> a row in that specific
+critical table of yours, even if the transaction is then aborted. That's
+often referenced under the name 
+<em>audit trigger</em> and we already saw how to
+implement such a trigger in our article 
+<a href='/blog/2013/08/27-auditing-changes-with-hstore'>Auditing Changes with Hstore</a>.
+</p><p>The whole goal of today's exercise is going to populate our 
+<em>audit</em> table even
+when the main transaction fails. Let's first see what happens with the
+solution we had already when we 
+<code>ROLLBACK</code> the main transaction:
+</p><pre><code>~# begin;
+BEGIN
+
+~*# update example set f1 = &#039;b&#039; where id = 1;
+UPDATE 1
+
+~*# rollback;
+ROLLBACK
+
+~# select * from audit;
+ change_date | before | after 
+-------------+--------+-------
+(0 rows)
+</code></pre><p>The auditing table is not populated.
+</p><h3>Installing PLproxy</h3><p> It begins as usual:
+</p><pre><code>~# create extension plproxy;
+CREATE EXTENSION
+</code></pre><p>For that command to work you need to have installed the Operating System
+Package for plproxy (if using PostgreSQL 9.3 under debian you need to
+install the 
+<code>postgresql-9.3-plproxy</code> package, as found in the
+<a href='http://www.postgresql.org/download/linux/debian/'>PostgreSQL debian repository</a>). If you don't have a package for 
+<em>PL/Proxy</em> you
+need to fetch the sources from 
+<a href='https://github.com/markokr/plproxy-dev'>https://github.com/markokr/plproxy-dev</a> then
+run 
+<code>make install</code>.
+</p><center><img src='../../../images/setup-sofa.jpg' /></center><h3>The Setup</h3><p>Now that we have the extension, we need to use the 
+<a href='http://www.postgresql.org/docs/current/static/sql-createserver.html'>CREATE SERVER</a> command to
+have an entry point to a 
+<em>remote</em> transaction on the same connection string.
+</p><pre><code>~# create server local foreign data wrapper plproxy options(p0 &#039;dbname=dim&#039;);
+CREATE SERVER
+
+~# create user mapping for public server local options(user &#039;dim&#039;);
+CREATE USER MAPPING
+
+~# create function test_proxy(i int)
+           returns int
+          language plproxy
+as $$
+  cluster &#039;local&#039;;
+  select i;
+$$;
+CREATE FUNCTION
+
+~# select test_proxy(1);
+ test_proxy 
+------------
+          1
+(1 row)
+
+Time: 0.866 ms
+</code></pre><p>So we have a 
+<em>PL/proxy</em> 
+<em>cluster</em> to use, named 
+<em>local</em>, and we tested it with a
+very simple function that just returns whatever integer we give it as
+argument. We can see that the overhead to reconnect locally is not daunting
+in our pretty simple example.
+</p><center><img src='../../../images/Stealth-Remote-Trigger.640.jpg' /></center><h3>The remote auditing trigger</h3><p>We already had a 
+<em>trigger</em> function named 
+<em>audit</em> that will work with the magic
+variables 
+<code>NEW</code> and 
+<code>OLD</code>. What we want now is that the trigger function issues
+a 
+<em>remote procedure call</em> to our 
+<em>PL/proxy</em> local connection instead:
+</p><pre><code>create function audit_trigger()
+  returns trigger
+  language plpgsql
+as $$
+begin
+  perform audit_proxy(old, new);
+  return new;
+end;
+$$;
+
+create function audit_proxy(old example, new example)
+  returns void
+  language plproxy
+as $$
+  cluster &#039;local&#039;;
+  target audit;
+$$;
+
+create or replace function audit(old example, new example)
+  returns void
+  language SQL
+as $$
+  INSERT INTO audit(before, after) SELECT hstore(old), hstore(new);   
+$$;
+
+drop trigger if exists audit on example;
+
+    create trigger audit
+      after update on example
+          for each row          -- defaults to FOR EACH STATEMENT!
+ execute procedure audit_trigger();
+</code></pre><p>What you can see in that new setup is that the trigger calls the function
+<code>audit_trigger</code> which in turns call the function 
+<code>audit_proxy</code>. That 
+<em>proxy</em>
+function is the key for us to benefit from the 
+<em>PL/proxy</em> remote transaction
+management, all the proxy function does is connect back to 
+<em>localhost</em> then
+call the function named 
+<code>audit</code> with the same parameter it got called with.
+</p><p>The previous example was made quite generic thanks to using 
+<a href='http://www.postgresql.org/docs/current/static/hstore.html'>hstore</a>. We can't
+use 
+<a href='http://www.postgresql.org/docs/9.3/static/datatype-pseudo.html'>pseudo types</a> with 
+<em>PL/proxy</em> so we need a pair of functions per table we
+want to be able to audit in this fashion.
+</p><p>Now here's what happens with those definitions and an aborted 
+<code>UPDATE</code>:
+</p><pre><code>~# begin;
+BEGIN
+
+~*# update example set f1 = &#039;b&#039; where id = 1;
+UPDATE 1
+
+~*# rollback;
+ROLLBACK
+
+~# select change_date, before, after, after-before as diff from audit;
+-[ RECORD 1 ]--------------------------------
+change_date | 2013-10-14 14:29:09.685105+02
+before      | &quot;f1&quot;=&gt;&quot;a&quot;, &quot;f2&quot;=&gt;&quot;a&quot;, &quot;id&quot;=&gt;&quot;1&quot;
+after       | &quot;f1&quot;=&gt;&quot;b&quot;, &quot;f2&quot;=&gt;&quot;a&quot;, &quot;id&quot;=&gt;&quot;1&quot;
+diff        | &quot;f1&quot;=&gt;&quot;b&quot;
+</code></pre><p>The aborted update has been captured in the audit logs!
+</p><h2>Conclusion</h2><p>Thanks to a design where extensibility is a first class citizen, 
+<a href='http://www.postgresql.org/'>PostgreSQL</a>
+makes it possible to implement 
+<em><strong>Autonomous Transactions</strong></em> without having to
+edit its source code. Here we're using a special kind of a
+<a href='http://www.postgresql.org/docs/current/static/sql-createforeigndatawrapper.html'>Foreign Data Wrapper</a>: the 
+<em>PL/proxy</em> driver allows implementing 
+<em>remote
+procedure calls</em> and 
+<em>sharding</em>.
+</p><center><img src='../../../images/fdws.320.png' /></center><p>If you need 
+<em><strong>Autonomous Transactions</strong></em> and though PostgreSQL might not be
+suitable in your case, now is the time to review your choice!
+</p>  </div>
+  </div>
+  </div>
+  <div id="push"></div>
+  </div>
+
+<footer>
+  <p>
+    <small>Unless otherwise specified, the contents of
+    <a href=../../../index.html>this website</a> are Copyright
+    &#169;&#160; 2008-2013 <a href=/about>Dimitri Fontaine</a>, and are
+    licensed for use under
+    <a href=http://creativecommons.org/licenses/by-sa/3.0/
+    rel=license><abbr title="Creative
+    Commons">CC</abbr>&#160;<abbr title=Attribution>BY</abbr>-<abbr title=Share-Alike>SA</abbr>&#160;3.0</a>.</small>
+  </p> 
+</footer> 
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-47059482-1', 'tapoueh.org');
+  ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

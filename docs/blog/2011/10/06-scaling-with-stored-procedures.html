@@ -1,0 +1,216 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset=utf-8 /> 
+    <meta name=viewport content="width=device-width" /> 
+    <meta name="generator" content="Emacs Muse Blog" /> 
+    <meta description="blog de Dimitri Fontaine, Expert PostgreSQL - 2ndQuadrant France" />
+    <meta property="og:title" content="tapoueh.org"/>
+    <meta property="og:type" content="non_profit"/>
+    <meta property="og:url" content="http://tapoueh.org/blog/2011/10/06-scaling-with-stored-procedures.html"/>
+    <meta property="og:image" content="http://tapoueh.org/static/2ndQuadrant-cross.png"/>
+    <meta property="og:site_name" content="Tapoueh"/>
+    <meta property="fb:admins" content="545062436"/>
+
+    <title>Expertise PostgreSQL</title>
+    <link rel='stylesheet' type='text/css' media='all' href='../../../static/styles.css' />
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/bootstrap/css/bootstrap.min.css' />
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/FontAwesome/css/font-awesome.min.css' />
+
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/highlight.js/styles/sunburst.css' />
+    <script type='text/javascript' src='../../../static/highlight.js/highlight.pack.js'></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script type='text/javascript' src='../../../static/jquery-1.9.1.min.js'></script>
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/jqcloud.css' />
+    <script type='text/javascript' src='../../../static/jqcloud-1.0.4.min.js'></script>
+
+    <!-- <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="/static/FontAwesome/css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="/static/highlight.js/styles/sunburst.css">
+    <script src="/static/highlight.js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script src="/static/jquery-1.9.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/jqcloud.css" />
+    <script type="text/javascript" src="/static/jqcloud-1.0.4.min.js"></script>
+    -->
+
+    <script type="text/javascript" src="http://apis.google.com/js/plusone.js">{lang: 'fr'}</script>
+    
+  </head>
+  <body>
+
+   <div id="wrap">
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="nav-collapse collapse">
+	<p class="pull-right">
+	  <a href="http://2ndquadrant.com">
+	    <img alt="logo" src="/static/2ndQuadrant-cross.png"
+		 style="margin-right: 8px; margin-top: 4px; height: 32px;"/>
+	  </a>
+	</p>
+	<div class="navbar-inner">
+	 <a class="brand" style="margin-left: 0.2em; margin-top: -4px;"
+	    href="http://expert-postgresql.fr/">
+	  <img src="/static/expert-postgresql.png"></a>
+	 <ul class="nav">
+	   <li><a href="../../../blog/index.html">
+               <i class="icon-book"></i> blog</a>
+           </li>
+	   <li><a href="../../../projects.html">
+               <i class="icon-suitcase"></i> projects</a>
+           </li>
+	   <li><a href="../../../conferences.html">
+               <i class="icon-plane"></i> confs</a>
+           </li>
+	   <li><a href="../../../about.html">
+               <i class="icon-beer"></i> about</a>
+           </li>
+	   <li><a href="../../../rss/tapoueh.xml">
+               <i class="icon-rss"></i> rss</a>
+           </li>
+	 </ul>
+	</div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row">
+	<div class="span4">
+	  <div><ul class='breadcrumb'><li><span class='divider'><i class='icon-sitemap'></i></span></li><li><a href='../../../'>/dev/dim</a><span class='divider'>/</span></li><li><a href='../../../blog'>blog</a><span class='divider'>/</span></li><li><a href='../../../blog/2011'>2011</a><span class='divider'>/</span></li><li><a href='../../../blog/2011/10'>10</a></li></ul></div>
+	  <div class='date'>Thursday, October 06 2011 <i class='icon-calendar'></i></div>
+	  <div style='text-align: right;'><span><a href='../../../tags/postgresql'>PostgreSQL</a>, <a href='../../../tags/extensions'>Extensions</a>, <a href='../../../tags/plproxy'>plproxy</a></span> <i class='icon-tags'></i></div>
+	  
+
+	  <div style="margin-top: 1em;">
+	    <div class='span2 pull-left'><a class='thumbnail' href='../../../tags/postgresql'><img class='img-polaroid' style='width: 160px; height: 120px;' src='../../../thumbnails/postgresql-elephant.small.png' /></a></div>
+	    <div id='social' class='span1 pull-right social'><ul><li><g:plusone size='tall' href='http://tapoueh.org/blog/2011/10/06-scaling-with-stored-procedures'></g:plusone></li><li><a href='http://twitter.com/share' class='twitter-share-button' data-via='tapoueh' data-count='vertical'>Tweet</a><script type='text/javascript' src='http://platform.twitter.com/widgets.js'></script></li></ul></div>
+	  </div>
+
+	  <div id="prevnext">
+	    <h3 class='prevnext'>Recent Articles</h3>
+	    <div><a class='previous' href='../../../blog/2011/10/04-see-you-in-Amsterdam.html'>« See you in Amsterdam</a></div>
+	    <div><a class='next pull-right' href='../../../blog/2011/10/10-extensions-applicatives.html'>Extensions, applications »</a></div>
+	  </div>
+	  
+	  <div>
+	    <div id="left-tag-cloud" class="jqcloud"
+		 style="width: 300px; height: 650px; position: absolute; top: 475px;">
+	    </div>
+            <script>
+            var word_list;
+            
+            $.ajax({
+                type: 'GET',
+                url: '/cloud.json',
+                dataType: 'json',
+                success: function(response) { word_list = response; },
+                data: {},
+                async: false
+            });
+             
+            $(document).ready(function() {
+               $("#left-tag-cloud").jQCloud(word_list,
+	                {shape: "rectangular",
+	                 removeOverflowing: false});
+            });
+            </script>
+	  </div>
+
+	</div>
+
+	<div id="title" class="span8">
+	  <h1>Scaling Stored Procedures</h1>
+	</div>
+	
+	<div id="content" class="span8">
+<p>In the news recently 
+<em>stored procedures</em> where used as an excuse for moving
+away logic from the database layer to application layer, and to migrate away
+from a powerful technology to a simpler one, now that there's no logic
+anymore in the database.
+</p><p>It's not the way I would typically approach scaling problems, and apparently
+I'm not alone on the 
+<em>Stored Procedures</em> camp.  Did you read this nice blog
+post 
+<a href='http://ora-00001.blogspot.com/2011/07/mythbusters-stored-procedures-edition.html'>Mythbusters: Stored Procedures Edition</a> already?  Well it happens in
+another land that where my comfort zone is, but still has some interesting
+things to say.
+</p><p>I won't try and address all of the myths they attack in a single article.
+Let's pick the scalability problems, the two of them I think about are code
+management and performances.  We are quite well equiped for that in
+PostgreSQL, really.
+</p><p>For code maintainance we now have 
+<a href='http://www.postgresql.org/docs/9.1/static/extend-extensions.html'>PostgreSQL Extensions</a>, which allows you to
+pack all your procedures into separate 
+<em>extensions</em>, and to maintain a version
+number and upgrade procedures for each of them.  You can handle separate
+rollouts in development for going from 
+<code>1.12</code> to 
+<code>1.13</code> then 
+<code>1.14</code> and after the
+developers tested it more completely and changed their mind again on the
+best API they want to work with, 
+<code>1.15</code> which is stamped ok for production.
+At this point, 
+<code>ALTER EXTENSION UPGRADE</code> will happily apply all the rollouts
+in sequence to upgrade from 
+<code>1.12</code> straight to 
+<code>1.15</code> in one go.  And if you
+prefer to bake a special careful script to handle that big jump, you also
+can provide a specific 
+<code>extension--1.12--1.15.sql</code> script.
+</p><p>Of course you're managing all those files with your favorite 
+<em>SCM</em>, to answer
+to some other myth from the blog reference we are loosely following.
+</p><center><a href='http://postgresqlrussia.org/articles/view/131'><img src='../../../images/Moskva_DB_Tools.v3.png' /></a></center><p>I wanted to talk about the other side of the scalability problem, which is
+the operations side of it.  What happens when you need to scale the database
+in terms of its size and level of concurrent activity?  PostgreSQL earned a
+very good reputation at being able to scale-up, what about scaling-out?
+Certainly, now that you're all down into 
+<em>Stored Procedure</em>, it's going to be
+a very bad situation?
+</p><p>Well, in fact, you're then in a very good position here, thanks to 
+<a href='http://wiki.postgresql.org/wiki/PL/Proxy'>PLproxy</a>.
+This 
+<em>extension</em> is a custom procedural language whose job is to handle a
+cluster of database shards that all expose the same PL API, and it's very
+good at doing that.
+</p><p><em>Stored Procedures</em> are a very good tool to have, be sure to get comfortable
+enough with them so that you can choose exactly when to use them.  If you're
+not sure about that, we at 
+<a href='http://www.2ndquadrant.com/'>2ndQuadrant</a> will be happy to help you there!
+</p>  </div>
+  </div>
+  </div>
+  <div id="push"></div>
+  </div>
+
+<footer>
+  <p>
+    <small>Unless otherwise specified, the contents of
+    <a href=../../../index.html>this website</a> are Copyright
+    &#169;&#160; 2008-2013 <a href=/about>Dimitri Fontaine</a>, and are
+    licensed for use under
+    <a href=http://creativecommons.org/licenses/by-sa/3.0/
+    rel=license><abbr title="Creative
+    Commons">CC</abbr>&#160;<abbr title=Attribution>BY</abbr>-<abbr title=Share-Alike>SA</abbr>&#160;3.0</a>.</small>
+  </p> 
+</footer> 
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-47059482-1', 'tapoueh.org');
+  ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

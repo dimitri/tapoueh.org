@@ -1,0 +1,308 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset=utf-8 /> 
+    <meta name=viewport content="width=device-width" /> 
+    <meta name="generator" content="Emacs Muse Blog" /> 
+    <meta description="blog de Dimitri Fontaine, Expert PostgreSQL - 2ndQuadrant France" />
+    <meta property="og:title" content="tapoueh.org"/>
+    <meta property="og:type" content="non_profit"/>
+    <meta property="og:url" content="http://tapoueh.org/blog/2013/08/23-parametrized-triggers.html"/>
+    <meta property="og:image" content="http://tapoueh.org/static/2ndQuadrant-cross.png"/>
+    <meta property="og:site_name" content="Tapoueh"/>
+    <meta property="fb:admins" content="545062436"/>
+
+    <title>Expertise PostgreSQL</title>
+    <link rel='stylesheet' type='text/css' media='all' href='../../../static/styles.css' />
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/bootstrap/css/bootstrap.min.css' />
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/FontAwesome/css/font-awesome.min.css' />
+
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/highlight.js/styles/sunburst.css' />
+    <script type='text/javascript' src='../../../static/highlight.js/highlight.pack.js'></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script type='text/javascript' src='../../../static/jquery-1.9.1.min.js'></script>
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/jqcloud.css' />
+    <script type='text/javascript' src='../../../static/jqcloud-1.0.4.min.js'></script>
+
+    <!-- <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="/static/FontAwesome/css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="/static/highlight.js/styles/sunburst.css">
+    <script src="/static/highlight.js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script src="/static/jquery-1.9.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/jqcloud.css" />
+    <script type="text/javascript" src="/static/jqcloud-1.0.4.min.js"></script>
+    -->
+
+    <script type="text/javascript" src="http://apis.google.com/js/plusone.js">{lang: 'fr'}</script>
+    
+  </head>
+  <body>
+
+   <div id="wrap">
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="nav-collapse collapse">
+	<p class="pull-right">
+	  <a href="http://2ndquadrant.com">
+	    <img alt="logo" src="/static/2ndQuadrant-cross.png"
+		 style="margin-right: 8px; margin-top: 4px; height: 32px;"/>
+	  </a>
+	</p>
+	<div class="navbar-inner">
+	 <a class="brand" style="margin-left: 0.2em; margin-top: -4px;"
+	    href="http://expert-postgresql.fr/">
+	  <img src="/static/expert-postgresql.png"></a>
+	 <ul class="nav">
+	   <li><a href="../../../blog/index.html">
+               <i class="icon-book"></i> blog</a>
+           </li>
+	   <li><a href="../../../projects.html">
+               <i class="icon-suitcase"></i> projects</a>
+           </li>
+	   <li><a href="../../../conferences.html">
+               <i class="icon-plane"></i> confs</a>
+           </li>
+	   <li><a href="../../../about.html">
+               <i class="icon-beer"></i> about</a>
+           </li>
+	   <li><a href="../../../rss/tapoueh.xml">
+               <i class="icon-rss"></i> rss</a>
+           </li>
+	 </ul>
+	</div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row">
+	<div class="span4">
+	  <div><ul class='breadcrumb'><li><span class='divider'><i class='icon-sitemap'></i></span></li><li><a href='../../../'>/dev/dim</a><span class='divider'>/</span></li><li><a href='../../../blog'>blog</a><span class='divider'>/</span></li><li><a href='../../../blog/2013'>2013</a><span class='divider'>/</span></li><li><a href='../../../blog/2013/08'>08</a></li></ul></div>
+	  <div class='date'>Friday, August 23 2013 <i class='icon-calendar'></i></div>
+	  <div style='text-align: right;'><span><a href='../../../tags/postgresql'>PostgreSQL</a>, <a href='../../../tags/triggers'>Triggers</a>, <a href='../../../tags/hstore'>hstore</a>, <a href='../../../tags/extensions'>Extensions</a>, <a href='../../../tags/yesql'>YeSQL</a></span> <i class='icon-tags'></i></div>
+	  
+
+	  <div style="margin-top: 1em;">
+	    <div class='span2 pull-left'><a class='thumbnail' href='../../../tags/postgresql'><img class='img-polaroid' style='width: 160px; height: 120px;' src='../../../thumbnails/postgresql-elephant.small.png' /></a></div>
+	    <div id='social' class='span1 pull-right social'><ul><li><g:plusone size='tall' href='http://tapoueh.org/blog/2013/08/23-parametrized-triggers'></g:plusone></li><li><a href='http://twitter.com/share' class='twitter-share-button' data-via='tapoueh' data-count='vertical'>Tweet</a><script type='text/javascript' src='http://platform.twitter.com/widgets.js'></script></li></ul></div>
+	  </div>
+
+	  <div id="prevnext">
+	    <h3 class='prevnext'>Recent Articles</h3>
+	    <div><a class='previous' href='../../../blog/2013/08/20-Window-Functions.html'>« Understanding Window Functions</a></div>
+	    <div><a class='next pull-right' href='../../../blog/2013/08/27-auditing-changes-with-hstore.html'>Auditing Changes with Hstore »</a></div>
+	  </div>
+	  
+	  <div>
+	    <div id="left-tag-cloud" class="jqcloud"
+		 style="width: 300px; height: 650px; position: absolute; top: 475px;">
+	    </div>
+            <script>
+            var word_list;
+            
+            $.ajax({
+                type: 'GET',
+                url: '/cloud.json',
+                dataType: 'json',
+                success: function(response) { word_list = response; },
+                data: {},
+                async: false
+            });
+             
+            $(document).ready(function() {
+               $("#left-tag-cloud").jQCloud(word_list,
+	                {shape: "rectangular",
+	                 removeOverflowing: false});
+            });
+            </script>
+	  </div>
+
+	</div>
+
+	<div id="title" class="span8">
+	  <h1>Trigger Parameters</h1>
+	</div>
+	
+	<div id="content" class="span8">
+<p>Sometimes you want to compute values automatically at 
+<code>INSERT</code> time, like for
+example a 
+<em>duration</em> column out of a 
+<em>start</em> and an 
+<em>end</em> column, both
+<em>timestamptz</em>. It's easy enough to do with a 
+<code>BEFORE TRIGGER</code> on your table.
+What's more complex is to come up with a parametrized spelling of the
+trigger, where you can attach the same 
+<em>stored procedure</em> to any table even
+when the column names are different from one another.
+</p><center><img src='../../../images/dunlop-trigger-84fg-gold.640.jpg' /></center><center><em>I found a kind of trigger that I can use!</em></center><p>The exact problem to solve here is how to code a 
+<em>dynamic trigger</em> where the
+trigger's function code doesn't have to hard code the field names it will
+process. Basically, 
+<a href='http://www.postgresql.org/docs/9.2/static/plpgsql-overview.html'>PLpgSQL</a> is a static language and wants to know all about
+the function data types in use before it 
+<em>compiles</em> it, so there's no easy way
+to do that.
+</p><p>That said, we now have 
+<a href='http://www.postgresql.org/docs/9.2/static/hstore.html'>hstore</a> and it's empowering us a lot here.
+</p><h2>The exemple</h2><p>Let's start simple, with a table having a 
+<code>d_start</code> and a 
+<code>d_end</code> column where
+to store, as you might have already guessed, a start timestamp (with
+timezone) and an ending timezone. The goal will be to have a parametrized
+trigger able to maintain a 
+<code>duration</code> for us automatically, something we
+should be able to reuse on other tables.
+</p><pre><code>create table foo (
+  id serial primary key,
+  d_start timestamptz default now(),
+  d_end timestamptz,
+  duration interval
+);
+
+insert into foo(d_start, d_end)
+     select now() - 10 * random() * interval &#039;1 min&#039;,
+            now() + 10 * random() * interval &#039;1 min&#039;
+       from generate_series(1, 10);
+</code></pre><p>So now I have a table with 10 lines containing random timestamps, but none
+of them of course has the 
+<code>duration</code> field set. Let's see about that now.
+</p><h2>Playing with hstore</h2><center><img src='../../../images/hstore.png' /></center><p>The 
+<em>hstore</em> extension is full of goodies, we will only have to discover a
+handful of them now.
+</p><p>First thing to do is make 
+<code>hstore</code> available in our test database:
+</p><pre><code># create extension hstore;
+CREATE EXTENSION
+</code></pre><p>And now play with 
+<em>hstore</em> in our table.
+</p><pre><code># select hstore(foo) from foo limit 1;
+
+ &quot;id&quot;=&gt;&quot;1&quot;,
+ &quot;d_end&quot;=&gt;&quot;2013-08-23 11:34:53.129109+01&quot;,
+ &quot;d_start&quot;=&gt;&quot;2013-08-23 11:16:04.869424+01&quot;,
+ &quot;duration&quot;=&gt;NULL
+(1 row)
+</code></pre><p>I edited the result for it to be easier to read, splitting it on more than
+one line, so if you try that at home you will have a different result.
+</p><p>What's happening in that first example is that we are transforming a 
+<em>row
+type</em> into a value of type 
+<em>hstore</em>. A 
+<em>row type</em> is the result of 
+<code>select foo
+from foo;</code>. Each PostgreSQL relation defines a type of the same name, and you
+can use it as a 
+<em>composite type</em> if you want to.
+</p><p>Now, hstore also provides the 
+<code>#=</code> operator which will replace a
+given field in a row, look at that:
+</p><pre><code># select (foo #= hstore(&#039;duration&#039;, &#039;10 mins&#039;)).* from foo limit 1;
+ id |            d_start            |             d_end             | duration 
+----+-------------------------------+-------------------------------+----------
+  1 | 2013-08-23 11:16:04.869424+01 | 2013-08-23 11:34:53.129109+01 | 00:10:00
+(1 row)
+</code></pre><p>We just replaced the 
+<code>duration</code> field with the value 
+<code>10 mins</code>, and to have a
+better grasp at what just happened, we then use the 
+<code>(...).*</code> notation to
+expand the row type into its full definition.
+</p><p>We should be ready for the next step now...
+</p><center><img src='../../../images/trigger-parameter.jpg' /></center><h2>The generic trigger, using hstore</h2><p>Now let's code the trigger:
+</p><pre><code>create or replace function tg_duration()
+ -- (
+ --  start_name    text,
+ --  end_name      text,
+ --  duration      interval
+ -- )
+ returns trigger
+ language plpgsql
+as $$
+declare
+   hash hstore := hstore(NEW);
+   duration interval;
+begin
+   duration :=  (hash -&gt; TG_ARGV[1])::timestamptz
+              - (hash -&gt; TG_ARGV[0])::timestamptz;
+
+   NEW := NEW #= hstore(TG_ARGV[2], duration::text);
+
+   RETURN NEW;
+end;
+$$;
+</code></pre><p>And here's how to attach the trigger to our table. Don't forget the 
+<code>FOR EACH
+ROW</code> part or you will have a hard time understanding why you can't accedd the
+details of the 
+<code>OLD</code> and 
+<code>NEW</code> records in your trigger: they default to being
+<em>FOR EACH STATEMENT</em> triggers.
+</p><p>The other important point is how we pass down the column names as argument
+to the stored procedure above.
+</p><pre><code>create trigger compute_duration
+     before insert on foo
+          for each row
+ execute procedure tg_duration(&#039;d_start&#039;, &#039;d_end&#039;, &#039;duration&#039;);
+</code></pre><p>Equiped with the trigger properly attached to our table, we can truncate it
+and insert again some rows:
+</p><pre><code># truncate foo;
+# insert into foo(d_start, d_end)
+       select now() - 10 * random() * interval &#039;1 min&#039;,
+              now() + 10 * random() * interval &#039;1 min&#039;
+         from generate_series(1, 10);
+
+# select d_start, d_end, duration from foo;
+            d_start            |             d_end             |    duration     
+-------------------------------+-------------------------------+-----------------
+ 2013-08-23 11:56:20.185563+02 | 2013-08-23 12:00:08.188698+02 | 00:03:48.003135
+ 2013-08-23 11:51:10.933982+02 | 2013-08-23 12:02:08.661389+02 | 00:10:57.727407
+ 2013-08-23 11:59:44.214844+02 | 2013-08-23 12:00:57.852027+02 | 00:01:13.637183
+ 2013-08-23 11:50:18.931533+02 | 2013-08-23 12:00:52.752111+02 | 00:10:33.820578
+ 2013-08-23 11:53:18.811819+02 | 2013-08-23 12:06:30.419106+02 | 00:13:11.607287
+ 2013-08-23 11:56:33.933842+02 | 2013-08-23 12:01:15.158055+02 | 00:04:41.224213
+ 2013-08-23 11:57:26.881887+02 | 2013-08-23 12:05:53.724116+02 | 00:08:26.842229
+ 2013-08-23 11:54:10.897691+02 | 2013-08-23 12:06:27.528534+02 | 00:12:16.630843
+ 2013-08-23 11:52:17.22929+02  | 2013-08-23 12:02:08.647837+02 | 00:09:51.418547
+ 2013-08-23 11:58:18.20224+02  | 2013-08-23 12:07:11.170435+02 | 00:08:52.968195
+(10 rows)
+</code></pre><h2>Conclusion</h2><p>Thanks to the 
+<a href='http://www.postgresql.org/docs/current/static/hstore.html'>hstore</a> extension we've been able to come up with a dynamic
+solution where you can give the name of the columns you want to work with at
+<code>CREATE TRIGGER</code> time rather than hard-code that in a series of stored
+procedure that will end up alike and a pain to maintain.
+</p>  </div>
+  </div>
+  </div>
+  <div id="push"></div>
+  </div>
+
+<footer>
+  <p>
+    <small>Unless otherwise specified, the contents of
+    <a href=../../../index.html>this website</a> are Copyright
+    &#169;&#160; 2008-2013 <a href=/about>Dimitri Fontaine</a>, and are
+    licensed for use under
+    <a href=http://creativecommons.org/licenses/by-sa/3.0/
+    rel=license><abbr title="Creative
+    Commons">CC</abbr>&#160;<abbr title=Attribution>BY</abbr>-<abbr title=Share-Alike>SA</abbr>&#160;3.0</a>.</small>
+  </p> 
+</footer> 
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-47059482-1', 'tapoueh.org');
+  ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

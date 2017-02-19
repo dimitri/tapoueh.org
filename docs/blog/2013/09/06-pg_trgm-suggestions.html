@@ -1,0 +1,339 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset=utf-8 /> 
+    <meta name=viewport content="width=device-width" /> 
+    <meta name="generator" content="Emacs Muse Blog" /> 
+    <meta description="blog de Dimitri Fontaine, Expert PostgreSQL - 2ndQuadrant France" />
+    <meta property="og:title" content="tapoueh.org"/>
+    <meta property="og:type" content="non_profit"/>
+    <meta property="og:url" content="http://tapoueh.org/blog/2013/09/06-pg_trgm-suggestions.html"/>
+    <meta property="og:image" content="http://tapoueh.org/static/2ndQuadrant-cross.png"/>
+    <meta property="og:site_name" content="Tapoueh"/>
+    <meta property="fb:admins" content="545062436"/>
+
+    <title>Expertise PostgreSQL</title>
+    <link rel='stylesheet' type='text/css' media='all' href='../../../static/styles.css' />
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/bootstrap/css/bootstrap.min.css' />
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/FontAwesome/css/font-awesome.min.css' />
+
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/highlight.js/styles/sunburst.css' />
+    <script type='text/javascript' src='../../../static/highlight.js/highlight.pack.js'></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script type='text/javascript' src='../../../static/jquery-1.9.1.min.js'></script>
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/jqcloud.css' />
+    <script type='text/javascript' src='../../../static/jqcloud-1.0.4.min.js'></script>
+
+    <!-- <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="/static/FontAwesome/css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="/static/highlight.js/styles/sunburst.css">
+    <script src="/static/highlight.js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script src="/static/jquery-1.9.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/jqcloud.css" />
+    <script type="text/javascript" src="/static/jqcloud-1.0.4.min.js"></script>
+    -->
+
+    <script type="text/javascript" src="http://apis.google.com/js/plusone.js">{lang: 'fr'}</script>
+    
+  </head>
+  <body>
+
+   <div id="wrap">
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="nav-collapse collapse">
+	<p class="pull-right">
+	  <a href="http://2ndquadrant.com">
+	    <img alt="logo" src="/static/2ndQuadrant-cross.png"
+		 style="margin-right: 8px; margin-top: 4px; height: 32px;"/>
+	  </a>
+	</p>
+	<div class="navbar-inner">
+	 <a class="brand" style="margin-left: 0.2em; margin-top: -4px;"
+	    href="http://expert-postgresql.fr/">
+	  <img src="/static/expert-postgresql.png"></a>
+	 <ul class="nav">
+	   <li><a href="../../../blog/index.html">
+               <i class="icon-book"></i> blog</a>
+           </li>
+	   <li><a href="../../../projects.html">
+               <i class="icon-suitcase"></i> projects</a>
+           </li>
+	   <li><a href="../../../conferences.html">
+               <i class="icon-plane"></i> confs</a>
+           </li>
+	   <li><a href="../../../about.html">
+               <i class="icon-beer"></i> about</a>
+           </li>
+	   <li><a href="../../../rss/tapoueh.xml">
+               <i class="icon-rss"></i> rss</a>
+           </li>
+	 </ul>
+	</div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row">
+	<div class="span4">
+	  <div><ul class='breadcrumb'><li><span class='divider'><i class='icon-sitemap'></i></span></li><li><a href='../../../'>/dev/dim</a><span class='divider'>/</span></li><li><a href='../../../blog'>blog</a><span class='divider'>/</span></li><li><a href='../../../blog/2013'>2013</a><span class='divider'>/</span></li><li><a href='../../../blog/2013/09'>09</a></li></ul></div>
+	  <div class='date'>Friday, September 06 2013 <i class='icon-calendar'></i></div>
+	  <div style='text-align: right;'><span><a href='../../../tags/postgresql'>PostgreSQL</a>, <a href='../../../tags/extensions'>Extensions</a>, <a href='../../../tags/pg_trgm'>pg_trgm</a>, <a href='../../../tags/yesql'>YeSQL</a></span> <i class='icon-tags'></i></div>
+	  
+
+	  <div style="margin-top: 1em;">
+	    <div class='span2 pull-left'><a class='thumbnail' href='../../../tags/postgresql'><img class='img-polaroid' style='width: 160px; height: 120px;' src='../../../thumbnails/postgresql-elephant.small.png' /></a></div>
+	    <div id='social' class='span1 pull-right social'><ul><li><g:plusone size='tall' href='http://tapoueh.org/blog/2013/09/06-pg_trgm-suggestions'></g:plusone></li><li><a href='http://twitter.com/share' class='twitter-share-button' data-via='tapoueh' data-count='vertical'>Tweet</a><script type='text/javascript' src='http://platform.twitter.com/widgets.js'></script></li></ul></div>
+	  </div>
+
+	  <div id="prevnext">
+	    <h3 class='prevnext'>Recent Articles</h3>
+	    <div><a class='previous' href='../../../blog/2013/08/27-auditing-changes-with-hstore.html'>« Auditing Changes with Hstore</a></div>
+	    <div><a class='next pull-right' href='../../../blog/2013/09/16-PostgreSQL-data-recovery.html'>PostgreSQL data recovery »</a></div>
+	  </div>
+	  
+	  <div>
+	    <div id="left-tag-cloud" class="jqcloud"
+		 style="width: 300px; height: 650px; position: absolute; top: 475px;">
+	    </div>
+            <script>
+            var word_list;
+            
+            $.ajax({
+                type: 'GET',
+                url: '/cloud.json',
+                dataType: 'json',
+                success: function(response) { word_list = response; },
+                data: {},
+                async: false
+            });
+             
+            $(document).ready(function() {
+               $("#left-tag-cloud").jQCloud(word_list,
+	                {shape: "rectangular",
+	                 removeOverflowing: false});
+            });
+            </script>
+	  </div>
+
+	</div>
+
+	<div id="title" class="span8">
+	  <h1>Using trigrams against typos</h1>
+	</div>
+	
+	<div id="content" class="span8">
+<p>In our ongoing 
+<a href='/tags/extensions'>Tour of Extensions</a> we played with 
+<a href='http://www.postgresql.org/docs/current/static/earthdistance.html'>earth distance</a> in
+<a href='/blog/2013/08/05-earthdistance'>How far is the nearest pub?</a> then with 
+<a href='http://www.postgresql.org/docs/current/static/hstore.html'>hstore</a> in a series about trigger,
+first to generalize 
+<a href='/blog/2013/08/23-parametrized-triggers'>Trigger Parameters</a> then to enable us to
+<a href='/blog/2013/08/27-auditing-changes-with-hstore'>Auditing Changes with Hstore</a>. Today we are going to work with 
+<a href='http://www.postgresql.org/docs/current/static/pgtrgm.html'>pg_trgm</a> which
+is the 
+<em>trigrams</em> PostgreSQL extension: its usage got seriously enhanced in
+recent PostgreSQL releases and it's now a poor's man 
+<a href='http://www.postgresql.org/docs/current/static/textsearch.html'>Full Text Search</a>
+engine.
+</p><center><img src='../../../images/trigramme.png' /></center><center><em>Some people are quite serious about trigrams</em></center><p>Of course we also have the rich men version with 
+<a href='http://www.postgresql.org/docs/current/static/textsearch-parsers.html'>Text Search Parsers</a> and
+several kinds of 
+<a href='http://www.postgresql.org/docs/current/static/textsearch-dictionaries.html'>dictionnaries</a> with support for 
+<em>stemming</em>, 
+<em>thesaurus</em> or
+<em>synomyms</em> support, and 
+<a href='http://www.postgresql.org/docs/current/static/textsearch-controls.html#TEXTSEARCH-PARSING-QUERIES'>a full text query language</a> and tools for
+<a href='http://www.postgresql.org/docs/current/static/textsearch-controls.html#TEXTSEARCH-RANKING'>ranking search result</a>. So if what you need really is 
+<strong>Full Text Search</strong> then
+go check the docs.
+</p><p>The use 
+<em><strong>trigrams</strong></em> is often complementary to 
+<em>Full Text Search</em>. With trigrams
+we can implement typing correction suggestions or index 
+<code>like</code> and
+<a href='http://www.postgresql.org/docs/current/static/functions-matching.html'>POSIX Regular Expressions</a> searches.
+</p><p>Whatever the use case, it all begins as usual by enabling the extension
+within your database server. If you're running from 
+<a href='http://www.postgresql.org/download/'>PostgreSQL packages</a> be
+sure to always install the 
+<code>contrib</code> package, really. A time will come when
+you need it and you will then be happy to only have to type 
+<code>CREATE EXTENSION</code>
+to get started.
+</p><pre><code># create extension pg_trgm;
+CREATE EXTENSION
+</code></pre><center><img src='../../../images/pellicule.png' /></center><h2>Setting up the use case</h2><p>The use case I want to show today is to suggest corrections to some words
+the user did obviously typoed, because your search form is not finding any
+result. Or to offer suggest as you type feature maybe, doing a database
+search for approximate matching strings in a kind of 
+<em>catalog</em> that you have
+to offer auto-completion.
+</p><p>One easy to use catalog here is the 
+<a href='http://linux.dell.com/dvdstore/'>Dell DVD Store Database Test Suite</a> that
+you can download also as a ready to use PostgreSQL text dump at
+<a href='http://pgfoundry.org/frs/download.php/543/dellstore2-normal-1.0.tar.gz'>http://pgfoundry.org/frs/download.php/543/dellstore2-normal-1.0.tar.gz</a>.
+</p><p>This small database offers ten thousands 
+<em>products</em> and simplifies the schema
+so much as to offer a single column 
+<em>actor</em> in the 
+<em>products</em> table. Let's
+pretend we just filled in a search box to find products by actor name, but
+we don't know the right spelling of the actor's name or maybe the cat really
+wanted to help us on the keyboard that day.
+</p><center><img src='../../../images/ComputerCat.jpg' /></center><center><em>A cat! that picture should at least double the traffic to this article...</em></center><p>The 
+<em>trigram</em> extension comes with two operators of interest for this
+situation here, which are the 
+<em>similarity</em> operator named 
+<code>%</code> and the 
+<em>distance</em>
+operator named 
+<code>&lt;-&gt;</code>. The 
+<em>similarity</em> operator will compare the list of
+trigrams extracted from the query terms with those extracted from each data
+of our table, and filter out those rows where the data is considered not
+similar enough.
+</p><pre><code># select show_trgm(&#039;tomy&#039;) as tomy,
+         show_trgm(&#039;Tomy&#039;) as &quot;Tomy&quot;,
+         show_trgm(&#039;tom torn&#039;) as &quot;tom torn&quot;,
+         similarity(&#039;tomy&#039;, &#039;tom&#039;),
+         similarity(&#039;dim&#039;, &#039;tom&#039;);
+-[ RECORD 1 ]-------------------------------------
+tomy       | {&quot;  t&quot;,&quot; to&quot;,&quot;my &quot;,omy,tom}
+Tomy       | {&quot;  t&quot;,&quot; to&quot;,&quot;my &quot;,omy,tom}
+tom torn   | {&quot;  t&quot;,&quot; to&quot;,&quot;om &quot;,orn,&quot;rn &quot;,tom,tor}
+similarity | 0.5
+similarity | 0
+</code></pre><p>As you can read in the 
+<a href='http://www.postgresql.org/docs/current/static/pgtrgm.html'>PostgreSQL trigram extension documentation</a> the
+default similarity threshold is 
+<code>0.3</code> and you can tweak it by using the
+functions 
+<code>set_limit()</code>.
+</p><p>Now let's find out all those actors whose name looks like 
+<em>tomy</em>, as clearly
+the user did enter that in the search box but we found no exact match for
+it:
+</p><pre><code># select * from products where actor ~* &#039;tomy&#039;;
+ prod_id | category | title | actor | price | special | common_prod_id 
+---------+----------+-------+-------+-------+---------+----------------
+(0 rows)
+
+# select actor from products where actor % &#039;tomy&#039;;
+  actor   
+----------
+ TOM TORN
+ TOM DAY
+(2 rows)
+
+Time: 26.972 ms
+</code></pre><center><img src='../../../images/macrex-index.640.gif' /></center><h2>Trigram indexing</h2><p>That's a little too much time on that query when we consider only 10,000
+entries in our table, let's try and do better than that:
+</p><pre><code># create index on products using gist(actor gist_trgm_ops);
+CREATE INDEX
+</code></pre><p>Now if we run the exact same query we get our result in less than 
+<em>3
+milliseconds</em>, which is more like something we can push to production.
+</p><pre><code>select actor from products where actor % &#039;tomy&#039;;
+  actor   
+----------
+ TOM TORN
+ TOM DAY
+(2 rows)
+
+Time: 2.695 ms
+</code></pre><p>Oh and by the way, did you know that the 
+<code>~*</code> operator we used above to
+discover that there's not a single 
+<em>Tony</em> actor in our products table, that 
+<code>~*</code>
+operator implements a 
+<em>case insensitive posix regex search</em> in PostgreSQL?
+Isn't that awesome? Now, on to the next surprise, have a look at that
+explain plan:
+</p><pre><code># explain (costs off)
+  select * from products where actor ~* &#039;tomy&#039;;
+                   QUERY PLAN                    
+-------------------------------------------------
+ Index Scan using products_actor_idx on products
+   Index Cond: ((actor)::text ~* &#039;tomy&#039;::text)
+(2 rows)
+</code></pre><p>In PostgreSQL 9.3 the trigram extension is able to solve regular expression
+searches. The first production release of 9.3 should happen as soon as next
+week, I hope you're ready for it!
+</p><center><a href='http://crm114.sourceforge.net/'><img src='../../../images/crm114_tarot_card_logo_small.jpg' /></a></center><center><em>What about direct support for <a href='http://crm114.sourceforge.net/'>CRM114</a> then?</em></center><h2>Auto Completion</h2><p>What if you want to offer as-you-type completion to the names of the actors
+we know in our catalog? Then maybe you will find the following query useful:
+</p><pre><code>#   select actor
+      from products
+     where actor % &#039;fran&#039;
+  order by actor &lt;-&gt; &#039;fran&#039;
+     limit 10;
+    actor     
+--------------
+ FRANK HAWKE
+ FRANK BERRY
+ FRANK POSEY
+ FRANK HAWKE
+ FRANCES DEE
+ FRANK LEIGH
+ FRANCES DAY
+ FRANK FOSTER
+ FRANK HORNE
+ FRANK TOMEI
+(10 rows)
+
+Time: 2.960 ms
+</code></pre><p>Note that without the 
+<code>WHERE</code> clause to filter on the trigram similarity I get
+run times of 30ms rather than 3ms in my tests here, because the GiST index
+is not used then. As usual 
+<code>EXPLAIN</code> is your friend and remember that a query
+plan will change depending on the volume of your data set as known by the
+<a href='http://www.postgresql.org/docs/current/static/routine-vacuuming.html#VACUUM-FOR-STATISTICS'>PostgreSQL planner statistics</a>.
+</p><h2>Conclusion</h2><p>The 
+<a href='http://www.postgresql.org/docs/current/static/pgtrgm.html'>trigram extension</a> allows indexing 
+<code>like</code> searches and 
+<code>regular expression</code>
+searches, and also know how to compute 
+<em>similarity</em> and 
+<em>distance</em> in between
+texts, and how to index that. That's another power tool included with
+PostgreSQL. Another reason why you won't believe how much behind the other
+database systems you know of really are, if you ask me.
+</p><center><img src='../../../images/logo_man_tool_open_300x_watermark.jpg' /></center><center><em>When all you have is hammer... doesn't apply to PostgreSQL</em></center><p>Oh, and get ready for PostgreSQL 9.3. Another release packed with awesome.
+</p>  </div>
+  </div>
+  </div>
+  <div id="push"></div>
+  </div>
+
+<footer>
+  <p>
+    <small>Unless otherwise specified, the contents of
+    <a href=../../../index.html>this website</a> are Copyright
+    &#169;&#160; 2008-2013 <a href=/about>Dimitri Fontaine</a>, and are
+    licensed for use under
+    <a href=http://creativecommons.org/licenses/by-sa/3.0/
+    rel=license><abbr title="Creative
+    Commons">CC</abbr>&#160;<abbr title=Attribution>BY</abbr>-<abbr title=Share-Alike>SA</abbr>&#160;3.0</a>.</small>
+  </p> 
+</footer> 
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-47059482-1', 'tapoueh.org');
+  ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

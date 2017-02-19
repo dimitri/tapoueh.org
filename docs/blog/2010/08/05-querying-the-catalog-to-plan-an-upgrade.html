@@ -1,0 +1,257 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset=utf-8 /> 
+    <meta name=viewport content="width=device-width" /> 
+    <meta name="generator" content="Emacs Muse Blog" /> 
+    <meta description="blog de Dimitri Fontaine, Expert PostgreSQL - 2ndQuadrant France" />
+    <meta property="og:title" content="tapoueh.org"/>
+    <meta property="og:type" content="non_profit"/>
+    <meta property="og:url" content="http://tapoueh.org/blog/2010/08/05-querying-the-catalog-to-plan-an-upgrade.html"/>
+    <meta property="og:image" content="http://tapoueh.org/static/2ndQuadrant-cross.png"/>
+    <meta property="og:site_name" content="Tapoueh"/>
+    <meta property="fb:admins" content="545062436"/>
+
+    <title>Expertise PostgreSQL</title>
+    <link rel='stylesheet' type='text/css' media='all' href='../../../static/styles.css' />
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/bootstrap/css/bootstrap.min.css' />
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/FontAwesome/css/font-awesome.min.css' />
+
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/highlight.js/styles/sunburst.css' />
+    <script type='text/javascript' src='../../../static/highlight.js/highlight.pack.js'></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script type='text/javascript' src='../../../static/jquery-1.9.1.min.js'></script>
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/jqcloud.css' />
+    <script type='text/javascript' src='../../../static/jqcloud-1.0.4.min.js'></script>
+
+    <!-- <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="/static/FontAwesome/css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="/static/highlight.js/styles/sunburst.css">
+    <script src="/static/highlight.js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script src="/static/jquery-1.9.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/jqcloud.css" />
+    <script type="text/javascript" src="/static/jqcloud-1.0.4.min.js"></script>
+    -->
+
+    <script type="text/javascript" src="http://apis.google.com/js/plusone.js">{lang: 'fr'}</script>
+    
+  </head>
+  <body>
+
+   <div id="wrap">
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="nav-collapse collapse">
+	<p class="pull-right">
+	  <a href="http://2ndquadrant.com">
+	    <img alt="logo" src="/static/2ndQuadrant-cross.png"
+		 style="margin-right: 8px; margin-top: 4px; height: 32px;"/>
+	  </a>
+	</p>
+	<div class="navbar-inner">
+	 <a class="brand" style="margin-left: 0.2em; margin-top: -4px;"
+	    href="http://expert-postgresql.fr/">
+	  <img src="/static/expert-postgresql.png"></a>
+	 <ul class="nav">
+	   <li><a href="../../../blog/index.html">
+               <i class="icon-book"></i> blog</a>
+           </li>
+	   <li><a href="../../../projects.html">
+               <i class="icon-suitcase"></i> projects</a>
+           </li>
+	   <li><a href="../../../conferences.html">
+               <i class="icon-plane"></i> confs</a>
+           </li>
+	   <li><a href="../../../about.html">
+               <i class="icon-beer"></i> about</a>
+           </li>
+	   <li><a href="../../../rss/tapoueh.xml">
+               <i class="icon-rss"></i> rss</a>
+           </li>
+	 </ul>
+	</div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row">
+	<div class="span4">
+	  <div><ul class='breadcrumb'><li><span class='divider'><i class='icon-sitemap'></i></span></li><li><a href='../../../'>/dev/dim</a><span class='divider'>/</span></li><li><a href='../../../blog'>blog</a><span class='divider'>/</span></li><li><a href='../../../blog/2010'>2010</a><span class='divider'>/</span></li><li><a href='../../../blog/2010/08'>08</a></li></ul></div>
+	  <div class='date'>Thursday, August 05 2010 <i class='icon-calendar'></i></div>
+	  <div style='text-align: right;'><span><a href='../../../tags/postgresql'>PostgreSQL</a>, <a href='../../../tags/release'>release</a>, <a href='../../../tags/catalogs'>catalogs</a></span> <i class='icon-tags'></i></div>
+	  
+
+	  <div style="margin-top: 1em;">
+	    <div class='span2 pull-left'><a class='thumbnail' href='../../../tags/catalogs'><img class='img-polaroid' style='width: 160px; height: 120px;' src='../../../thumbnails/library-card-catalogs.small.jpg' /></a></div>
+	    <div id='social' class='span1 pull-right social'><ul><li><g:plusone size='tall' href='http://tapoueh.org/blog/2010/08/05-querying-the-catalog-to-plan-an-upgrade'></g:plusone></li><li><a href='http://twitter.com/share' class='twitter-share-button' data-via='tapoueh' data-count='vertical'>Tweet</a><script type='text/javascript' src='http://platform.twitter.com/widgets.js'></script></li></ul></div>
+	  </div>
+
+	  <div id="prevnext">
+	    <h3 class='prevnext'>Recent Articles</h3>
+	    <div><a class='previous' href='../../../blog/2010/08/04-el-get.html'>« el-get</a></div>
+	    <div><a class='next pull-right' href='../../../blog/2010/08/06-debian-packaging-postgresql-extensions.html'>debian packaging PostgreSQL extensions »</a></div>
+	  </div>
+	  
+	  <div>
+	    <div id="left-tag-cloud" class="jqcloud"
+		 style="width: 300px; height: 650px; position: absolute; top: 475px;">
+	    </div>
+            <script>
+            var word_list;
+            
+            $.ajax({
+                type: 'GET',
+                url: '/cloud.json',
+                dataType: 'json',
+                success: function(response) { word_list = response; },
+                data: {},
+                async: false
+            });
+             
+            $(document).ready(function() {
+               $("#left-tag-cloud").jQCloud(word_list,
+	                {shape: "rectangular",
+	                 removeOverflowing: false});
+            });
+            </script>
+	  </div>
+
+	</div>
+
+	<div id="title" class="span8">
+	  <h1>Querying the Catalog to plan an upgrade</h1>
+	</div>
+	
+	<div id="content" class="span8">
+<p>Some user on 
+<code>IRC</code> was reading the releases notes in order to plan for a minor
+upgrade of his 
+<code>8.3.3</code> installation, and was puzzled about potential needs for
+rebuilding 
+<code>GIST</code> indexes. That's from the 
+<a href='http://www.postgresql.org/docs/8.3/static/release-8-3-5.html'>8.3.5 release notes</a>, and from the
+<a href='http://www.postgresql.org/docs/8.3/static/release-8-3-8.html'>8.3.8 notes</a> you see that you need to consider 
+<em>hash</em> indexes on 
+<em>interval</em>
+columns too. Now the question is, how to find out if any such beasts are in
+use in your database?
+</p><p>It happens that 
+<a href='http://www.postgresql.org/'>PostgreSQL</a> is letting you know those things by querying its
+<a href='http://www.postgresql.org/docs/8.4/static/catalogs.html'>system catalogs</a>. That might look hairy at first, but it's very worth getting
+used to those system tables. You could compare that to introspection and
+reflexive facilities of some programming languages, except much more useful,
+because you're reaching all the system at once. But, well, here it goes:
+</p><pre><code>SELECT schemaname, tablename, relname, amname, indexdef
+  FROM pg_indexes i 
+       JOIN pg_class c ON i.indexname = c.relname and c.relkind = &#039;i&#039; 
+       JOIN pg_am am ON c.relam = am.oid
+ WHERE amname = &#039;gist&#039;;
+</code></pre><p>Now you could replace the 
+<code>WHERE</code> clause with 
+<code>WHERE amname IN (&#039;gist&#039;, &#039;hash&#039;)</code>
+to check both conditions at once. What about pursuing the restriction on the
+<em>hash</em> indexes rebuild to schedule, as they should only get done to indexes on
+<code>interval</code> columns. Well let's try it:
+</p><pre><code>SELECT schemaname, tablename, relname as indexname, amname, indclass
+  FROM pg_indexes i 
+       JOIN pg_class c on i.indexname = c.relname and c.relkind = &#039;i&#039; 
+       JOIN pg_am am on c.relam = am.oid 
+       JOIN pg_index x on x.indexrelid = c.oid 
+ WHERE amname in (&#039;btree&#039;, &#039;gist&#039;) 
+       and schemaname not in (&#039;pg_catalog&#039;, &#039;information_schema&#039;);
+</code></pre><p>We're not there yet, because as you notice, the catalogs are somewhat
+optimized and not always in a normal form. That's good for the system's
+performance, but it makes querying a bit uneasy. What we want is to get from
+the 
+<code>indclass</code> column if there's any of them (it's an 
+<code>oidvector</code>) that applies
+to an 
+<code>interval</code> data type. There's a subtlety here as the index could store
+<code>interval</code> data even if the column is not of an 
+<code>interval</code> type itself, so we
+have to find both cases.
+</p><p>Well the 
+<em>subtlety</em> applies after you know what an 
+<a href='http://www.postgresql.org/docs/8.4/static/xindex.html'>operator class</a> is: 
+<em>“An
+operator class defines how a particular data type can be used with an
+index”</em> is what the 
+<a href='http://www.postgresql.org/docs/8.4/static/sql-createopclass.html'>CREATE OPERATOR CLASS</a> manual page teaches us. What we
+need to know here is that an index will talk to an operator class to get to
+the data type, either the 
+<em>column</em> data type or the index 
+<em>storage</em> one.
+</p><pre><code>SELECT schemaname, tablename, relname as indexname, amname, indclass, opcname, typname
+  FROM pg_indexes i 
+       JOIN pg_class c on i.indexname = c.relname and c.relkind = &#039;i&#039; 
+       JOIN pg_am am on c.relam = am.oid 
+       JOIN pg_index x on x.indexrelid = c.oid 
+       JOIN pg_opclass o 
+         on string_to_array(x.indclass::text, &#039; &#039;)::oid[] @&gt; array[o.oid]::oid[]
+       JOIN pg_type t on o.opckeytype = t.oid
+WHERE amname = &#039;hash&#039; and t.typname = &#039;interval&#039;
+
+UNION ALL
+
+SELECT schemaname, tablename, relname as indexname, amname, indclass, opcname, typname
+  FROM pg_indexes i 
+       JOIN pg_class c on i.indexname = c.relname and c.relkind = &#039;i&#039; 
+       JOIN pg_am am on c.relam = am.oid 
+       JOIN pg_index x on x.indexrelid = c.oid 
+       JOIN pg_opclass o 
+         on string_to_array(x.indclass::text, &#039; &#039;)::oid[] @&gt; array[o.oid]::oid[]
+       JOIN pg_type t on o.opcintype = t.oid
+WHERE amname = &#039;hash&#039; and t.typname = &#039;interval&#039;;
+</code></pre><p>Most certainly this query will return no row for you, as 
+<em>hash</em> indexes are
+not widely used, mainly because they are not crash tolerant. For seeing some
+results you could remove the 
+<code>amname</code> restriction of course, that would show
+the query is working, but don't forget to add the restriction back to plan
+for the upgrade!
+</p><p>But hey, why walking the extra mile here, would you ask me? After all, in
+the second query we would already have had the information we needed should
+we added the 
+<code>indexdef</code> column, albeit in a human reader friendly way: the
+<em>resultset</em> would then contain the 
+<code>CREATE INDEX</code> command you need to issue to
+build the index from scratch. That would be enough for checking only the
+catalog, but the extra mile allows you to produce a 
+<code>SQL</code> script to build the
+indexes that need your attention post upgrade. That last step is left as an
+exercise for the reader, though.
+</p>  </div>
+  </div>
+  </div>
+  <div id="push"></div>
+  </div>
+
+<footer>
+  <p>
+    <small>Unless otherwise specified, the contents of
+    <a href=../../../index.html>this website</a> are Copyright
+    &#169;&#160; 2008-2013 <a href=/about>Dimitri Fontaine</a>, and are
+    licensed for use under
+    <a href=http://creativecommons.org/licenses/by-sa/3.0/
+    rel=license><abbr title="Creative
+    Commons">CC</abbr>&#160;<abbr title=Attribution>BY</abbr>-<abbr title=Share-Alike>SA</abbr>&#160;3.0</a>.</small>
+  </p> 
+</footer> 
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-47059482-1', 'tapoueh.org');
+  ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

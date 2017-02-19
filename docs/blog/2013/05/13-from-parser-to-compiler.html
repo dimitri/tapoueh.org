@@ -1,0 +1,299 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset=utf-8 /> 
+    <meta name=viewport content="width=device-width" /> 
+    <meta name="generator" content="Emacs Muse Blog" /> 
+    <meta description="blog de Dimitri Fontaine, Expert PostgreSQL - 2ndQuadrant France" />
+    <meta property="og:title" content="tapoueh.org"/>
+    <meta property="og:type" content="non_profit"/>
+    <meta property="og:url" content="http://tapoueh.org/blog/2013/05/13-from-parser-to-compiler.html"/>
+    <meta property="og:image" content="http://tapoueh.org/static/2ndQuadrant-cross.png"/>
+    <meta property="og:site_name" content="Tapoueh"/>
+    <meta property="fb:admins" content="545062436"/>
+
+    <title>Expertise PostgreSQL</title>
+    <link rel='stylesheet' type='text/css' media='all' href='../../../static/styles.css' />
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/bootstrap/css/bootstrap.min.css' />
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/FontAwesome/css/font-awesome.min.css' />
+
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/highlight.js/styles/sunburst.css' />
+    <script type='text/javascript' src='../../../static/highlight.js/highlight.pack.js'></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script type='text/javascript' src='../../../static/jquery-1.9.1.min.js'></script>
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/jqcloud.css' />
+    <script type='text/javascript' src='../../../static/jqcloud-1.0.4.min.js'></script>
+
+    <!-- <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="/static/FontAwesome/css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="/static/highlight.js/styles/sunburst.css">
+    <script src="/static/highlight.js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script src="/static/jquery-1.9.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/jqcloud.css" />
+    <script type="text/javascript" src="/static/jqcloud-1.0.4.min.js"></script>
+    -->
+
+    <script type="text/javascript" src="http://apis.google.com/js/plusone.js">{lang: 'fr'}</script>
+    
+  </head>
+  <body>
+
+   <div id="wrap">
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="nav-collapse collapse">
+	<p class="pull-right">
+	  <a href="http://2ndquadrant.com">
+	    <img alt="logo" src="/static/2ndQuadrant-cross.png"
+		 style="margin-right: 8px; margin-top: 4px; height: 32px;"/>
+	  </a>
+	</p>
+	<div class="navbar-inner">
+	 <a class="brand" style="margin-left: 0.2em; margin-top: -4px;"
+	    href="http://expert-postgresql.fr/">
+	  <img src="/static/expert-postgresql.png"></a>
+	 <ul class="nav">
+	   <li><a href="../../../blog/index.html">
+               <i class="icon-book"></i> blog</a>
+           </li>
+	   <li><a href="../../../projects.html">
+               <i class="icon-suitcase"></i> projects</a>
+           </li>
+	   <li><a href="../../../conferences.html">
+               <i class="icon-plane"></i> confs</a>
+           </li>
+	   <li><a href="../../../about.html">
+               <i class="icon-beer"></i> about</a>
+           </li>
+	   <li><a href="../../../rss/tapoueh.xml">
+               <i class="icon-rss"></i> rss</a>
+           </li>
+	 </ul>
+	</div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row">
+	<div class="span4">
+	  <div><ul class='breadcrumb'><li><span class='divider'><i class='icon-sitemap'></i></span></li><li><a href='../../../'>/dev/dim</a><span class='divider'>/</span></li><li><a href='../../../blog'>blog</a><span class='divider'>/</span></li><li><a href='../../../blog/2013'>2013</a><span class='divider'>/</span></li><li><a href='../../../blog/2013/05'>05</a></li></ul></div>
+	  <div class='date'>Monday, May 13 2013 <i class='icon-calendar'></i></div>
+	  <div style='text-align: right;'><span><a href='../../../tags/common-lisp'>Common-Lisp</a></span> <i class='icon-tags'></i></div>
+	  
+
+	  <div style="margin-top: 1em;">
+	    <div class='span2 pull-left'><a class='thumbnail' href='../../../tags/common-lisp'><img class='img-polaroid' style='width: 160px; height: 120px;' src='../../../thumbnails/made-with-lisp.png' /></a></div>
+	    <div id='social' class='span1 pull-right social'><ul><li><g:plusone size='tall' href='http://tapoueh.org/blog/2013/05/13-from-parser-to-compiler'></g:plusone></li><li><a href='http://twitter.com/share' class='twitter-share-button' data-via='tapoueh' data-count='vertical'>Tweet</a><script type='text/javascript' src='http://platform.twitter.com/widgets.js'></script></li></ul></div>
+	  </div>
+
+	  <div id="prevnext">
+	    <h3 class='prevnext'>Recent Articles</h3>
+	    <div><a class='previous' href='../../../blog/2013/05/02-nearest-big-city.html'>« Nearest Big City</a></div>
+	    <div><a class='next pull-right' href='../../../blog/2013/07/02-dubpug.html'>Make the Most ouf of SQL »</a></div>
+	  </div>
+	  
+	  <div>
+	    <div id="left-tag-cloud" class="jqcloud"
+		 style="width: 300px; height: 650px; position: absolute; top: 475px;">
+	    </div>
+            <script>
+            var word_list;
+            
+            $.ajax({
+                type: 'GET',
+                url: '/cloud.json',
+                dataType: 'json',
+                success: function(response) { word_list = response; },
+                data: {},
+                async: false
+            });
+             
+            $(document).ready(function() {
+               $("#left-tag-cloud").jQCloud(word_list,
+	                {shape: "rectangular",
+	                 removeOverflowing: false});
+            });
+            </script>
+	  </div>
+
+	</div>
+
+	<div id="title" class="span8">
+	  <h1>from Parsing to Compiling</h1>
+	</div>
+	
+	<div id="content" class="span8">
+<p>Last week came with two bank holidays in a row, and I took the opportunity
+to design a 
+<em>command language</em> for 
+<a href='../../../pgsql/pgloader.html'>pgloader</a>. While doing that, I unexpectedly
+stumbled accross a very nice 
+<em>AHAH!</em> moment, and I now want to share it with
+you, dear reader.
+</p><center><img src='../../../images/lightbulb.gif' /></center><center><em>AHAH, you'll see!</em></center><p>The general approach I'm following code wise with that 
+<em>command language</em> is
+to first get a code API to expose the capabilities of the system, then
+somehow plug the 
+<em>command language</em> into that API thanks to a 
+<em>parser</em>. It turns
+out that doing so in 
+<em>Common Lisp</em> is really easy, and that you can get a
+<em>compiler</em> for free too, while at it. Let's see about that.
+</p><h2>A very simple toy example</h2><p>In this newsgroup article 
+<a href='https://groups.google.com/forum/?fromgroups=#!topic/comp.lang.lisp/JJxTBqf7scU'>What is symbolic compoutation?</a>, 
+<a href='http://informatimago.com/'>Pascal Bourguignon</a>
+did propose a very simple piece of code:
+</p><pre><code>(defparameter *additive-color-graph*
+  &#039;((red   (red white)   (green yellow) (blue magenta))
+    (green (red yellow)  (green white)  (blue cyan))
+    (blue  (red magenta) (green cyan)   (blue white))))
+
+(defun symbolic-color-add (a b)
+  (cadr (assoc a (cdr (assoc b *additive-color-graph*)))))
+</code></pre><p>This is an example of 
+<em>symbolic computation</em>, and we're going to build a
+little 
+<em>language</em> to express the data and the code. Not that we would need to
+build one, mind you, more in order to have a really simple example leading
+us to the 
+<em>ahah</em> moment you're now waiting for.
+</p><p>Before we dive into the main topic, you have to realize that the previous
+code example actually works: it's defining some data, using an implicit data
+structure composed by nesting lists together, and defines a function that
+knows how to sort out the data in that anonymous data structure so as to
+compound 2 colors together.
+</p><pre><code>TOY-PARSER&gt; (symbolic-color-add &#039;red &#039;green)
+YELLOW
+</code></pre><h2>A command language and parser</h2><p>I decided to go with the following 
+<em>language</em>:
+</p><pre><code>color red   +red white    +green yellow  +blue magenta
+color green +red yellow   +green white   +blue cyan
+color blue  +red magenta  +green cyan    +blue white
+
+mix red and green
+</code></pre><p>And here's how some of the parser looks like, using the 
+<a href='http://nikodemus.github.io/esrap/'>esrap</a> 
+<em>packrat</em> lib:
+</p><pre><code>(defrule color-name (and whitespaces (+ (alpha-char-p character)))
+  (:destructure (ws name)
+    (declare (ignore ws))		; ignore whitespaces
+    ;; CL symbols default to upper case.
+    (intern (string-upcase (coerce name &#039;string)) :toy-parser)))
+
+;;; parse string &quot;+ red white&quot;
+(defrule color-mix (and whitespaces &quot;+&quot; color-name color-name)
+  (:destructure (ws plus color-added color-obtained)
+    (declare (ignore ws plus))		; ignore whitespaces and keywords
+    (list color-added color-obtained)))
+
+;;; mix red and green
+(defrule mix-two-colors (and kw-mix color-name kw-and color-name)
+  (:destructure (mix c1 and c2)
+    (declare (ignore mix and))		; ignore keywords
+    (list c1 c2)))
+</code></pre><p>Those 
+<em>rules</em> are not the whole parser, go have a look at the project on
+github if you want to see the whole code, it's called 
+<a href='https://github.com/dimitri/toy-parser'>toy-parser</a> over there.
+The main idea here is to show that when we parse a line from our little
+language, we produce the simplest possible structured data: in lisp that's
+<em>symbols</em> and 
+<em>lists</em>.
+</p><p>The reason why it makes sense doing that is the next rule:
+</p><center><img src='../../../images/the-one-ring.jpg' /></center><center><em>The one grammar rule to bind them all</em></center><pre><code>(defrule program (and colors mix-two-colors)
+  (:destructure (graph (c1 c2))
+    `(lambda ()
+       (let ((*additive-color-graph* &#039;,graph))
+	 (symbolic-color-add &#039;,c1 &#039;,c2)))))
+</code></pre><p>This rule is the complex one to bind them all. It's using a 
+<em>quasiquote</em>, a
+basic lisp syntax element allowing the programmer to very easily produce
+data that looks exactly like code. Let's see how it goes with a very simple
+example:
+</p><pre><code>TOY-PARSER&gt; (pprint (parse &#039;program
+                           &quot;color red +green yellow mix green and red&quot;))
+
+(LAMBDA NIL
+  (LET ((*ADDITIVE-COLOR-GRAPH* &#039;((RED (GREEN YELLOW)))))
+    (SYMBOLIC-COLOR-ADD &#039;RED &#039;GREEN)))
+; No value
+</code></pre><p>The parser is producing structure (nested) data that really looks like lisp
+code, right? So maybe we can just run that code...
+</p><h2>What about a compiler now?</h2><center><img src='../../../images/aha.jpg' /></center><center><em>Here is my AHAH moment!</em></center><p>Let's see about actually running the code:
+</p><pre><code>TOY-PARSER&gt; (let* ((code &quot;color red +green yellow mix green and red&quot;)
+		   (program (parse &#039;program code)))
+	      (compile nil program))
+#&lt;Anonymous Function #x3020027CF0EF&gt;
+NIL
+NIL
+TOY-PARSER&gt; (let* ((code &quot;color red +green yellow mix green and red&quot;)
+		   (program (parse &#039;program code)))
+	      (funcall (compile nil program)))
+YELLOW
+</code></pre><p>So we have a string reprensing code in our very little language, and a
+parser that knows how to produce a nested list of atoms that looks like lisp
+code. And as we have lisp, we can actually compile that code at run-time
+with the same compiler that we used to produce our parser, and we can then
+<code>funcall</code> that function we just built.
+</p><p>Oh and the function is actually compiled down to native code, of course:
+</p><pre><code>TOY-PARSER&gt; (let* ((code &quot;color red +green yellow mix red and green&quot;)
+		   (program (parse &#039;program code))
+		   (func    (compile nil program)))
+	      (time (loop repeat 1000 do (funcall func))))
+
+(LOOP REPEAT 1000 DO (FUNCALL FUNC))
+took 108 microseconds (0.000108 seconds) to run.
+During that period, and with 4 available CPU cores,
+     105 microseconds (0.000105 seconds) were spent in user mode
+      13 microseconds (0.000013 seconds) were spent in system mode
+NIL
+</code></pre><p>Yeah, it took the whole of 
+<code>108 microseconds</code> to actually run the code
+generated by our own 
+<em>parser</em> 
+<strong>a thousand times</strong>, on my laptop. I can believe
+it's been compiled to native code, that seems like the right ballpark.
+</p><h2>Conclusion</h2><p>The 
+<a href='https://github.com/dimitri/toy-parser'>toy-parser</a> code is there on 
+<em>GitHub</em> and you can actually load it using
+<a href='http://www.quicklisp.org/'>Quicklisp</a>: clone the repository in 
+<code>~/quicklisp/local-projects/</code> then
+<code>(ql:quickload &quot;toy-parser&quot;)</code>, and play with it in 
+<code>(in-package :toy-parser)</code>.
+</p><p>The only thing I still want to say here is this: can your programming
+language of choice make it that easy?
+</p>  </div>
+  </div>
+  </div>
+  <div id="push"></div>
+  </div>
+
+<footer>
+  <p>
+    <small>Unless otherwise specified, the contents of
+    <a href=../../../index.html>this website</a> are Copyright
+    &#169;&#160; 2008-2013 <a href=/about>Dimitri Fontaine</a>, and are
+    licensed for use under
+    <a href=http://creativecommons.org/licenses/by-sa/3.0/
+    rel=license><abbr title="Creative
+    Commons">CC</abbr>&#160;<abbr title=Attribution>BY</abbr>-<abbr title=Share-Alike>SA</abbr>&#160;3.0</a>.</small>
+  </p> 
+</footer> 
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-47059482-1', 'tapoueh.org');
+  ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

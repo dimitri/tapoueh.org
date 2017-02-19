@@ -1,0 +1,321 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset=utf-8 /> 
+    <meta name=viewport content="width=device-width" /> 
+    <meta name="generator" content="Emacs Muse Blog" /> 
+    <meta description="blog de Dimitri Fontaine, Expert PostgreSQL - 2ndQuadrant France" />
+    <meta property="og:title" content="tapoueh.org"/>
+    <meta property="og:type" content="non_profit"/>
+    <meta property="og:url" content="http://tapoueh.org/blog/2011/09/21-skytools-walmgr-part-1.html"/>
+    <meta property="og:image" content="http://tapoueh.org/static/2ndQuadrant-cross.png"/>
+    <meta property="og:site_name" content="Tapoueh"/>
+    <meta property="fb:admins" content="545062436"/>
+
+    <title>Expertise PostgreSQL</title>
+    <link rel='stylesheet' type='text/css' media='all' href='../../../static/styles.css' />
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/bootstrap/css/bootstrap.min.css' />
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/FontAwesome/css/font-awesome.min.css' />
+
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/highlight.js/styles/sunburst.css' />
+    <script type='text/javascript' src='../../../static/highlight.js/highlight.pack.js'></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script type='text/javascript' src='../../../static/jquery-1.9.1.min.js'></script>
+    <link rel='stylesheet' type='text/css' medial='all' href='../../../static/jqcloud.css' />
+    <script type='text/javascript' src='../../../static/jqcloud-1.0.4.min.js'></script>
+
+    <!-- <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="/static/FontAwesome/css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="/static/highlight.js/styles/sunburst.css">
+    <script src="/static/highlight.js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script src="/static/jquery-1.9.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/jqcloud.css" />
+    <script type="text/javascript" src="/static/jqcloud-1.0.4.min.js"></script>
+    -->
+
+    <script type="text/javascript" src="http://apis.google.com/js/plusone.js">{lang: 'fr'}</script>
+    
+  </head>
+  <body>
+
+   <div id="wrap">
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="nav-collapse collapse">
+	<p class="pull-right">
+	  <a href="http://2ndquadrant.com">
+	    <img alt="logo" src="/static/2ndQuadrant-cross.png"
+		 style="margin-right: 8px; margin-top: 4px; height: 32px;"/>
+	  </a>
+	</p>
+	<div class="navbar-inner">
+	 <a class="brand" style="margin-left: 0.2em; margin-top: -4px;"
+	    href="http://expert-postgresql.fr/">
+	  <img src="/static/expert-postgresql.png"></a>
+	 <ul class="nav">
+	   <li><a href="../../../blog/index.html">
+               <i class="icon-book"></i> blog</a>
+           </li>
+	   <li><a href="../../../projects.html">
+               <i class="icon-suitcase"></i> projects</a>
+           </li>
+	   <li><a href="../../../conferences.html">
+               <i class="icon-plane"></i> confs</a>
+           </li>
+	   <li><a href="../../../about.html">
+               <i class="icon-beer"></i> about</a>
+           </li>
+	   <li><a href="../../../rss/tapoueh.xml">
+               <i class="icon-rss"></i> rss</a>
+           </li>
+	 </ul>
+	</div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row">
+	<div class="span4">
+	  <div><ul class='breadcrumb'><li><span class='divider'><i class='icon-sitemap'></i></span></li><li><a href='../../../'>/dev/dim</a><span class='divider'>/</span></li><li><a href='../../../blog'>blog</a><span class='divider'>/</span></li><li><a href='../../../blog/2011'>2011</a><span class='divider'>/</span></li><li><a href='../../../blog/2011/09'>09</a></li></ul></div>
+	  <div class='date'>Wednesday, September 21 2011 <i class='icon-calendar'></i></div>
+	  <div style='text-align: right;'><span><a href='../../../tags/postgresql'>PostgreSQL</a>, <a href='../../../tags/skytools'>Skytools</a>, <a href='../../../tags/walmgr'>WalMgr</a>, <a href='../../../tags/replication'>Replication</a>, <a href='../../../tags/archiving'>Archiving</a></span> <i class='icon-tags'></i></div>
+	  
+
+	  <div style="margin-top: 1em;">
+	    <div class='span2 pull-left'><a class='thumbnail' href='../../../tags/skytools'><img class='img-polaroid' style='width: 160px; height: 120px;' src='../../../thumbnails/londiste_logo.gif' /></a></div>
+	    <div id='social' class='span1 pull-right social'><ul><li><g:plusone size='tall' href='http://tapoueh.org/blog/2011/09/21-skytools-walmgr-part-1'></g:plusone></li><li><a href='http://twitter.com/share' class='twitter-share-button' data-via='tapoueh' data-count='vertical'>Tweet</a><script type='text/javascript' src='http://platform.twitter.com/widgets.js'></script></li></ul></div>
+	  </div>
+
+	  <div id="prevnext">
+	    <h3 class='prevnext'>Recent Articles</h3>
+	    <div><a class='previous' href='../../../blog/2011/09/16-el-get-3.1.html'>« el-get-3.1</a></div>
+	    <div><a class='next pull-right' href='../../../blog/2011/09/27-pgconf-eu.html'>PostgreSQL à Amsterdam »</a></div>
+	  </div>
+	  
+	  <div>
+	    <div id="left-tag-cloud" class="jqcloud"
+		 style="width: 300px; height: 650px; position: absolute; top: 475px;">
+	    </div>
+            <script>
+            var word_list;
+            
+            $.ajax({
+                type: 'GET',
+                url: '/cloud.json',
+                dataType: 'json',
+                success: function(response) { word_list = response; },
+                data: {},
+                async: false
+            });
+             
+            $(document).ready(function() {
+               $("#left-tag-cloud").jQCloud(word_list,
+	                {shape: "rectangular",
+	                 removeOverflowing: false});
+            });
+            </script>
+	  </div>
+
+	</div>
+
+	<div id="title" class="span8">
+	  <h1>Skytools3: walmgr</h1>
+	</div>
+	
+	<div id="content" class="span8">
+<p>Let's begin the 
+<a href='http://wiki.postgresql.org/wiki/SkyTools'>Skytools 3</a> documentation effort, which is long overdue.  The
+code is waiting for you over at 
+<a href='https://github.com/markokr/skytools'>github</a>, and is stable and working.  Why is
+it still in 
+<em>release candidate</em> status, I hear you asking?  Well because it's
+missing updated documentation.
+</p><p><a href='http://packages.debian.org/experimental/skytools3-walmgr'>WalMgr</a> is the Skytools component that manages 
+<em>WAL shipping</em> for you, and
+archiving too.  It knows how to prepare your master and standby setup, how
+to take a base backup and push it to the standby's system, how to archive
+(at the satndby) master's WAL files as they are produced and have the
+standby restore from this archive.
+</p><p>What's new in 
+<code>walmgr</code> from Skytools 3 is its support for 
+<em>Streaming
+Replication</em> that made its way into PostgreSQL 9.0 and is even more useful in
+PostgreSQL 9.1 (better monitoring, synchronous replication option).
+</p><h1>Getting ready</h1><p>Now, I'm using debian here, and a build virtual machine where I'm doing the
+<em>backporting</em> work.  As 
+<a href='http://www.postgresql.org/about/news.1349'>PostgreSQL 9.1</a> is now out, let's use that.
+</p><pre><code>:~$ pg_lsclusters 
+Version Cluster   Port Status Owner    Data directory               
+8.4     main      5432 online postgres /var/lib/postgresql/8.4/main ...
+9.0     main      5433 online postgres /var/lib/postgresql/9.0/main ...
+9.1     main      5434 online postgres /var/lib/postgresql/9.1/main ...
+</code></pre><p>After some editing of the configuration files (enabling 
+<em>hot standby</em> and
+switching 
+<code>pg_hba.conf</code> to 
+<code>trust</code> for the sake of this example), we can see
+that the cluster is ready to be abused:
+</p><pre><code>:~$ sudo pg_ctlcluster 9.1 main restart
+:~$ psql --cluster 9.1/main  -U postgres \
+-c &quot;select name, setting from pg_settings where name in (&#039;max_wal_senders&#039;, &#039;wal_level&#039;)&quot;
+      name       |   setting   
+-----------------+-------------
+ max_wal_senders | 1
+ wal_level       | hot_standby
+(2 rows)
+
+:~$ sudo mkdir -p /etc/walshipping/9.1/main /var/lib/postgresql/walshipping
+:~$ sudo chown -R postgres:postgres /etc/walshipping /var/lib/postgresql/walshipping
+
+:~$ ssh-keygen -t dsa
+:~/.ssh$ cp id_dsa.pub authorized_keys
+:~$ ssh localhost
+</code></pre><p>So the order of operations is to prepare a standby, then have it restore
+from the archives, then activate the wal streaming and check that the setup
+allows the standby to switch back and forth between the streaming and the
+archives.
+</p><h1>Setting walmgr </h1><p>To prepare the standby, we will do a 
+<em>base backup</em> of the master.  That step
+is handled by 
+<code>walmgr</code>, so we first need to set it up.  Here's the sample
+<code>master.ini</code> file:
+</p><pre><code>[walmgr]
+job_name             = wal-master
+logfile              = /var/log/postgresql/%(job_name)s.log
+pidfile              = /var/run/postgresql/%(job_name)s.pid
+use_skylog           = 0
+
+master_db            = port=5434 dbname=template1
+master_data          = /var/lib/postgresql/9.1/main/
+master_config        = /etc/postgresql/9.1/main/postgresql.conf
+master_bin           = /usr/lib/postgresql/9.1/bin
+
+# set this only if you can afford database restarts during setup and stop.
+master_restart_cmd   = pg_ctlcluster 9.1 main restart
+
+slave = 127.0.0.1
+slave_config = /etc/walshipping/9.1/main/standby.ini
+
+walmgr_data          = /var/lib/postgresql/walshipping/9.1/main
+completed_wals       = %(walmgr_data)s/logs.complete
+partial_wals         = %(walmgr_data)s/logs.partial
+full_backup          = %(walmgr_data)s/data.master
+config_backup        = %(walmgr_data)s/config.backup
+
+# syncdaemon update frequency
+loop_delay           = 10.0
+# use record based shipping available since 8.2
+use_xlog_functions   = 0
+
+# pass -z to rsync, useful on low bandwidth links
+compression          = 0
+
+# keep symlinks for pg_xlog and pg_log
+keep_symlinks        = 1
+
+# tell walmgr to set wal_level to hot_standby during setup
+#hot_standby          = 1
+
+# periodic sync
+#command_interval     = 600
+#periodic_command     = /var/lib/postgresql/walshipping/periodic.sh
+</code></pre><p>And the 
+<code>/etc/walshipping/9.1/main/standby.ini</code> companion:
+</p><pre><code>[walmgr]
+job_name             = wal-standby
+logfile              = /var/log/postgresql/%(job_name)s.log
+use_skylog           = 0
+
+slave_data           = /var/lib/postgresql/9.1/standby
+slave_bin            = /usr/lib/postgresql/9.1/bin
+slave_stop_cmd       = pg_ctlcluster 9.1 standby stop
+slave_start_cmd      = pg_ctlcluster 9.1 standby start
+slave_config_dir     = /etc/postgresql/9.1/standby/
+
+walmgr_data          = /var/lib/postgresql/walshipping/9.1/main
+completed_wals       = %(walmgr_data)s/logs.complete
+partial_wals         = %(walmgr_data)s/logs.partial
+full_backup          = %(walmgr_data)s/data.master
+config_backup        = %(walmgr_data)s/config.backup
+
+backup_datadir       = no
+keep_backups         = 0
+# archive_command =
+
+# primary database connect string for hot standby -- enabling
+# this will cause the slave to be started in hot standby mode.
+primary_conninfo     = host=127.0.0.1 port=5434 user=postgres
+</code></pre><p>And let's get started:
+</p><pre><code>:~$ cp standby.ini /etc/walshipping/9.1/main/
+
+:~$ walmgr3 -v master.ini setup
+2011-09-21 16:57:05,685 30450 INFO Configuring WAL archiving
+2011-09-21 16:57:05,687 30450 DEBUG found &#039;archive_mode&#039; in config -- enabling it
+2011-09-21 16:57:05,687 30450 DEBUG found &#039;wal_level&#039; in config -- setting to &#039;archive&#039;
+2011-09-21 16:57:05,688 30450 DEBUG modifying configuration: {&#039;archive_mode&#039;: &#039;on&#039;, &#039;wal_level&#039;: &#039;archive&#039;, &#039;archive_command&#039;: &#039;/usr/bin/walmgr3 /var/lib/postgresql/master.ini xarchive %p %f&#039;}
+2011-09-21 16:57:05,688 30450 DEBUG found parameter archive_mode with value &#039;&#039;off&#039;&#039;
+2011-09-21 16:57:05,690 30450 DEBUG found parameter wal_level with value &#039;&#039;minimal&#039;&#039;
+2011-09-21 16:57:05,690 30450 DEBUG found parameter archive_command with value &#039;&#039;&#039;&#039;
+2011-09-21 16:57:05,691 30450 INFO Restarting postmaster
+2011-09-21 16:57:05,691 30450 DEBUG Execute cmd: &#039;pg_ctlcluster 9.1 main restart&#039;
+2011-09-21 16:57:09,404 30450 DEBUG Execute cmd: &#039;ssh&#039; &#039;-Tn&#039; &#039;-o&#039; &#039;Batchmode=yes&#039; &#039;-o&#039; &#039;StrictHostKeyChecking=no&#039; &#039;127.0.0.1&#039; &#039;/usr/bin/walmgr3&#039; &#039;/etc/walshipping/9.1/main/standby.ini&#039; &#039;setup&#039;
+2011-09-21 16:57:09,712 30450 INFO Done
+
+postgres@squeeze64:~$ walmgr3 master.ini backup
+2011-09-21 17:00:17,259 30702 INFO Backup lock obtained.
+2011-09-21 17:00:17,277 30692 INFO Execute SQL: select pg_start_backup(&#039;FullBackup&#039;); [port=5434 dbname=template1]
+2011-09-21 17:00:17,791 30712 INFO Removing expired backup directory: /var/lib/postgresql/walshipping/9.1/main/data.master
+2011-09-21 17:00:18,200 30692 INFO Checking tablespaces
+2011-09-21 17:00:18,202 30692 INFO pg_log does not exist, skipping
+2011-09-21 17:00:18,259 30692 INFO Backup conf files from /etc/postgresql/9.1/main
+2011-09-21 17:00:18,590 30731 INFO First useful WAL file is: 000000010000000200000092
+2011-09-21 17:00:19,901 30759 INFO Backup lock released.
+2011-09-21 17:00:19,919 30692 INFO Full backup successful
+
+:~$ walmgr3 /etc/walshipping/9.1/main/standby.ini listbackups
+
+List of backups:
+
+Backup set      Timestamp                Label       First WAL               
+--------------- ------------------------ ----------- ------------------------
+data.master     2011-09-21 17:00:17 CEST FullBackup  000000010000000200000092
+</code></pre><p>Following articles will show how to manage that archive and how to go from
+that to an 
+<em>Hot Standby</em> fed by either 
+<em>Streaming Replication</em> or 
+<em>Archives</em>.
+</p>  </div>
+  </div>
+  </div>
+  <div id="push"></div>
+  </div>
+
+<footer>
+  <p>
+    <small>Unless otherwise specified, the contents of
+    <a href=../../../index.html>this website</a> are Copyright
+    &#169;&#160; 2008-2013 <a href=/about>Dimitri Fontaine</a>, and are
+    licensed for use under
+    <a href=http://creativecommons.org/licenses/by-sa/3.0/
+    rel=license><abbr title="Creative
+    Commons">CC</abbr>&#160;<abbr title=Attribution>BY</abbr>-<abbr title=Share-Alike>SA</abbr>&#160;3.0</a>.</small>
+  </p> 
+</footer> 
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-47059482-1', 'tapoueh.org');
+  ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>
