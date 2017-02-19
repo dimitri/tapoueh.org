@@ -86,7 +86,8 @@
 	     (expand-file-name-into base-directory *root-directory*)))
 	articles)
     (flet ((push-article (pathname)
-	     (push (funcall parse-fn pathname) articles)))
+             (let ((*script-name* (muse-pathname-to-script-name pathname)))
+               (push (funcall parse-fn pathname) articles))))
       ;; walk on-disk directories to find articles
       (fad:walk-directory base-directory #'push-article
 			  :test #'publish-document-p)

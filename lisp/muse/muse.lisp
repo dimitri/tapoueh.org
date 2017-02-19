@@ -105,6 +105,22 @@
     (when (and t1 t2)
       (funcall test t1 t2))))
 
+(defun muse-pathname-to-script-name (pathname)
+  "Given a full PATHNAME of a muse article on-disk, return its canonical
+  *script-name*.
+
+     IN: #P\"/Users/dim/dev/tapoueh.org/blog/2015/05/25-JUG-Montpellier.html\"
+    OUT: \"/blog/2015/05/25-JUG-Montpellier.html\"
+
+  Works with a PATHNAME because a *script-name* is needed already in the
+  parsing, in order to publish relative URLs.
+  "
+  (concatenate 'string
+               "/"
+               (enough-namestring (make-pathname :defaults pathname
+                                                 :type "html")
+                                  *root-directory*)))
+
 (defun muse-parse-article (pathname)
   "Parse the Muse article at PATHNAME and return a muse structure."
   (let* ((*muse-parser-cwd* (directory-namestring pathname))
@@ -177,7 +193,8 @@
 (defmethod muse-extract-article-image-source ((article muse))
   "Extract the image source from the article"
   (let* ((tags  (muse-tags article))
-	 (image (muse-image article)))
+	 (image (muse-image article))
+         (script-name (muse-pathname-to-script-name (muse-pathname article))))
     (labels ((image-link-p (image)
 	       (and (listp image) (eq :img (car image))))
 	     (image-link-or-nil (image)
@@ -191,9 +208,9 @@
 
 	  ;; grab the main article tag image if we have one
 	  (loop
-	     for (tag . image-file) in *article-default-image-for-tag*
-	     when (member tag tags :test #'string-equal)
-	     return `(:img :src ,image-file))
+	     :for (tag . image-file) :in *article-default-image-for-tag*
+	     :when (member tag tags :test #'string-equal)
+	     :return `(:img :src ,image-file))
 
 	  ;; default to the global default
 	  `(:img :src ,*article-default-image*)))))
@@ -259,8 +276,8 @@
 
 (defmethod muse-format-article-with-chapeau ((article muse))
   "Return a list suitable for printing the article meta-data with cl-who"
-  (let* ((link `(:a :href ,(muse-url article)
-		    ,(muse-title article)))
+  (let* ((href (get-relative-url (muse-url article :with-file-type "html")))
+         (link `(:a :href ,href ,(muse-title article)))
 	 (date `(:span :class "date" ,(muse-format-date article :format :short)))
 	 (image (muse-extract-article-image-source article))
          (thumb (thumbnail
@@ -288,10 +305,10 @@
 		 ,div.city)
 
 	   (:div :class "span2"
-		 (:a :class "thumbnail" :href ,(muse-url article)
+		 (:a :class "thumbnail" :href ,href
 		     (:img :class "img-polaroid"
 			   :style "width: 160px; height: 120px;"
-			   :src ,thumb)))
+			   :src ,(get-relative-url thumb))))
 
 	   (:div :class "span6"
 		 ,(get-absolute-hrefs (muse-first-para article)

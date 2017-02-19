@@ -69,11 +69,13 @@
 (defun compile-site-documents (&key documents verbose)
   "Compile to *HTML-DIRECTORY* all the muse documents from *ROOT-DIRECTORY*."
   (loop
-     for article in (or documents (find-muse-documents))
-     do (let ((html (render-muse-document :article article)))
-	  (write-html-file html (muse-url article) :verbose verbose))
+     :for article :in (or documents (find-muse-documents))
+     :do (let* ((*script-name*
+                 (muse-pathname-to-script-name (muse-pathname article)))
+                (html (render-muse-document :article article)))
+           (write-html-file html (muse-url article) :verbose verbose))
      ;; return how many documents we wrote
-     count article))
+     :count article))
 
 (defun compile-blog-indexes (&key documents verbose)
   "Compile to *HTML-DIRECTORY* all the blog indexes from *BLOG-DIRECTORY*"

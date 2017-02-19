@@ -245,7 +245,8 @@
 	     (path (when (< 0 pos) (nth (- pos 1) *blog-articles-list*)))
 	     (prev (when path (gethash path *blog-articles*))))
 	(when prev
-	  (get-navigation-link (muse-url prev) (muse-title prev)
+	  (get-navigation-link (muse-url prev :with-file-type "html")
+                               (muse-title prev)
 			       :class "previous" :title-format "« ~a")))
       ;; not an article
       (let* ((prev  (tapoueh-previous-directory))
@@ -260,7 +261,8 @@
 	   (path (nth (+ pos 1) *blog-articles-list*))
 	   (next (when path (gethash path *blog-articles*))))
       (when next
-	(get-navigation-link (muse-url next) (muse-title next)
+	(get-navigation-link (muse-url next :with-file-type "html")
+                             (muse-title next)
 			     :class "next pull-right" :title-format "~a »")))
     ;; not an article
     (let* ((next  (tapoueh-next-directory))
@@ -363,7 +365,7 @@
 	     (muse-date *muse-current-file*))
     (let* ((image     (muse-extract-article-image-source *muse-current-file*))
 	   (ifile     (if (listp image) (third image) image))
-           (thumbnail (thumbnail ifile))
+           (thumbnail (get-relative-url (thumbnail ifile)))
 	   (tag
 	    (car (rassoc ifile *article-default-image-for-tag* :test #'string=))))
       `(:div :class "span2 pull-left"

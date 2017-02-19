@@ -134,27 +134,17 @@
 				   "/Users/dim/dev/tapoueh.org/blog/2008/12/04-fake-entry.muse")
 	   "blog/2008/12/04-fake-entry.muse")))
 
-;; (defmethod muse-url ((m muse) &key with-base-url with-file-type)
-;;   "Returns the full URL to get at given Muse document"
-;;   (let ((script-name
-;; 	 (relative-pathname-from *root-directory* (muse-pathname m))))
-;;     (concatenate 'string
-;; 		 (when with-base-url *base-url*)
-;; 		 (unless with-base-url "/")
-;; 		 ;; we chop off the pathname-type here
-;; 		 (directory-namestring script-name)
-;; 		 (pathname-name script-name)
-;; 		 (when with-file-type (format nil ".~a" with-file-type)))))
-
-(defmethod muse-url ((m muse) &key with-base-url)
+(defmethod muse-url ((m muse) &key with-base-url with-file-type)
   "Returns the full URL to get at given Muse document"
   (let ((script-name
 	 (relative-pathname-from *root-directory* (muse-pathname m))))
-    (if with-base-url
-        (concatenate 'string *base-url* script-name)
-
-        (get-relative-url (concatenate 'string "/" script-name)
-                          (or *script-name* *root-directory*)))))
+    (concatenate 'string
+		 (when with-base-url *base-url*)
+		 (unless with-base-url "/")
+		 ;; we chop off the pathname-type here
+		 (directory-namestring script-name)
+		 (pathname-name script-name)
+		 (when with-file-type (format nil ".~a" with-file-type)))))
 
 #+5am
 (test muse-url
