@@ -44,6 +44,7 @@
      in a hash-table where the pathname is the key."
   (when purge
     (setq *blog-articles* (make-hash-table :test 'equal :size 1024)))
+
   (fad:walk-directory *root-directory* #'add-article :test #'muse-file-type-p)
   (compute-sorted-blog-articles-list))
 

@@ -288,7 +288,10 @@
 		 :for rel := "" :then (relative-pathname-from *root-directory* cur)
 		 :collect `(:li
                             (:a :href ,(get-relative-url
-                                        (concatenate 'string "/" rel))
+                                        (if (string= "" rel)
+                                            "/index.html"
+                                            (concatenate 'string
+                                                         "/" rel "/index.html")))
 				   ,(namestring (fad:pathname-as-file d)))
 			       ,(when more?
 				      '(:span :class "divider" "/"))))))))
@@ -372,7 +375,7 @@
 	     (:a :class "thumbnail"
 		 :href ,(if tag
                             (get-relative-url
-                             (format nil "/tags/~a" (string-downcase tag)))
+                             (format nil "/tags/~a.html" (string-downcase tag)))
 			    (get-relative-url "/blog/archives.html"))
 		 (:img :class "img-polaroid"
 		       :style "width: 160px; height: 120px;"

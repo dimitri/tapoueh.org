@@ -11,6 +11,7 @@
   (compile-routes
    (:GET    ""                                      'serve-reversed-index-page)
    (:GET    "/"                                     'serve-reversed-index-page)
+   (:GET    "/index.html"                           'serve-reversed-index-page)
    (:GET    "/blog"                                 'serve-reversed-index-page)
    (:GET    "/blog/index.html"                      'serve-reversed-index-page)
 

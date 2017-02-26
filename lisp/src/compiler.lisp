@@ -49,7 +49,7 @@
 
 (defun compile-home-page (&key documents verbose)
   "Compile to *HTML-DIRECTORY* this site's home page"
-  (let ((url "/")
+  (let ((url "/index.html")
 	(html (render-reversed-index-page "/" documents)))
     (write-html-file html url :name "index" :verbose verbose)))
 
@@ -99,7 +99,7 @@
 
 (defun compile-blog-archives (&key documents verbose)
   "Compile to *HTML-DIRECTORY* the whole blog archives page."
-  (let* ((url  "/blog/")
+  (let* ((url  "/blog/archives.html")
 	 (len  (length documents))
 	 (html (render-reversed-index-page url documents len)))
     (write-html-file html url :name "archives" :verbose verbose)
@@ -117,7 +117,7 @@
     ;; now export tags listings
     (loop
        for tag in (mapcar #'string-downcase tags)
-       do (let* ((url  (format nil "/tags/~a" tag))
+       do (let* ((url  (format nil "/tags/~a.html" tag))
 		 (html (render-tag-listing url (articles-tagged tag documents))))
 	    (write-html-file html url :name tag :verbose verbose))
        ;; return how many files we wrote
@@ -125,7 +125,7 @@
 
 (defun compile-conf-index (&key documents verbose)
   "Compile to *HTML-DIRECTORY* the conferences index page."
-  (let* ((url  "/conferences")
+  (let* ((url  "/conferences.html")
 	 (len  (length documents))
 	 (html (render-confs-index-page url (reverse documents))))
     (write-html-file html url :name "conferences" :verbose verbose)
@@ -134,7 +134,7 @@
 
 (defun compile-projects-index (&key pgsql emacs verbose)
   "Compile to *HTML-DIRECTORY* the conferences index page."
-  (let* ((url  "/conferences")
+  (let* ((url  "/projects.html")
 	 (len  (+ (length pgsql )(length emacs)))
 	 (html (render-projects-index-page url pgsql emacs)))
     (write-html-file html url :name "projects" :verbose verbose)
