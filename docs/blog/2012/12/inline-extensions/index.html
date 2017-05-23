@@ -1,0 +1,1214 @@
+
+
+  
+    
+  
+
+
+  
+
+
+
+
+  
+
+
+  
+
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Hugo 0.20.7">
+    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
+    <title>Inline Extensions</title>
+    <meta name="author" content="Dimitri Fontaine">
+    <meta name="keywords" content="">
+
+    <link rel="icon" href="/favicon.ico">
+    
+
+    
+    <meta name="description" content="We&rsquo;ve been having the CREATE EXTENSION feature in PostgreSQL for a couple of releases now, so let&rsquo;s talk about how to go from here. The first goal of the extension facility has been to allow for a clean dump and restore process of contrib modules. As such it&rsquo;s been tailored to the needs of deploying files on the file system because there&rsquo;s no escaping from that when you have to ship binary and executable files, those infamous .">
+    <meta property="og:description" content="We&rsquo;ve been having the CREATE EXTENSION feature in PostgreSQL for a couple of releases now, so let&rsquo;s talk about how to go from here. The first goal of the extension facility has been to allow for a clean dump and restore process of contrib modules. As such it&rsquo;s been tailored to the needs of deploying files on the file system because there&rsquo;s no escaping from that when you have to ship binary and executable files, those infamous .">
+    <meta property="og:type" content="blog">
+    <meta property="og:title" content="Inline Extensions">
+    <meta property="og:url" content="/blog/2012/12/inline-extensions/">
+    <meta property="og:site_name" content="Dimitri Fontaine, Expert PostgreSQL">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Dimitri Fontaine, Expert PostgreSQL">
+    <meta name="twitter:description" content="We&rsquo;ve been having the CREATE EXTENSION feature in PostgreSQL for a couple of releases now, so let&rsquo;s talk about how to go from here. The first goal of the extension facility has been to allow for a clean dump and restore process of contrib modules. As such it&rsquo;s been tailored to the needs of deploying files on the file system because there&rsquo;s no escaping from that when you have to ship binary and executable files, those infamous .">
+    
+      <meta name="twitter:creator" content="@tapoueh">
+    
+    
+
+    
+    
+
+    
+      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
+    
+
+    
+      <meta property="og:image" content="http://tapoueh.org/img/old/dylibbundler.png">
+    
+    
+      <meta property="og:image" content="http://tapoueh.org/img/old/dylibbundler.png">
+    
+    
+
+    
+
+    
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
+    
+    
+    <link rel="stylesheet" href="/css/style-u6mk0ojoywresbx8iepslrmmhl4stuhrsxuwhkpwrkrx7mryjcaimasnk4pi.min.css" />
+    
+    
+      <link rel="stylesheet" href="http://tapoueh.org//css/dim.css">
+    
+
+    
+      
+    
+    
+  </head>
+
+  <body>
+    <div id="blog">
+      <header id="header" data-behavior="1">
+  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+  <div class="header-title">
+    <a class="header-title-link" href="/">Dimitri Fontaine, Expert PostgreSQL</a>
+  </div>
+  
+</header>
+
+      <nav id="sidebar" data-behavior="1">
+  <div class="sidebar-container">
+    
+      <div class="sidebar-profile">
+        <a href="/#about">
+          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+        </a>
+        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
+        
+          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
+        
+      </div>
+    
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
+      
+      <span class="sidebar-button-desc">Blog</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/about/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
+      
+      <span class="sidebar-button-desc">About</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/book/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
+      
+      <span class="sidebar-button-desc">Book</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/tags/conferences/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-plane"></i>
+      
+      <span class="sidebar-button-desc">Conferences</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/projects/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bug"></i>
+      
+      <span class="sidebar-button-desc">Projects</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+      
+      <span class="sidebar-button-desc">GitHub</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+      
+      <span class="sidebar-button-desc">Twitter</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+      
+      <span class="sidebar-button-desc">Categories</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/tags">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+      
+      <span class="sidebar-button-desc">Tags</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/archives">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+      
+      <span class="sidebar-button-desc">Archives</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/index.xml">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+      
+      <span class="sidebar-button-desc">RSS</span>
+    </a>
+  </li>
+
+    </ul>
+  </div>
+</nav>
+
+      
+  <div class="post-header-cover
+              text-left
+              post-header-cover--partial"
+       style="background-image:url('/img/old/dylibbundler.png')"
+       data-behavior="1">
+    
+  </div>
+
+
+      <div id="main" data-behavior="1"
+        class="hasCover
+               hasCoverMetaOut
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
+          
+            <div class="post-header main-content-wrap text-left">
+  
+    <h1 class="post-title" itemprop="headline">
+      Inline Extensions
+    </h1>
+  
+  <div class="postShorten-meta post-meta">
+  
+    <time itemprop="datePublished" datetime="2012-12-13T11:34:00&#43;01:00">
+      
+  
+  
+  
+  
+    Thursday 13 Dec 2012
+  
+
+    </time>
+  
+  
+  
+  
+    <span></span>
+    
+      <a class="category-link" href="/categories/postgresql">PostgreSQL</a>, 
+    
+      <a class="category-link" href="/categories/extensions">Extensions</a>
+    
+  
+
+
+</div>
+
+</div>
+          
+          <div class="post-content markdown" itemprop="articleBody">
+            <div class="main-content-wrap">
+              
+
+<p>We&rsquo;ve been having the
+<code>CREATE EXTENSION</code> feature in
+<a href="http://www.postgresql.org/">PostgreSQL</a> for a couple of
+releases now, so let&rsquo;s talk about how to go from here. The first goal of the
+extension facility has been to allow for a clean
+<em>dump</em> and
+<em>restore</em> process of
+<a href="http://www.postgresql.org/docs/9.2/static/contrib.html">contrib</a> modules. As such it&rsquo;s been tailored to the needs of deploying files
+on the
+<em>file system</em> because there&rsquo;s no escaping from that when you have to
+ship
+<em>binary</em> and
+<em>executable</em> files, those infamous
+<code>.so</code>,
+<code>.dll</code> or
+<code>.dylib</code> things.</p>
+
+<p>Now that we have the
+<em>Extension</em> facility though, what we see is a growing
+number of users taking advantage of it for the purpose of managing in house
+procedural code and related objects. This code can be a bunch of
+<a href="http://www.postgresql.org/docs/9.2/static/plpgsql.html">PLpgSQL</a> or
+<a href="http://www.postgresql.org/docs/9.2/static/plpython.html">plpython</a> functions and as such you normaly create them directly from any
+application connection to PostgreSQL.</p>
+
+<p>So the idea would be to allow creating
+<em>Extensions</em> fully from a SQL command,
+including the whole set of objects it contains. More than one approach are
+possible to reach that goal, each with downsides and advantages. We will see
+them later in that document.</p>
+
+<p>Before that though, let&rsquo;s first review what the extension mechanism has to
+offer to its users when there&rsquo;s no
+<em>contrib like</em> module to manage.</p>
+
+<h2 id="a-use-case-for-next-generation-extensions">A use case for next generation extensions</h2>
+
+<p>The only design goal of the
+<code>9.1</code> PostgreSQL Extension feature has been to
+support a proper
+<em>dump &amp; restore</em> user experience when using
+<em>contrib modules</em>
+such as
+<code>hstore</code> or
+<code>ltree</code>. Building up on that, what do
+<em>Extensions</em> have to
+offer to non
+<code>C</code> developpers out there? In other words, what
+<code>CREATE EXTENSION</code>
+brings on the table that a bunch of
+<em>loose</em> objects does not? What problems
+can we now solve?</p>
+
+
+
+ 
+  
+  
+  
+  
+    
+      
+    
+  
+    
+      
+    
+  
+    
+  
+    
+      
+    
+  
+
+<div class="figure fig50 center dim-margin" >
+  
+    <a class="fancybox" href="/img/old/multi_function_equipment.jpg" data-fancybox-group="">
+  
+    <img class="fig-img" src="/img/old/multi_function_equipment.jpg" >
+  
+    </a>
+  
+  
+</div>
+
+
+<p><em>A Multi Functions Equipment, All Bundled Together</em></p>
+
+<p>A way to phrase it is to say that
+<em>Extensions</em> are user defined
+<code>CASCADE</code>
+support.
+<em>Extensions</em> brings extensibility to the
+<code>pg_depend</code> PostgreSQL
+internal dependency tracking system that
+<code>CASCADE</code> is built on. From that
+angle,
+<em>Extensions</em> are a way to manage dependencies of
+<em>SQL objects</em> in a way
+that allow you to manage them as a single entity.</p>
+
+<p>One of the existing problems this helps solving is the infamous lack of
+dependency tracking between function calls. Using
+<em>Extensions</em> when you deal
+with a set of functions acting as an API, you can at least protect that as a
+unit:</p>
+
+<pre><code>STATEMENT: drop function public.populate_record(anyelement,hstore);
+    ERROR: cannot drop function populate_record(anyelement,hstore) because
+           extension hstore requires it
+     HINT: You can drop extension hstore instead.
+</code></pre>
+
+<p>And you also have a version number and tools integration to manage
+extensions, with psql
+<code>\dx</code> command and the equivalent feature in
+<a href="http://www.pgadmin.org/">pgAdmin</a>.
+Coming with your own version number management is not impossible, some do
+that already. Here it&rsquo;s integrated and the upgrade sequences are offered too
+(applying
+<code>1.1--1.2</code> then
+<code>1.2--1.3</code> automatically).</p>
+
+<p>Let&rsquo;s just say that it&rsquo;s very easy to understand the
+<em>traction</em> our users feel
+towards leveraging
+<em>Extensions</em> features in order to properly manage their set
+of stored procedures and SQL objects.</p>
+
+<h2 id="the-dump-restore-experience">The <em>dump &amp; restore</em> experience</h2>
+
+<p>The common problem of all those proposals is very central to the whole idea
+of
+<em>Extensions</em> as we know them. The goal of building them as been to fix the
+<em>restoring</em> experience when using extensions in a database, and we managed to
+do that properly for contrib likes extensions.</p>
+
+
+
+ 
+  
+  
+  
+  
+    
+      
+    
+  
+    
+      
+    
+  
+    
+  
+    
+      
+    
+  
+
+<div class="figure fig50 center dim-margin" >
+  
+    <a class="fancybox" href="/img/old/fly.tn.png" data-fancybox-group="">
+  
+    <img class="fig-img" src="/img/old/fly.tn.png" >
+  
+    </a>
+  
+  
+</div>
+
+
+<p><em>A fly in the ointment</em></p>
+
+<p>When talking about
+<em>Inline Extensions</em>, the fly in the ointment is how to
+properly manage their
+<code>pg_dump</code> behavior. The principle we built for
+<em>Extensions</em> and that is almost unique to them is to
+<strong><em>omit</em></strong> them in the dump
+files. The only other objects that we filter out of the dump are the one
+installed at server initialisation times, when using
+<a href="http://www.postgresql.org/docs/9.2/static/app-initdb.html">initdb</a>, to be found in
+the
+<code>pg_catalog</code> and
+<code>information_schema</code> systems&rsquo;
+<em>schema</em>.</p>
+
+<p>At restore time, the dump file contains the
+<code>CREATE EXTENSION</code> command so the
+PostgreSQL server will go fetch the
+<em>control</em> and
+<em>script</em> files on disk and
+process them, loading the database with the right set of SQL objects.</p>
+
+<p>Now we&rsquo;re talking about
+<em>Extensions</em> which we would maybe want to dump the
+objects of, so that at
+<em>restore</em> time we don&rsquo;t need to find them from unknown
+external resources: the fact that the extension is
+<em>Inline</em> means that the
+PostgreSQL server has no way to know where its content is coming from.</p>
+
+<p>The next proposals are trying to address that problem, with more or less
+success. So far none of them is entirely sastisfying to me, even if a clear
+temporary winner as emerged on the
+<em>hackers</em> mailing list, summarized in the
+<a href="http://archives.postgresql.org/message-id/m2fw3judug.fsf@2ndQuadrant.fr">in-catalog Extension Scripts and Control parameters (templates?)</a> thread.</p>
+
+<h2 id="inline-extension-proposals">Inline Extension Proposals</h2>
+
+<p>Now, on to some proposals to make the best out of our all time favorite
+PostgreSQL feature, the only one that makes no sense at all by itself&hellip;</p>
+
+<h3 id="starting-from-an-empty-extension">Starting from an empty extension</h3>
+
+<p>We already have the facility to add existing
+<em>loose</em> objects to an extension,
+and that&rsquo;s exactly what we use when we create an extension for the first
+time when it used not to be an extension before, with the
+<code>CREATE EXTENSION
+... FROM 'unpackaged';</code> command.</p>
+
+<p>The
+<code>hstore--unpackaged--1.0.sql</code> file contains statements such as:</p>
+
+<pre><code>ALTER EXTENSION hstore ADD type hstore;
+ALTER EXTENSION hstore ADD function hstore_in(cstring);
+ALTER EXTENSION hstore ADD function hstore_out(hstore);
+ALTER EXTENSION hstore ADD function hstore_recv(internal);
+ALTER EXTENSION hstore ADD function hstore_send(hstore);
+</code></pre>
+
+<p>Opening
+<code>CREATE EXTENSION</code> so that it allows you to create a really
+<em>empty</em>
+extension would then allow you to fill-in as you need, with as many commands
+as you want to add objects to it. The
+<em>control</em> file properties would need to
+find their way in that design, that sure can be taken care of.</p>
+
+
+
+ 
+  
+  
+  
+  
+    
+      
+    
+  
+    
+      
+    
+  
+    
+  
+    
+      
+    
+  
+
+<div class="figure fig50 center dim-margin" >
+  
+    <a class="fancybox" href="/img/old/empty-extension.jpg" data-fancybox-group="">
+  
+    <img class="fig-img" src="/img/old/empty-extension.jpg" >
+  
+    </a>
+  
+  
+</div>
+
+
+<p><em>Look me, an Empty Extension!</em></p>
+
+<p>The main drawback here is that there&rsquo;s no separation anymore in between the
+extension author, the distribution means, the DBA and the database user.
+When you want to install a third party
+<em>Extension</em> using only SQL commands,
+you could do it with that scheme by using a big script full of one-liners
+commands.</p>
+
+<p>So that if you screw up your
+<em>copy/pasting</em> session (well you should maybe
+reconsider your choice of tooling at this point, but that&rsquo;s another topic),
+you will end up with a perfectly valid
+<em>Extension</em> that does not contain what
+you wanted. As the end user, you have no clue about that until the first
+time using the extension fails.</p>
+
+<h3 id="create-extension-as">CREATE EXTENSION AS</h3>
+
+<p>The next idea is to embed the
+<em>Extension</em> script itself in the command, so as
+to to get a cleaner command API (in my opinion at least) and a better error
+message when the paste is wrong. Of course it your
+<em>paste</em> problem happens to
+just be loosing a line in the middle of the script there is not so much I
+can do for you&hellip;</p>
+
+<pre><code>CREATE EXTENSION hstore
+  WITH parameter = value, ...
+AS $$
+CREATE TYPE hstore;
+
+CREATE FUNCTION hstore_in(cstring) RETURNS hstore
+ AS 'MODULE_PATHNAME' LANGUAGE C STRICT IMMUTABLE;
+
+CREATE FUNCTION hstore_out(hstore) RETURNS cstring
+AS 'MODULE_PATHNAME' LANGUAGE C STRICT IMMUTABLE;
+
+CREATE FUNCTION hstore_recv(internal) RETURNS hstore
+AS 'MODULE_PATHNAME' LANGUAGE C STRICT IMMUTABLE;
+
+CREATE FUNCTION hstore_send(hstore) RETURNS bytea
+AS 'MODULE_PATHNAME' LANGUAGE C STRICT IMMUTABLE;
+
+CREATE TYPE hstore (
+        INTERNALLENGTH = -1, STORAGE = extended
+        INPUT = hstore_in, OUTPUT = hstore_out,
+        RECEIVE = hstore_recv, SEND = hstore_send);
+$$;
+</code></pre>
+
+<p><em>An edited version of <code>hstore--1.1.sql</code> for vertical space concerns</em></p>
+
+<p>I&rsquo;ve actually proposed a patch to implement that, as you can see in the
+<a href="https://commitfest.postgresql.org/action/patch_view?id=981">pg_dump &ndash;extension-script</a> commit fest entry. As spoiled by the commit fest
+entry title, the main problem we have with
+<em>Inline Extensions</em> is their
+management in the seamless experience of
+<em>dump &amp; restore</em> that we are so happy
+to have now. More about that later, though.</p>
+
+<h3 id="extension-templates">Extension Templates</h3>
+
+<p>Another idea is to continue working from control parameters and scripts to
+install and update extensions, but to have two different places where to
+find those. Either on the server&rsquo;s
+<em>File System</em> (when dealing with
+<em>contribs</em>
+and
+<em>shared libraries</em>, there&rsquo;s but a choice), or on the system catalogs.</p>
+
+
+
+ 
+  
+  
+  
+  
+    
+      
+    
+  
+    
+      
+    
+  
+    
+  
+    
+      
+    
+  
+
+<div class="figure fig50 center dim-margin" >
+  
+    <a class="fancybox" href="/img/old/templates.png" data-fancybox-group="">
+  
+    <img class="fig-img" src="/img/old/templates.png" >
+  
+    </a>
+  
+  
+</div>
+
+
+<p><em>We Already Have <code>TEXT SEARCH TEMPLATE</code> After All</em></p>
+
+<p>The idea would then be to have some new specific
+<code>TEMPLATE</code> SQL Object that
+would be used to
+<em>import</em> or
+<em>upload</em> your control file and create and update
+scripts in the database, using nothing else than a SQL connection. Then at
+<code>CREATE EXTENSION</code> time the system would be able to work either from the file
+system or the
+<em>template</em> catalogs.</p>
+
+<p>One obvious problem is how to deal with a unique namespace when we split the
+sources into the file system and the database, and when the file system is
+typically maintained by using
+<code>apt-get</code> or
+<code>yum</code> commands.</p>
+
+<p>Then again I would actually prefer that mechanism better than the other
+proposals if the idea was to load the file system control and scripts files
+as
+<code>TEMPLATEs</code> themselves and then only operate
+<em>Extensions</em> from
+<em>Templates</em>. But
+doing that would mean getting back to the situation where we still are not
+able to devise a good, simple and robust
+<code>pg_dump</code> policy for extensions and
+templates.</p>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>I hope to be finding the right solution to my long term plan in this release
+development cycle, but it looks like the right challenge to address now is
+to find the right compromise instead. Using the
+<em>Templates</em> idea already
+brings a lot on the table, if not the whole set of features I would like to
+see.</p>
+
+
+
+ 
+  
+  
+  
+  
+    
+      
+    
+  
+    
+      
+    
+  
+    
+  
+    
+      
+    
+  
+
+<div class="figure fig50 center dim-margin" >
+  
+    <a class="fancybox" href="/img/old/building-blocks.jpg" data-fancybox-group="">
+  
+    <img class="fig-img" src="/img/old/building-blocks.jpg" >
+  
+    </a>
+  
+  
+</div>
+
+
+<p><em>PostgreSQL: Building on Solid Foundations</em></p>
+
+<p>What would be missing mainly would be the ability for an
+<em>Extension</em> to switch
+from being file based to being a template, either because the author decided
+to change the way he&rsquo;s shipping it, or because the user is switching from
+using the
+<a href="http://pgxnclient.projects.pgfoundry.org/">pgxn client</a> to using
+<em>proper</em> system packages. I guess that&rsquo;s
+something we can see about later, though.</p>
+
+              
+            </div>
+          </div>
+          <div id="post-footer" class="post-footer main-content-wrap">
+            
+              
+                
+                
+                  <div class="post-footer-tags">
+                    <span class="text-color-light text-small"></span><br/>
+                    
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/postgresql/">PostgreSQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/extensions/">Extensions</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/9.3/">9.3</a>
+
+                  </div>
+                
+              
+            
+            <div class="post-actions-wrap">
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2013/01/extensions-templates/" data-tooltip="Extensions Templates">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2012/11/m-x-ack/" data-tooltip="M-x ack">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2012%2f12%2finline-extensions%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2012%2f12%2finline-extensions%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http%3a%2f%2ftapoueh.org%2fblog%2f2012%2f12%2finline-extensions%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+            
+              
+            
+          </div>
+        </article>
+        <footer id="footer" class="main-content-wrap">
+  <span class="copyrights">
+    &copy; 2017 Dimitri Fontaine. 
+  </span>
+</footer>
+
+      </div>
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="1">
+        <div class="post-actions-wrap">
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2013/01/extensions-templates/" data-tooltip="Extensions Templates">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2012/11/m-x-ack/" data-tooltip="M-x ack">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2012%2f12%2finline-extensions%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2012%2f12%2finline-extensions%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http%3a%2f%2ftapoueh.org%2fblog%2f2012%2f12%2finline-extensions%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+      </div>
+      <div id="share-options-bar" class="share-options-bar" data-behavior="1">
+  <ul class="share-options">
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2012%2f12%2finline-extensions%2f">
+        <i class="fa fa-google-plus"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2012%2f12%2finline-extensions%2f">
+        <i class="fa fa-facebook-official"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http%3a%2f%2ftapoueh.org%2fblog%2f2012%2f12%2finline-extensions%2f">
+        <i class="fa fa-twitter"></i><span></span>
+      </a>
+    </li>
+  </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+    </div>
+    
+    <div id="about">
+  <div id="about-card">
+    <div id="about-btn-close">
+      <i class="fa fa-remove"></i>
+    </div>
+    
+      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+    
+    <h4 id="about-card-name">Dimitri Fontaine</h4>
+    
+      <div id="about-card-bio">PostgreSQL Major Contributor</div>
+    
+    
+      <div id="about-card-job">
+        <i class="fa fa-briefcase"></i>
+        <br/>
+        Open Source Software Engineer
+      </div>
+    
+    
+      <div id="about-card-location">
+        <i class="fa fa-map-marker"></i>
+        <br/>
+        France
+      </div>
+    
+  </div>
+</div>
+
+    <div id="algolia-search-modal" class="modal-container">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="close-button"><i class="fa fa-close"></i></span>
+      <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+        <span class="searchby-algolia-text text-color-light text-small">by</span>
+        <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+      </a>
+      <i class="search-icon fa fa-search"></i>
+      <form id="algolia-search-form">
+        <input type="text" id="algolia-search-input" name="search"
+          class="form-control input--large search-input" placeholder="" />
+      </form>
+    </div>
+    <div class="modal-body">
+      <div class="no-result text-color-light text-center"></div>
+      <div class="results">
+        
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/11/all-your-base-conference-2015/">
+                <h3 class="media-heading">All Your Base Conference 2015</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Nov 11, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">I had the pleasure to be invited to speak at All Your Base Conference 2015 about PostgreSQL (of course). The conference gathers together lots of user experience around data management and database products, either in the now classic meaning of the word (I mean relational database management systems here) or the newer set of trade-offs represented by the NoSQL set of tools.
+  The conference was very nicely organized and ran smoothly, and I got the unique chance to get a back from the trenches story series about people tools of choices and the reason why they do things their way.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/05/postgresql-au-jug-de-montpellier/">
+                <h3 class="media-heading">PostgreSQL au JUG de Montpellier</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">J&rsquo;ai eu le plaisir de présenter PostgreSQL au Java User Group de Montpellier le 20 mai dernier dans le cadre d&rsquo;une soirée PostgreSQL is YeSQL. L&rsquo;accueil réservé par le JUG a été parfait et je tiens à les remercier pour une très bonne soirée de partage et d&rsquo;échanges autour de PostgreSQL.
+Les slides des présentations sont disponibles. Nous avons commencé par une présentation générale sur comment et pourquoi utiliser PostgreSQL en 2015 :</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/05/quicklisp-and-debian/">
+                <h3 class="media-heading">Quicklisp and debian</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">Common Lisp users are very happy to use Quicklisp when it comes to downloading and maintaining dependencies between their own code and the librairies it is using.
+Sometimes I am pointed that when compared to other programming languages Common Lisp is lacking a lot in the batteries included area. After having had to package about 50 common lisp librairies for debian I can tell you that I politely disagree with that.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/04/pgday-paris/">
+                <h3 class="media-heading">pgDay Paris</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">Le 21 avril prochain se tient le premier pgDay Paris: une conférence PostgreSQL d&rsquo;une journée complète. Il s&rsquo;agit de 8 conférences sur votre base de données préférée par des conférencers internationaux, incluant des retours d&rsquo;expérience et une analyse de l&rsquo;utilisation des derniers développements en cours dans notre projet de base de données préféré.
+  *pgDay Paris, 21 avril 2015 : 8 conférences PostgreSQL*
+Pour 65 € l&rsquo;accès à la conférence inclut les pauses cafés (avec thé, eau, biscuits, etc) et le déjeuner sur place (repas complet servi à table).</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/03/a-pgday-in-paris/">
+                <h3 class="media-heading">a pgDay in Paris!</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Mar 3, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">I was lucky to participate as a speaker to the Nordic PostgreSQL Day 2015 and it&rsquo;s been another awesome edition of the conference. Really smooth, everything has been running as it should, with about one hundred people at the conference.
+In action at Nordic pgDay in Copenhaguen
+You can get the slides I&rsquo;ve been using for my talk at the Nordic pgDay 2015 page on the Conferences pages of this website.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/02/back-from-fosdem-2015/">
+                <h3 class="media-heading">Back From FOSDEM 2015</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Feb 2, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">The FOSDEM 2015 edition has been awesome this year, the usual mix of meeting with old friends, talking about interesting topics, seeing tremendous activity in all Open Source domains, and having Belgium beers in the evenings.
+  FOSDEM PGDAY On the Friday before the real FOSDEM event our own PostgreSQL Europe organized a one-day event, the FOSDEM PGDAY. It as an intense day of conferences about PostgreSQL, where I had the opportunity to present pgloader in the context of dealing with database migrations.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/01/my-first-slashdot-effect/">
+                <h3 class="media-heading">My First Slashdot Effect</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jan 1, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">Thanks to the Postgres Weekly issue #89 and a post to Hacker News front page (see Pgloader: A High-speed PostgreSQL Swiss Army Knife, Written in Lisp it well seems that I just had my first Slashdot effect&hellip;
+Well actually you know what? I don&rsquo;t&hellip;
+So please consider using the new mirror http://dimitri.github.io/pgloader/ and maybe voting on Hacker News for either tooling around your favorite database system, PostgreSQL or your favorite programming language, Common Lisp&hellip;</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/01/new-release-pgloader-3.2/">
+                <h3 class="media-heading">New release: pgloader 3.2</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jan 1, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">PostgreSQL comes with an awesome bulk copy protocol and tooling best known as the COPY and \copy commands. Being a transactional system, PostgreSQL COPY implementation will ROLLBACK any work done if a single error is found in the data set you&rsquo;re importing. That&rsquo;s the reason why pgloader got started: it provides with error handling for the COPY protocol.
+That&rsquo;s basically what pgloader used to be all about
+As soon as we have the capability to load data from unreliable sources, another use case appears on the horizon, and soon enough pgloader grew the capacity to load data from other databases, some having a more liberal notion of what is sane data type input.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2014/10/meetup-postgresql-%C3%A0-paris/">
+                <h3 class="media-heading">Meetup PostgreSQL à Paris</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Oct 10, 2014
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">Mercredi 8 octobre se tiendra le prochain Meetup PostgreSQL à Paris dans les locaux de Mozilla Europe, dont la capacité est de 90 personnes ! Venez nombreux !
+Le programme de cette édition est un peu particulier puisque nous avons reçu quatre propositions enthousiastes de présentations. Chacun aura donc 15 à 20 minutes (questions incluses) pour présenter son sujet. Voici le programme :
+ Aggrégation temporelle sous contrainte d&rsquo;iops, par Jean-Gérard Pailloncy</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2014/09/php-tour-la-video/">
+                <h3 class="media-heading">PHP Tour, La Video</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Sep 9, 2014
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">En juin dernier se tenait le PHP Tour 2014 à Lyon, où j&rsquo;ai eu le plaisir de présenter une conférence sur PostgreSQL en 2014.
+  Cette intervention était filmée, et la vidéo est maintenant disponible :
+
+ 
+En espérant que vous regarderez cette vidéo avec autant d&rsquo;intérêt que j&rsquo;ai eu à participer à PHP Tour 2014 !</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+      </div>
+    </div>
+    <div class="modal-footer">
+      <p class="results-count text-medium"
+         data-message-zero=""
+         data-message-one=""
+         data-message-other="">
+         229 posts found
+      </p>
+    </div>
+  </div>
+</div>
+    
+  
+    
+    <div id="cover" style="background-image:url('http://tapoueh.org/images/Tree_Of_Light_by_lowapproach.jpg');"></div>
+  
+
+
+    
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.8.0/highlight.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.js"></script>
+
+
+<script src="/js/script-wl33z0n6ocaypepiqrazthtivfrliqijej4rq8ek8gvrv1awftmgjuv8k4zc.min.js"></script>
+
+<script>
+$(document).ready(function() {
+  hljs.configure({ classPrefix: '', useBR: false });
+  $('pre.code-highlight').each(function(i, block) {
+    var code = "";
+    hljs.highlightAuto(block.innerText).value.split(/\r\n|\r|\n/).forEach(function(line) {
+      code += "<span class=\"line\">" + line + "</span><br>";
+    });
+    if (code.length > 0) {
+      block.innerHTML = code;  
+    }
+  });
+  $('pre > code').each(function(i, block) {
+    $(this).addClass('codeblock');
+    hljs.highlightBlock(block);
+  });
+});
+</script>
+
+  
+    
+  
+
+
+
+
+
+    
+  </body>
+</html>
+

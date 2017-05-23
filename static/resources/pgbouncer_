@@ -1,0 +1,299 @@
+#! /usr/bin/python
+# -*- coding: utf-8 -*-
+
+# Magic markers - optional - used by installation scripts and
+# munin-node-configure:
+#
+#%# family=auto
+#%# capabilities=autoconf suggest
+#
+
+import os, psycopg
+
+FEATURES = ['pools_cl', 'stats_query', 'stats_requests', 'pools_sv']
+
+class pgbouncer:
+    """ PgBouncer class to get some data out of special SHOW commands """
+
+    def __init__(self, user = 'postgres', host = '127.0.0.1', port = 6432):
+        """ pgbouncer instance init """
+        self.user = user
+        self.host = host
+        self.port = port
+        self.dbname = 'pgbouncer'
+
+    def get_data(self, command):
+        """ get pgbouncer SHOW <command> data """
+        alldata = []
+
+        psql = 'psql -h %s -p %s -U %s %s -c "SHOW %s;" 2>/dev/null' \
+                  % (self.host, self.port, self.user, self.dbname, command)
+
+        i = 0
+
+        out  = os.popen(psql)
+        line = 'stupid init value'
+        while line != '':
+            line = out.readline()
+            i += 1
+
+            if i == 1:
+                # header
+                header = [col.strip() for col in line.split('|')]
+
+            elif i == 2:
+                # skip second line, full of ---
+                continue
+
+            elif line.strip() != '' and line[0] != '(':
+                cols = [c.strip() for c in line.split('|')]
+                data = {}
+
+                k = 0
+                for c in cols:
+                    data[header[k]] = c
+                    k += 1
+
+                alldata.append(data)
+
+        code = out.close()
+
+        return alldata
+
+
+    def stats(self):
+        """ return stats """
+        return self.get_data("STATS")
+
+    def pools(self):
+        """ return pools """
+        return self.get_data("pools")
+
+    def databases(self):
+        """ return databases """
+        return self.get_data("databases")
+
+
+def split_scriptname(scriptname):
+    """ returns (database, mode, field) from scriptname """
+
+    # scriptname must be on the form
+    #  pgbouncer_dbname_stats_requests
+    #  pgbouncer_dbname_pools
+    #
+    # dbname can of course contain _
+
+    pos = scriptname.find('pgbouncer_')
+    if pos > -1:
+        exploded = scriptname[pos:].split('_')
+
+        if exploded[-2] == 'pools':
+            dbname = '_'.join(exploded[1:-2])
+            mode   = 'pools'
+            stat   = exploded[-1]
+
+            if stat not in ('sv', 'cl'):
+                return None
+
+        elif exploded[-2] == 'stats':
+            dbname = '_'.join(exploded[1:-2])
+            mode   = 'stats'
+            stat   = exploded[-1]
+
+            if stat == 'requests':
+                stat = 'total_requests'
+
+            elif stat == 'req':
+                stat = 'avg_req'
+
+            elif stat == 'query':
+                stat = 'avg_query'
+
+            else:
+                stat = None
+
+        else:
+            return None
+
+        return (dbname, mode, stat)
+
+    return None
+
+def get_config_from_env():
+    """ read os.environ to get current configuration """
+    import os
+    user, host, port = 'postgres', '127.0.0.1', '6432'
+
+    if 'user' in os.environ: user = os.environ['user']
+    if 'host' in os.environ: host = os.environ['host']
+    if 'port' in os.environ: port = os.environ['port']
+
+    return user, host, port
+
+def autoconf():
+    """ munin autoconf """
+    ret = "no"
+    exitcode = 1
+    user, host, port = get_config_from_env()
+    try:
+        pgb = pgbouncer(user, host, port)
+
+        for database in pgb.databases():
+            if database['name'] != 'pgbouncer':
+                ret = "yes"
+		exitcode = 0
+                break
+
+    except:
+        # we print ret whatever, here ret = "no"
+        pass
+
+    print ret
+    return exitcode
+
+def suggest():
+    """ munin suggest """
+    user, host, port = get_config_from_env()
+    try:
+        pgb = pgbouncer(user, host, port)
+
+        for database in pgb.databases():
+            if database['name'] != 'pgbouncer':
+                for f in FEATURES:
+                    print '%s_%s' % (database['name'], f)
+
+    except:
+        return 1
+
+    return 0
+
+def config(scriptname):
+    """ munin plugin configuration """
+
+    try:
+        (dbname, mode, stat) = split_scriptname(scriptname)
+    except Exception:
+        return 1
+
+    if mode == 'pools' and stat == 'cl':
+        print '''graph_title PgBouncer %s clients
+graph_category pgbouncer
+graph_vlabel Client connections
+graph_scale no
+active.label active
+active.min 0
+active.max 1024
+active.type GAUGE
+active.draw AREA
+waiting.label waiting
+waiting.min 0
+waiting.max 1024
+waiting.type GAUGE
+waiting.draw STACK''' % dbname
+
+    elif mode == 'pools' and stat == 'sv':
+        print '''graph_title PgBouncer %s servers
+graph_category pgbouncer
+graph_vlabel Server connections
+graph_scale no
+active.label active
+active.min 0
+active.max 120
+active.type GAUGE
+active.draw AREA
+idle.label idle
+idle.min 0
+idle.max 120
+idle.type GAUGE
+idle.draw STACK
+used.label used
+used.min 0
+used.max 120
+used.type GAUGE
+used.draw STACK
+tested.label tested
+tested.min 0
+tested.max 120
+tested.type GAUGE
+tested.draw STACK
+login.label login
+login.min 0
+login.max 120
+login.type GAUGE
+login.draw STACK''' % dbname
+
+    elif mode == 'stats' and stat == 'total_requests':
+        print '''graph_title PgBouncer %s %s
+graph_category pgbouncer
+graph_vlabel SQL requests pooled
+graph_args --lower-limit 1 --base 1000 --logarithmic
+graph_scale no
+%s.label requests
+%s.type COUNTER''' % (dbname, stat, stat, stat)
+
+    elif mode == 'stats' and stat == 'avg_query':
+        print '''graph_title PgBouncer %s %s
+graph_category pgbouncer
+graph_vlabel Average query duration (in µs)
+graph_args --lower-limit 1 --base 1000 --logarithmic
+graph_scale no
+%s.label duration
+%s.type GAUGE''' % (dbname, stat, stat, stat)
+
+    else:
+        print '%s %s not supported' % (mode, stat)
+        return 1
+
+def main(scriptname):
+    """ returns stats or pools values depending on script name ($0) """
+    user, host, port = get_config_from_env()
+    pgb  = pgbouncer(user, host, port)
+
+    try:
+        (dbname, mode, stat) = split_scriptname(scriptname)
+    except Exception:
+        return 1
+
+    if mode == 'stats':
+        stats = pgb.stats()
+        value = [s[stat] for s in stats if s['database'] == dbname][0]
+        print "%s.value %s" % (stat, value)
+
+    elif mode == 'pools':
+        pools  = pgb.pools()
+        values = [p for p in pools if p['database'] == dbname]
+
+        if stat == 'cl':
+            s = 'cl_active cl_waiting'
+
+        elif stat == 'sv':
+            s = 'sv_active sv_idle sv_used sv_tested sv_login'
+
+        d_stats = {}
+        for v in values:
+            for stat in s.split():
+                # drop the sv_ or cl_ prefix
+                statname = stat[3:]
+                if statname not in d_stats:
+                    d_stats[statname]  = int(v[stat])
+                else:
+                    d_stats[statname] += int(v[stat])
+
+        for s, v in d_stats.items():
+            print '%s.value %s' % (s, v)
+
+
+if __name__ == '__main__':
+    import sys
+
+    if len(sys.argv) == 2:
+        if sys.argv[1] == "autoconf":
+            sys.exit( autoconf() )
+
+        elif sys.argv[1] == "suggest":
+            sys.exit( suggest() )
+
+        elif sys.argv[1] == "config":
+            sys.exit( config(sys.argv[0]) )
+
+    main(sys.argv[0])

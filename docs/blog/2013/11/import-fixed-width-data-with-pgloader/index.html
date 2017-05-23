@@ -1,0 +1,980 @@
+
+
+  
+    
+  
+
+
+  
+
+
+
+
+  
+
+
+  
+
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Hugo 0.20.7">
+    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
+    <title>Import fixed width data with pgloader</title>
+    <meta name="author" content="Dimitri Fontaine">
+    <meta name="keywords" content="">
+
+    <link rel="icon" href="/favicon.ico">
+    
+
+    
+    <meta name="description" content="A long time ago we talked about how to Import fixed width data with pgloader, following up on other stories still online at Postgres OnLine Journal and on David Fetter&rsquo;s blog. Back then, I showed that using pgloader made it easier to import the data, but also showed quite poor performances characteristics due to using the debug mode in the timings. Let&rsquo;s update that article with current pgloader wonders!">
+    <meta property="og:description" content="A long time ago we talked about how to Import fixed width data with pgloader, following up on other stories still online at Postgres OnLine Journal and on David Fetter&rsquo;s blog. Back then, I showed that using pgloader made it easier to import the data, but also showed quite poor performances characteristics due to using the debug mode in the timings. Let&rsquo;s update that article with current pgloader wonders!">
+    <meta property="og:type" content="blog">
+    <meta property="og:title" content="Import fixed width data with pgloader">
+    <meta property="og:url" content="/blog/2013/11/import-fixed-width-data-with-pgloader/">
+    <meta property="og:site_name" content="Dimitri Fontaine, Expert PostgreSQL">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Dimitri Fontaine, Expert PostgreSQL">
+    <meta name="twitter:description" content="A long time ago we talked about how to Import fixed width data with pgloader, following up on other stories still online at Postgres OnLine Journal and on David Fetter&rsquo;s blog. Back then, I showed that using pgloader made it easier to import the data, but also showed quite poor performances characteristics due to using the debug mode in the timings. Let&rsquo;s update that article with current pgloader wonders!">
+    
+      <meta name="twitter:creator" content="@tapoueh">
+    
+    
+
+    
+    
+
+    
+      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
+    
+
+    
+      <meta property="og:image" content="http://tapoueh.org/img/old/fixed_text_read.png">
+    
+    
+      <meta property="og:image" content="http://tapoueh.org/img/old/fixed_text_read.png">
+    
+    
+
+    
+
+    
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
+    
+    
+    <link rel="stylesheet" href="/css/style-u6mk0ojoywresbx8iepslrmmhl4stuhrsxuwhkpwrkrx7mryjcaimasnk4pi.min.css" />
+    
+    
+      <link rel="stylesheet" href="http://tapoueh.org//css/dim.css">
+    
+
+    
+      
+    
+    
+  </head>
+
+  <body>
+    <div id="blog">
+      <header id="header" data-behavior="1">
+  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+  <div class="header-title">
+    <a class="header-title-link" href="/">Dimitri Fontaine, Expert PostgreSQL</a>
+  </div>
+  
+</header>
+
+      <nav id="sidebar" data-behavior="1">
+  <div class="sidebar-container">
+    
+      <div class="sidebar-profile">
+        <a href="/#about">
+          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+        </a>
+        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
+        
+          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
+        
+      </div>
+    
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
+      
+      <span class="sidebar-button-desc">Blog</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/about/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
+      
+      <span class="sidebar-button-desc">About</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/book/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
+      
+      <span class="sidebar-button-desc">Book</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/tags/conferences/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-plane"></i>
+      
+      <span class="sidebar-button-desc">Conferences</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/projects/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bug"></i>
+      
+      <span class="sidebar-button-desc">Projects</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+      
+      <span class="sidebar-button-desc">GitHub</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+      
+      <span class="sidebar-button-desc">Twitter</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+      
+      <span class="sidebar-button-desc">Categories</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/tags">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+      
+      <span class="sidebar-button-desc">Tags</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/archives">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+      
+      <span class="sidebar-button-desc">Archives</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/index.xml">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+      
+      <span class="sidebar-button-desc">RSS</span>
+    </a>
+  </li>
+
+    </ul>
+  </div>
+</nav>
+
+      
+  <div class="post-header-cover
+              text-left
+              post-header-cover--partial"
+       style="background-image:url('/img/old/fixed_text_read.png')"
+       data-behavior="1">
+    
+  </div>
+
+
+      <div id="main" data-behavior="1"
+        class="hasCover
+               hasCoverMetaOut
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
+          
+            <div class="post-header main-content-wrap text-left">
+  
+    <h1 class="post-title" itemprop="headline">
+      Import fixed width data with pgloader
+    </h1>
+  
+  <div class="postShorten-meta post-meta">
+  
+    <time itemprop="datePublished" datetime="2013-11-18T12:48:00&#43;01:00">
+      
+  
+  
+  
+  
+    Monday 18 Nov 2013
+  
+
+    </time>
+  
+  
+  
+  
+    <span></span>
+    
+      <a class="category-link" href="/categories/projects">Projects</a>, 
+    
+      <a class="category-link" href="/categories/pgloader">pgloader</a>
+    
+  
+
+
+</div>
+
+</div>
+          
+          <div class="post-content markdown" itemprop="articleBody">
+            <div class="main-content-wrap">
+              
+
+<p>A long time ago we talked about how to
+<a href="http://tapoueh.org/blog/2010/04/27-import-fixed-width-data-with-pgloader.html">Import fixed width data with pgloader</a>, following up on other stories still
+online at
+<a href="http://www.postgresonline.com/journal/index.php?/archives/157-Import-fixed-width-data-into-PostgreSQL-with-just-PSQL.html">Postgres OnLine Journal</a> and on
+<a href="http://people.planetpostgresql.org/dfetter/index.php?/archives/58-psql,-Paste,-Perl-Pefficiency!.html">David Fetter&rsquo;s blog</a>. Back then, I
+showed that using pgloader made it easier to import the data, but also
+showed quite poor performances characteristics due to using the
+<code>debug</code> mode
+in the timings. Let&rsquo;s update that article with current
+<a href="https://github.com/dimitri/pgloader">pgloader</a> wonders!</p>
+
+<h2 id="redoing-the-python-based-test">Redoing the python based test</h2>
+
+<p>Let&rsquo;s be fair, hardware did evolve in those past 3 years, and the test that
+ran in 14 seconds was done with debug information level, which is the wrong
+way to do tests.</p>
+
+<pre><code>$ ~/dev/pgloader-v2/pgloader.py -R. -Tsc census.conf 
+
+Table name        |    duration |    size |  copy rows |     errors 
+====================================================================
+fixed             |      1.834s |       - |      25375 |          0
+</code></pre>
+
+<p>I got timings anywhere betseen
+<strong><em>1.5 seconds</em></strong> and
+<strong><em>1.834 seconds</em></strong> here.</p>
+
+<h2 id="the-new-pgloader">The new pgloader</h2>
+
+<p>Now with the current version of pgloader, what do we get:</p>
+
+<pre><code>$ pgloader.exe census-place.load
+2013-11-18T12:02:35.001000+01:00 LOG Starting pgloader, log system is ready.
+2013-11-18T12:02:35.003000+01:00 LOG Parsing commands from file &quot;/Users/dim/dev/pgloader/test/census-places.load&quot;
+
+                    table name       read   imported     errors            time
+------------------------------  ---------  ---------  ---------  --------------
+                      download          0          0          0          1.587s
+                       extract          0          0          0          1.010s
+                   before load          0          0          0          0.014s
+------------------------------  ---------  ---------  ---------  --------------
+                        places      25375      25375          0          0.366s
+------------------------------  ---------  ---------  ---------  --------------
+             Total import time      25375      25375          0          2.977s
+</code></pre>
+
+<p>So the loading itself took as much as
+<strong><em>366 milliseconds</em></strong> to run. To be fair
+that&rsquo;s kind of a best run, with run times varying between that and
+<strong><em>700
+milliseconds</em></strong>.</p>
+
+
+
+ 
+  
+  
+  
+  
+    
+      
+    
+  
+    
+      
+    
+  
+    
+  
+    
+      
+    
+  
+
+<div class="figure fig50 center dim-margin" >
+  
+    <a class="fancybox" href="/img/old/mph.jpg" data-fancybox-group="">
+  
+    <img class="fig-img" src="/img/old/mph.jpg" >
+  
+    </a>
+  
+  
+</div>
+
+
+<p>So the new version is about
+<strong><em>3 to 9 times faster</em></strong> depending on the story you
+want to tell. Let&rsquo;s stick with
+<em>much faster</em> for the sake of this article.</p>
+
+<h2 id="the-command">The command</h2>
+
+<p>The new loader takes a full command as its input, rather than a
+configuration file. Here&rsquo;s what the command I&rsquo;ve used this time looks like:</p>
+
+<pre><code>LOAD ARCHIVE
+   FROM http://www.census.gov/geo/maps-data/data/docs/gazetteer/places2k.zip
+   INTO postgresql:///pgloader
+
+   BEFORE LOAD DO
+     $$ drop table if exists places; $$,
+     $$ create table places
+       (
+          usps      char(2)  not null,
+          fips      char(2)  not null,
+          fips_code char(5),
+          loc_name  varchar(64)
+       );
+     $$
+
+   LOAD FIXED
+        FROM FILENAME MATCHING ~/places2k.txt/
+             WITH ENCODING latin-1
+             (
+             -- name   start  length
+                usps       0  2,
+                fips       2  2,
+                fips_code  4  5,
+                loc_name   9 64,
+                p         73  9,
+                h         82  9,
+                land      91 14,
+                water    105 14,
+                ldm      119 14,
+                wtm      131 14,
+                lat      143 10,
+                long     153 11
+             )
+        INTO postgresql:///pgloader?places
+             (
+	        usps, fips, fips_code,
+                loc_name text using (right-trim loc_name)
+             );
+</code></pre>
+
+<p>First, the URL used in the blog post of april 2010 is no longer valid. You
+can find a list of other interesting data at the
+<a href="http://www.census.gov/geo/maps-data/data/gazetteer2000.html">Census 2000 Gazetteer Files</a>
+page, and of course you have more recent version of the data available. In
+another format entirely, this time tab-based csv-like, so better for general
+usage, but not for this test where I wanted to reuse the same data source as
+3 years ago.</p>
+
+<p>What we can see in that command is that pgloader will actually download the
+zip archive file from its http source URL, unzip it locally then work on the
+filename from the archive matching the one we know about: we don&rsquo;t want to
+hardcode in the command the name of the directory contained in the zip file.</p>
+
+
+
+ 
+  
+  
+  
+  
+    
+      
+    
+  
+    
+      
+    
+  
+    
+  
+    
+      
+    
+  
+
+<div class="figure fig50 center dim-margin" >
+  
+    <a class="fancybox" href="/img/old/lisp-locator-logo.jpg" data-fancybox-group="">
+  
+    <img class="fig-img" src="/img/old/lisp-locator-logo.jpg" >
+  
+    </a>
+  
+  
+</div>
+
+
+<p>Also, contrary to the previous version, it&rsquo;s quite easy to just trim the
+<code>loc_name</code> column as we load the data. Here I&rsquo;ve been adding a new function to
+do that, because I wanted to play with optimizing it (adding type
+declarations and inlining it), but the loading works about as well with just
+the following (just timed 3 runs at
+<code>0.771s</code>,
+<code>0.654s</code> and
+<code>0.862s</code>) :</p>
+
+<pre><code>        INTO postgresql:///pgloader?places
+             (
+	        usps, fips, fips_code,
+                loc_name text using (string-right-trim &quot; &quot; loc_name)
+             );
+</code></pre>
+
+<p>The
+<a href="http://www.lispworks.com/documentation/HyperSpec/Body/f_stg_tr.htm">string-right-trim</a> function is part of the Common Lisp Standard. The
+optimisation here looks like:</p>
+
+<pre><code>(declaim (inline right-trim))
+
+(defun right-trim (string)
+  &quot;Remove whitespaces at end of STRING.&quot;
+  (declare (type simple-string string))
+  (string-right-trim '(#\Space) string))
+</code></pre>
+
+<p>Note that you could be providing that definition in your own
+<code>trim.lisp</code> file
+and provide it using the
+<code>--load trim.lisp</code> command line option, pgloader
+would then compile that to machine code for you before processing your data
+file.</p>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>If you&rsquo;re already using pgloader, you will enjoy the new version of it! The
+new version comes with a command line option to migrate the old
+configuration file into a command string, making upgrades even easier.</p>
+
+<p>Of course, if you&rsquo;re interested, consider giving the release candidate a
+try, it&rsquo;s available on the
+<a href="https://github.com/dimitri/pgloader">pgloader</a> github repository already.</p>
+
+              
+            </div>
+          </div>
+          <div id="post-footer" class="post-footer main-content-wrap">
+            
+              
+                
+                
+                  <div class="post-footer-tags">
+                    <span class="text-color-light text-small"></span><br/>
+                    
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/postgresql/">PostgreSQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/pgloader/">pgloader</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/common-lisp/">Common-Lisp</a>
+
+                  </div>
+                
+              
+            
+            <div class="post-actions-wrap">
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2013/11/groupe-dutilisateurs-postgresql-%C3%A0-paris/" data-tooltip="Groupe d&#39;Utilisateurs PostgreSQL à Paris">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2013/11/migrating-sakila-from-mysql-to-postgresql/" data-tooltip="Migrating Sakila from MySQL to PostgreSQL">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2013%2f11%2fimport-fixed-width-data-with-pgloader%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2013%2f11%2fimport-fixed-width-data-with-pgloader%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http%3a%2f%2ftapoueh.org%2fblog%2f2013%2f11%2fimport-fixed-width-data-with-pgloader%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+            
+              
+            
+          </div>
+        </article>
+        <footer id="footer" class="main-content-wrap">
+  <span class="copyrights">
+    &copy; 2017 Dimitri Fontaine. 
+  </span>
+</footer>
+
+      </div>
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="1">
+        <div class="post-actions-wrap">
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2013/11/groupe-dutilisateurs-postgresql-%C3%A0-paris/" data-tooltip="Groupe d&#39;Utilisateurs PostgreSQL à Paris">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2013/11/migrating-sakila-from-mysql-to-postgresql/" data-tooltip="Migrating Sakila from MySQL to PostgreSQL">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2013%2f11%2fimport-fixed-width-data-with-pgloader%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2013%2f11%2fimport-fixed-width-data-with-pgloader%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http%3a%2f%2ftapoueh.org%2fblog%2f2013%2f11%2fimport-fixed-width-data-with-pgloader%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+      </div>
+      <div id="share-options-bar" class="share-options-bar" data-behavior="1">
+  <ul class="share-options">
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2013%2f11%2fimport-fixed-width-data-with-pgloader%2f">
+        <i class="fa fa-google-plus"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2013%2f11%2fimport-fixed-width-data-with-pgloader%2f">
+        <i class="fa fa-facebook-official"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http%3a%2f%2ftapoueh.org%2fblog%2f2013%2f11%2fimport-fixed-width-data-with-pgloader%2f">
+        <i class="fa fa-twitter"></i><span></span>
+      </a>
+    </li>
+  </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+    </div>
+    
+    <div id="about">
+  <div id="about-card">
+    <div id="about-btn-close">
+      <i class="fa fa-remove"></i>
+    </div>
+    
+      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+    
+    <h4 id="about-card-name">Dimitri Fontaine</h4>
+    
+      <div id="about-card-bio">PostgreSQL Major Contributor</div>
+    
+    
+      <div id="about-card-job">
+        <i class="fa fa-briefcase"></i>
+        <br/>
+        Open Source Software Engineer
+      </div>
+    
+    
+      <div id="about-card-location">
+        <i class="fa fa-map-marker"></i>
+        <br/>
+        France
+      </div>
+    
+  </div>
+</div>
+
+    <div id="algolia-search-modal" class="modal-container">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="close-button"><i class="fa fa-close"></i></span>
+      <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+        <span class="searchby-algolia-text text-color-light text-small">by</span>
+        <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+      </a>
+      <i class="search-icon fa fa-search"></i>
+      <form id="algolia-search-form">
+        <input type="text" id="algolia-search-input" name="search"
+          class="form-control input--large search-input" placeholder="" />
+      </form>
+    </div>
+    <div class="modal-body">
+      <div class="no-result text-color-light text-center"></div>
+      <div class="results">
+        
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/11/all-your-base-conference-2015/">
+                <h3 class="media-heading">All Your Base Conference 2015</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Nov 11, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">I had the pleasure to be invited to speak at All Your Base Conference 2015 about PostgreSQL (of course). The conference gathers together lots of user experience around data management and database products, either in the now classic meaning of the word (I mean relational database management systems here) or the newer set of trade-offs represented by the NoSQL set of tools.
+  The conference was very nicely organized and ran smoothly, and I got the unique chance to get a back from the trenches story series about people tools of choices and the reason why they do things their way.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/05/postgresql-au-jug-de-montpellier/">
+                <h3 class="media-heading">PostgreSQL au JUG de Montpellier</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">J&rsquo;ai eu le plaisir de présenter PostgreSQL au Java User Group de Montpellier le 20 mai dernier dans le cadre d&rsquo;une soirée PostgreSQL is YeSQL. L&rsquo;accueil réservé par le JUG a été parfait et je tiens à les remercier pour une très bonne soirée de partage et d&rsquo;échanges autour de PostgreSQL.
+Les slides des présentations sont disponibles. Nous avons commencé par une présentation générale sur comment et pourquoi utiliser PostgreSQL en 2015 :</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/05/quicklisp-and-debian/">
+                <h3 class="media-heading">Quicklisp and debian</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">Common Lisp users are very happy to use Quicklisp when it comes to downloading and maintaining dependencies between their own code and the librairies it is using.
+Sometimes I am pointed that when compared to other programming languages Common Lisp is lacking a lot in the batteries included area. After having had to package about 50 common lisp librairies for debian I can tell you that I politely disagree with that.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/04/pgday-paris/">
+                <h3 class="media-heading">pgDay Paris</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">Le 21 avril prochain se tient le premier pgDay Paris: une conférence PostgreSQL d&rsquo;une journée complète. Il s&rsquo;agit de 8 conférences sur votre base de données préférée par des conférencers internationaux, incluant des retours d&rsquo;expérience et une analyse de l&rsquo;utilisation des derniers développements en cours dans notre projet de base de données préféré.
+  *pgDay Paris, 21 avril 2015 : 8 conférences PostgreSQL*
+Pour 65 € l&rsquo;accès à la conférence inclut les pauses cafés (avec thé, eau, biscuits, etc) et le déjeuner sur place (repas complet servi à table).</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/03/a-pgday-in-paris/">
+                <h3 class="media-heading">a pgDay in Paris!</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Mar 3, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">I was lucky to participate as a speaker to the Nordic PostgreSQL Day 2015 and it&rsquo;s been another awesome edition of the conference. Really smooth, everything has been running as it should, with about one hundred people at the conference.
+In action at Nordic pgDay in Copenhaguen
+You can get the slides I&rsquo;ve been using for my talk at the Nordic pgDay 2015 page on the Conferences pages of this website.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/02/back-from-fosdem-2015/">
+                <h3 class="media-heading">Back From FOSDEM 2015</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Feb 2, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">The FOSDEM 2015 edition has been awesome this year, the usual mix of meeting with old friends, talking about interesting topics, seeing tremendous activity in all Open Source domains, and having Belgium beers in the evenings.
+  FOSDEM PGDAY On the Friday before the real FOSDEM event our own PostgreSQL Europe organized a one-day event, the FOSDEM PGDAY. It as an intense day of conferences about PostgreSQL, where I had the opportunity to present pgloader in the context of dealing with database migrations.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/01/my-first-slashdot-effect/">
+                <h3 class="media-heading">My First Slashdot Effect</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jan 1, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">Thanks to the Postgres Weekly issue #89 and a post to Hacker News front page (see Pgloader: A High-speed PostgreSQL Swiss Army Knife, Written in Lisp it well seems that I just had my first Slashdot effect&hellip;
+Well actually you know what? I don&rsquo;t&hellip;
+So please consider using the new mirror http://dimitri.github.io/pgloader/ and maybe voting on Hacker News for either tooling around your favorite database system, PostgreSQL or your favorite programming language, Common Lisp&hellip;</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/01/new-release-pgloader-3.2/">
+                <h3 class="media-heading">New release: pgloader 3.2</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jan 1, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">PostgreSQL comes with an awesome bulk copy protocol and tooling best known as the COPY and \copy commands. Being a transactional system, PostgreSQL COPY implementation will ROLLBACK any work done if a single error is found in the data set you&rsquo;re importing. That&rsquo;s the reason why pgloader got started: it provides with error handling for the COPY protocol.
+That&rsquo;s basically what pgloader used to be all about
+As soon as we have the capability to load data from unreliable sources, another use case appears on the horizon, and soon enough pgloader grew the capacity to load data from other databases, some having a more liberal notion of what is sane data type input.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2014/10/meetup-postgresql-%C3%A0-paris/">
+                <h3 class="media-heading">Meetup PostgreSQL à Paris</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Oct 10, 2014
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">Mercredi 8 octobre se tiendra le prochain Meetup PostgreSQL à Paris dans les locaux de Mozilla Europe, dont la capacité est de 90 personnes ! Venez nombreux !
+Le programme de cette édition est un peu particulier puisque nous avons reçu quatre propositions enthousiastes de présentations. Chacun aura donc 15 à 20 minutes (questions incluses) pour présenter son sujet. Voici le programme :
+ Aggrégation temporelle sous contrainte d&rsquo;iops, par Jean-Gérard Pailloncy</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2014/09/php-tour-la-video/">
+                <h3 class="media-heading">PHP Tour, La Video</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Sep 9, 2014
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">En juin dernier se tenait le PHP Tour 2014 à Lyon, où j&rsquo;ai eu le plaisir de présenter une conférence sur PostgreSQL en 2014.
+  Cette intervention était filmée, et la vidéo est maintenant disponible :
+
+ 
+En espérant que vous regarderez cette vidéo avec autant d&rsquo;intérêt que j&rsquo;ai eu à participer à PHP Tour 2014 !</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+      </div>
+    </div>
+    <div class="modal-footer">
+      <p class="results-count text-medium"
+         data-message-zero=""
+         data-message-one=""
+         data-message-other="">
+         229 posts found
+      </p>
+    </div>
+  </div>
+</div>
+    
+  
+    
+    <div id="cover" style="background-image:url('http://tapoueh.org/images/Tree_Of_Light_by_lowapproach.jpg');"></div>
+  
+
+
+    
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.8.0/highlight.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.js"></script>
+
+
+<script src="/js/script-wl33z0n6ocaypepiqrazthtivfrliqijej4rq8ek8gvrv1awftmgjuv8k4zc.min.js"></script>
+
+<script>
+$(document).ready(function() {
+  hljs.configure({ classPrefix: '', useBR: false });
+  $('pre.code-highlight').each(function(i, block) {
+    var code = "";
+    hljs.highlightAuto(block.innerText).value.split(/\r\n|\r|\n/).forEach(function(line) {
+      code += "<span class=\"line\">" + line + "</span><br>";
+    });
+    if (code.length > 0) {
+      block.innerHTML = code;  
+    }
+  });
+  $('pre > code').each(function(i, block) {
+    $(this).addClass('codeblock');
+    hljs.highlightBlock(block);
+  });
+});
+</script>
+
+  
+    
+  
+
+
+
+
+
+    
+  </body>
+</html>
+

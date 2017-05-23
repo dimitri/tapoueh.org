@@ -1,0 +1,949 @@
+
+
+  
+    
+  
+
+
+  
+
+
+
+
+  
+
+
+  
+
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Hugo 0.20.7">
+    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
+    <title>Why is pgloader so much faster?</title>
+    <meta name="author" content="Dimitri Fontaine">
+    <meta name="keywords" content="">
+
+    <link rel="icon" href="/favicon.ico">
+    
+
+    
+    <meta name="description" content="pgloader loads data into PostgreSQL. The new version is stable enough nowadays that it&rsquo;s soon to be released, the last piece of the 3.1.0 puzzle being full debian packaging of the tool.
+The pgloader logo is a loader truck, just because.
+As you might have noticed if you&rsquo;ve read my blog before, I decided that pgloader needed a full rewrite in order for it to be able to enter the current decade as a relevant tool.">
+    <meta property="og:description" content="pgloader loads data into PostgreSQL. The new version is stable enough nowadays that it&rsquo;s soon to be released, the last piece of the 3.1.0 puzzle being full debian packaging of the tool.
+The pgloader logo is a loader truck, just because.
+As you might have noticed if you&rsquo;ve read my blog before, I decided that pgloader needed a full rewrite in order for it to be able to enter the current decade as a relevant tool.">
+    <meta property="og:type" content="blog">
+    <meta property="og:title" content="Why is pgloader so much faster?">
+    <meta property="og:url" content="/blog/2014/05/why-is-pgloader-so-much-faster/">
+    <meta property="og:site_name" content="Dimitri Fontaine, Expert PostgreSQL">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Dimitri Fontaine, Expert PostgreSQL">
+    <meta name="twitter:description" content="pgloader loads data into PostgreSQL. The new version is stable enough nowadays that it&rsquo;s soon to be released, the last piece of the 3.1.0 puzzle being full debian packaging of the tool.
+The pgloader logo is a loader truck, just because.
+As you might have noticed if you&rsquo;ve read my blog before, I decided that pgloader needed a full rewrite in order for it to be able to enter the current decade as a relevant tool.">
+    
+      <meta name="twitter:creator" content="@tapoueh">
+    
+    
+
+    
+    
+
+    
+      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
+    
+
+    
+      <meta property="og:image" content="http://tapoueh.org/img/old/toy-loader.320.jpg">
+    
+    
+      <meta property="og:image" content="http://tapoueh.org/img/old/toy-loader.320.jpg">
+    
+    
+
+    
+
+    
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
+    
+    
+    <link rel="stylesheet" href="/css/style-u6mk0ojoywresbx8iepslrmmhl4stuhrsxuwhkpwrkrx7mryjcaimasnk4pi.min.css" />
+    
+    
+      <link rel="stylesheet" href="http://tapoueh.org//css/dim.css">
+    
+
+    
+      
+    
+    
+  </head>
+
+  <body>
+    <div id="blog">
+      <header id="header" data-behavior="1">
+  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+  <div class="header-title">
+    <a class="header-title-link" href="/">Dimitri Fontaine, Expert PostgreSQL</a>
+  </div>
+  
+</header>
+
+      <nav id="sidebar" data-behavior="1">
+  <div class="sidebar-container">
+    
+      <div class="sidebar-profile">
+        <a href="/#about">
+          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+        </a>
+        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
+        
+          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
+        
+      </div>
+    
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
+      
+      <span class="sidebar-button-desc">Blog</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/about/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
+      
+      <span class="sidebar-button-desc">About</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/book/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
+      
+      <span class="sidebar-button-desc">Book</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/tags/conferences/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-plane"></i>
+      
+      <span class="sidebar-button-desc">Conferences</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/projects/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bug"></i>
+      
+      <span class="sidebar-button-desc">Projects</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+      
+      <span class="sidebar-button-desc">GitHub</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+      
+      <span class="sidebar-button-desc">Twitter</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+      
+      <span class="sidebar-button-desc">Categories</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/tags">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+      
+      <span class="sidebar-button-desc">Tags</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/archives">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+      
+      <span class="sidebar-button-desc">Archives</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/index.xml">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+      
+      <span class="sidebar-button-desc">RSS</span>
+    </a>
+  </li>
+
+    </ul>
+  </div>
+</nav>
+
+      
+  <div class="post-header-cover
+              text-left
+              post-header-cover--partial"
+       style="background-image:url('/img/old/toy-loader.320.jpg')"
+       data-behavior="1">
+    
+  </div>
+
+
+      <div id="main" data-behavior="1"
+        class="hasCover
+               hasCoverMetaOut
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
+          
+            <div class="post-header main-content-wrap text-left">
+  
+    <h1 class="post-title" itemprop="headline">
+      Why is pgloader so much faster?
+    </h1>
+  
+  <div class="postShorten-meta post-meta">
+  
+    <time itemprop="datePublished" datetime="2014-05-14T14:59:00&#43;02:00">
+      
+  
+  
+  
+  
+    Wednesday 14  2014
+  
+
+    </time>
+  
+  
+  
+  
+    <span></span>
+    
+      <a class="category-link" href="/categories/projects">Projects</a>, 
+    
+      <a class="category-link" href="/categories/pgloader">pgloader</a>
+    
+  
+
+
+</div>
+
+</div>
+          
+          <div class="post-content markdown" itemprop="articleBody">
+            <div class="main-content-wrap">
+              
+
+<p><a href="http://pgloader.io/">pgloader</a> loads data into PostgreSQL. The new version is stable enough
+nowadays that it&rsquo;s soon to be released, the last piece of the
+<code>3.1.0</code> puzzle
+being full
+<a href="https://www.debian.org/">debian</a> packaging of the tool.</p>
+
+<p><em>The pgloader logo is a loader truck, just because</em>.</p>
+
+<p>As you might have noticed if you&rsquo;ve read my blog before, I decided that
+<a href="http://pgloader.io/">pgloader</a> needed a full rewrite in order for it to be able to enter the
+current decade as a relevant tool. pgloader used to be written in the
+<a href="https://www.python.org/">python programming language</a>, which is used by lots of people and generally
+quite appreciated by its users.</p>
+
+<h2 id="why-changing">Why changing</h2>
+
+<p>Still, python is not without problems, the main ones I had to deal with
+being
+<em>poor performances</em> and lack of threading capabilities. Also, the
+pgloader setup design was pretty hard to maintain, and adding compatiblity
+to other
+<em>loader</em> products from competitors was harder than it should.</p>
+
+<p>As I said in my
+<a href="http://tapoueh.org/confs/2014/05/05-ELS-2014">pgloader lightning talk</a> at the
+<a href="http://www.european-lisp-symposium.org/">7th European Lisp Symposium</a>
+last week, in searching for a
+<strong><em>modern programming language</em></strong> the best candidate
+I found was actually
+<a href="http://en.wikipedia.org/wiki/Common_Lisp">Common Lisp</a>.</p>
+
+<div class="figure center dim-margin">
+  <a href="/images/confs/ELS_2014_pgloader.pdf">
+    <img src="/img/old/ELS_2014_pgloader.png">
+  </a>
+</div>
+
+<p>After some basic performances checking as seen in my
+<a href="https://github.com/dimitri/sudoku">Common Lisp Sudoku Solver</a> project where I did get up to
+<strong><em>ten times faster</em></strong>
+code when compared to python, it felt like the amazing set of features of
+the language could be put to good use here.</p>
+
+<h2 id="so-what-about-performances-after-rewrite">So, what about performances after rewrite?</h2>
+
+<p>The main reason why I&rsquo;m now writing this blog post is receiving emails from
+pgloader users with strange feelings about the speedup. Let&rsquo;s see at the
+numbers one user gave me, for some data point:</p>
+
+<pre><code> select rows, v2, v3,
+        round((  extract(epoch from v2)
+               / extract(epoch from v3))::numeric, 2) as speedup
+   from timing;
+        
+  rows   |        v2         |       v3        | speedup 
+---------+-------------------+-----------------+---------
+ 4768765 | @ 37 mins 10.878  | @ 1 min 26.917  |   25.67
+ 3115880 | @ 36 mins 5.881   | @ 1 min 10.994  |   30.51
+ 3865750 | @ 33 mins 40.233  | @ 1 min 15.33   |   26.82
+ 3994483 | @ 29 mins 30.028  | @ 1 min 18.484  |   22.55
+(4 rows)
+</code></pre>
+
+<p><em>The raw numbers have been loaded into a PostgreSQL table</em></p>
+
+<p>So what we see in this quite typical
+<a href="http://pgloader.io/howto/csv.html">CSV Loading</a> test case is a best case of
+<strong><em>30 times faster</em></strong> import. Which brings some questions on the table, of course.</p>
+
+<h2 id="wait-you-re-still-using-copy-right">Wait, you&rsquo;re still using <code>COPY</code> right?</h2>
+
+<p>The
+<a href="http://www.postgresql.org/docs/9.3/interactive/index.html">PostgreSQL</a> database system provides a really neat
+<a href="http://www.postgresql.org/docs/9.3/interactive/sql-copy.html">COPY</a> command, which in
+turn is only exposing the
+<a href="http://www.postgresql.org/docs/9.3/static/protocol-flow.html#PROTOCOL-COPY">COPY Streaming Protocol</a>, that pgloader is using.</p>
+
+<p>So yes,
+<a href="http://pgloader.io/">pgloader</a> is still using
+<code>COPY</code>. This time the protocol implementation
+is to be found in the Common Lisp
+<a href="http://marijnhaverbeke.nl/postmodern/">Postmodern</a> driver, which is really great.
+Before that, back when pgloader was python code, it was using the very good
+<a href="http://initd.org/psycopg/">psycopg</a> driver, which also exposes the COPY protocol.</p>
+
+<h2 id="so-what-did-happen-here">So, what did happen here?</h2>
+
+<p>Well it happens that pgloader is now built using Common Lisp technologies,
+and those are really great, powerful and fast!</p>
+
+<p>Not only is Common Lisp code compiled to
+<em>machine code</em> when using most
+<a href="http://cliki.net/Common%20Lisp%20implementation">Common Lisp Implementations</a> such as
+<a href="http://sbcl.org/">SBCL</a> or
+<a href="http://ccl.clozure.com/">Clozure Common Lisp</a>; it&rsquo;s also
+possible to actually benefit from
+<em>parallel computing</em> and
+<em>threads</em> in Common
+Lisp.</p>
+
+
+
+ 
+  
+  
+  
+  
+    
+      
+    
+  
+    
+      
+    
+  
+    
+  
+    
+      
+    
+  
+
+<div class="figure fig50 center dim-margin" >
+  
+    <a class="fancybox" href="/img/old/speedup.jpg" data-fancybox-group="">
+  
+    <img class="fig-img" src="/img/old/speedup.jpg" >
+  
+    </a>
+  
+  
+</div>
+
+
+<p><em>That&rsquo;s not how I did it!</em></p>
+
+<p>In the
+<a href="http://pgloader.io/">pgloader</a> case I&rsquo;ve been using the
+<a href="http://lparallel.org/">lparallel</a> utilities, in particular
+its
+<a href="http://lparallel.org/api/queues/">queuing facility</a> to be able to implement
+<em>asynchronous IOs</em> where a thread
+reads the source data and preprocess it, fills up a batch at a time in a
+buffer that is then pushed down to the writer thread, that handles the
+<code>COPY</code>
+protocol and operations.</p>
+
+<p>So my current analysis is that the new thread based architecture used with a
+very powerful compiler for the Common Lisp high-level language are allowing
+pgloader to enter a whole new field of
+<em>data loading performances</em>.</p>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>Not only is pgloader so much faster now, it&rsquo;s also full of new capabilities
+and supports several sources of data such as
+<a href="http://pgloader.io/howto/dBase.html">dBase files</a>,
+<a href="http://pgloader.io/howto/sqlite.html">SQLite database files</a> or even
+<a href="http://pgloader.io/howto/mysql.html">MySQL live connections</a>.</p>
+
+<p>Rather than a configuration file, the way to use the new pgloader is using a
+<em>command language</em> that has been designed to look as much like SQL as possible
+in the pgloader context, to make it easy for its users. Implementation wise,
+it should now be trivial enough to implement compatibility with other
+<em>data
+load</em> software that some
+<a href="http://www.postgresql.org/">PostgreSQL</a> competitor products do have.</p>
+
+<p>Also, the new code base and feature set seems to attract way more users than
+the previous implementation ever did, despite using a less popular
+programming language.</p>
+
+<p>You can already
+<a href="http://pgloader.io/download.html">download pgloader binary packages</a> for
+<em>debian</em> based
+distributions and
+<em>centos</em> based ones too, and you will even find a
+<em>Mac OS X</em>
+package file (
+<code>.pkg</code>) that will make
+<code>/usr/local/bin/pgloader</code> available for you
+on the command line. If you need a windows binary, drop me an email.</p>
+
+<p>The first stable release of the new
+<a href="http://pgloader.io/">pgloader</a> utility is scheduled to be
+named
+<code>3.1.0</code> and to happen quite soon. We are hard at work on packaging the
+dependencies for
+<em>debian</em>, and you can have a look at the
+<a href="https://github.com/dimitri/ql-to-deb">Quicklisp to debian</a>
+project if you want to help us get there!</p>
+
+              
+            </div>
+          </div>
+          <div id="post-footer" class="post-footer main-content-wrap">
+            
+              
+                
+                
+                  <div class="post-footer-tags">
+                    <span class="text-color-light text-small"></span><br/>
+                    
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/postgresql/">PostgreSQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/pgloader/">pgloader</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/common-lisp/">Common-Lisp</a>
+
+                  </div>
+                
+              
+            
+            <div class="post-actions-wrap">
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2014/06/conf%C3%A9rences-fran%C3%A7aises/" data-tooltip="Conférences Françaises">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2014/04/new-york/" data-tooltip="New York!">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2014%2f05%2fwhy-is-pgloader-so-much-faster%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2014%2f05%2fwhy-is-pgloader-so-much-faster%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http%3a%2f%2ftapoueh.org%2fblog%2f2014%2f05%2fwhy-is-pgloader-so-much-faster%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+            
+              
+            
+          </div>
+        </article>
+        <footer id="footer" class="main-content-wrap">
+  <span class="copyrights">
+    &copy; 2017 Dimitri Fontaine. 
+  </span>
+</footer>
+
+      </div>
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="1">
+        <div class="post-actions-wrap">
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2014/06/conf%C3%A9rences-fran%C3%A7aises/" data-tooltip="Conférences Françaises">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2014/04/new-york/" data-tooltip="New York!">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2014%2f05%2fwhy-is-pgloader-so-much-faster%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2014%2f05%2fwhy-is-pgloader-so-much-faster%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http%3a%2f%2ftapoueh.org%2fblog%2f2014%2f05%2fwhy-is-pgloader-so-much-faster%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+      </div>
+      <div id="share-options-bar" class="share-options-bar" data-behavior="1">
+  <ul class="share-options">
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2014%2f05%2fwhy-is-pgloader-so-much-faster%2f">
+        <i class="fa fa-google-plus"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2014%2f05%2fwhy-is-pgloader-so-much-faster%2f">
+        <i class="fa fa-facebook-official"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http%3a%2f%2ftapoueh.org%2fblog%2f2014%2f05%2fwhy-is-pgloader-so-much-faster%2f">
+        <i class="fa fa-twitter"></i><span></span>
+      </a>
+    </li>
+  </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+    </div>
+    
+    <div id="about">
+  <div id="about-card">
+    <div id="about-btn-close">
+      <i class="fa fa-remove"></i>
+    </div>
+    
+      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+    
+    <h4 id="about-card-name">Dimitri Fontaine</h4>
+    
+      <div id="about-card-bio">PostgreSQL Major Contributor</div>
+    
+    
+      <div id="about-card-job">
+        <i class="fa fa-briefcase"></i>
+        <br/>
+        Open Source Software Engineer
+      </div>
+    
+    
+      <div id="about-card-location">
+        <i class="fa fa-map-marker"></i>
+        <br/>
+        France
+      </div>
+    
+  </div>
+</div>
+
+    <div id="algolia-search-modal" class="modal-container">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="close-button"><i class="fa fa-close"></i></span>
+      <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+        <span class="searchby-algolia-text text-color-light text-small">by</span>
+        <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+      </a>
+      <i class="search-icon fa fa-search"></i>
+      <form id="algolia-search-form">
+        <input type="text" id="algolia-search-input" name="search"
+          class="form-control input--large search-input" placeholder="" />
+      </form>
+    </div>
+    <div class="modal-body">
+      <div class="no-result text-color-light text-center"></div>
+      <div class="results">
+        
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/11/all-your-base-conference-2015/">
+                <h3 class="media-heading">All Your Base Conference 2015</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Nov 11, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">I had the pleasure to be invited to speak at All Your Base Conference 2015 about PostgreSQL (of course). The conference gathers together lots of user experience around data management and database products, either in the now classic meaning of the word (I mean relational database management systems here) or the newer set of trade-offs represented by the NoSQL set of tools.
+  The conference was very nicely organized and ran smoothly, and I got the unique chance to get a back from the trenches story series about people tools of choices and the reason why they do things their way.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/05/postgresql-au-jug-de-montpellier/">
+                <h3 class="media-heading">PostgreSQL au JUG de Montpellier</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">J&rsquo;ai eu le plaisir de présenter PostgreSQL au Java User Group de Montpellier le 20 mai dernier dans le cadre d&rsquo;une soirée PostgreSQL is YeSQL. L&rsquo;accueil réservé par le JUG a été parfait et je tiens à les remercier pour une très bonne soirée de partage et d&rsquo;échanges autour de PostgreSQL.
+Les slides des présentations sont disponibles. Nous avons commencé par une présentation générale sur comment et pourquoi utiliser PostgreSQL en 2015 :</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/05/quicklisp-and-debian/">
+                <h3 class="media-heading">Quicklisp and debian</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">Common Lisp users are very happy to use Quicklisp when it comes to downloading and maintaining dependencies between their own code and the librairies it is using.
+Sometimes I am pointed that when compared to other programming languages Common Lisp is lacking a lot in the batteries included area. After having had to package about 50 common lisp librairies for debian I can tell you that I politely disagree with that.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/04/pgday-paris/">
+                <h3 class="media-heading">pgDay Paris</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">Le 21 avril prochain se tient le premier pgDay Paris: une conférence PostgreSQL d&rsquo;une journée complète. Il s&rsquo;agit de 8 conférences sur votre base de données préférée par des conférencers internationaux, incluant des retours d&rsquo;expérience et une analyse de l&rsquo;utilisation des derniers développements en cours dans notre projet de base de données préféré.
+  *pgDay Paris, 21 avril 2015 : 8 conférences PostgreSQL*
+Pour 65 € l&rsquo;accès à la conférence inclut les pauses cafés (avec thé, eau, biscuits, etc) et le déjeuner sur place (repas complet servi à table).</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/03/a-pgday-in-paris/">
+                <h3 class="media-heading">a pgDay in Paris!</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Mar 3, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">I was lucky to participate as a speaker to the Nordic PostgreSQL Day 2015 and it&rsquo;s been another awesome edition of the conference. Really smooth, everything has been running as it should, with about one hundred people at the conference.
+In action at Nordic pgDay in Copenhaguen
+You can get the slides I&rsquo;ve been using for my talk at the Nordic pgDay 2015 page on the Conferences pages of this website.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/02/back-from-fosdem-2015/">
+                <h3 class="media-heading">Back From FOSDEM 2015</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Feb 2, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">The FOSDEM 2015 edition has been awesome this year, the usual mix of meeting with old friends, talking about interesting topics, seeing tremendous activity in all Open Source domains, and having Belgium beers in the evenings.
+  FOSDEM PGDAY On the Friday before the real FOSDEM event our own PostgreSQL Europe organized a one-day event, the FOSDEM PGDAY. It as an intense day of conferences about PostgreSQL, where I had the opportunity to present pgloader in the context of dealing with database migrations.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/01/my-first-slashdot-effect/">
+                <h3 class="media-heading">My First Slashdot Effect</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jan 1, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">Thanks to the Postgres Weekly issue #89 and a post to Hacker News front page (see Pgloader: A High-speed PostgreSQL Swiss Army Knife, Written in Lisp it well seems that I just had my first Slashdot effect&hellip;
+Well actually you know what? I don&rsquo;t&hellip;
+So please consider using the new mirror http://dimitri.github.io/pgloader/ and maybe voting on Hacker News for either tooling around your favorite database system, PostgreSQL or your favorite programming language, Common Lisp&hellip;</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/01/new-release-pgloader-3.2/">
+                <h3 class="media-heading">New release: pgloader 3.2</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jan 1, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">PostgreSQL comes with an awesome bulk copy protocol and tooling best known as the COPY and \copy commands. Being a transactional system, PostgreSQL COPY implementation will ROLLBACK any work done if a single error is found in the data set you&rsquo;re importing. That&rsquo;s the reason why pgloader got started: it provides with error handling for the COPY protocol.
+That&rsquo;s basically what pgloader used to be all about
+As soon as we have the capability to load data from unreliable sources, another use case appears on the horizon, and soon enough pgloader grew the capacity to load data from other databases, some having a more liberal notion of what is sane data type input.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2014/10/meetup-postgresql-%C3%A0-paris/">
+                <h3 class="media-heading">Meetup PostgreSQL à Paris</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Oct 10, 2014
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">Mercredi 8 octobre se tiendra le prochain Meetup PostgreSQL à Paris dans les locaux de Mozilla Europe, dont la capacité est de 90 personnes ! Venez nombreux !
+Le programme de cette édition est un peu particulier puisque nous avons reçu quatre propositions enthousiastes de présentations. Chacun aura donc 15 à 20 minutes (questions incluses) pour présenter son sujet. Voici le programme :
+ Aggrégation temporelle sous contrainte d&rsquo;iops, par Jean-Gérard Pailloncy</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2014/09/php-tour-la-video/">
+                <h3 class="media-heading">PHP Tour, La Video</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Sep 9, 2014
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">En juin dernier se tenait le PHP Tour 2014 à Lyon, où j&rsquo;ai eu le plaisir de présenter une conférence sur PostgreSQL en 2014.
+  Cette intervention était filmée, et la vidéo est maintenant disponible :
+
+ 
+En espérant que vous regarderez cette vidéo avec autant d&rsquo;intérêt que j&rsquo;ai eu à participer à PHP Tour 2014 !</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+      </div>
+    </div>
+    <div class="modal-footer">
+      <p class="results-count text-medium"
+         data-message-zero=""
+         data-message-one=""
+         data-message-other="">
+         229 posts found
+      </p>
+    </div>
+  </div>
+</div>
+    
+  
+    
+    <div id="cover" style="background-image:url('http://tapoueh.org/images/Tree_Of_Light_by_lowapproach.jpg');"></div>
+  
+
+
+    
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.8.0/highlight.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.js"></script>
+
+
+<script src="/js/script-wl33z0n6ocaypepiqrazthtivfrliqijej4rq8ek8gvrv1awftmgjuv8k4zc.min.js"></script>
+
+<script>
+$(document).ready(function() {
+  hljs.configure({ classPrefix: '', useBR: false });
+  $('pre.code-highlight').each(function(i, block) {
+    var code = "";
+    hljs.highlightAuto(block.innerText).value.split(/\r\n|\r|\n/).forEach(function(line) {
+      code += "<span class=\"line\">" + line + "</span><br>";
+    });
+    if (code.length > 0) {
+      block.innerHTML = code;  
+    }
+  });
+  $('pre > code').each(function(i, block) {
+    $(this).addClass('codeblock');
+    hljs.highlightBlock(block);
+  });
+});
+</script>
+
+  
+    
+  
+
+
+
+
+
+    
+  </body>
+</html>
+

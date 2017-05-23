@@ -1,0 +1,1277 @@
+
+
+  
+    
+  
+
+
+  
+
+
+
+
+  
+
+
+  
+
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Hugo 0.20.7">
+    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
+    <title>Reset Counter</title>
+    <meta name="author" content="Dimitri Fontaine">
+    <meta name="keywords" content="">
+
+    <link rel="icon" href="/favicon.ico">
+    
+
+    
+    <meta name="description" content="I&rsquo;ve been given a nice puzzle that I think is a good blog article opportunity, as it involves some thinking and window functions.
+What&rsquo;s to solve Say we store in a table entries from a counter that only increases and the time stamp when we did the measurement. So that when you read 30 then later 40 in fact that means we counted 10 more the second reading when compared to the first, in other words the first 30 are counted again in the second counter value, 40.">
+    <meta property="og:description" content="I&rsquo;ve been given a nice puzzle that I think is a good blog article opportunity, as it involves some thinking and window functions.
+What&rsquo;s to solve Say we store in a table entries from a counter that only increases and the time stamp when we did the measurement. So that when you read 30 then later 40 in fact that means we counted 10 more the second reading when compared to the first, in other words the first 30 are counted again in the second counter value, 40.">
+    <meta property="og:type" content="blog">
+    <meta property="og:title" content="Reset Counter">
+    <meta property="og:url" content="/blog/2012/10/reset-counter/">
+    <meta property="og:site_name" content="Dimitri Fontaine, Expert PostgreSQL">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Dimitri Fontaine, Expert PostgreSQL">
+    <meta name="twitter:description" content="I&rsquo;ve been given a nice puzzle that I think is a good blog article opportunity, as it involves some thinking and window functions.
+What&rsquo;s to solve Say we store in a table entries from a counter that only increases and the time stamp when we did the measurement. So that when you read 30 then later 40 in fact that means we counted 10 more the second reading when compared to the first, in other words the first 30 are counted again in the second counter value, 40.">
+    
+      <meta name="twitter:creator" content="@tapoueh">
+    
+    
+
+    
+    
+
+    
+      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
+    
+
+    
+      <meta property="og:image" content="http://tapoueh.org/img/postgresql-512.jpg">
+    
+    
+      <meta property="og:image" content="http://tapoueh.org/img/postgresql-512.jpg">
+    
+    
+
+    
+
+    
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
+    
+    
+    <link rel="stylesheet" href="/css/style-u6mk0ojoywresbx8iepslrmmhl4stuhrsxuwhkpwrkrx7mryjcaimasnk4pi.min.css" />
+    
+    
+      <link rel="stylesheet" href="http://tapoueh.org//css/dim.css">
+    
+
+    
+      
+    
+    
+  </head>
+
+  <body>
+    <div id="blog">
+      <header id="header" data-behavior="1">
+  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+  <div class="header-title">
+    <a class="header-title-link" href="/">Dimitri Fontaine, Expert PostgreSQL</a>
+  </div>
+  
+</header>
+
+      <nav id="sidebar" data-behavior="1">
+  <div class="sidebar-container">
+    
+      <div class="sidebar-profile">
+        <a href="/#about">
+          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+        </a>
+        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
+        
+          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
+        
+      </div>
+    
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
+      
+      <span class="sidebar-button-desc">Blog</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/about/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
+      
+      <span class="sidebar-button-desc">About</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/book/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
+      
+      <span class="sidebar-button-desc">Book</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/tags/conferences/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-plane"></i>
+      
+      <span class="sidebar-button-desc">Conferences</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/projects/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bug"></i>
+      
+      <span class="sidebar-button-desc">Projects</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+      
+      <span class="sidebar-button-desc">GitHub</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+      
+      <span class="sidebar-button-desc">Twitter</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+      
+      <span class="sidebar-button-desc">Categories</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/tags">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+      
+      <span class="sidebar-button-desc">Tags</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/archives">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+      
+      <span class="sidebar-button-desc">Archives</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/index.xml">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+      
+      <span class="sidebar-button-desc">RSS</span>
+    </a>
+  </li>
+
+    </ul>
+  </div>
+</nav>
+
+      
+  <div class="post-header-cover
+              text-left
+              post-header-cover--partial"
+       style="background-image:url('/img/postgresql-512.jpg')"
+       data-behavior="1">
+    
+  </div>
+
+
+      <div id="main" data-behavior="1"
+        class="hasCover
+               hasCoverMetaOut
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
+          
+            <div class="post-header main-content-wrap text-left">
+  
+    <h1 class="post-title" itemprop="headline">
+      Reset Counter
+    </h1>
+  
+  <div class="postShorten-meta post-meta">
+  
+    <time itemprop="datePublished" datetime="2012-10-05T09:44:00&#43;02:00">
+      
+  
+  
+  
+  
+    Friday 05 Oct 2012
+  
+
+    </time>
+  
+  
+  
+  
+    <span></span>
+    
+      <a class="category-link" href="/categories/postgresql">PostgreSQL</a>, 
+    
+      <a class="category-link" href="/categories/yesql">YeSQL</a>
+    
+  
+
+
+</div>
+
+</div>
+          
+          <div class="post-content markdown" itemprop="articleBody">
+            <div class="main-content-wrap">
+              
+
+<p>I&rsquo;ve been given a nice puzzle that I think is a good blog article
+opportunity, as it involves some thinking and
+<em>window functions</em>.</p>
+
+<h2 id="what-s-to-solve">What&rsquo;s to solve</h2>
+
+<p>Say we store in a table entries from a
+<em>counter</em> that only increases and the
+time stamp when we did the measurement. So that when you read
+<code>30</code> then later
+<code>40</code> in fact that means we counted
+<code>10</code> more the second reading when compared to
+the first, in other words the first
+<code>30</code> are counted again in the second
+counter value,
+<code>40</code>.</p>
+
+<div class="figure center dim-margin">
+  <a href="http://xkcd.com/363/">
+    <img src="/img/old/reset.png">
+  </a>
+</div>
+
+<p>Now of course it&rsquo;s a real world counter. Think network traffic counter on a
+network interface, if you want something real to play with in your mind. So
+the counter will sometime reset and you will read measure sequences such as
+<code>40, 0, 20</code> if you happen to read just when the counter is reset, or most of
+the time that will look like
+<code>45, 25, 50</code>.</p>
+
+<p>The question we want to answer is, given a series of that counter measures,
+including some resets, what is the current logical value of the counter?</p>
+
+<p>Given the sequence of measures
+<code>0, 10, 20, 30, 40, 0, 20, 30, 60</code> the result
+we want is
+<code>40 + 60</code>, that is
+<code>100</code>. Right?</p>
+
+<h2 id="playing-with-some-data">Playing with some data</h2>
+
+<p>Let&rsquo;s model an hypothetical dataset easy enough to play with. What about
+just the previous example? We also need to
+<em>time stamp</em> the measurements,
+let&rsquo;s just use a
+<em>tick</em> for now, as it&rsquo;s easier to think about:</p>
+
+<pre><code>create table measures(tick int, nb int);
+
+insert into measures
+     values (1, 0), (2, 10), (3, 20), (4, 30), (5, 40),
+            (6, 0), (7, 20), (8, 30), (9, 60);
+</code></pre>
+
+<p>Now that we have some data in a table to play with, let&rsquo;s try to find out
+the numbers we are interested in: we only want to keep the latest measure we
+read on the counter just before it wraps. That means values where the
+<em>next
+one</em> (in tick or time stamping order) is lesser than the current counter
+value.</p>
+
+<p>As we are lucky enough to be playing with the awesome
+<a href="http://www.postgresql.org/">PostgreSQL</a> which
+brings
+<a href="http://www.postgresql.org/docs/9.2/static/tutorial-window.html">window functions</a> on the table, we can easily implement just what we
+said in a readable way:</p>
+
+<pre><code>select tick, nb,
+         case when lead(nb) over w &lt; nb then nb
+              when lead(nb) over w is null then nb
+              else null
+          end as max
+    from measures
+  window w as (order by tick);
+</code></pre>
+
+<p>The firt
+<em>case</em> is the exact translation of the problem as spelled in english
+in just the previous paragraph where we stated we want to keep the current
+counter value in case of a
+<em>wraparound</em>, so I guess it&rsquo;s easy enough to get
+at.</p>
+
+
+
+ 
+  
+  
+  
+  
+    
+      
+    
+  
+    
+      
+    
+  
+    
+  
+    
+      
+    
+  
+
+<div class="figure fig50 center dim-margin" >
+  
+    <a class="fancybox" href="/img/old/reset-circuit-thumbnail.jpg" data-fancybox-group="">
+  
+    <img class="fig-img" src="/img/old/reset-circuit-thumbnail.jpg" >
+  
+    </a>
+  
+  
+</div>
+
+
+<p>Then we have a couple of tricks in that query in order to massage the data
+as we want it. First, the last row of the output won&rsquo;t have a
+<em>lead</em>, that
+<em>window function</em> call is going to return
+<code>NULL</code>. In that case, we keep the
+current counter value as if we just did a
+<em>wraparound</em>. And finally, when
+there&rsquo;s no
+<em>wraparound</em>, we don&rsquo;t care about the data. Well, for the purpose
+of knowing the current
+<em>logical</em> value of the counter, that is.</p>
+
+<p>And we get that encouraging result:</p>
+
+<pre><code>tick | nb  | max 
+------+-----+-----
+    1 |   0 |    
+    2 |  10 |    
+    3 |  20 |    
+    4 |  30 |    
+    5 |  40 |  40
+    6 |   0 |    
+    7 |  20 |    
+    8 |  30 |    
+    9 |  60 |  60
+</code></pre>
+
+<p>As you see, we have been able to create a new column out of the dataset, and
+that new column only contains the data we are interested into.</p>
+
+<h2 id="finding-the-current-counter-value">Finding the current counter value</h2>
+
+<p>All we have to do now is sum this computed columns entries. Remember that
+the
+<code>sum()</code> aggregate function will simply discard nulls, so that we don&rsquo;t
+have to turn them into a bunch of
+<code>0</code>.</p>
+
+<pre><code>with t(tops) as (
+  select case when lead(nb) over w &lt; nb then nb
+              when lead(nb) over w is null then nb
+              else null
+          end as max
+    from measures
+  window w as (order by tick)
+)
+select sum(tops) from t;
+</code></pre>
+
+
+
+ 
+  
+  
+  
+  
+    
+      
+    
+  
+    
+      
+    
+  
+    
+  
+    
+      
+    
+  
+
+<div class="figure fig50 center dim-margin" >
+  
+    <a class="fancybox" href="/img/old/reset-elect.jpg" data-fancybox-group="">
+  
+    <img class="fig-img" src="/img/old/reset-elect.jpg" >
+  
+    </a>
+  
+  
+</div>
+
+
+<p>And here&rsquo;s the expected result:</p>
+
+<pre><code>sum 
+-----
+ 100
+</code></pre>
+
+<p>Now what about testing with another set of data or two, just to be sure that
+the counter is allowed to wrap more than once within our solution?</p>
+
+<pre><code>insert into measures
+     values (10, 0), (11, 10), (12, 30), (13, 35), (14, 45),
+            (15, 25), (16, 50), (17, 100), (18, 110);
+</code></pre>
+
+<p>Then we have:</p>
+
+<pre><code>with t(tops) as (
+   select case when lead(nb) over w &lt; nb then nb
+               when lead(nb) over w is null then nb
+               else null
+           end as max
+     from measures
+   window w as (order by tick)
+)
+select sum(tops) from t;
+ sum 
+-----
+ 255
+(1 row)
+</code></pre>
+
+<p>All good!</p>
+
+<h2 id="counter-logical-value-over-a-given-period">Counter logical value over a given period</h2>
+
+<p>Now of course what we want is to find the logical value of the counter for a
+given day&rsquo;s or month&rsquo;s worth of measures. We then need to pay attention to
+the value of the counter at the start of our period so that we know to
+substract it from the logical sum over the period.</p>
+
+
+
+ 
+  
+  
+  
+  
+    
+      
+    
+  
+    
+      
+    
+  
+    
+  
+    
+      
+    
+  
+
+<div class="figure fig50 center dim-margin" >
+  
+    <a class="fancybox" href="/img/old/reset-coin-counter.jpg" data-fancybox-group="">
+  
+    <img class="fig-img" src="/img/old/reset-coin-counter.jpg" >
+  
+    </a>
+  
+  
+</div>
+
+
+<p>Here&rsquo;s an SQL version of the same sentence, applied to the period in between
+ticks
+<code>4</code> and
+<code>14</code>, in a completely arbitrary choosing of mine:</p>
+
+<pre><code>with t as (
+  select tick,
+         first_value(nb) over w as first,
+         case when lead(nb) over w &lt; nb then nb
+              when lead(nb) over w is null then nb
+              else null
+          end as max
+    from measures
+   where tick &gt;= 4 and tick &lt; 14
+  window w as (order by tick)
+)
+select sum(max) - min(first) as sum
+ from t;
+</code></pre>
+
+<p>Here we are using the
+<em>first_value()</em> window function to retain it in the
+whole resultset of the
+<em>Common Table Expression</em> (the inner query introduced
+by the keyword
+<code>WITH</code> is called that way). And when doing the sum we&rsquo;re
+interested in at the outer level, we didn&rsquo;t forget to substract the first
+value: we need to use an aggregate here because we&rsquo;re doing a
+<code>sum()</code>
+aggregate at the same query level, and we have the same value in each row of
+the resultset, so we used
+<code>min()</code>,
+<code>max()</code> would have been as good.</p>
+
+<p>Another important trick we&rsquo;re using in that query is how to express the date
+range. Never use
+<code>between</code> for that, as you would end up counting boundaries
+twice, and customer won&rsquo;t like your accounting process if you do that.
+Always use a combo of inclusive and exclusive boundaries comparison, as in
+that
+<code>WHERE</code> clause in the previous query.</p>
+
+<p>Let&rsquo;s have a quick look at the raw data in that range, using another nice
+<em>aggregate</em> that PostgreSQL comes with:</p>
+
+<pre><code>select array_agg(nb) from measures where tick &gt;= 4 and tick &lt; 14;
+           array_agg           
+-------------------------------
+ {30,40,0,20,30,60,0,10,30,35}
+(1 row)
+</code></pre>
+
+<p>And now, the
+<em>logical counter value</em> for that period is computed as the
+following value by the previous query:</p>
+
+<pre><code>sum 
+-----
+ 105
+(1 row)
+</code></pre>
+
+<p>We can verify it manually, we want
+<code>40 + 60 + 35 - 30</code>, I think we&rsquo;re all good
+again. Don&rsquo;t forget we have to substract the first measure from the period!</p>
+
+<h2 id="extending-the-problem">Extending the problem</h2>
+
+<p>Another interesting problem, that we didn&rsquo;t have here but that I find
+interesting enough to extend this article, is finding the ranges of time
+(here, ticks) within which the counter didn&rsquo;t reset.</p>
+
+
+
+ 
+  
+  
+  
+  
+    
+      
+    
+  
+    
+      
+    
+  
+    
+  
+    
+      
+    
+  
+
+<div class="figure fig50 center dim-margin" >
+  
+    <a class="fancybox" href="/img/old/reset-A2a.jpg" data-fancybox-group="">
+  
+    <img class="fig-img" src="/img/old/reset-A2a.jpg" >
+  
+    </a>
+  
+  
+</div>
+
+
+<p>The query is more complex because we need to split the data into partitions,
+each partition containing data from the same counter series of measures
+without wrapping. The usual trick is to self-join our data set so that for
+each given row we have a set of rows from the same partition, we are going
+to instead use a
+<em>correlated subquery</em> to go fetch the next
+<em>wraparound</em> value:</p>
+
+<pre><code>with tops as (
+  select tick, nb,
+         case when lead(nb) over w &lt; nb then nb
+              when lead(nb) over w is null then nb
+             else null
+         end as max
+    from measures
+  window w as (order by tick)
+)
+  select tick, nb, max,
+         (select tick
+            from tops t2
+           where t2.tick &gt;= t1.tick and max is not null
+        order by t2.tick
+           limit 1) as p
+    from tops t1;
+
+ tick | nb  | max | p  
+------+-----+-----+----
+    1 |   0 |     |  5
+    2 |  10 |     |  5
+    3 |  20 |     |  5
+    4 |  30 |     |  5
+    5 |  40 |  40 |  5
+    6 |   0 |     |  9
+    7 |  20 |     |  9
+    8 |  30 |     |  9
+    9 |  60 |  60 |  9
+   10 |   0 |     | 14
+   11 |  10 |     | 14
+   12 |  30 |     | 14
+   13 |  35 |     | 14
+   14 |  45 |  45 | 14
+   15 |  25 |     | 18
+   16 |  50 |     | 18
+   17 | 100 |     | 18
+   18 | 110 | 110 | 18
+(18 rows)
+</code></pre>
+
+<p>With that as an input it&rsquo;s then possible to build ranges of ticks including
+non wrapping set of measures from our counter, and get for each range the
+logical value tat the counter had at the end of it:</p>
+
+<pre><code>with tops as (
+  select tick, nb,
+         case when lead(nb) over w &lt; nb then nb
+              when lead(nb) over w is null then nb
+             else null
+         end as max
+    from measures
+  window w as (order by tick)
+),
+     parts as (
+  select tick, nb, max,
+         (select tick
+            from tops t2
+           where t2.tick &gt;= t1.tick and max is not null
+        order by t2.tick
+           limit 1) as p
+    from tops t1
+),
+     ranges as (
+  select first_value(tick) over w as start,
+         last_value(tick) over w as end,
+         max(max) over w
+    from parts
+  window w as (partition by p order by tick)
+)
+select * from ranges where max is not null;
+
+ start | end | max 
+-------+-----+-----
+     1 |   5 |  40
+     6 |   9 |  60
+    10 |  14 |  45
+    15 |  18 | 110
+(4 rows)
+</code></pre>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>What I hope to have shown here, apart from some
+<em>window function</em> tips and
+some nice use cases for
+<em>common table expressions</em>, is that as a developper
+adding
+<code>SQL</code> to your tool set is a very good idea.</p>
+
+
+
+ 
+  
+  
+  
+  
+    
+      
+    
+  
+    
+      
+    
+  
+    
+  
+    
+      
+    
+  
+
+<div class="figure fig50 center dim-margin" >
+  
+    <a class="fancybox" href="/img/old/skill-set.jpg" data-fancybox-group="">
+  
+    <img class="fig-img" src="/img/old/skill-set.jpg" >
+  
+    </a>
+  
+  
+</div>
+
+
+<p>You don&rsquo;t want to have several parts of your code dealing with a logical
+counter like this, because you want the reporting, accounting, quota,
+billing and other software to all agree on the values. And you most probably
+want to avoid to fetch a huge result set of data and process it in the
+application memory (it&rsquo;d better fit) rather than just get back a single
+integer column single row resultset, right?</p>
+
+<p>If you find this SQL example to be off the limits, it&rsquo;s a good sign that you
+need to improve on your skills so that SQL is a real asset of your developer
+multi languages multi paradygm talents.</p>
+
+              
+            </div>
+          </div>
+          <div id="post-footer" class="post-footer main-content-wrap">
+            
+              
+                
+                
+                  <div class="post-footer-tags">
+                    <span class="text-color-light text-small"></span><br/>
+                    
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/postgresql/">PostgreSQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/window-functions/">Window-Functions</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/yesql/">YeSQL</a>
+
+                  </div>
+                
+              
+            
+            <div class="post-actions-wrap">
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2012/10/prefixes-and-ranges/" data-tooltip="Prefixes and Ranges">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2012/09/postgresql-9.3/" data-tooltip="PostgreSQL 9.3">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2012%2f10%2freset-counter%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2012%2f10%2freset-counter%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http%3a%2f%2ftapoueh.org%2fblog%2f2012%2f10%2freset-counter%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+            
+              
+            
+          </div>
+        </article>
+        <footer id="footer" class="main-content-wrap">
+  <span class="copyrights">
+    &copy; 2017 Dimitri Fontaine. 
+  </span>
+</footer>
+
+      </div>
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="1">
+        <div class="post-actions-wrap">
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2012/10/prefixes-and-ranges/" data-tooltip="Prefixes and Ranges">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2012/09/postgresql-9.3/" data-tooltip="PostgreSQL 9.3">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2012%2f10%2freset-counter%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2012%2f10%2freset-counter%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http%3a%2f%2ftapoueh.org%2fblog%2f2012%2f10%2freset-counter%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+      </div>
+      <div id="share-options-bar" class="share-options-bar" data-behavior="1">
+  <ul class="share-options">
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2012%2f10%2freset-counter%2f">
+        <i class="fa fa-google-plus"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2012%2f10%2freset-counter%2f">
+        <i class="fa fa-facebook-official"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http%3a%2f%2ftapoueh.org%2fblog%2f2012%2f10%2freset-counter%2f">
+        <i class="fa fa-twitter"></i><span></span>
+      </a>
+    </li>
+  </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+    </div>
+    
+    <div id="about">
+  <div id="about-card">
+    <div id="about-btn-close">
+      <i class="fa fa-remove"></i>
+    </div>
+    
+      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+    
+    <h4 id="about-card-name">Dimitri Fontaine</h4>
+    
+      <div id="about-card-bio">PostgreSQL Major Contributor</div>
+    
+    
+      <div id="about-card-job">
+        <i class="fa fa-briefcase"></i>
+        <br/>
+        Open Source Software Engineer
+      </div>
+    
+    
+      <div id="about-card-location">
+        <i class="fa fa-map-marker"></i>
+        <br/>
+        France
+      </div>
+    
+  </div>
+</div>
+
+    <div id="algolia-search-modal" class="modal-container">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="close-button"><i class="fa fa-close"></i></span>
+      <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+        <span class="searchby-algolia-text text-color-light text-small">by</span>
+        <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+      </a>
+      <i class="search-icon fa fa-search"></i>
+      <form id="algolia-search-form">
+        <input type="text" id="algolia-search-input" name="search"
+          class="form-control input--large search-input" placeholder="" />
+      </form>
+    </div>
+    <div class="modal-body">
+      <div class="no-result text-color-light text-center"></div>
+      <div class="results">
+        
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/11/all-your-base-conference-2015/">
+                <h3 class="media-heading">All Your Base Conference 2015</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Nov 11, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">I had the pleasure to be invited to speak at All Your Base Conference 2015 about PostgreSQL (of course). The conference gathers together lots of user experience around data management and database products, either in the now classic meaning of the word (I mean relational database management systems here) or the newer set of trade-offs represented by the NoSQL set of tools.
+  The conference was very nicely organized and ran smoothly, and I got the unique chance to get a back from the trenches story series about people tools of choices and the reason why they do things their way.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/05/postgresql-au-jug-de-montpellier/">
+                <h3 class="media-heading">PostgreSQL au JUG de Montpellier</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">J&rsquo;ai eu le plaisir de présenter PostgreSQL au Java User Group de Montpellier le 20 mai dernier dans le cadre d&rsquo;une soirée PostgreSQL is YeSQL. L&rsquo;accueil réservé par le JUG a été parfait et je tiens à les remercier pour une très bonne soirée de partage et d&rsquo;échanges autour de PostgreSQL.
+Les slides des présentations sont disponibles. Nous avons commencé par une présentation générale sur comment et pourquoi utiliser PostgreSQL en 2015 :</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/05/quicklisp-and-debian/">
+                <h3 class="media-heading">Quicklisp and debian</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">Common Lisp users are very happy to use Quicklisp when it comes to downloading and maintaining dependencies between their own code and the librairies it is using.
+Sometimes I am pointed that when compared to other programming languages Common Lisp is lacking a lot in the batteries included area. After having had to package about 50 common lisp librairies for debian I can tell you that I politely disagree with that.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/04/pgday-paris/">
+                <h3 class="media-heading">pgDay Paris</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">Le 21 avril prochain se tient le premier pgDay Paris: une conférence PostgreSQL d&rsquo;une journée complète. Il s&rsquo;agit de 8 conférences sur votre base de données préférée par des conférencers internationaux, incluant des retours d&rsquo;expérience et une analyse de l&rsquo;utilisation des derniers développements en cours dans notre projet de base de données préféré.
+  *pgDay Paris, 21 avril 2015 : 8 conférences PostgreSQL*
+Pour 65 € l&rsquo;accès à la conférence inclut les pauses cafés (avec thé, eau, biscuits, etc) et le déjeuner sur place (repas complet servi à table).</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/03/a-pgday-in-paris/">
+                <h3 class="media-heading">a pgDay in Paris!</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Mar 3, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">I was lucky to participate as a speaker to the Nordic PostgreSQL Day 2015 and it&rsquo;s been another awesome edition of the conference. Really smooth, everything has been running as it should, with about one hundred people at the conference.
+In action at Nordic pgDay in Copenhaguen
+You can get the slides I&rsquo;ve been using for my talk at the Nordic pgDay 2015 page on the Conferences pages of this website.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/02/back-from-fosdem-2015/">
+                <h3 class="media-heading">Back From FOSDEM 2015</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Feb 2, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">The FOSDEM 2015 edition has been awesome this year, the usual mix of meeting with old friends, talking about interesting topics, seeing tremendous activity in all Open Source domains, and having Belgium beers in the evenings.
+  FOSDEM PGDAY On the Friday before the real FOSDEM event our own PostgreSQL Europe organized a one-day event, the FOSDEM PGDAY. It as an intense day of conferences about PostgreSQL, where I had the opportunity to present pgloader in the context of dealing with database migrations.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/01/my-first-slashdot-effect/">
+                <h3 class="media-heading">My First Slashdot Effect</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jan 1, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">Thanks to the Postgres Weekly issue #89 and a post to Hacker News front page (see Pgloader: A High-speed PostgreSQL Swiss Army Knife, Written in Lisp it well seems that I just had my first Slashdot effect&hellip;
+Well actually you know what? I don&rsquo;t&hellip;
+So please consider using the new mirror http://dimitri.github.io/pgloader/ and maybe voting on Hacker News for either tooling around your favorite database system, PostgreSQL or your favorite programming language, Common Lisp&hellip;</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/01/new-release-pgloader-3.2/">
+                <h3 class="media-heading">New release: pgloader 3.2</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jan 1, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">PostgreSQL comes with an awesome bulk copy protocol and tooling best known as the COPY and \copy commands. Being a transactional system, PostgreSQL COPY implementation will ROLLBACK any work done if a single error is found in the data set you&rsquo;re importing. That&rsquo;s the reason why pgloader got started: it provides with error handling for the COPY protocol.
+That&rsquo;s basically what pgloader used to be all about
+As soon as we have the capability to load data from unreliable sources, another use case appears on the horizon, and soon enough pgloader grew the capacity to load data from other databases, some having a more liberal notion of what is sane data type input.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2014/10/meetup-postgresql-%C3%A0-paris/">
+                <h3 class="media-heading">Meetup PostgreSQL à Paris</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Oct 10, 2014
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">Mercredi 8 octobre se tiendra le prochain Meetup PostgreSQL à Paris dans les locaux de Mozilla Europe, dont la capacité est de 90 personnes ! Venez nombreux !
+Le programme de cette édition est un peu particulier puisque nous avons reçu quatre propositions enthousiastes de présentations. Chacun aura donc 15 à 20 minutes (questions incluses) pour présenter son sujet. Voici le programme :
+ Aggrégation temporelle sous contrainte d&rsquo;iops, par Jean-Gérard Pailloncy</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2014/09/php-tour-la-video/">
+                <h3 class="media-heading">PHP Tour, La Video</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Sep 9, 2014
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">En juin dernier se tenait le PHP Tour 2014 à Lyon, où j&rsquo;ai eu le plaisir de présenter une conférence sur PostgreSQL en 2014.
+  Cette intervention était filmée, et la vidéo est maintenant disponible :
+
+ 
+En espérant que vous regarderez cette vidéo avec autant d&rsquo;intérêt que j&rsquo;ai eu à participer à PHP Tour 2014 !</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+      </div>
+    </div>
+    <div class="modal-footer">
+      <p class="results-count text-medium"
+         data-message-zero=""
+         data-message-one=""
+         data-message-other="">
+         229 posts found
+      </p>
+    </div>
+  </div>
+</div>
+    
+  
+    
+    <div id="cover" style="background-image:url('http://tapoueh.org/images/Tree_Of_Light_by_lowapproach.jpg');"></div>
+  
+
+
+    
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.8.0/highlight.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.js"></script>
+
+
+<script src="/js/script-wl33z0n6ocaypepiqrazthtivfrliqijej4rq8ek8gvrv1awftmgjuv8k4zc.min.js"></script>
+
+<script>
+$(document).ready(function() {
+  hljs.configure({ classPrefix: '', useBR: false });
+  $('pre.code-highlight').each(function(i, block) {
+    var code = "";
+    hljs.highlightAuto(block.innerText).value.split(/\r\n|\r|\n/).forEach(function(line) {
+      code += "<span class=\"line\">" + line + "</span><br>";
+    });
+    if (code.length > 0) {
+      block.innerHTML = code;  
+    }
+  });
+  $('pre > code').each(function(i, block) {
+    $(this).addClass('codeblock');
+    hljs.highlightBlock(block);
+  });
+});
+</script>
+
+  
+    
+  
+
+
+
+
+
+    
+  </body>
+</html>
+

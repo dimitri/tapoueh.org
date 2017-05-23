@@ -1,0 +1,1114 @@
+
+
+  
+    
+  
+
+
+  
+
+
+
+
+  
+
+
+  
+
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Hugo 0.20.7">
+    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
+    <title>Solving Every Sudoku Puzzle</title>
+    <meta name="author" content="Dimitri Fontaine">
+    <meta name="keywords" content="">
+
+    <link rel="icon" href="/favicon.ico">
+    
+
+    
+    <meta name="description" content="Peter Norvig published a while ago a very nice article titled Solving Every Sudoku Puzzle wherein he presents a programmatic approach to solving that puzzle game.
+  The article is very well written and makes it easy to think that coming up with the code for such a solver is a very easy task, you apply some basic problem search principles and there you are. Which is partly true, in fact.">
+    <meta property="og:description" content="Peter Norvig published a while ago a very nice article titled Solving Every Sudoku Puzzle wherein he presents a programmatic approach to solving that puzzle game.
+  The article is very well written and makes it easy to think that coming up with the code for such a solver is a very easy task, you apply some basic problem search principles and there you are. Which is partly true, in fact.">
+    <meta property="og:type" content="blog">
+    <meta property="og:title" content="Solving Every Sudoku Puzzle">
+    <meta property="og:url" content="/blog/2012/07/solving-every-sudoku-puzzle/">
+    <meta property="og:site_name" content="Dimitri Fontaine, Expert PostgreSQL">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Dimitri Fontaine, Expert PostgreSQL">
+    <meta name="twitter:description" content="Peter Norvig published a while ago a very nice article titled Solving Every Sudoku Puzzle wherein he presents a programmatic approach to solving that puzzle game.
+  The article is very well written and makes it easy to think that coming up with the code for such a solver is a very easy task, you apply some basic problem search principles and there you are. Which is partly true, in fact.">
+    
+      <meta name="twitter:creator" content="@tapoueh">
+    
+    
+
+    
+    
+
+    
+      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
+    
+
+    
+      <meta property="og:image" content="http://tapoueh.org/img/old/sudoku.png">
+    
+    
+      <meta property="og:image" content="http://tapoueh.org/img/old/sudoku.png">
+    
+    
+
+    
+
+    
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
+    
+    
+    <link rel="stylesheet" href="/css/style-u6mk0ojoywresbx8iepslrmmhl4stuhrsxuwhkpwrkrx7mryjcaimasnk4pi.min.css" />
+    
+    
+      <link rel="stylesheet" href="http://tapoueh.org//css/dim.css">
+    
+
+    
+      
+    
+    
+  </head>
+
+  <body>
+    <div id="blog">
+      <header id="header" data-behavior="1">
+  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+  <div class="header-title">
+    <a class="header-title-link" href="/">Dimitri Fontaine, Expert PostgreSQL</a>
+  </div>
+  
+</header>
+
+      <nav id="sidebar" data-behavior="1">
+  <div class="sidebar-container">
+    
+      <div class="sidebar-profile">
+        <a href="/#about">
+          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+        </a>
+        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
+        
+          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
+        
+      </div>
+    
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
+      
+      <span class="sidebar-button-desc">Blog</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/about/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
+      
+      <span class="sidebar-button-desc">About</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/book/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
+      
+      <span class="sidebar-button-desc">Book</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/tags/conferences/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-plane"></i>
+      
+      <span class="sidebar-button-desc">Conferences</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/projects/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bug"></i>
+      
+      <span class="sidebar-button-desc">Projects</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+      
+      <span class="sidebar-button-desc">GitHub</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+      
+      <span class="sidebar-button-desc">Twitter</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+      
+      <span class="sidebar-button-desc">Categories</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/tags">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+      
+      <span class="sidebar-button-desc">Tags</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/archives">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+      
+      <span class="sidebar-button-desc">Archives</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/index.xml">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+      
+      <span class="sidebar-button-desc">RSS</span>
+    </a>
+  </li>
+
+    </ul>
+  </div>
+</nav>
+
+      
+  <div class="post-header-cover
+              text-left
+              post-header-cover--partial"
+       style="background-image:url('/img/old/sudoku.png')"
+       data-behavior="1">
+    
+  </div>
+
+
+      <div id="main" data-behavior="1"
+        class="hasCover
+               hasCoverMetaOut
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
+          
+            <div class="post-header main-content-wrap text-left">
+  
+    <h1 class="post-title" itemprop="headline">
+      Solving Every Sudoku Puzzle
+    </h1>
+  
+  <div class="postShorten-meta post-meta">
+  
+    <time itemprop="datePublished" datetime="2012-07-10T20:37:00&#43;02:00">
+      
+  
+  
+  
+  
+    Tuesday 10 Jul 2012
+  
+
+    </time>
+  
+  
+  
+  
+    <span></span>
+    
+      <a class="category-link" href="/categories/software-programming">Software Programming</a>, 
+    
+      <a class="category-link" href="/categories/common-lisp">Common Lisp</a>
+    
+  
+
+
+</div>
+
+</div>
+          
+          <div class="post-content markdown" itemprop="articleBody">
+            <div class="main-content-wrap">
+              
+
+<p><a href="http://norvig.com/">Peter Norvig</a> published a while ago a very nice article titled
+<a href="http://norvig.com/sudoku.html">Solving Every Sudoku Puzzle</a> wherein he presents a programmatic approach to
+solving that puzzle game.</p>
+
+<div class="figure center dim-margin">
+  <a href="http://en.wikipedia.org/wiki/Sudoku">
+    <img src="/img/old/sudoku.png">
+  </a>
+</div>
+
+<p>The article is very well written and makes it easy to think that coming up
+with the code for such a solver is a very easy task, you apply some basic
+problem search principles and there you are. Which is partly true, in fact.
+Also, he uses
+<code>python</code>, and that means that a lot of trivial programming
+activities are not a concern anymore, such as memory management.</p>
+
+<p>As I&rsquo;ve been teaching myself
+<a href="http://www.cliki.net/Common%20Lisp">Common Lisp</a> for some weeks now I though I would
+like to read a lisp version of his code, and the article even has a section
+titled
+<em>Translations</em>. Unfortunately, no lisp version is available there. One
+might argue that
+<a href="http://clojure.org/">Clojure</a> is a decent enough lisp, but my current quest is
+all about
+<em>Common Lisp</em> really. So I had to write one myself.</p>
+
+<pre><code>CL-USER&gt; (sudoku:print-puzzle
+	  (sudoku:solve-grid
+&quot;530070000600195000098000060800060003400803001700020006060000280000419005000080079&quot;))
+5 3 4 | 6 7 8 | 9 1 2 
+6 7 2 | 1 9 5 | 3 4 8 
+1 9 8 | 3 4 2 | 5 6 7 
+------+-------+------
+8 5 9 | 7 6 1 | 4 2 3 
+4 2 6 | 8 5 3 | 7 9 1 
+7 1 3 | 9 2 4 | 8 5 6 
+------+-------+------
+9 6 1 | 5 3 7 | 2 8 4 
+2 8 7 | 4 1 9 | 6 3 5 
+3 4 5 | 2 8 6 | 1 7 9 
+took 1,974 microseconds (0.001974 seconds) to run.
+During that period, and with 2 available CPU cores,
+     1,894 microseconds (0.001894 seconds) were spent in user mode
+        88 microseconds (0.000088 seconds) were spent in system mode
+ 174,320 bytes of memory allocated.
+#&lt;SUDOKU::PUZZLE #x3020023BB9FD&gt;
+</code></pre>
+
+<h2 id="comments-on-the-python-version">Comments on the python version</h2>
+
+<p>Norvig&rsquo;s article is very well written, I think. By that I mean that by
+reading it you&rsquo;re confident that you&rsquo;ve understood the problem and how the
+solution is articulated, so you almost think you don&rsquo;t need to really try to
+understand the code, it&rsquo;s just an illustration of the text.</p>
+
+<p>Well, not so much. When you want to port the exact same algorithm you have
+to understand exactly what the code is doing so that you&rsquo;re not implementing
+something else. All the more when, as I did, you want to use some other data
+structure.</p>
+
+<p>My goal was not to rewrite the code as-is, but to try and come up with
+<em>idiomatic</em> lisp code implementing Norvig&rsquo;s solution. So rather than using
+<em>strings</em> and
+<em>dictionaries</em> (in lisp, they still call them a
+<a href="http://www.lispworks.com/documentation/lw50/CLHS/Body/f_mk_has.htm">hash table</a>) I&rsquo;ve
+been using more natural data structures.</p>
+
+<p>The
+<em>python</em> code is really not that easy to follow, full of functional
+programming veteran tricks. I mean avoiding
+<em>exceptions</em> and simply
+returning
+<code>False</code> whenever there&rsquo;s a problem, and using functions such as
+<code>all</code> and
+<code>some</code> to manage that. It&rsquo;s certainly working, it&rsquo;s not making the
+code any easier to read.</p>
+
+<p>To summarize, that code looks like it&rsquo;s been written by someone smart who
+didn&rsquo;t want to spend more than a couple of hours on it, and did take all
+known trustworthy shortcuts he could to achieve that goal. Quality and
+readability certainly weren&rsquo;t the key motive. I&rsquo;ve been quite deceived after
+reading a very good article.</p>
+
+<h2 id="comments-on-the-common-lisp-version">Comments on the common lisp version</h2>
+
+<p>Keep in mind that I&rsquo;m just a
+<em>Common Lisp</em> newbie. I&rsquo;ve been told some good
+pieces of advice by knowledgeable people though, so with some luck my
+implementation is somewhat
+<em>lispy</em> enough.</p>
+
+<p>So we start by defining some data structures and low-level functions to
+build up the more complex one, so that it&rsquo;s easier to read and debug. The
+<em>sudoku</em> puzzle is then a grid of digits and a grid of possible values in
+places where the digits are yet unknown.</p>
+
+<p>The way to represent that 9x9 grid is with using
+<a href="http://www.lispworks.com/documentation/lw51/CLHS/Body/f_mk_ar.htm">make-array</a>:</p>
+
+<pre><code>(make-array '(9 9)
+	    :element-type '(integer 0 9)
+	    :initial-element 0)
+</code></pre>
+
+<p>Then the possible values. I though about using a
+<code>bit-vector</code> (and actually I
+did implement it that way), then I&rsquo;ve been told that the
+<em>Common Lisp</em> way to
+approach that is using
+<a href="http://psg.com/~dlamkins/sl/chapter18.html">2-complement integer representation</a>, as we have
+plenty of functions to operate numbers that way. I wouldn&rsquo;t believe that
+would make the code simpler, but in fact it really did, see:</p>
+
+<pre><code>CL-USER&gt; #b111111111
+511
+CL-USER&gt; (logcount #b111111111)
+9
+CL-USER&gt; (logcount 511)
+9
+CL-USER&gt; (logbitp 3 #b100100100)
+NIL
+CL-USER&gt; (logbitp 2 #b100100100)
+T
+CL-USER&gt; (format nil &quot;~2r&quot; (logxor #b111111111 (ash 1 4)))
+&quot;111101111&quot;
+CL-USER&gt; (logbitp 4 (logxor #b111111111 (ash 1 4)))
+NIL
+</code></pre>
+
+<p>With that in mind, we can write the following code:</p>
+
+<pre><code>(defun count-remaining-possible-values (possible-values)
+  &quot;How many possible values are left in there?&quot;
+  ;; we could raise an empty-values condition if we get 0...
+  (logcount possible-values))
+
+(defun first-set-value (possible-values)
+  &quot;Return the index of the first set value in POSSIBLE-VALUES.&quot;
+  (+ 1 (floor (log possible-values 2))))
+
+(defun only-possible-value-is? (possible-values value)
+  &quot;Return a generalized boolean which is true when the only value found in
+   POSSIBLE-VALUES is VALUE&quot;
+  (and (logbitp (- value 1) possible-values)
+       (= 1 (logcount possible-values))))
+
+(defun list-all-possible-values (possible-values)
+  &quot;Return a list of all possible values to explore&quot;
+  (loop for i from 1 to 9
+     when (logbitp (- i 1) possible-values)
+     collect i))
+
+(defun value-is-set? (possible-values value)
+  &quot;Return a generalized boolean which is true when given VALUE is possible
+   in POSSIBLE-VALUES&quot;
+  (logbitp (- value 1) possible-values))
+
+(defun unset-possible-value (possible-values value)
+  &quot;return an integer representing POSSIBLE-VALUES with VALUE unset&quot;
+  (logxor possible-values (ash 1 (- value 1))))
+</code></pre>
+
+<p>You can see here that I was also under the influence of a recent reading
+about
+<a href="http://gar1t.com/blog/2012/06/10/solving-embarrassingly-obvious-problems-in-erlang/">making it obvious</a>, or so called
+<a href="http://dieswaytoofast.blogspot.fr/2012/07/erlang-why-so-many-seemingly-identical.html">intentional programming</a>, following
+what
+<a href="http://armstrongonsoftware.blogspot.fr/">Joe Armstrong</a> has to say about it:</p>
+
+<blockquote>
+<p>Intentional programming is a name I give to a style of programming where
+  the reader of a program can easily see what the programmer intended by
+  their code. The intention of the code should be obvious from the names of
+  the functions involved and not be inferred by analysing the structure of
+  the code. (Reading the code should) precisely expresses the intention of
+  the programmer—here no guesswork or program analysis is involved, we
+  clearly read what was intended.</p>
+</blockquote>
+
+<p>So there we go with function names such as
+<code>count-remaining-possible-values</code>,
+that will help when reading some more complex code, as in the following, the
+meat of the solution:</p>
+
+<pre><code>(defmethod eliminate ((puzzle puzzle) row col value)
+  &quot;Eliminate given VALUE from possible values in cell ROWxCOL of PUZZLE, and
+   propagate when needed&quot;
+  (with-slots (grid values) puzzle
+    ;; if already unset, work is already done
+    (when (value-is-set? (aref values row col) value)
+      ;; eliminate the value from the set of possible values
+      (let* ((possible-values
+	      (unset-possible-value (aref values row col) value)))
+	(setf (aref values row col) possible-values)
+
+	;; now if we're left with a single possible value
+	(when (= 1 (count-remaining-possible-values possible-values))
+	  (let ((found-value (first-set-value possible-values)))
+	    ;; update the main grid
+	    (setf (aref grid row col) found-value)
+
+	    ;; eliminate that value we just found in all peers
+	    (eliminate-value-in-peers puzzle row col found-value)))
+
+	;; now check if any unit has a single possible place for that value
+	(loop
+	   for (r . c)
+	   in (list-places-with-single-unit-solution puzzle row col value)
+	   do (assign puzzle r c value))))))
+</code></pre>
+
+<p>So that lisp code is quite verbose and at 389 lines almost doubles the 201
+lines Norvig had. When clarity is part of the goal, that&rsquo;s hard to avoid, I
+hope I made a good case that this is not due to lisp being overly verbose by
+itself.</p>
+
+<h2 id="comments-on-the-development-environment">Comments on the development environment</h2>
+
+<p>Or why I even considered
+<em>Common Lisp</em> as an interesting language for that
+kind of exercise, and some more.
+<em>I&rsquo;ll have to tell about re-sharding data
+live with 16 threads and 256 databases, all in CL, someday</em>.</p>
+
+<p>So I&rsquo;ve been doing some
+<em>Emacs Lisp</em> development for a while now, and the part
+that makes that so much fun is the instant reward. You write some code in
+your editor, type a key chord (usually, that&rsquo;s
+<code>C-M-x runs the command
+eval-defun</code>) and your code is loaded up, ready to be tested. In
+<em>Emacs Lisp</em>
+the test can be simply using your editor and watching the new behavior
+taking place, or playing in the
+<code>M-x ielm</code> console. When the code is not
+ready, it crashes, and you&rsquo;re left in the interactive debugger, where you
+can use
+<code>C-x C-e runs the command eval-last-sexp</code> to evaluate any expression
+in your source and see its value in the current
+<em>debug frame</em>.</p>
+
+<p>That way of working is a huge productivity boost, that I&rsquo;ve been missing
+much when getting back to writing C code for PostgreSQL. I can&rsquo;t
+<code>C-M-x</code> the
+current function and go write some
+<code>SQL</code> to test it right away, I have to
+<em>compile</em> the whole source tree, then
+<em>install</em> the new binaries, then
+<em>restart</em>
+the test server and then open up a
+<em>psql</em> console to interact with the new
+code. Of course I could just
+<code>make check</code> and watch the results, but then if I
+attach a
+<em>debugger</em> it complains that the code on-disk is more recent than the
+code in the
+<em>core dump</em>.</p>
+
+<p>What if you want
+<em>Emacs Lisp</em> integrated facilities and something made for
+general programming rather than suited to building a text editor? Don&rsquo;t get
+me wrong, you can probably find more production ready code in
+<em>elisp</em> than in
+many other languages, just because Emacs has been there for about 35 years.
+Editor targeted production code, though.</p>
+
+<p>This integrated development cycle is all the same when you&rsquo;re using
+<em>Common
+Lisp</em>. The awesome
+<a href="http://common-lisp.net/project/slime/">Superior Lisp Interaction Mode for Emacs</a> is providing
+exactly that experience. Just run
+<code>M-x slime</code> and then as you define your code
+you can
+<code>C-M-x</code> the function at point, see the compilation errors and warnings
+if any in the associated
+<em>REPL</em>, and just try your code. I tend to mostly play
+in the command line, it&rsquo;s possible to just use
+<code>C-x C-e</code> while typing too.</p>
+
+<h2 id="performances">Performances</h2>
+
+<p>Of course we do care! After all the original article came with a quite
+detailed performance analysis with graphs and all. I won&rsquo;t be reproducing
+that, sorry. I&rsquo;ll just show you what penalty you get for using an older
+language specification, much more dynamic and with more features than
+python, and with a great, scratch that, awesome development environment.</p>
+
+<p>Oh wait, that&rsquo;s the other way round, no penalty, it&rsquo;s actually so much
+faster!</p>
+
+<h3 id="python-version-perfs">Python version perfs</h3>
+
+<p>The results I got on my desktop machine are about twice as fast as in the
+original article, I guess newer machines and newer python have something to
+say for that:</p>
+
+<pre><code>dim ~/dev/CL/sudoku python sudoku.dim.py 
+  All tests pass.
+  Solved 50 of 50 easy puzzles (avg 0.01 secs (151 Hz), max 0.01 secs).
+  Solved 95 of 95 hard puzzles (avg 0.02 secs (42 Hz), max 0.12 secs).
+  Solved 11 of 11 hardest puzzles (avg 0.01 secs (115 Hz), max 0.01 secs).
+</code></pre>
+
+<p>That makes an average of
+<code>(50*151 + 95*42 + 11*115) / (50+95+11) =
+82Hz</code>.</p>
+
+<p>That seems pretty good, let&rsquo;s continue.</p>
+
+<p>As you can see I&rsquo;ve cut away the
+<em>random puzzle</em> part, that&rsquo;s because I was
+too lazy to implement that part, which didn&rsquo;t seem all that interesting to
+me. If you think that&rsquo;s a problem and need solving, I accept patches.</p>
+
+<h3 id="common-lisp-version-perfs">Common lisp version perfs</h3>
+
+<p>When using
+<a href="http://sbcl.org/">SBCL</a> on the same machine, what I got was:</p>
+
+<pre><code>(sudoku:solve-example-grids)
+  Solved 50 of 50 easy puzzles (avg .0021 sec (471.7 Hz), max 0.015 secs).
+  Solved 95 of 95 hard puzzles (avg .0022 sec (446.0 Hz), max 0.008 secs).
+  Solved 11 of 11 hardest puzzles (avg .0018 sec (550.0 Hz), max 0.003 secs).
+</code></pre>
+
+<p>With the same way to compute the average, we now have
+<code>461.6Hz</code>.</p>
+
+<p>Now, that&rsquo;s between 3 times and more than
+<strong>10 times faster</strong> than the python
+version (taken collection per collection), for a comparable effort, a much
+better development environment, and the same all dynamic no explicit
+compiling approach.</p>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>I guess I&rsquo;m fond of
+<em>Common Lisp</em>, which I already saw coming (so did you,
+right?), and now I have some public article and code to share about why :)</p>
+
+<p>The code is hosted at
+<a href="https://github.com/dimitri/sudoku">https://github.com/dimitri/sudoku</a> if you&rsquo;re
+interested, with the necessary files to reproduce, some docs, etc.</p>
+
+<p>Also, apart from using
+<em>integers</em> as
+<em>bitfields</em>, which I did more for being
+lispy than for performances, I did very little effort for optimizing the
+code. It&rsquo;s quite naive in this respect, yet allow me an average of
+<code>461.6Hz</code>
+rather than
+<code>82Hz</code>, that&rsquo;s
+<strong><em>5.6 times faster</em></strong> average.</p>
+
+<p>So yes, I will continue to invest some precious time in
+<em>Common Lisp</em> as a
+very good interactive scripting language, and maybe more than that.</p>
+
+              
+            </div>
+          </div>
+          <div id="post-footer" class="post-footer main-content-wrap">
+            
+              
+                
+                
+                  <div class="post-footer-tags">
+                    <span class="text-color-light text-small"></span><br/>
+                    
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/common-lisp/">Common-Lisp</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/sudoku/">Sudoku</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/solver/">Solver</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/puzzle/">Puzzle</a>
+
+                  </div>
+                
+              
+            
+            <div class="post-actions-wrap">
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2012/08/autumn-2012-conferences/" data-tooltip="Autumn 2012 Conferences">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2012/06/pgday-france-2012/" data-tooltip="PGDay France 2012">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2012%2f07%2fsolving-every-sudoku-puzzle%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2012%2f07%2fsolving-every-sudoku-puzzle%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http%3a%2f%2ftapoueh.org%2fblog%2f2012%2f07%2fsolving-every-sudoku-puzzle%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+            
+              
+            
+          </div>
+        </article>
+        <footer id="footer" class="main-content-wrap">
+  <span class="copyrights">
+    &copy; 2017 Dimitri Fontaine. 
+  </span>
+</footer>
+
+      </div>
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="1">
+        <div class="post-actions-wrap">
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2012/08/autumn-2012-conferences/" data-tooltip="Autumn 2012 Conferences">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2012/06/pgday-france-2012/" data-tooltip="PGDay France 2012">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2012%2f07%2fsolving-every-sudoku-puzzle%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2012%2f07%2fsolving-every-sudoku-puzzle%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http%3a%2f%2ftapoueh.org%2fblog%2f2012%2f07%2fsolving-every-sudoku-puzzle%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+      </div>
+      <div id="share-options-bar" class="share-options-bar" data-behavior="1">
+  <ul class="share-options">
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2012%2f07%2fsolving-every-sudoku-puzzle%2f">
+        <i class="fa fa-google-plus"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2012%2f07%2fsolving-every-sudoku-puzzle%2f">
+        <i class="fa fa-facebook-official"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http%3a%2f%2ftapoueh.org%2fblog%2f2012%2f07%2fsolving-every-sudoku-puzzle%2f">
+        <i class="fa fa-twitter"></i><span></span>
+      </a>
+    </li>
+  </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+    </div>
+    
+    <div id="about">
+  <div id="about-card">
+    <div id="about-btn-close">
+      <i class="fa fa-remove"></i>
+    </div>
+    
+      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+    
+    <h4 id="about-card-name">Dimitri Fontaine</h4>
+    
+      <div id="about-card-bio">PostgreSQL Major Contributor</div>
+    
+    
+      <div id="about-card-job">
+        <i class="fa fa-briefcase"></i>
+        <br/>
+        Open Source Software Engineer
+      </div>
+    
+    
+      <div id="about-card-location">
+        <i class="fa fa-map-marker"></i>
+        <br/>
+        France
+      </div>
+    
+  </div>
+</div>
+
+    <div id="algolia-search-modal" class="modal-container">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="close-button"><i class="fa fa-close"></i></span>
+      <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+        <span class="searchby-algolia-text text-color-light text-small">by</span>
+        <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+      </a>
+      <i class="search-icon fa fa-search"></i>
+      <form id="algolia-search-form">
+        <input type="text" id="algolia-search-input" name="search"
+          class="form-control input--large search-input" placeholder="" />
+      </form>
+    </div>
+    <div class="modal-body">
+      <div class="no-result text-color-light text-center"></div>
+      <div class="results">
+        
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/11/all-your-base-conference-2015/">
+                <h3 class="media-heading">All Your Base Conference 2015</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Nov 11, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">I had the pleasure to be invited to speak at All Your Base Conference 2015 about PostgreSQL (of course). The conference gathers together lots of user experience around data management and database products, either in the now classic meaning of the word (I mean relational database management systems here) or the newer set of trade-offs represented by the NoSQL set of tools.
+  The conference was very nicely organized and ran smoothly, and I got the unique chance to get a back from the trenches story series about people tools of choices and the reason why they do things their way.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/05/postgresql-au-jug-de-montpellier/">
+                <h3 class="media-heading">PostgreSQL au JUG de Montpellier</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">J&rsquo;ai eu le plaisir de présenter PostgreSQL au Java User Group de Montpellier le 20 mai dernier dans le cadre d&rsquo;une soirée PostgreSQL is YeSQL. L&rsquo;accueil réservé par le JUG a été parfait et je tiens à les remercier pour une très bonne soirée de partage et d&rsquo;échanges autour de PostgreSQL.
+Les slides des présentations sont disponibles. Nous avons commencé par une présentation générale sur comment et pourquoi utiliser PostgreSQL en 2015 :</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/05/quicklisp-and-debian/">
+                <h3 class="media-heading">Quicklisp and debian</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">Common Lisp users are very happy to use Quicklisp when it comes to downloading and maintaining dependencies between their own code and the librairies it is using.
+Sometimes I am pointed that when compared to other programming languages Common Lisp is lacking a lot in the batteries included area. After having had to package about 50 common lisp librairies for debian I can tell you that I politely disagree with that.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/04/pgday-paris/">
+                <h3 class="media-heading">pgDay Paris</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">Le 21 avril prochain se tient le premier pgDay Paris: une conférence PostgreSQL d&rsquo;une journée complète. Il s&rsquo;agit de 8 conférences sur votre base de données préférée par des conférencers internationaux, incluant des retours d&rsquo;expérience et une analyse de l&rsquo;utilisation des derniers développements en cours dans notre projet de base de données préféré.
+  *pgDay Paris, 21 avril 2015 : 8 conférences PostgreSQL*
+Pour 65 € l&rsquo;accès à la conférence inclut les pauses cafés (avec thé, eau, biscuits, etc) et le déjeuner sur place (repas complet servi à table).</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/03/a-pgday-in-paris/">
+                <h3 class="media-heading">a pgDay in Paris!</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Mar 3, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">I was lucky to participate as a speaker to the Nordic PostgreSQL Day 2015 and it&rsquo;s been another awesome edition of the conference. Really smooth, everything has been running as it should, with about one hundred people at the conference.
+In action at Nordic pgDay in Copenhaguen
+You can get the slides I&rsquo;ve been using for my talk at the Nordic pgDay 2015 page on the Conferences pages of this website.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/02/back-from-fosdem-2015/">
+                <h3 class="media-heading">Back From FOSDEM 2015</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Feb 2, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">The FOSDEM 2015 edition has been awesome this year, the usual mix of meeting with old friends, talking about interesting topics, seeing tremendous activity in all Open Source domains, and having Belgium beers in the evenings.
+  FOSDEM PGDAY On the Friday before the real FOSDEM event our own PostgreSQL Europe organized a one-day event, the FOSDEM PGDAY. It as an intense day of conferences about PostgreSQL, where I had the opportunity to present pgloader in the context of dealing with database migrations.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/01/my-first-slashdot-effect/">
+                <h3 class="media-heading">My First Slashdot Effect</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jan 1, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">Thanks to the Postgres Weekly issue #89 and a post to Hacker News front page (see Pgloader: A High-speed PostgreSQL Swiss Army Knife, Written in Lisp it well seems that I just had my first Slashdot effect&hellip;
+Well actually you know what? I don&rsquo;t&hellip;
+So please consider using the new mirror http://dimitri.github.io/pgloader/ and maybe voting on Hacker News for either tooling around your favorite database system, PostgreSQL or your favorite programming language, Common Lisp&hellip;</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/01/new-release-pgloader-3.2/">
+                <h3 class="media-heading">New release: pgloader 3.2</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jan 1, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">PostgreSQL comes with an awesome bulk copy protocol and tooling best known as the COPY and \copy commands. Being a transactional system, PostgreSQL COPY implementation will ROLLBACK any work done if a single error is found in the data set you&rsquo;re importing. That&rsquo;s the reason why pgloader got started: it provides with error handling for the COPY protocol.
+That&rsquo;s basically what pgloader used to be all about
+As soon as we have the capability to load data from unreliable sources, another use case appears on the horizon, and soon enough pgloader grew the capacity to load data from other databases, some having a more liberal notion of what is sane data type input.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2014/10/meetup-postgresql-%C3%A0-paris/">
+                <h3 class="media-heading">Meetup PostgreSQL à Paris</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Oct 10, 2014
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">Mercredi 8 octobre se tiendra le prochain Meetup PostgreSQL à Paris dans les locaux de Mozilla Europe, dont la capacité est de 90 personnes ! Venez nombreux !
+Le programme de cette édition est un peu particulier puisque nous avons reçu quatre propositions enthousiastes de présentations. Chacun aura donc 15 à 20 minutes (questions incluses) pour présenter son sujet. Voici le programme :
+ Aggrégation temporelle sous contrainte d&rsquo;iops, par Jean-Gérard Pailloncy</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2014/09/php-tour-la-video/">
+                <h3 class="media-heading">PHP Tour, La Video</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Sep 9, 2014
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">En juin dernier se tenait le PHP Tour 2014 à Lyon, où j&rsquo;ai eu le plaisir de présenter une conférence sur PostgreSQL en 2014.
+  Cette intervention était filmée, et la vidéo est maintenant disponible :
+
+ 
+En espérant que vous regarderez cette vidéo avec autant d&rsquo;intérêt que j&rsquo;ai eu à participer à PHP Tour 2014 !</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+      </div>
+    </div>
+    <div class="modal-footer">
+      <p class="results-count text-medium"
+         data-message-zero=""
+         data-message-one=""
+         data-message-other="">
+         229 posts found
+      </p>
+    </div>
+  </div>
+</div>
+    
+  
+    
+    <div id="cover" style="background-image:url('http://tapoueh.org/images/Tree_Of_Light_by_lowapproach.jpg');"></div>
+  
+
+
+    
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.8.0/highlight.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.js"></script>
+
+
+<script src="/js/script-wl33z0n6ocaypepiqrazthtivfrliqijej4rq8ek8gvrv1awftmgjuv8k4zc.min.js"></script>
+
+<script>
+$(document).ready(function() {
+  hljs.configure({ classPrefix: '', useBR: false });
+  $('pre.code-highlight').each(function(i, block) {
+    var code = "";
+    hljs.highlightAuto(block.innerText).value.split(/\r\n|\r|\n/).forEach(function(line) {
+      code += "<span class=\"line\">" + line + "</span><br>";
+    });
+    if (code.length > 0) {
+      block.innerHTML = code;  
+    }
+  });
+  $('pre > code').each(function(i, block) {
+    $(this).addClass('codeblock');
+    hljs.highlightBlock(block);
+  });
+});
+</script>
+
+  
+    
+  
+
+
+
+
+
+    
+  </body>
+</html>
+
