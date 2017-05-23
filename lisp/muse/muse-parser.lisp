@@ -131,7 +131,9 @@
 
 (defun image-filename-p (maybe-filename)
   "Return non-nil only when MAYBE-FILENAME has a pathname-type of an image"
-  (member (pathname-type maybe-filename) *image-type-list* :test #'string=))
+  (let ((type (ignore-errors (pathname-type maybe-filename))))
+    (when type
+      (member type *image-type-list* :test #'string=))))
 
 (defun maybe-image-tagify (string &key as-link)
   "Turn STRING into (:img :src STRING) if it's a local image filename."
