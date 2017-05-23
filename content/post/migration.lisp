@@ -226,7 +226,8 @@
                                  ("&lt;"   . "<")
                                  ("&gt;"   . ">")
                                  ("&amp;"  . "&")
-                                 ("&#xA0;" . " "))
+                                 ("&#xA0;" . " ")
+                                 ("&#xB5;" . "µ"))
        :do (setf result (cl-ppcre:regex-replace-all regexp result new))
        :finally (return result))))
 

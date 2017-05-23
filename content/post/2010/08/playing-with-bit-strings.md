@@ -105,6 +105,6 @@ In case you wonder, querying the main index on
 `varbit` rather than the one on
 `text` for a single result row, the cost of doing the conversion with
 `varbit_to_hex` seems to be around 
-`28 &#xB5;s`. We can afford it.
+`28 µs`. We can afford it.
 
 Hope this helps!

@@ -152,7 +152,7 @@ Thanks to the optimisation, the
 transformation now has an added cost of 
 `620 ms` with our data set. The whole
 file loading is now averaging to 
-`10.07841 &#xB5;s` per row, or just a tad more
+`10.07841 µs` per row, or just a tad more
 than 
 ***10 microseconds*** per row, transformation included this time.
 

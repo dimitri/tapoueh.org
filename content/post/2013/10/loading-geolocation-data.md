@@ -393,7 +393,7 @@ solution down to less than
 and the create table steps. Another way to look at it is that 
 *pgloader* here
 spent 
-`9.73213 &#xB5;s` to process each row. Yeah, less than 10 
+`9.73213 µs` to process each row. Yeah, less than 10 
 ***microseconds*** per
 row.
 
@@ -441,7 +441,7 @@ gist(iprange);` and still finish about 40 seconds earlier.
 
 This time 31,456,000 microseconds where spent loading 1,790,461 rows, and
 that gives us 
-`17.568659 &#xB5;s` per row in average, including the 
+`17.568659 µs` per row in average, including the 
 *two bigint as
 text to iprange as text* transformation calls. Not too bad.
 
