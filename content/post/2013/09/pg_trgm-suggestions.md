@@ -5,7 +5,7 @@ tags = ["PostgreSQL", "Extensions", "pg_trgm", "YeSQL"]
 categories = ["PostgreSQL","YeSQL"]
 thumbnailImage = "/img/old/trigramme.png"
 thumbnailImagePosition = "left"
-coverImage = "/img/old/trigramme.png"
+coverImage = "/img/yin_yang_trigrams_by_chrysdives.jpg"
 coverSize = "partial"
 coverMeta = "out"
 aliases = ["/blog/2013/09/06-pg_trgm-suggestions",
@@ -27,7 +27,8 @@ recent PostgreSQL releases and it's now a poor's man
 [Full Text Search](http://www.postgresql.org/docs/current/static/textsearch.html)
 engine.
 
-<center>*Some people are quite serious about trigrams*</center>
+<!--more-->
+<!--toc-->
 
 Of course we also have the rich men version with 
 [Text Search Parsers](http://www.postgresql.org/docs/current/static/textsearch-parsers.html) and
@@ -57,18 +58,14 @@ you need it and you will then be happy to only have to type
 `CREATE EXTENSION`
 to get started.
 
-~~~
+~~~ sql
 # create extension pg_trgm;
 CREATE EXTENSION
 ~~~
 
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/pellicule.png" >}}
-</center>
 
-
-## Setting up the use case
+# Setting up the use case
 
 The use case I want to show today is to suggest corrections to some words
 the user did obviously typoed, because your search form is not finding any
@@ -82,6 +79,8 @@ One easy to use catalog here is the
 you can download also as a ready to use PostgreSQL text dump at
 [http://pgfoundry.org/frs/download.php/543/dellstore2-normal-1.0.tar.gz](http://pgfoundry.org/frs/download.php/543/dellstore2-normal-1.0.tar.gz).
 
+{{< image classes="fig25 right dim-margin" src="/img/old/ComputerCat.jpg" >}}
+
 This small database offers ten thousands 
 *products* and simplifies the schema
 so much as to offer a single column 
@@ -90,12 +89,6 @@ so much as to offer a single column
 pretend we just filled in a search box to find products by actor name, but
 we don't know the right spelling of the actor's name or maybe the cat really
 wanted to help us on the keyboard that day.
-
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/ComputerCat.jpg" >}}
-</center>
-
-<center>*A cat! that picture should at least double the traffic to this article...*</center>
 
 The 
 *trigram* extension comes with two operators of interest for this
@@ -110,12 +103,13 @@ trigrams extracted from the query terms with those extracted from each data
 of our table, and filter out those rows where the data is considered not
 similar enough.
 
-~~~
-# select show_trgm('tomy') as tomy,
+~~~ sql
+> select show_trgm('tomy') as tomy,
          show_trgm('Tomy') as "Tomy",
          show_trgm('tom torn') as "tom torn",
          similarity('tomy', 'tom'),
          similarity('dim', 'tom');
+
 -[ RECORD 1 ]-------------------------------------
 tomy       | {"  t"," to","my ",omy,tom}
 Tomy       | {"  t"," to","my ",omy,tom}
@@ -137,13 +131,19 @@ Now let's find out all those actors whose name looks like
 the user did enter that in the search box but we found no exact match for
 it:
 
-~~~
-# select * from products where actor ~* 'tomy';
+~~~ sql
+> select *
+    from products
+   where actor ~* 'tomy';
+ 
  prod_id | category | title | actor | price | special | common_prod_id 
 ---------+----------+-------+-------+-------+---------+----------------
 (0 rows)
 
-# select actor from products where actor % 'tomy';
+> select actor
+    from products
+   where actor % 'tomy';
+  
   actor   
 ----------
  TOM TORN
@@ -154,17 +154,15 @@ Time: 26.972 ms
 ~~~
 
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/macrex-index.640.gif" >}}
-</center>
+# Trigram indexing
 
+{{< image classes="fig25 left dim-margin" src="/img/old/macrex-index.320.gif" >}}
 
-## Trigram indexing
 
 That's a little too much time on that query when we consider only 10,000
 entries in our table, let's try and do better than that:
 
-~~~
+~~~ sql
 # create index on products using gist(actor gist_trgm_ops);
 CREATE INDEX
 ~~~
@@ -174,8 +172,11 @@ Now if we run the exact same query we get our result in less than
 *3
 milliseconds*, which is more like something we can push to production.
 
-~~~
-select actor from products where actor % 'tomy';
+~~~ sql
+> select actor
+    from products
+   where actor % 'tomy';
+  
   actor   
 ----------
  TOM TORN
@@ -196,8 +197,8 @@ operator implements a
 Isn't that awesome? Now, on to the next surprise, have a look at that
 explain plan:
 
-~~~
-# explain (costs off)
+~~~ sql
+> explain (costs off)
   select * from products where actor ~* 'tomy';
                    QUERY PLAN                    
 -------------------------------------------------
@@ -211,24 +212,13 @@ In PostgreSQL 9.3 the trigram extension is able to solve regular expression
 searches. The first production release of 9.3 should happen as soon as next
 week, I hope you're ready for it!
 
-<center>
-<div class="figure dim-margin">
-  <a href="http://crm114.sourceforge.net/">
-    <img src="/img/old/crm114_tarot_card_logo_small.jpg">
-  </a>
-</div>
-</center>
-
-<center>*What about direct support for [CRM114](http://crm114.sourceforge.net/) then?*</center>
-
-
-## Auto Completion
+# Auto Completion
 
 What if you want to offer as-you-type completion to the names of the actors
 we know in our catalog? Then maybe you will find the following query useful:
 
-~~~
-#   select actor
+~~~ sql
+>   select actor
       from products
      where actor % 'fran'
   order by actor <-> 'fran'
@@ -260,7 +250,9 @@ plan will change depending on the volume of your data set as known by the
 [PostgreSQL planner statistics](http://www.postgresql.org/docs/current/static/routine-vacuuming.html#VACUUM-FOR-STATISTICS).
 
 
-## Conclusion
+# Conclusion
+
+{{< image classes="fig25 right fancybox dim-margin" src="/img/old/logo_man_tool_open_300x_watermark.jpg" >}}
 
 The 
 [trigram extension](http://www.postgresql.org/docs/current/static/pgtrgm.html) allows indexing 
@@ -272,11 +264,5 @@ searches, and also know how to compute
 texts, and how to index that. That's another power tool included with
 PostgreSQL. Another reason why you won't believe how much behind the other
 database systems you know of really are, if you ask me.
-
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/logo_man_tool_open_300x_watermark.jpg" >}}
-</center>
-
-<center>*When all you have is hammer... doesn't apply to PostgreSQL*</center>
 
 Oh, and get ready for PostgreSQL 9.3. Another release packed with awesome.

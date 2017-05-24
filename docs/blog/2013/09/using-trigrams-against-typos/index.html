@@ -31,15 +31,54 @@
     
 
     
-    <meta name="description" content="In our ongoing Tour of Extensions we played with earth distance in How far is the nearest pub? then with hstore in a series about trigger, first to generalize Trigger Parameters then to enable us to Auditing Changes with Hstore. Today we are going to work with pg_trgm which is the trigrams PostgreSQL extension: its usage got seriously enhanced in recent PostgreSQL releases and it&rsquo;s now a poor&rsquo;s man Full Text Search engine.">
-    <meta property="og:description" content="In our ongoing Tour of Extensions we played with earth distance in How far is the nearest pub? then with hstore in a series about trigger, first to generalize Trigger Parameters then to enable us to Auditing Changes with Hstore. Today we are going to work with pg_trgm which is the trigrams PostgreSQL extension: its usage got seriously enhanced in recent PostgreSQL releases and it&rsquo;s now a poor&rsquo;s man Full Text Search engine.">
+    <meta name="description" content="In our ongoing
+Tour of Extensions we played with
+earth distance in
+How far is the nearest pub? then with
+hstore in a series about trigger,
+first to generalize
+Trigger Parameters then to enable us to
+Auditing Changes with Hstore. Today we are going to work with
+pg_trgm which
+is the
+trigrams PostgreSQL extension: its usage got seriously enhanced in
+recent PostgreSQL releases and it&rsquo;s now a poor&rsquo;s man
+Full Text Search
+engine.">
+    <meta property="og:description" content="In our ongoing
+Tour of Extensions we played with
+earth distance in
+How far is the nearest pub? then with
+hstore in a series about trigger,
+first to generalize
+Trigger Parameters then to enable us to
+Auditing Changes with Hstore. Today we are going to work with
+pg_trgm which
+is the
+trigrams PostgreSQL extension: its usage got seriously enhanced in
+recent PostgreSQL releases and it&rsquo;s now a poor&rsquo;s man
+Full Text Search
+engine.">
     <meta property="og:type" content="blog">
     <meta property="og:title" content="Using trigrams against typos">
     <meta property="og:url" content="/blog/2013/09/using-trigrams-against-typos/">
     <meta property="og:site_name" content="Dimitri Fontaine, Expert PostgreSQL">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Dimitri Fontaine, Expert PostgreSQL">
-    <meta name="twitter:description" content="In our ongoing Tour of Extensions we played with earth distance in How far is the nearest pub? then with hstore in a series about trigger, first to generalize Trigger Parameters then to enable us to Auditing Changes with Hstore. Today we are going to work with pg_trgm which is the trigrams PostgreSQL extension: its usage got seriously enhanced in recent PostgreSQL releases and it&rsquo;s now a poor&rsquo;s man Full Text Search engine.">
+    <meta name="twitter:description" content="In our ongoing
+Tour of Extensions we played with
+earth distance in
+How far is the nearest pub? then with
+hstore in a series about trigger,
+first to generalize
+Trigger Parameters then to enable us to
+Auditing Changes with Hstore. Today we are going to work with
+pg_trgm which
+is the
+trigrams PostgreSQL extension: its usage got seriously enhanced in
+recent PostgreSQL releases and it&rsquo;s now a poor&rsquo;s man
+Full Text Search
+engine.">
     
       <meta name="twitter:creator" content="@tapoueh">
     
@@ -56,7 +95,7 @@
       <meta property="og:image" content="http://tapoueh.org/img/old/trigramme.png">
     
     
-      <meta property="og:image" content="http://tapoueh.org/img/old/trigramme.png">
+      <meta property="og:image" content="http://tapoueh.org/img/yin_yang_trigrams_by_chrysdives.jpg">
     
     
 
@@ -239,7 +278,7 @@ ga('send', 'pageview');
   <div class="post-header-cover
               text-left
               post-header-cover--partial"
-       style="background-image:url('/img/old/trigramme.png')"
+       style="background-image:url('/img/yin_yang_trigrams_by_chrysdives.jpg')"
        data-behavior="1">
     
   </div>
@@ -289,9 +328,7 @@ ga('send', 'pageview');
           
           <div class="post-content markdown" itemprop="articleBody">
             <div class="main-content-wrap">
-              
-
-<p>In our ongoing
+              <p>In our ongoing
 <a href="/tags/extensions">Tour of Extensions</a> we played with
 <a href="http://www.postgresql.org/docs/current/static/earthdistance.html">earth distance</a> in
 <a href="/blog/2013/08/05-earthdistance">How far is the nearest pub?</a> then with
@@ -306,7 +343,15 @@ recent PostgreSQL releases and it&rsquo;s now a poor&rsquo;s man
 <a href="http://www.postgresql.org/docs/current/static/textsearch.html">Full Text Search</a>
 engine.</p>
 
-<p><center><em>Some people are quite serious about trigrams</em></center></p>
+<p>
+<h1 id="table-of-contents"></h1><nav id="TableOfContents">
+<ul>
+<li><a href="#setting-up-the-use-case">Setting up the use case</a></li>
+<li><a href="#trigram-indexing">Trigram indexing</a></li>
+<li><a href="#auto-completion">Auto Completion</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+</nav></p>
 
 <p>Of course we also have the rich men version with
 <a href="http://www.postgresql.org/docs/current/static/textsearch-parsers.html">Text Search Parsers</a> and
@@ -336,43 +381,11 @@ you need it and you will then be happy to only have to type
 <code>CREATE EXTENSION</code>
 to get started.</p>
 
-<pre><code># create extension pg_trgm;
+<pre><code class="language-sql"># create extension pg_trgm;
 CREATE EXTENSION
 </code></pre>
 
-<p><center>
-
-
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/pellicule.png" data-fancybox-group="">
-  
-    <img class="fig-img" src="/img/old/pellicule.png" >
-  
-    </a>
-  
-  
-</div>
-
-</center></p>
-
-<h2 id="setting-up-the-use-case">Setting up the use case</h2>
+<h1 id="setting-up-the-use-case">Setting up the use case</h1>
 
 <p>The use case I want to show today is to suggest corrections to some words
 the user did obviously typoed, because your search form is not finding any
@@ -386,6 +399,17 @@ to offer auto-completion.</p>
 you can download also as a ready to use PostgreSQL text dump at
 <a href="http://pgfoundry.org/frs/download.php/543/dellstore2-normal-1.0.tar.gz">http://pgfoundry.org/frs/download.php/543/dellstore2-normal-1.0.tar.gz</a>.</p>
 
+
+
+
+<div class="figure fig25 right dim-margin" >
+  
+    <img class="fig-img" src="/img/old/ComputerCat.jpg" >
+  
+  
+</div>
+
+
 <p>This small database offers ten thousands
 <em>products</em> and simplifies the schema
 so much as to offer a single column
@@ -394,40 +418,6 @@ so much as to offer a single column
 pretend we just filled in a search box to find products by actor name, but
 we don&rsquo;t know the right spelling of the actor&rsquo;s name or maybe the cat really
 wanted to help us on the keyboard that day.</p>
-
-<p><center>
-
-
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/ComputerCat.jpg" data-fancybox-group="">
-  
-    <img class="fig-img" src="/img/old/ComputerCat.jpg" >
-  
-    </a>
-  
-  
-</div>
-
-</center></p>
-
-<p><center><em>A cat! that picture should at least double the traffic to this article&hellip;</em></center></p>
 
 <p>The
 <em>trigram</em> extension comes with two operators of interest for this
@@ -442,11 +432,12 @@ trigrams extracted from the query terms with those extracted from each data
 of our table, and filter out those rows where the data is considered not
 similar enough.</p>
 
-<pre><code># select show_trgm('tomy') as tomy,
+<pre><code class="language-sql">&gt; select show_trgm('tomy') as tomy,
          show_trgm('Tomy') as &quot;Tomy&quot;,
          show_trgm('tom torn') as &quot;tom torn&quot;,
          similarity('tomy', 'tom'),
          similarity('dim', 'tom');
+
 -[ RECORD 1 ]-------------------------------------
 tomy       | {&quot;  t&quot;,&quot; to&quot;,&quot;my &quot;,omy,tom}
 Tomy       | {&quot;  t&quot;,&quot; to&quot;,&quot;my &quot;,omy,tom}
@@ -467,12 +458,18 @@ functions
 the user did enter that in the search box but we found no exact match for
 it:</p>
 
-<pre><code># select * from products where actor ~* 'tomy';
+<pre><code class="language-sql">&gt; select *
+    from products
+   where actor ~* 'tomy';
+ 
  prod_id | category | title | actor | price | special | common_prod_id 
 ---------+----------+-------+-------+-------+---------+----------------
 (0 rows)
 
-# select actor from products where actor % 'tomy';
+&gt; select actor
+    from products
+   where actor % 'tomy';
+  
   actor   
 ----------
  TOM TORN
@@ -482,44 +479,23 @@ it:</p>
 Time: 26.972 ms
 </code></pre>
 
-<p><center>
+<h1 id="trigram-indexing">Trigram indexing</h1>
 
 
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
 
-<div class="figure fig50 dim-margin" >
+
+<div class="figure fig25 left dim-margin" >
   
-    <a class="fancybox" href="/img/old/macrex-index.640.gif" data-fancybox-group="">
-  
-    <img class="fig-img" src="/img/old/macrex-index.640.gif" >
-  
-    </a>
+    <img class="fig-img" src="/img/old/macrex-index.320.gif" >
   
   
 </div>
 
-</center></p>
-
-<h2 id="trigram-indexing">Trigram indexing</h2>
 
 <p>That&rsquo;s a little too much time on that query when we consider only 10,000
 entries in our table, let&rsquo;s try and do better than that:</p>
 
-<pre><code># create index on products using gist(actor gist_trgm_ops);
+<pre><code class="language-sql"># create index on products using gist(actor gist_trgm_ops);
 CREATE INDEX
 </code></pre>
 
@@ -527,7 +503,10 @@ CREATE INDEX
 <em>3
 milliseconds</em>, which is more like something we can push to production.</p>
 
-<pre><code>select actor from products where actor % 'tomy';
+<pre><code class="language-sql">&gt; select actor
+    from products
+   where actor % 'tomy';
+  
   actor   
 ----------
  TOM TORN
@@ -547,7 +526,7 @@ operator implements a
 Isn&rsquo;t that awesome? Now, on to the next surprise, have a look at that
 explain plan:</p>
 
-<pre><code># explain (costs off)
+<pre><code class="language-sql">&gt; explain (costs off)
   select * from products where actor ~* 'tomy';
                    QUERY PLAN                    
 -------------------------------------------------
@@ -560,22 +539,12 @@ explain plan:</p>
 searches. The first production release of 9.3 should happen as soon as next
 week, I hope you&rsquo;re ready for it!</p>
 
-<p><center>
-<div class="figure dim-margin">
-  <a href="http://crm114.sourceforge.net/">
-    <img src="/img/old/crm114_tarot_card_logo_small.jpg">
-  </a>
-</div>
-</center></p>
-
-<p><center><em>What about direct support for <a href="http://crm114.sourceforge.net/">CRM114</a> then?</em></center></p>
-
-<h2 id="auto-completion">Auto Completion</h2>
+<h1 id="auto-completion">Auto Completion</h1>
 
 <p>What if you want to offer as-you-type completion to the names of the actors
 we know in our catalog? Then maybe you will find the following query useful:</p>
 
-<pre><code>#   select actor
+<pre><code class="language-sql">&gt;   select actor
       from products
      where actor % 'fran'
   order by actor &lt;-&gt; 'fran'
@@ -605,20 +574,8 @@ is not used then. As usual
 plan will change depending on the volume of your data set as known by the
 <a href="http://www.postgresql.org/docs/current/static/routine-vacuuming.html#VACUUM-FOR-STATISTICS">PostgreSQL planner statistics</a>.</p>
 
-<h2 id="conclusion">Conclusion</h2>
+<h1 id="conclusion">Conclusion</h1>
 
-<p>The
-<a href="http://www.postgresql.org/docs/current/static/pgtrgm.html">trigram extension</a> allows indexing
-<code>like</code> searches and
-<code>regular expression</code>
-searches, and also know how to compute
-<em>similarity</em> and
-<em>distance</em> in between
-texts, and how to index that. That&rsquo;s another power tool included with
-PostgreSQL. Another reason why you won&rsquo;t believe how much behind the other
-database systems you know of really are, if you ask me.</p>
-
-<p><center>
 
 
  
@@ -631,13 +588,17 @@ database systems you know of really are, if you ask me.</p>
     
   
     
+      
+    
+  
+    
   
     
       
     
   
 
-<div class="figure fig50 dim-margin" >
+<div class="figure fig25 right dim-margin" >
   
     <a class="fancybox" href="/img/old/logo_man_tool_open_300x_watermark.jpg" data-fancybox-group="">
   
@@ -648,12 +609,19 @@ database systems you know of really are, if you ask me.</p>
   
 </div>
 
-</center></p>
 
-<p><center><em>When all you have is hammer&hellip; doesn&rsquo;t apply to PostgreSQL</em></center></p>
+<p>The
+<a href="http://www.postgresql.org/docs/current/static/pgtrgm.html">trigram extension</a> allows indexing
+<code>like</code> searches and
+<code>regular expression</code>
+searches, and also know how to compute
+<em>similarity</em> and
+<em>distance</em> in between
+texts, and how to index that. That&rsquo;s another power tool included with
+PostgreSQL. Another reason why you won&rsquo;t believe how much behind the other
+database systems you know of really are, if you ask me.</p>
 
 <p>Oh, and get ready for PostgreSQL 9.3. Another release packed with awesome.</p>
-
               
             </div>
           </div>
@@ -732,7 +700,7 @@ database systems you know of really are, if you ask me.</p>
     
     <li class="post-action">
       
-        <a class="post-action-btn btn btn--default" href="#">
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
       
         <i class="fa fa-list"></i>
       </a>
@@ -813,7 +781,7 @@ database systems you know of really are, if you ask me.</p>
     
     <li class="post-action">
       
-        <a class="post-action-btn btn btn--default" href="#">
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
       
         <i class="fa fa-list"></i>
       </a>

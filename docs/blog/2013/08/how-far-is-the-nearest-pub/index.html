@@ -31,18 +31,42 @@
     
 
     
-    <meta name="description" content="In our recent article about The Most Popular Pub Names we did have a look at how to find the pubs nearby, but didn&rsquo;t compute the distance in between that pub and us. That&rsquo;s because how to compute a distance given a position on the earth expressed as longitude and latitude is not that easy. Today, we are going to solve that problem nonetheless, thanks to PostgreSQL Extensions.
-Some math are required to go from (long, lat) to distance on earth">
-    <meta property="og:description" content="In our recent article about The Most Popular Pub Names we did have a look at how to find the pubs nearby, but didn&rsquo;t compute the distance in between that pub and us. That&rsquo;s because how to compute a distance given a position on the earth expressed as longitude and latitude is not that easy. Today, we are going to solve that problem nonetheless, thanks to PostgreSQL Extensions.
-Some math are required to go from (long, lat) to distance on earth">
+    <meta name="description" content="In our recent article about
+The Most Popular Pub Names we did have a look at
+how to find the pubs nearby, but didn&rsquo;t compute the
+distance in between that
+pub and us. That&rsquo;s because how to compute a distance given a position on the
+earth expressed as
+longitude and
+latitude is not that easy. Today, we are
+going to solve that problem nonetheless, thanks to
+PostgreSQL Extensions.">
+    <meta property="og:description" content="In our recent article about
+The Most Popular Pub Names we did have a look at
+how to find the pubs nearby, but didn&rsquo;t compute the
+distance in between that
+pub and us. That&rsquo;s because how to compute a distance given a position on the
+earth expressed as
+longitude and
+latitude is not that easy. Today, we are
+going to solve that problem nonetheless, thanks to
+PostgreSQL Extensions.">
     <meta property="og:type" content="blog">
     <meta property="og:title" content="How far is the nearest pub?">
     <meta property="og:url" content="/blog/2013/08/how-far-is-the-nearest-pub/">
     <meta property="og:site_name" content="Dimitri Fontaine, Expert PostgreSQL">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Dimitri Fontaine, Expert PostgreSQL">
-    <meta name="twitter:description" content="In our recent article about The Most Popular Pub Names we did have a look at how to find the pubs nearby, but didn&rsquo;t compute the distance in between that pub and us. That&rsquo;s because how to compute a distance given a position on the earth expressed as longitude and latitude is not that easy. Today, we are going to solve that problem nonetheless, thanks to PostgreSQL Extensions.
-Some math are required to go from (long, lat) to distance on earth">
+    <meta name="twitter:description" content="In our recent article about
+The Most Popular Pub Names we did have a look at
+how to find the pubs nearby, but didn&rsquo;t compute the
+distance in between that
+pub and us. That&rsquo;s because how to compute a distance given a position on the
+earth expressed as
+longitude and
+latitude is not that easy. Today, we are
+going to solve that problem nonetheless, thanks to
+PostgreSQL Extensions.">
     
       <meta name="twitter:creator" content="@tapoueh">
     
@@ -245,17 +269,7 @@ ga('send', 'pageview');
        style="background-image:url('/img/old/latitude_and_longitude.jpg')"
        data-behavior="1">
     
-  </div>
-
-
-      <div id="main" data-behavior="1"
-        class="hasCover
-               hasCoverMetaOut
-               ">
-        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
-          
-          
-            <div class="post-header main-content-wrap text-left">
+      <div class="post-header main-content-wrap text-left">
   
     <h1 class="post-title" itemprop="headline">
       How far is the nearest pub?
@@ -289,12 +303,20 @@ ga('send', 'pageview');
 </div>
 
 </div>
+    
+  </div>
+
+
+      <div id="main" data-behavior="1"
+        class="hasCover
+               hasCoverMetaIn
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
           
           <div class="post-content markdown" itemprop="articleBody">
             <div class="main-content-wrap">
-              
-
-<p>In our recent article about
+              <p>In our recent article about
 <a href="/blog/2013/08/02-pub-names-knn">The Most Popular Pub Names</a> we did have a look at
 how to find the pubs nearby, but didn&rsquo;t compute the
 <strong>distance</strong> in between that
@@ -305,9 +327,17 @@ earth expressed as
 going to solve that problem nonetheless, thanks to
 <a href="http://www.postgresql.org/docs/9.2/interactive/extend-extensions.html">PostgreSQL Extensions</a>.</p>
 
-<p><center><em>Some math are required to go from (long, lat) to distance on earth</em></center></p>
+<p>
+<h1 id="table-of-contents"></h1><nav id="TableOfContents">
+<ul>
+<li><a href="#the-earthdistance-postgresql-contrib">The earthdistance PostgreSQL contrib</a></li>
+<li><a href="#pubs-and-cities">Pubs and cities</a></li>
+<li><a href="#the-most-popular-pub-names-per-city">The Most Popular Pub Names, per City</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+</nav></p>
 
-<h2 id="the-earthdistance-postgresql-contrib">The earthdistance PostgreSQL contrib</h2>
+<h1 id="the-earthdistance-postgresql-contrib">The earthdistance PostgreSQL contrib</h1>
 
 <p>As the maths are complex enough to easily make mistakes when implementing
 them again, we want to find an existing implementation that&rsquo;s been tested
@@ -316,7 +346,7 @@ already. PostgreSQL provides several
 named
 <a href="http://www.postgresql.org/docs/9.2/static/earthdistance.html">earthdistance</a> and is made to solve our problem. Time to try it!</p>
 
-<pre><code># create extension cube;
+<pre><code class="language-sql"># create extension cube;
 # create extension earthdistance;
 </code></pre>
 
@@ -327,11 +357,12 @@ distance in miles at the surface of the earth, given points as
 latitude)</em>. So I had to import our data set again with points in the right
 representation, then I could run this query:</p>
 
-<pre><code>#  select id, name, pos,
+<pre><code class="language-sql">&gt;  select id, name, pos,
           round((pos &lt;@&gt; point(-0.12,51.516))::numeric, 3) as miles
      from pubnames
  order by pos &lt;-&gt; point(-0.12,51.516)
     limit 10;
+
      id     |          name          |           pos           | miles 
 ------------+------------------------+-------------------------+-------
    21593238 | All Bar One            | (-0.1192746,51.5163499) | 0.039
@@ -355,48 +386,17 @@ apparently. And we can see that adding the computation to get the distance
 in
 <em>miles</em> didn&rsquo;t add that much to the query timing.</p>
 
-<p><center>
-
-
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/pubstopslondon.jpg" data-fancybox-group="">
-  
-    <img class="fig-img" src="/img/old/pubstopslondon.jpg" >
-  
-    </a>
-  
-  
-</div>
-
-</center></p>
-
-<h2 id="pubs-and-cities">Pubs and cities</h2>
+<h1 id="pubs-and-cities">Pubs and cities</h1>
 
 <p>Just as easily as we have
 <em>nearest</em> pubs we can also of course query for pubs
 <em>farthest</em> away from any location.</p>
 
-<pre><code>#   select name, round((pos &lt;@&gt; point(-0.12,51.516))::numeric, 3) as miles
+<pre><code class="language-sql">&gt;   select name, round((pos &lt;@&gt; point(-0.12,51.516))::numeric, 3) as miles
       from pubnames
   order by pos &lt;-&gt; point(-0.12,51.516) desc
      limit 5;
+      
       name       |  miles  
 -----------------+---------
  Tig Bhric       | 440.194
@@ -421,18 +421,19 @@ was easy, and allowed to import those city names and locations in
 <em>0.087
 seconds of real time</em>, with the following schema:</p>
 
-<pre><code># create table if not exists cities (id bigint, pos point, name text);
+<pre><code class="language-sql"># create table if not exists cities (id bigint, pos point, name text);
 # create index on cities using gist(pos);
 </code></pre>
 
 <p>Now let&rsquo;s see where are those far away pubs:</p>
 
-<pre><code>#   select name,
+<pre><code class="language-sql">&gt;   select name,
           (select name from cities c order by c.pos &lt;-&gt; p.pos limit 1) as city,
           round((pos &lt;@&gt; point(-0.12,51.516))::numeric, 3) as miles
      from pubnames p
  order by pos &lt;-&gt; point(-0.12,51.516) desc
     limit 5;
+
       name       |  city  |  miles  
 -----------------+--------+---------
  Tig Bhric       | Galway | 440.194
@@ -445,40 +446,6 @@ seconds of real time</em>, with the following schema:</p>
 Time: 686.444 ms
 </code></pre>
 
-<p><center>
-
-
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/ninedotslines.gif" data-fancybox-group="">
-  
-    <img class="fig-img" src="/img/old/ninedotslines.gif" >
-  
-    </a>
-  
-  
-</div>
-
-</center></p>
-
-<p><center><em>Using <code>LATERAL</code> Joins is not a form of lateral thinking</em></center></p>
-
 <p>As you can see we are fetching the pubs at a distance from our given point
 and then the nearest city from where the pub is. The way it&rsquo;s implemented
 here is called a
@@ -486,7 +453,7 @@ here is called a
 to use the
 <a href="http://www.postgresql.org/docs/devel/static/queries-table-expressions.html#QUERIES-LATERAL">LATERAL</a> standard join construct, as in the following example:</p>
 
-<pre><code>#   select c.name as city, p.name,
+<pre><code class="language-sql">&gt;   select c.name as city, p.name,
            round((pos &lt;@&gt; point(-0.12,51.516))::numeric, 3) as miles
       from pubnames p,
            lateral (select name
@@ -495,6 +462,7 @@ to use the
                      limit 1) c
   order by pos &lt;-&gt; point(-0.12,51.516) desc
      limit 5;
+
   city  |      name       |  miles  
 --------+-----------------+---------
  Galway | Tig Bhric       | 440.194
@@ -520,7 +488,7 @@ the position index of the cities 27878 times (once per pubnames entry).</p>
 
 <p>It&rsquo;s possible to force the planner into doing it the obvious way though:</p>
 
-<pre><code>#   with pubs as (
+<pre><code class="language-sql">&gt;   with pubs as (
         select name, pos,
                round((pos &lt;@&gt; point(-0.12,51.516))::numeric, 3) as miles
           from pubnames
@@ -532,6 +500,7 @@ the position index of the cities 27878 times (once per pubnames entry).</p>
                               from cities c
                           order by c.pos &lt;-&gt; p.pos
                              limit 1) c;
+
   city  |      name       |  miles  
 --------+-----------------+---------
  Galway | Tig Bhric       | 440.194
@@ -544,45 +513,13 @@ the position index of the cities 27878 times (once per pubnames entry).</p>
 Time: 76.467 ms
 </code></pre>
 
-<p><center>
-
-
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/bite-top-ten-pub-names.jpg" data-fancybox-group="">
-  
-    <img class="fig-img" src="/img/old/bite-top-ten-pub-names.jpg" >
-  
-    </a>
-  
-  
-</div>
-
-</center></p>
-
-<h2 id="the-most-popular-pub-names-per-city">The Most Popular Pub Names, per City</h2>
+<h1 id="the-most-popular-pub-names-per-city">The Most Popular Pub Names, per City</h1>
 
 <p>Let&rsquo;s now find which cities have the highest count of pubs, considering that
 a pub is affiliated to a city if it&rsquo;s within 5 miles of the single point we
 have as city location in our data set.</p>
 
-<pre><code>#   select c.name, count(cp)
+<pre><code>&gt;   select c.name, count(cp)
       from cities c, lateral (select name
                                 from pubnames p
                                where (p.pos &lt;@&gt; c.pos) &lt; 5) as cp
@@ -617,7 +554,6 @@ from London&rsquo;s count the pubs that are actually in Westminster (when within
 mile of the location we have for it). Then extend that query to address any
 other situation like that in the whole data set.</p>
 
-<p><center>
 
 
  
@@ -630,32 +566,35 @@ other situation like that in the whole data set.</p>
     
   
     
+      
+    
+  
+    
   
     
       
     
   
 
-<div class="figure fig50 dim-margin" >
+<div class="figure fig50 right dim-margin" >
   
-    <a class="fancybox" href="/img/old/sql-logo.png" data-fancybox-group="">
+    <a class="fancybox" href="/img/sql-logo.png" title="Often the most powerful tool you have to make sense of your data..." data-fancybox-group="">
   
-    <img class="fig-img" src="/img/old/sql-logo.png" >
+    <img class="fig-img" src="/img/sql-logo.png"  alt="Often the most powerful tool you have to make sense of your data...">
   
     </a>
   
+   
+    <span class="caption">Often the most powerful tool you have to make sense of your data...</span>
   
 </div>
 
-</center></p>
-
-<p><center><em>Often the most powerful tool you have to make sense of your data&hellip;</em></center></p>
 
 <p>And now what about the most popular pub names per city? Of course we want to
 normalize again our pub names here but only for counting: we still display
 all the names we did count.</p>
 
-<pre><code>#   select c.name,
+<pre><code class="language-sql">&gt;   select c.name,
            array_to_string(array_agg(distinct(cp.name) order by cp.name), ', '),
            count(*)
       from cities c,
@@ -684,7 +623,7 @@ all the names we did count.</p>
 Time: 729.866 ms
 </code></pre>
 
-<h2 id="conclusion">Conclusion</h2>
+<h1 id="conclusion">Conclusion</h1>
 
 <p>As said in the previous article on the same theme, SQL when using
 <a href="http://www.postgresql.org/">PostgreSQL</a>
@@ -696,7 +635,6 @@ the earth distance computation from
 of choice, be sure to install
 <em>contribs</em> by default), then to use it to solve
 some interesting problems with our data set.</p>
-
               
             </div>
           </div>
@@ -775,7 +713,7 @@ some interesting problems with our data set.</p>
     
     <li class="post-action">
       
-        <a class="post-action-btn btn btn--default" href="#">
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
       
         <i class="fa fa-list"></i>
       </a>
@@ -856,7 +794,7 @@ some interesting problems with our data set.</p>
     
     <li class="post-action">
       
-        <a class="post-action-btn btn btn--default" href="#">
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
       
         <i class="fa fa-list"></i>
       </a>

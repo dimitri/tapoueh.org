@@ -7,7 +7,7 @@ thumbnailImage = "/img/old/postgresql-mongodb.jpg"
 thumbnailImagePosition = "left"
 coverImage = "/img/old/postgresql-mongodb.jpg"
 coverSize = "partial"
-coverMeta = "out"
+coverMeta = "in"
 aliases = ["/blog/2014/02/17-aggregating-nba-data-PostgreSQL-vs-MongoDB",
            "/blog/2014/02/17-aggregating-nba-data-PostgreSQL-vs-MongoDB.html"]
 +++
@@ -21,14 +21,17 @@ When using
 given the SQL command 
 [create aggregate](http://www.postgresql.org/docs/current/static/sql-createaggregate.html).
 
+<!--more-->
+
 <center>*Photo Credit: [Copyright All rights reserved by Segward Graupner](https://www.flickr.com/photos/57426425@N07/6005436411/sizes/z/)*</center>
 
 The next step after thinking how obvious the queries written in the
 mentionned article would be to express in SQL was to actually load the data
 into PostgreSQL and write the aggregate queries, of course.
 
+<!--toc-->
 
-## Loading the data
+# Loading the data
 
 With the help of a little bit of 
 *Common Lisp* code and using the
@@ -51,7 +54,7 @@ we store only the scores. Here's the main table definition of the stats we
 are going to be playing with, the 
 `game` table:
 
-~~~
+~~~ sql
 create table nba.game (
   id          serial primary key,
   date        timestamptz,
@@ -68,7 +71,7 @@ statistics from teams who actually
 *won* the game, let's create a view to
 simplify our SQL queries thereafter:
 
-~~~
+~~~ sql
 create view winners as
   select id,
          date,
@@ -83,17 +86,12 @@ create view winners as
 If you're not doing much SQL, remember that creating such a view is common
 practice in the relational world.
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/running-aggregates.jpg" >}}
-</center>
-
-
-## Running the Aggregates
+# Running the Aggregates
 
 Now that we have the extra useful view, it's possible to implement the first
 [MongoDB](http://www.mongodb.org/) query in SQL. First, let's have a look at the MongoDB query:
 
-~~~
+~~~ js
 db.games.aggregate([
   {
     $match : {
@@ -138,7 +136,7 @@ typed by a human being.
 
 Here's the same query in SQL, with the result this time:
 
-~~~
+~~~ sql
   SELECT abbrev, name, count(*)
     FROM winners JOIN team ON team.id = winners.winner
    WHERE     date > '1999-08-01T00:00:00Z'
@@ -175,7 +173,7 @@ of similar ones.
 Here's, as in the original article, the same query against a much larger
 data set this time, with all games of the 2000s decade:
 
-~~~
+~~~ sql
    SELECT abbrev, name, count(*)
      FROM winners join team on team.id = winners.winner
     WHERE     date > '2000-08-01T00:00:00Z'
@@ -197,12 +195,7 @@ Time: 24.713 ms
 ~~~
 
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/try_science.png" >}}
-</center>
-
-
-## Correlating stats with wins
+# Correlating stats with wins
 
 The goal here is to compute how often a team wins when they record more
 defensive rebounds than their opponent across the entire data set.
@@ -216,7 +209,7 @@ how many times* in SQL is usually written as a
 `sum(case when <condition> then
 1 else 0 end)`, which is what we're doing here:
 
-~~~
+~~~ sql
 select count(*) as games,
        sum(case when ws.drb > ls.drb then 1 else 0 end) as drb,
        sum(case when ws.drb > ls.drb then 1 else 0 end)::float / count(*) * 100 as pct
@@ -241,12 +234,10 @@ short of computing the
 client tool, maybe using a 
 *spreadsheet* application or something.
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/DReboundsVandy.png" >}}
-</center>
 
+# Defensive Rebounds and Total Rebounds Versus Win Percentage
 
-## Defensive Rebounds and Total Rebounds Versus Win Percentage
+{{< image classes="fig25 right dim-margin" src="/img/old/DReboundsVandy.320.png" >}}
 
 Next, still following on our inspirational article
 [Crunching 30 Years of NBA Data with MongoDB Aggregation](http://thecodebarbarian.wordpress.com/2014/02/14/crunching-30-years-of-nba-data-with-mongodb-aggregation/), we’re going to
@@ -257,7 +248,7 @@ I'm not sure I understand what they achieve with averaging ones when a team
 wins and zero when a team loses, so I couldn't quite reproduce their result.
 Here's an approaching query tho:
 
-~~~
+~~~ sql
 with game_stats as (
     select t.id, count(*)
       from team t join game on game.host = t.id or game.guest = t.id
@@ -285,7 +276,7 @@ I only pasted the first few lines of the result because I'm not sure how to
 make sense of it, really.
 
 
-## Interesting factoid
+# Interesting factoid
 
 What I find most interesting in the following 
 *factoid* proposed in the
@@ -304,7 +295,7 @@ When doing the necessary query in SQL, using a
 different games with the minimum defensive rebounds in our history of NBA
 games, 14:
 
-~~~
+~~~ sql
 with stats(game, team, drb, min) as (
     select ts.game, ts.team, drb, min(drb) over ()
       from team_stats ts
@@ -350,12 +341,8 @@ To understand all there's to know about
 article on the topic: 
 [Understanding Window Functions](/blog/2013/08/20-Window-Functions).
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/reboundsc1.640.jpg" >}}
-</center>
 
-
-## Total rebounds and wins
+# Total rebounds and wins
 
 The next interesting aside is the following:
 
@@ -367,7 +354,7 @@ The next interesting aside is the following:
 
 Which we translate in SQL as the following query:
 
-~~~
+~~~ sql
 with stats as (
     select ts.game, ts.team, trb,
            min(trb) over () as min,
@@ -410,7 +397,7 @@ Again it's easy enough in SQL to have more details about the
 in our source article, and we get a slightly different story.
 
 
-## Conclusion
+# Conclusion
 
 It's quite hard for me to appreciate the work done in the 
 *MongoDB
@@ -421,6 +408,10 @@ and statistics in
 [Aggregate Functions for Statistics](http://www.postgresql.org/docs/9.3/static/functions-aggregate.html#FUNCTIONS-AGGREGATE-STATISTICS-TABLE) it's possible to
 implement advanced analysis right into your SQL queries.
 
+{{< image classes="fig25 right dim-margin"
+              src="/img/old/sql-logo.png"
+           title="PostgreSQL is YeSQL" >}}
+
 In next PostgreSQL release the set of analytical functions is going to
 expand again with the addition of both 
 [Ordered-Set Aggregate Functions](http://www.postgresql.org/docs/devel/static/functions-aggregate.html#FUNCTIONS-ORDEREDSET-TABLE) (also
@@ -428,12 +419,6 @@ known as
 *inverse distribution* functions) and
 [Hypothetical-Set Aggregate Functions](http://www.postgresql.org/docs/devel/static/functions-aggregate.html#FUNCTIONS-HYPOTHETICAL-TABLE) (also known as 
 `WITHIN GROUP`).
-
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/sql-logo.png" >}}
-</center>
-
-<center>*PostgreSQL is YeSQL!*</center>
 
 When the problem you have to solve involves analyzing data, one of the more
 advanced tooling you can find around certainly is the SQL language, in

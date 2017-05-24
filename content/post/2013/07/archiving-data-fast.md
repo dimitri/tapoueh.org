@@ -22,6 +22,8 @@ life of fellow DBAs and developers, and would say that
 *Writable CTE* are at
 least the same boost again.
 
+<!--more-->
+
 <center>*Writable CTEs allow to easily implement data processing pipelines*</center>
 
 In the case of archiving data into side tables the pipeline we're talking
@@ -31,7 +33,7 @@ the destination (
 *archiving*) table, and that's an 
 `INSERT`:
 
-~~~
+~~~ sql
 WITH archive AS (
     DELETE FROM source WHERE ...
  RETURNING s.id
@@ -68,7 +70,7 @@ The way to fix that problem that I've been using is to check the
 between the Hot Standby you're interested into and the primary server by
 running that query periodically:
 
-~~~
+~~~ sql
 select pg_current_xlog_location() as current, replay_location as replay
   from pg_stat_replication
  where application_name = 'standby-name';
@@ -80,10 +82,11 @@ Be aware that any replication client that you use will show up in the
 [pg_basebackup](http://www.postgresql.org/docs/current/static/app-pgbasebackup.html) and
 [pg_receivexlog](http://www.postgresql.org/docs/current/static/app-pgreceivexlog.html):
 
-~~~
-# select application_name, pg_current_xlog_location(),
-         sent_location, replay_location
-    from pg_stat_replication;
+~~~ sql
+ select application_name, pg_current_xlog_location(),
+        sent_location, replay_location
+   from pg_stat_replication;
+   
  application_name | pg_current_xlog_location | sent_location  | replay_location 
 ------------------+--------------------------+----------------+-----------------
  pg_receivexlog   | 18C85/55DCA900           | 18C85/55DAEC20 | {NULL}
@@ -104,7 +107,7 @@ replicate its implementation in your client application code, it's simple
 enough to do so. Here's a 
 [Common Lisp](/tags/common-lisp) version of it:
 
-~~~
+~~~ lisp
 (defun pg-xlog-location-diff (loc1 loc2)
   "Compute the difference between WAL locations as WAL bytes.
 

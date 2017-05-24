@@ -20,8 +20,10 @@ old SQL aggregates. Today, let's showcase more of those SQL aggregates,
 producing a nice 
 *histogram* right from our SQL console.
 
+<!--more-->
+<!--toc-->
 
-## PostgreSQL and Mathematics
+# PostgreSQL and Mathematics
 
 The other day while giving a 
 [Practical SQL](http://2ndquadrant.com/en/training/course-catalog/practical-sql/) training my attention drifted to
@@ -72,7 +74,7 @@ order by 1;
 <center>*We've just calibrated our games in terms of rebounds here*</center>
 
 
-## Console Histograms
+# Console Histograms
 
 Now, what would it take to actually be able to display the full story right
 into our 
@@ -139,6 +141,10 @@ for each of our games, and we
 *min* and 
 *max* values.
 
+{{< image classes="fig25 right dim-margin"
+              src="/img/old/220px-Postgresql_elephant.svg.png"
+            title="PostgreSQL is YeSQL!">}}
+
 As we're using PostgreSQL though, just having two columns with the min and
 max as separate values is not enough, what we actually need is a
 [discrete range](http://www.postgresql.org/docs/9.3/static/rangetypes.html) of 
@@ -153,23 +159,17 @@ Of course, within the same
 *rebounds* stat within the bucket, defining
 the histogram's frequency.
 
+# Conclusion
+
 The only remaining step then consists into hacking our way into actually
 displaying something 
 *visual enough* for a quick less-than-1-minute effort of
 data crunching, using the 
 `repeat` function which is part of
 [PostgreSQL String Functions and Operators](http://www.postgresql.org/docs/9.3/static/functions-string.html). Note that we're using the
-[Window Function](blog/2013/08/20-Window-Functions) expression 
+[Window Function](/blog/2013/08/20-Window-Functions) expression 
 `max(freq) over()` to have access the highest
 frequency value from each and every result row.
-
-So... Did I mention lately?
-
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/220px-Postgresql_elephant.svg.png" >}}
-</center>
-
-<center>***PostgreSQL is YeSQL!***</center>
 
 By the way, the whole scripting and data and SQL is available at
 [github/dimitri/nba](https://github.com/dimitri/nba), and there's an 

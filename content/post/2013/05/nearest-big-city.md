@@ -7,7 +7,7 @@ thumbnailImage = "/img/old/global_accessibility-640.png"
 thumbnailImagePosition = "left"
 coverImage = "/img/old/global_accessibility-640.png"
 coverSize = "partial"
-coverMeta = "out"
+coverMeta = "in"
 aliases = ["/blog/2013/05/02-nearest-big-city",
            "/blog/2013/05/02-nearest-big-city.html"]
 +++
@@ -15,8 +15,9 @@ aliases = ["/blog/2013/05/02-nearest-big-city",
 In this article, we want to find the town with the greatest number of
 inhabitants near a given location.
 
+<!--toc-->
 
-## A very localized example
+# A very localized example
 
 We first need to find and import some data, and I found at the following
 place a 
@@ -26,7 +27,7 @@ some numbers of interest for the exercise here.
 To import the data set, we first need a table, then a 
 `COPY` command:
 
-~~~
+~~~ sql
 CREATE TABLE lion1906 (
   insee       text,
   nom         text,
@@ -47,7 +48,7 @@ choosing of us, let's pick
 *Villeurbanne* which is in the region of 
 *Lyon*.
 
-~~~
+~~~ sql
 select code_postal, nom, pop99
      from lion1906
  order by point(longitude, latitude) <->
@@ -75,7 +76,7 @@ select code_postal, nom, pop99
 We find Lyon in our list in there, and we want the query now to return only
 that one as it has the greatest number of inhabitants in the list:
 
-~~~
+~~~ sql
 with neighbours as (
    select code_postal, nom, pop99
      from lion1906
@@ -107,7 +108,7 @@ expression such as
 search in your application.
 
 
-## Let's get worldwide
+# Let's get worldwide
 
 The real scope of our exercise is to associate every known town in the world
 with some big city around, so let's first fetch and import some worldwide
@@ -118,7 +119,7 @@ data this time, from
 {{< image classes="fig50 fancybox dim-margin" src="/img/old/map_nearest_city_01.gif" >}}
 </center>
 
-~~~
+~~~ sql
 CREATE TABLE maxmind_worldcities (
 	country_code text,
 	city_lower text,
@@ -144,7 +145,7 @@ before.
 Now is the time to test that data set and hopefully fetch the same result as
 before when we only had french cities loaded:
 
-~~~
+~~~ sql
 with neighbours as (
    select country_code, city_lower, population
      from maxmind_worldcities
@@ -167,7 +168,7 @@ with neighbours as (
 Ok, looks like we're all set for the real problem. Now we want to pick for
 each of those cities it's nearest neighboor, so here's how to do that:
 
-~~~
+~~~ sql
 create index on maxmind_worldcities(country_code, region_code, city_lower);
 create index on maxmind_worldcities using gist(loc);
 
@@ -200,7 +201,7 @@ With that in hands we can now check some cities and their
 *biggest*
 neighbours, as in the following query:
 
-~~~
+~~~ sql
 select * from maxmind_neighbours where city_lower = 'villeurbanne';
  country_code | region_code |  city_lower  | neighbour 
 --------------+-------------+--------------+-----------
@@ -213,7 +214,7 @@ And looking for New-York City suburbs I did find a
 *chinatown*, which is a
 pretty common smaller town name apparently:
 
-~~~
+~~~ sql
 select * from maxmind_neighbours where city_lower = 'chinatown';
  country_code | region_code | city_lower |   neighbour   
 --------------+-------------+------------+---------------
@@ -230,7 +231,8 @@ select * from maxmind_neighbours where city_lower = 'chinatown';
 
 
 
-## Big Cities in the big world
+# Big Cities in the big world
+
 <center>
 {{< image classes="fig50 fancybox dim-margin" src="/img/old/Old-Photos-of-Big-Cities-21.jpg" >}}
 </center>
@@ -239,7 +241,7 @@ select * from maxmind_neighbours where city_lower = 'chinatown';
 
 So, let's see how many smaller towns each of those random big cities have:
 
-~~~
+~~~ sql
 select country_code, region_code, neighbour, count(*)
     from maxmind_neighbours
    where neighbour in ('london', 'new york', 'moscow',
@@ -261,7 +263,7 @@ group by country_code, region_code, neighbour;
 And now let's be fair and see where are the cities with the greatest number
 of towns nearby them, with the following query:
 
-~~~
+~~~ sql
 select country_code, region_code, neighbour, count(*)
     from maxmind_neighbours
    where neighbour is not null

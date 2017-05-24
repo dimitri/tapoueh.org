@@ -23,7 +23,11 @@ awesome
 [ip4r](https://github.com/RhodiumToad/ip4r) extension from 
 [RhodiumToad](http://blog.rhodiumtoad.org.uk/).
 
+<!--more-->
+
 <center>*The name of the game is to put IP adresses on a map*</center>
+
+<!--toc-->
 
 In this article we are going to 
 *geolocalize* our users given their IP
@@ -34,7 +38,7 @@ adapt to your user's current location for example. Of course we're going to
 do something more exciting than that. Read on!
 
 
-## Geolocation data loading
+# Geolocation data loading
 
 So the first step is to find an 
 *geolocation* database, and several providers
@@ -69,9 +73,8 @@ Archive:  /Users/dim/Downloads/GeoLiteCity-latest.zip
 
 So we now have the following tables to play with:
 
-~~~
-~# \dt+ geolite.
-\dt+ geolite.
+~~~ sql
+> \dt+ geolite.
                     List of relations
  Schema  |   Name   | Type  | Owner | Size  | Description 
 ---------+----------+-------+-------+-------+-------------
@@ -79,7 +82,7 @@ So we now have the following tables to play with:
  geolite | location | table | dim   | 30 MB | 
 (2 rows)
 
-~# \d geolite.
+> \d geolite.
     Table "geolite.blocks"
  Column  |  Type   | Modifiers 
 ---------+---------+-----------
@@ -109,12 +112,13 @@ Indexes:
 </center>
 
 
-## Finding an IP address in our ranges
+# Finding an IP address in our ranges
 
 Here's what the main data look like:
 
-~~~
-~# table geolite.blocks limit 10;
+~~~ sql
+> table geolite.blocks limit 10;
+        
         iprange        | locid 
 -----------------------+-------
  1.0.0.0/24            |    17
@@ -138,11 +142,7 @@ datatype output function is smart enough to display ranges either in their
 *start-end* notation when no CIDR
 applies.
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/PlusMinusTimesDivide.png" >}}
-</center>
-
-<center>*The ***IP4R*** operators are not written this way*</center>
+{{< image classes="fig25 right fancybox dim-margin" src="/img/old/PlusMinusTimesDivide.png" >}}
 
 The 
 *ip4r* extension provides several operators to work with the dataset we
@@ -150,11 +150,12 @@ have, some of those operators are supported by the index we just created.
 And just for the fun of it here's a catalog query to inquire about them:
 
 ~~~
-ip4r# select amopopr::regoperator
-        from pg_opclass c
-             join pg_am am on am.oid = c.opcmethod
-             join pg_amop amop on amop.amopfamily = c.opcfamily
-       where opcintype = 'ip4r'::regtype and am.amname = 'gist';
+> select amopopr::regoperator
+    from pg_opclass c
+         join pg_am am on am.oid = c.opcmethod
+         join pg_amop amop on amop.amopfamily = c.opcfamily
+   where opcintype = 'ip4r'::regtype and am.amname = 'gist';
+    
     amopopr     
 ----------------
  >>=(ip4r,ip4r)
@@ -176,8 +177,11 @@ to solve. The operator
 *contains* and is the one
 we're going to use here.
 
-~~~
-ip4r# select * from geolite.blocks where iprange >>= '91.121.37.122';
+~~~ sql
+> select *
+    from geolite.blocks
+   where iprange >>= '91.121.37.122';
+
           iprange          | locid 
 ---------------------------+-------
  91.121.0.0-91.121.159.255 |    75
@@ -187,12 +191,9 @@ Time: 1.220 ms
 ~~~
 
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/geolocation-clic.png" >}}
-</center>
+# Geolocation meta-data
 
-
-## Geolocation meta-data
+{{< image classes="fig25 left dim-margin" src="/img/old/geolocation-clic.png" >}}
 
 Now with the 
 *MaxMind* schema that we are using in that example, the
@@ -200,10 +201,12 @@ interesting data actually is to be found in the other table, the
 `geolite.localtion` one. Let's use another IP address now, I'm told that
 `google.us has address 74.125.195.147`, where is that IP from:
 
-~~~
-ip4r# select *
-        from geolite.blocks join geolite.location using(locid)
-       where iprange >>= '74.125.195.147';
+~~~ sql
+> select *
+   from      geolite.blocks
+        join geolite.location using(locid)
+  where iprange >>= '74.125.195.147';
+  
 -[ RECORD 1 ]----------------------------
 locid      | 2703
 iprange    | 74.125.189.24-74.125.255.255
@@ -231,12 +234,9 @@ extension in our recent enouth article
 [How far is the nearest pub?](/blog/2013/08/05-earthdistance) Time to
 try something more interesting then!
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/pubstopslondon.jpg" >}}
-</center>
+# Emergency Pub
 
-
-## Emergency Pub
+{{< image classes="fig25 right dim-margin" src="/img/old/pubstopslondon.320.jpg" >}}
 
 What if you want to make an application to help lost souls find the nearest
 pub from where they are currently? Now that you know their location from the
@@ -246,10 +246,12 @@ The pub names I got last time where all located in the UK, so we need an UK
 based IP address now: it seems that 
 `bbc.co.uk has address 212.58.251.195`.
 
-~~~
-ip4r# select *
-        from geolite.location l join geolite.blocks using(locid)
-       where iprange >>= '212.58.251.195';
+~~~ sql
+> select *
+    from      geolite.location l
+         join geolite.blocks using(locid)
+   where iprange >>= '212.58.251.195';
+
 -[ RECORD 1 ]---------------------------
 locid      | 14023
 country    | GB
@@ -266,8 +268,8 @@ iprange    | 212.58.232.0-212.58.255.255
 What are the ten nearest pubs around if you're just out of the BBC hosting
 services? Well, let's figure that out before we get thirsty!
 
-~~~
-ip4r# with geoloc as
+~~~ sql
+> with geoloc as
    (
     select location
       from geolite.location l
@@ -279,6 +281,7 @@ ip4r# with geoloc as
       from pubnames
   order by pos <-> (select location from geoloc)
      limit 10;
+          
           name          | miles 
 ------------------------+-------
  Blue Anchor            | 0.299
@@ -297,14 +300,10 @@ Time: 3.275 ms
 ~~~
 
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/simple-graphical-explain.png" >}}
-</center>
-
 For this query to be executed that fast, of course we had to create the
 right set of indexes. Here's the explain plan we got:
 
-~~~
+~~~ sql
 QUERY PLAN                               
 ------------------------------------------------------------------------
  Limit
@@ -327,7 +326,7 @@ QUERY PLAN
 
 
 
-## Conclusion
+# Conclusion
 
 While some 
 *geolocation* data provider are giving you some libs and code to do

@@ -2,7 +2,7 @@
 date = "2013-03-29T09:49:00.000000+01:00"
 title = "The Need For Speed"
 tags = ["PostgreSQLFr", "YeSQL"]
-categories = ["PostgreSQL","YeSQL"]
+categories = ["Conferences","PostgreSQLFr-Confs"]
 thumbnailImage = "/img/old/the_need_for_speed-3.png"
 thumbnailImagePosition = "left"
 coverImage = "/img/old/the_need_for_speed-3.png"

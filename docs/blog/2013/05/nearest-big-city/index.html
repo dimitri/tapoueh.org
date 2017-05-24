@@ -32,10 +32,10 @@
 
     
     <meta name="description" content="In this article, we want to find the town with the greatest number of inhabitants near a given location.
-A very localized example We first need to find and import some data, and I found at the following place a CSV listing of french cities with coordinates and population and some numbers of interest for the exercise here.
+ A very localized example We first need to find and import some data, and I found at the following place a CSV listing of french cities with coordinates and population and some numbers of interest for the exercise here.
 To import the data set, we first need a table, then a COPY command:">
     <meta property="og:description" content="In this article, we want to find the town with the greatest number of inhabitants near a given location.
-A very localized example We first need to find and import some data, and I found at the following place a CSV listing of french cities with coordinates and population and some numbers of interest for the exercise here.
+ A very localized example We first need to find and import some data, and I found at the following place a CSV listing of french cities with coordinates and population and some numbers of interest for the exercise here.
 To import the data set, we first need a table, then a COPY command:">
     <meta property="og:type" content="blog">
     <meta property="og:title" content="Nearest Big City">
@@ -44,7 +44,7 @@ To import the data set, we first need a table, then a COPY command:">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Dimitri Fontaine, Expert PostgreSQL">
     <meta name="twitter:description" content="In this article, we want to find the town with the greatest number of inhabitants near a given location.
-A very localized example We first need to find and import some data, and I found at the following place a CSV listing of french cities with coordinates and population and some numbers of interest for the exercise here.
+ A very localized example We first need to find and import some data, and I found at the following place a CSV listing of french cities with coordinates and population and some numbers of interest for the exercise here.
 To import the data set, we first need a table, then a COPY command:">
     
       <meta name="twitter:creator" content="@tapoueh">
@@ -248,17 +248,7 @@ ga('send', 'pageview');
        style="background-image:url('/img/old/global_accessibility-640.png')"
        data-behavior="1">
     
-  </div>
-
-
-      <div id="main" data-behavior="1"
-        class="hasCover
-               hasCoverMetaOut
-               ">
-        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
-          
-          
-            <div class="post-header main-content-wrap text-left">
+      <div class="post-header main-content-wrap text-left">
   
     <h1 class="post-title" itemprop="headline">
       Nearest Big City
@@ -292,6 +282,16 @@ ga('send', 'pageview');
 </div>
 
 </div>
+    
+  </div>
+
+
+      <div id="main" data-behavior="1"
+        class="hasCover
+               hasCoverMetaIn
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
           
           <div class="post-content markdown" itemprop="articleBody">
             <div class="main-content-wrap">
@@ -300,7 +300,15 @@ ga('send', 'pageview');
 <p>In this article, we want to find the town with the greatest number of
 inhabitants near a given location.</p>
 
-<h2 id="a-very-localized-example">A very localized example</h2>
+<h1 id="table-of-contents"></h1><nav id="TableOfContents">
+<ul>
+<li><a href="#a-very-localized-example">A very localized example</a></li>
+<li><a href="#let-s-get-worldwide">Let&rsquo;s get worldwide</a></li>
+<li><a href="#big-cities-in-the-big-world">Big Cities in the big world</a></li>
+</ul>
+</nav>
+
+<h1 id="a-very-localized-example">A very localized example</h1>
 
 <p>We first need to find and import some data, and I found at the following
 place a
@@ -310,7 +318,7 @@ some numbers of interest for the exercise here.</p>
 <p>To import the data set, we first need a table, then a
 <code>COPY</code> command:</p>
 
-<pre><code>CREATE TABLE lion1906 (
+<pre><code class="language-sql">CREATE TABLE lion1906 (
   insee       text,
   nom         text,
   altitude    integer,
@@ -329,7 +337,7 @@ choosing of us, let&rsquo;s pick
 <em>Villeurbanne</em> which is in the region of
 <em>Lyon</em>.</p>
 
-<pre><code>select code_postal, nom, pop99
+<pre><code class="language-sql">select code_postal, nom, pop99
      from lion1906
  order by point(longitude, latitude) &lt;-&gt;
           (select point(longitude, latitude)
@@ -355,7 +363,7 @@ choosing of us, let&rsquo;s pick
 <p>We find Lyon in our list in there, and we want the query now to return only
 that one as it has the greatest number of inhabitants in the list:</p>
 
-<pre><code>with neighbours as (
+<pre><code class="language-sql">with neighbours as (
    select code_postal, nom, pop99
      from lion1906
  order by point(longitude, latitude) &lt;-&gt;
@@ -384,7 +392,7 @@ expression such as
 <em>KNN</em>
 search in your application.</p>
 
-<h2 id="let-s-get-worldwide">Let&rsquo;s get worldwide</h2>
+<h1 id="let-s-get-worldwide">Let&rsquo;s get worldwide</h1>
 
 <p>The real scope of our exercise is to associate every known town in the world
 with some big city around, so let&rsquo;s first fetch and import some worldwide
@@ -423,7 +431,7 @@ data this time, from
 
 </center></p>
 
-<pre><code>CREATE TABLE maxmind_worldcities (
+<pre><code class="language-sql">CREATE TABLE maxmind_worldcities (
 	country_code text,
 	city_lower text,
 	city_normal text,
@@ -447,7 +455,7 @@ before.</p>
 <p>Now is the time to test that data set and hopefully fetch the same result as
 before when we only had french cities loaded:</p>
 
-<pre><code>with neighbours as (
+<pre><code class="language-sql">with neighbours as (
    select country_code, city_lower, population
      from maxmind_worldcities
     where population is not null
@@ -468,7 +476,7 @@ before when we only had french cities loaded:</p>
 <p>Ok, looks like we&rsquo;re all set for the real problem. Now we want to pick for
 each of those cities it&rsquo;s nearest neighboor, so here&rsquo;s how to do that:</p>
 
-<pre><code>create index on maxmind_worldcities(country_code, region_code, city_lower);
+<pre><code class="language-sql">create index on maxmind_worldcities(country_code, region_code, city_lower);
 create index on maxmind_worldcities using gist(loc);
 
 create table maxmind_neighbours as
@@ -499,7 +507,7 @@ performances: I didn&rsquo;t try.</p>
 <em>biggest</em>
 neighbours, as in the following query:</p>
 
-<pre><code>select * from maxmind_neighbours where city_lower = 'villeurbanne';
+<pre><code class="language-sql">select * from maxmind_neighbours where city_lower = 'villeurbanne';
  country_code | region_code |  city_lower  | neighbour 
 --------------+-------------+--------------+-----------
  fr           | B9          | villeurbanne | lyon
@@ -510,7 +518,7 @@ neighbours, as in the following query:</p>
 <em>chinatown</em>, which is a
 pretty common smaller town name apparently:</p>
 
-<pre><code>select * from maxmind_neighbours where city_lower = 'chinatown';
+<pre><code class="language-sql">select * from maxmind_neighbours where city_lower = 'chinatown';
  country_code | region_code | city_lower |   neighbour   
 --------------+-------------+------------+---------------
  sb           | 08          | chinatown  | honiara
@@ -524,7 +532,7 @@ pretty common smaller town name apparently:</p>
 (8 rows)
 </code></pre>
 
-<h2 id="big-cities-in-the-big-world">Big Cities in the big world</h2>
+<h1 id="big-cities-in-the-big-world">Big Cities in the big world</h1>
 
 <p><center>
 
@@ -562,7 +570,7 @@ pretty common smaller town name apparently:</p>
 
 <p>So, let&rsquo;s see how many smaller towns each of those random big cities have:</p>
 
-<pre><code>select country_code, region_code, neighbour, count(*)
+<pre><code class="language-sql">select country_code, region_code, neighbour, count(*)
     from maxmind_neighbours
    where neighbour in ('london', 'new york', 'moscow',
                        'paris', 'tokyo', 'sao polo', 'chicago')
@@ -582,7 +590,7 @@ group by country_code, region_code, neighbour;
 <p>And now let&rsquo;s be fair and see where are the cities with the greatest number
 of towns nearby them, with the following query:</p>
 
-<pre><code>select country_code, region_code, neighbour, count(*)
+<pre><code class="language-sql">select country_code, region_code, neighbour, count(*)
     from maxmind_neighbours
    where neighbour is not null
 group by country_code, region_code, neighbour
@@ -695,7 +703,7 @@ order by 4 desc
     
     <li class="post-action">
       
-        <a class="post-action-btn btn btn--default" href="#">
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
       
         <i class="fa fa-list"></i>
       </a>
@@ -776,7 +784,7 @@ order by 4 desc
     
     <li class="post-action">
       
-        <a class="post-action-btn btn btn--default" href="#">
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
       
         <i class="fa fa-list"></i>
       </a>

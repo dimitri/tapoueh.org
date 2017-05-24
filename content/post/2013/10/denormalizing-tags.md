@@ -7,7 +7,7 @@ thumbnailImage = "/img/old/wordpres-seo-categories-tags.jpg"
 thumbnailImagePosition = "left"
 coverImage = "/img/old/wordpres-seo-categories-tags.jpg"
 coverSize = "partial"
-coverMeta = "out"
+coverMeta = "in"
 aliases = ["/blog/2013/10/23-denormalizing-tags",
            "/blog/2013/10/23-denormalizing-tags.html"]
 +++
@@ -22,6 +22,8 @@ those
 *rhythm and blues*, for
 instance.
 
+<!--toc-->
+
 <center>*In this article, we're going to play with music related tags*</center>
 
 We're going to use the 
@@ -32,8 +34,9 @@ the whole dataset they have as a
 their python script 
 [demo_tags_db.py](http://labrosa.ee.columbia.edu/millionsong/sites/default/files/lastfm/demo_tags_db.py) to make sense of it.
 
+<!--toc-->
 
-## The Setup
+# The Setup
 
 First, we need to import this dataset into a PostgreSQL database. To do that
 the easier path I could think of was to hack the capability into 
@@ -55,6 +58,8 @@ course, so here we go:
 ~~~
 
 
+{{< image classes="fig25 right dim-margin" src="/img/old/sqlite.gif" >}}
+
 Here, 
 *pgloader* extracted the table and index definitions from the SQLite
 database using the 
@@ -64,29 +69,26 @@ commands, and migrated the data in a streaming fashion down to PostgreSQL,
 using the 
 *COPY protocol*.
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/sqlite.gif" >}}
-</center>
-
 Having a look at the 
 *demo_tags.py* script we can actually see how to use the
 relations here, and we realize they are using the
 [64-bit signed integer ROWID](http://www.sqlite.org/autoinc.html) system column. We need something comparable to
 be able to make sense of the data:
 
-~~~
-tags# alter table tags add column rowid serial;
+~~~ sql
+> alter table tags add column rowid serial;
 ALTER TABLE
 Time: 3177.603 ms
 
-tags# alter table tids add column rowid serial;
+> alter table tids add column rowid serial;
 ALTER TABLE
 Time: 2528.680 ms
 
-tags# SELECT tags.tag, COUNT(tid_tag.tid)
-        FROM tid_tag, tags
-       WHERE tid_tag.tag=tags.ROWID and tags.tag ~* 'setzer'
-    GROUP BY tags.tag;
+> SELECT tags.tag, COUNT(tid_tag.tid)
+    FROM tid_tag, tags
+   WHERE tid_tag.tag=tags.ROWID and tags.tag ~* 'setzer'
+GROUP BY tags.tag;
+             
              tag             | count 
 -----------------------------+-------
  the brian setzer orchestra  |     1
@@ -114,12 +116,7 @@ and tags), filtering on the
 we can imagine from reading the query execution time, we don't have any
 index to implement the filtering here.
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/Last-FM.png" >}}
-</center>
-
-
-## Advanced tag indexing
+# Advanced tag indexing
 
 PostgreSQL comes with plenty of interesting datatypes, one of them is known
 as the 
@@ -138,8 +135,8 @@ extension:
 > arrays that contain 1 and also contain either 2 or 3.
 
 
-~~~
-tags# create extension intarray;
+~~~ sql
+> create extension intarray;
 CREATE EXTENSION
 ~~~
 
@@ -151,11 +148,12 @@ array of integers. We're going to use our
 *rowid* identifier for that purpose,
 as in the following query:
 
-~~~
-tags# SELECT tt.tid, array_agg(tags.rowid) as tags
-        FROM tags JOIN tid_tag tt ON tags.rowid = tt.tag
-    GROUP BY tt.tid
-       LIMIT 3;
+~~~ sql
+>  SELECT tt.tid, array_agg(tags.rowid) as tags
+     FROM tags JOIN tid_tag tt ON tags.rowid = tt.tag
+ GROUP BY tt.tid
+    LIMIT 3;
+    
  tid |   tags    
 -----+-----------
    1 | {1,2}
@@ -169,26 +167,22 @@ Time: 942.074 ms
 
 So let's build the full table then index it:
 
-~~~
-tags# CREATE TABLE track_tags AS
+~~~ sql
+> CREATE TABLE track_tags AS
    SELECT tt.tid, array_agg(tags.rowid) as tags
      FROM tags join tid_tag tt on tags.rowid = tt.tag
  GROUP BY tt.tid;
 SELECT 505216
 Time: 45388.424 ms
 
-tags# create index on track_tags using gin(tags gin__int_ops);
+> create index on track_tags using gin(tags gin__int_ops);
 CREATE INDEX
 Time: 18645.931 ms
 ~~~
 
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/rhythm-and-blues-tag.jpg" >}}
-</center>
 
-
-## Searches
+# Searches
 
 Now 
 [PostgreSQL](http://www.postgresql.org/) is ready for the real magic. Let's find all the tracks we
@@ -196,10 +190,11 @@ have that have been tagged as both
 *blues* and 
 *rhythm and blues*:
 
-~~~
-tags# select array_agg(rowid)
-        from tags
-       where tag = 'blues' or tag = 'rhythm and blues';
+~~~ sql
+> select array_agg(rowid)
+    from tags
+   where tag = 'blues' or tag = 'rhythm and blues';
+ 
  array_agg 
 -----------
  {3,739}
@@ -215,12 +210,13 @@ Now what we want is a
 `array_agg` we're going to use the
 following query:
 
-~~~
-tags# select format('(%s)',
-                array_to_string(array_agg(rowid), '&')
-             )::query_int as query
-        from tags
-       where tag = 'blues' or tag = 'rhythm and blues';
+~~~ sql
+> select format('(%s)',
+            array_to_string(array_agg(rowid), '&')
+         )::query_int as query
+    from tags
+   where tag = 'blues' or tag = 'rhythm and blues';
+  
   query  
 ---------
  3 & 739
@@ -249,16 +245,17 @@ Now, how many tracks have been tagged with
 *rhythm and
 blues* tags, will you ask me:
 
-~~~
-tags# with t(query) as (
+~~~ sql
+> with t(query) as (
        select format('(%s)',
                 array_to_string(array_agg(rowid), '&')
              )::query_int as query
         from tags
        where tag = 'blues' or tag = 'rhythm and blues'
-)
+  )
 select count(*) from track_tags, t
  where tags @@ query;
+ 
  count 
 -------
   2278
@@ -268,16 +265,12 @@ Time: 8.242 ms
 ~~~
 
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/rhythm-blues-final4.640.jpg" >}}
-</center>
-
 Now of course you might want to fetch some track meta-data, here the only
 one we have is the track 
 *hash id*:
 
-~~~
-tags# with t(query) as (
+~~~ sql
+> with t(query) as (
     select format('(%s)',
                     array_to_string(array_agg(rowid), '&')
            )::query_int as query
@@ -307,7 +300,9 @@ Time: 7.630 ms
 
 
 
-## Conclusion
+# Conclusion
+
+{{< image classes="fig25 right dim-margin" src="/img/old/rhythm-blues-final4.320.jpg" >}}
 
 The usual way to handle a set of user defined tags and query against it
 involves join against a reference table of tags, but then it's quite

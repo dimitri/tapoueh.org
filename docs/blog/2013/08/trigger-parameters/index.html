@@ -31,15 +31,48 @@
     
 
     
-    <meta name="description" content="Sometimes you want to compute values automatically at INSERT time, like for example a duration column out of a start and an end column, both timestamptz. It&rsquo;s easy enough to do with a BEFORE TRIGGER on your table. What&rsquo;s more complex is to come up with a parametrized spelling of the trigger, where you can attach the same stored procedure to any table even when the column names are different from one another.">
-    <meta property="og:description" content="Sometimes you want to compute values automatically at INSERT time, like for example a duration column out of a start and an end column, both timestamptz. It&rsquo;s easy enough to do with a BEFORE TRIGGER on your table. What&rsquo;s more complex is to come up with a parametrized spelling of the trigger, where you can attach the same stored procedure to any table even when the column names are different from one another.">
+    <meta name="description" content="Sometimes you want to compute values automatically at
+INSERT time, like for
+example a
+duration column out of a
+start and an
+end column, both
+timestamptz. It&rsquo;s easy enough to do with a
+BEFORE TRIGGER on your table.
+What&rsquo;s more complex is to come up with a parametrized spelling of the
+trigger, where you can attach the same
+stored procedure to any table even
+when the column names are different from one another.">
+    <meta property="og:description" content="Sometimes you want to compute values automatically at
+INSERT time, like for
+example a
+duration column out of a
+start and an
+end column, both
+timestamptz. It&rsquo;s easy enough to do with a
+BEFORE TRIGGER on your table.
+What&rsquo;s more complex is to come up with a parametrized spelling of the
+trigger, where you can attach the same
+stored procedure to any table even
+when the column names are different from one another.">
     <meta property="og:type" content="blog">
     <meta property="og:title" content="Trigger Parameters">
     <meta property="og:url" content="/blog/2013/08/trigger-parameters/">
     <meta property="og:site_name" content="Dimitri Fontaine, Expert PostgreSQL">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Dimitri Fontaine, Expert PostgreSQL">
-    <meta name="twitter:description" content="Sometimes you want to compute values automatically at INSERT time, like for example a duration column out of a start and an end column, both timestamptz. It&rsquo;s easy enough to do with a BEFORE TRIGGER on your table. What&rsquo;s more complex is to come up with a parametrized spelling of the trigger, where you can attach the same stored procedure to any table even when the column names are different from one another.">
+    <meta name="twitter:description" content="Sometimes you want to compute values automatically at
+INSERT time, like for
+example a
+duration column out of a
+start and an
+end column, both
+timestamptz. It&rsquo;s easy enough to do with a
+BEFORE TRIGGER on your table.
+What&rsquo;s more complex is to come up with a parametrized spelling of the
+trigger, where you can attach the same
+stored procedure to any table even
+when the column names are different from one another.">
     
       <meta name="twitter:creator" content="@tapoueh">
     
@@ -289,9 +322,7 @@ ga('send', 'pageview');
           
           <div class="post-content markdown" itemprop="articleBody">
             <div class="main-content-wrap">
-              
-
-<p>Sometimes you want to compute values automatically at
+              <p>Sometimes you want to compute values automatically at
 <code>INSERT</code> time, like for
 example a
 <em>duration</em> column out of a
@@ -304,7 +335,15 @@ trigger, where you can attach the same
 <em>stored procedure</em> to any table even
 when the column names are different from one another.</p>
 
-<p><center><em>I found a kind of trigger that I can use!</em></center></p>
+<p>
+<h1 id="table-of-contents"></h1><nav id="TableOfContents">
+<ul>
+<li><a href="#the-exemple">The exemple</a></li>
+<li><a href="#playing-with-hstore">Playing with hstore</a></li>
+<li><a href="#the-generic-trigger-using-hstore">The generic trigger, using hstore</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+</nav></p>
 
 <p>The exact problem to solve here is how to code a
 <em>dynamic trigger</em> where the
@@ -318,7 +357,7 @@ to do that.</p>
 <p>That said, we now have
 <a href="http://www.postgresql.org/docs/9.2/static/hstore.html">hstore</a> and it&rsquo;s empowering us a lot here.</p>
 
-<h2 id="the-exemple">The exemple</h2>
+<h1 id="the-exemple">The exemple</h1>
 
 <p>Let&rsquo;s start simple, with a table having a
 <code>d_start</code> and a
@@ -346,39 +385,7 @@ insert into foo(d_start, d_end)
 of them of course has the
 <code>duration</code> field set. Let&rsquo;s see about that now.</p>
 
-<h2 id="playing-with-hstore">Playing with hstore</h2>
-
-<p><center>
-
-
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/hstore.png" data-fancybox-group="">
-  
-    <img class="fig-img" src="/img/old/hstore.png" >
-  
-    </a>
-  
-  
-</div>
-
-</center></p>
+<h1 id="playing-with-hstore">Playing with hstore</h1>
 
 <p>The
 <em>hstore</em> extension is full of goodies, we will only have to discover a
@@ -387,14 +394,14 @@ handful of them now.</p>
 <p>First thing to do is make
 <code>hstore</code> available in our test database:</p>
 
-<pre><code># create extension hstore;
+<pre><code class="language-sql"># create extension hstore;
 CREATE EXTENSION
 </code></pre>
 
 <p>And now play with
 <em>hstore</em> in our table.</p>
 
-<pre><code># select hstore(foo) from foo limit 1;
+<pre><code class="language-sql">&gt; select hstore(foo) from foo limit 1;
 
  &quot;id&quot;=&gt;&quot;1&quot;,
  &quot;d_end&quot;=&gt;&quot;2013-08-23 11:34:53.129109+01&quot;,
@@ -420,7 +427,10 @@ can use it as a
 <code>#=</code> operator which will replace a
 given field in a row, look at that:</p>
 
-<pre><code># select (foo #= hstore('duration', '10 mins')).* from foo limit 1;
+<pre><code class="language-sql">&gt; select (foo #= hstore('duration', '10 mins')).*
+    from foo
+   limit 1;
+
  id |            d_start            |             d_end             | duration 
 ----+-------------------------------+-------------------------------+----------
   1 | 2013-08-23 11:16:04.869424+01 | 2013-08-23 11:34:53.129109+01 | 00:10:00
@@ -436,43 +446,11 @@ expand the row type into its full definition.</p>
 
 <p>We should be ready for the next step now&hellip;</p>
 
-<p><center>
-
-
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/trigger-parameter.jpg" data-fancybox-group="">
-  
-    <img class="fig-img" src="/img/old/trigger-parameter.jpg" >
-  
-    </a>
-  
-  
-</div>
-
-</center></p>
-
-<h2 id="the-generic-trigger-using-hstore">The generic trigger, using hstore</h2>
+<h1 id="the-generic-trigger-using-hstore">The generic trigger, using hstore</h1>
 
 <p>Now let&rsquo;s code the trigger:</p>
 
-<pre><code>create or replace function tg_duration()
+<pre><code class="language-sql">create or replace function tg_duration()
  -- (
  --  start_name    text,
  --  end_name      text,
@@ -506,7 +484,7 @@ details of the
 <p>The other important point is how we pass down the column names as argument
 to the stored procedure above.</p>
 
-<pre><code>create trigger compute_duration
+<pre><code class="language-sql">create trigger compute_duration
      before insert on foo
           for each row
  execute procedure tg_duration('d_start', 'd_end', 'duration');
@@ -515,13 +493,14 @@ to the stored procedure above.</p>
 <p>Equiped with the trigger properly attached to our table, we can truncate it
 and insert again some rows:</p>
 
-<pre><code># truncate foo;
-# insert into foo(d_start, d_end)
+<pre><code class="language-sql">&gt; truncate foo;
+&gt; insert into foo(d_start, d_end)
        select now() - 10 * random() * interval '1 min',
               now() + 10 * random() * interval '1 min'
          from generate_series(1, 10);
 
-# select d_start, d_end, duration from foo;
+&gt; select d_start, d_end, duration from foo;
+
             d_start            |             d_end             |    duration     
 -------------------------------+-------------------------------+-----------------
  2013-08-23 11:56:20.185563+02 | 2013-08-23 12:00:08.188698+02 | 00:03:48.003135
@@ -537,14 +516,13 @@ and insert again some rows:</p>
 (10 rows)
 </code></pre>
 
-<h2 id="conclusion">Conclusion</h2>
+<h1 id="conclusion">Conclusion</h1>
 
 <p>Thanks to the
 <a href="http://www.postgresql.org/docs/current/static/hstore.html">hstore</a> extension we&rsquo;ve been able to come up with a dynamic
 solution where you can give the name of the columns you want to work with at
 <code>CREATE TRIGGER</code> time rather than hard-code that in a series of stored
 procedure that will end up alike and a pain to maintain.</p>
-
               
             </div>
           </div>
@@ -625,7 +603,7 @@ procedure that will end up alike and a pain to maintain.</p>
     
     <li class="post-action">
       
-        <a class="post-action-btn btn btn--default" href="#">
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
       
         <i class="fa fa-list"></i>
       </a>
@@ -706,7 +684,7 @@ procedure that will end up alike and a pain to maintain.</p>
     
     <li class="post-action">
       
-        <a class="post-action-btn btn btn--default" href="#">
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
       
         <i class="fa fa-list"></i>
       </a>

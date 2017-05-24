@@ -7,7 +7,7 @@ thumbnailImage = "/img/old/Home-Brewing.jpg"
 thumbnailImagePosition = "left"
 coverImage = "/img/old/Home-Brewing.jpg"
 coverSize = "partial"
-coverMeta = "out"
+coverMeta = "in"
 aliases = ["/blog/2013/03/15-batch-update",
            "/blog/2013/03/15-batch-update.html"]
 +++
@@ -17,7 +17,7 @@ over again. One of them is that SQL tends to be so much better at dealing
 with plenty of rows in a single statement when compared to running as many
 statements, each one against a single row.
 
-<center>*Another kind of Batch to update*</center>
+<!--more-->
 
 So when you need to 
 `UPDATE` a bunch of rows from a given source, remember
@@ -30,8 +30,9 @@ the
 *update* statement, or it's not, and we're getting back
 to that in a minute.
 
+<!--toc-->
 
-## `UPDATE FROM`
+# Update From
 
 It's all about using that 
 `FROM` clause in an 
@@ -50,7 +51,7 @@ Using that, you can actually update thousands of rows in our
 a single statement, and you can't really get faster than that.
 
 
-## Preparing the Batch
+# Preparing the Batch
 
 Now, if you happen to have the source data in your application process'
 memory, the previous bits is not doing you any good, you think. Well, the
@@ -97,7 +98,7 @@ it certainly includes some higher level facilities to deal with pushing the
 data into the streaming protocol.
 
 
-## Insert or Update
+# Insert or Update
 
 And now sometime some of the rows in the batch have to be 
 *updated* while some
@@ -143,7 +144,7 @@ against the
 *index* on the join key.
 
 
-## Concurrency patterns
+# Concurrency patterns
 
 Now, you will tell me that we just solved the 
 `UPSERT` problem. Well what
@@ -193,7 +194,8 @@ playing the
 *lock*.
 
 
-## Conclusion
+# Conclusion
+
 <center>
 <div class="figure dim-margin">
   <a href="http://www.flickr.com/photos/asquarephotography/6841106459/in/photostream/">

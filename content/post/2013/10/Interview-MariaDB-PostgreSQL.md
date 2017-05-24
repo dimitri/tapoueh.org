@@ -2,7 +2,7 @@
 date = "2013-10-16T21:07:00.000000+02:00"
 title = "An Interview about MariaDB and PostgreSQL"
 tags = ["PostgreSQL", "PostgreSQLFr", "MariaDB", "YeSQL"]
-categories = ["PostgreSQL","YeSQL"]
+categories = ["Conferences","PostgreSQL"]
 thumbnailImage = "/img/old/Interview.jpg"
 thumbnailImagePosition = "left"
 coverImage = "/img/old/Interview.jpg"
@@ -20,13 +20,9 @@ and
 [PostgreSQL](http://www.postgresql.org/), and even were both interviewed by the Open World Forum Team.
 The interview is now available online. Dear French readers, it's in English.
 
-<center>*Allo Mum? Yeah, I'm on TV. Well, Actually, Internet TV.*</center>
-
 Here's the video:
 
-
-<iframe width="640" height="360" src="//www.youtube.com/embed/I4-ULkWck3Y" frameborder="0" allowfullscreen></iframe>
-
+{{< youtube I4-ULkWck3Y >}}
 
 Executive Summary: MariaDB is a drop-in fully Open Source replacement for
 MySQL and sees quite some progress and innovation being made, and 

@@ -25,7 +25,8 @@ trigger, where you can attach the same
 *stored procedure* to any table even
 when the column names are different from one another.
 
-<center>*I found a kind of trigger that I can use!*</center>
+<!--more-->
+<!--toc-->
 
 The exact problem to solve here is how to code a 
 *dynamic trigger* where the
@@ -40,7 +41,7 @@ That said, we now have
 [hstore](http://www.postgresql.org/docs/9.2/static/hstore.html) and it's empowering us a lot here.
 
 
-## The exemple
+# The exemple
 
 Let's start simple, with a table having a 
 `d_start` and a 
@@ -71,10 +72,7 @@ of them of course has the
 `duration` field set. Let's see about that now.
 
 
-## Playing with hstore
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/hstore.png" >}}
-</center>
+# Playing with hstore
 
 The 
 *hstore* extension is full of goodies, we will only have to discover a
@@ -83,7 +81,7 @@ handful of them now.
 First thing to do is make 
 `hstore` available in our test database:
 
-~~~
+~~~ sql
 # create extension hstore;
 CREATE EXTENSION
 ~~~
@@ -92,8 +90,8 @@ CREATE EXTENSION
 And now play with 
 *hstore* in our table.
 
-~~~
-# select hstore(foo) from foo limit 1;
+~~~ sql
+> select hstore(foo) from foo limit 1;
 
  "id"=>"1",
  "d_end"=>"2013-08-23 11:34:53.129109+01",
@@ -120,8 +118,11 @@ Now, hstore also provides the
 `#=` operator which will replace a
 given field in a row, look at that:
 
-~~~
-# select (foo #= hstore('duration', '10 mins')).* from foo limit 1;
+~~~ sql
+> select (foo #= hstore('duration', '10 mins')).*
+    from foo
+   limit 1;
+
  id |            d_start            |             d_end             | duration 
 ----+-------------------------------+-------------------------------+----------
   1 | 2013-08-23 11:16:04.869424+01 | 2013-08-23 11:34:53.129109+01 | 00:10:00
@@ -138,16 +139,12 @@ expand the row type into its full definition.
 
 We should be ready for the next step now...
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/trigger-parameter.jpg" >}}
-</center>
 
-
-## The generic trigger, using hstore
+# The generic trigger, using hstore
 
 Now let's code the trigger:
 
-~~~
+~~~ sql
 create or replace function tg_duration()
  -- (
  --  start_name    text,
@@ -183,7 +180,7 @@ details of the
 The other important point is how we pass down the column names as argument
 to the stored procedure above.
 
-~~~
+~~~ sql
 create trigger compute_duration
      before insert on foo
           for each row
@@ -194,14 +191,15 @@ create trigger compute_duration
 Equiped with the trigger properly attached to our table, we can truncate it
 and insert again some rows:
 
-~~~
-# truncate foo;
-# insert into foo(d_start, d_end)
+~~~ sql
+> truncate foo;
+> insert into foo(d_start, d_end)
        select now() - 10 * random() * interval '1 min',
               now() + 10 * random() * interval '1 min'
          from generate_series(1, 10);
 
-# select d_start, d_end, duration from foo;
+> select d_start, d_end, duration from foo;
+
             d_start            |             d_end             |    duration     
 -------------------------------+-------------------------------+-----------------
  2013-08-23 11:56:20.185563+02 | 2013-08-23 12:00:08.188698+02 | 00:03:48.003135
@@ -219,7 +217,7 @@ and insert again some rows:
 
 
 
-## Conclusion
+# Conclusion
 
 Thanks to the 
 [hstore](http://www.postgresql.org/docs/current/static/hstore.html) extension we've been able to come up with a dynamic

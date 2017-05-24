@@ -13,11 +13,13 @@ aliases = ["/blog/2012/10/05-reset-counter",
 +++
 
 I've been given a nice puzzle that I think is a good blog article
-opportunity, as it involves some thinking and 
-*window functions*.
+opportunity, as it involves some thinking
+and [window functions](/blog/2013/08/understanding-window-functions/).
 
+<!--more-->
+<!--toc-->
 
-## What's to solve
+# What's to solve
 
 Say we store in a table entries from a 
 *counter* that only increases and the
@@ -55,7 +57,7 @@ we want is
 `100`. Right?
 
 
-## Playing with some data
+# Playing with some data
 
 Let's model an hypothetical dataset easy enough to play with. What about
 just the previous example? We also need to 
@@ -63,7 +65,7 @@ just the previous example? We also need to
 let's just use a 
 *tick* for now, as it's easier to think about:
 
-~~~
+~~~ sql
 create table measures(tick int, nb int);
 
 insert into measures
@@ -85,7 +87,7 @@ brings
 [window functions](http://www.postgresql.org/docs/9.2/static/tutorial-window.html) on the table, we can easily implement just what we
 said in a readable way:
 
-~~~
+~~~ sql
 select tick, nb,
          case when lead(nb) over w < nb then nb
               when lead(nb) over w is null then nb
@@ -121,8 +123,8 @@ of knowing the current
 
 And we get that encouraging result:
 
-~~~
-tick | nb  | max 
+~~~ sql
+ tick | nb  | max 
 ------+-----+-----
     1 |   0 |    
     2 |  10 |    
@@ -140,7 +142,7 @@ As you see, we have been able to create a new column out of the dataset, and
 that new column only contains the data we are interested into.
 
 
-## Finding the current counter value
+# Finding the current counter value
 
 All we have to do now is sum this computed columns entries. Remember that
 the 
@@ -148,7 +150,7 @@ the
 have to turn them into a bunch of 
 `0`.
 
-~~~
+~~~ sql
 with t(tops) as (
   select case when lead(nb) over w < nb then nb
               when lead(nb) over w is null then nb
@@ -167,8 +169,8 @@ select sum(tops) from t;
 
 And here's the expected result:
 
-~~~
-sum 
+~~~ sql
+ sum 
 -----
  100
 ~~~
@@ -177,7 +179,7 @@ sum
 Now what about testing with another set of data or two, just to be sure that
 the counter is allowed to wrap more than once within our solution?
 
-~~~
+~~~ sql
 insert into measures
      values (10, 0), (11, 10), (12, 30), (13, 35), (14, 45),
             (15, 25), (16, 50), (17, 100), (18, 110);
@@ -186,7 +188,7 @@ insert into measures
 
 Then we have:
 
-~~~
+~~~ sql
 with t(tops) as (
    select case when lead(nb) over w < nb then nb
                when lead(nb) over w is null then nb
@@ -196,6 +198,7 @@ with t(tops) as (
    window w as (order by tick)
 )
 select sum(tops) from t;
+ 
  sum 
 -----
  255
@@ -206,7 +209,7 @@ select sum(tops) from t;
 All good!
 
 
-## Counter logical value over a given period
+# Counter logical value over a given period
 
 Now of course what we want is to find the logical value of the counter for a
 given day's or month's worth of measures. We then need to pay attention to
@@ -222,7 +225,7 @@ ticks
 `4` and 
 `14`, in a completely arbitrary choosing of mine:
 
-~~~
+~~~ sql
 with t as (
   select tick,
          first_value(nb) over w as first,
@@ -264,7 +267,7 @@ that
 Let's have a quick look at the raw data in that range, using another nice
 *aggregate* that PostgreSQL comes with:
 
-~~~
+~~~ sql
 select array_agg(nb) from measures where tick >= 4 and tick < 14;
            array_agg           
 -------------------------------
@@ -277,8 +280,8 @@ And now, the
 *logical counter value* for that period is computed as the
 following value by the previous query:
 
-~~~
-sum 
+~~~ sql
+ sum 
 -----
  105
 (1 row)
@@ -290,7 +293,7 @@ We can verify it manually, we want
 again. Don't forget we have to substract the first measure from the period!
 
 
-## Extending the problem
+# Extending the problem
 
 Another interesting problem, that we didn't have here but that I find
 interesting enough to extend this article, is finding the ranges of time
@@ -308,7 +311,7 @@ to instead use a
 *correlated subquery* to go fetch the next 
 *wraparound* value:
 
-~~~
+~~~ sql
 with tops as (
   select tick, nb,
          case when lead(nb) over w < nb then nb
@@ -354,7 +357,7 @@ With that as an input it's then possible to build ranges of ticks including
 non wrapping set of measures from our counter, and get for each range the
 logical value tat the counter had at the end of it:
 
-~~~
+~~~ sql
 with tops as (
   select tick, nb,
          case when lead(nb) over w < nb then nb
@@ -393,7 +396,7 @@ select * from ranges where max is not null;
 
 
 
-## Conclusion
+# Conclusion
 
 What I hope to have shown here, apart from some 
 *window function* tips and

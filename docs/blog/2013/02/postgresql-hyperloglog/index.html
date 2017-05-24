@@ -31,21 +31,48 @@
     
 
     
-    <meta name="description" content="If you&rsquo;ve been following along at home the newer statistics developments, you might have heard about this new State of The Art Cardinality Estimation Algorithm called HyperLogLog. This technique is now available for PostgreSQL in the extension postgresql-hll available at https://github.com/aggregateknowledge/postgresql-hll and soon to be in debian.
-How to Compute Cardinality?
-Installing postgresql-hll It&rsquo;s as simple as CREATE EXTENSION hll; really, even if to get there you must have installed the package on your system.">
-    <meta property="og:description" content="If you&rsquo;ve been following along at home the newer statistics developments, you might have heard about this new State of The Art Cardinality Estimation Algorithm called HyperLogLog. This technique is now available for PostgreSQL in the extension postgresql-hll available at https://github.com/aggregateknowledge/postgresql-hll and soon to be in debian.
-How to Compute Cardinality?
-Installing postgresql-hll It&rsquo;s as simple as CREATE EXTENSION hll; really, even if to get there you must have installed the package on your system.">
+    <meta name="description" content="If you&rsquo;ve been following along at home the newer statistics developments,
+you might have heard about this new
+State of The Art Cardinality Estimation Algorithm called
+HyperLogLog. This
+technique is now available for PostgreSQL in the extension
+postgresql-hll
+available at
+https://github.com/aggregateknowledge/postgresql-hll and soon
+to be in
+debian.
+
+">
+    <meta property="og:description" content="If you&rsquo;ve been following along at home the newer statistics developments,
+you might have heard about this new
+State of The Art Cardinality Estimation Algorithm called
+HyperLogLog. This
+technique is now available for PostgreSQL in the extension
+postgresql-hll
+available at
+https://github.com/aggregateknowledge/postgresql-hll and soon
+to be in
+debian.
+
+">
     <meta property="og:type" content="blog">
     <meta property="og:title" content="PostgreSQL HyperLogLog">
     <meta property="og:url" content="/blog/2013/02/postgresql-hyperloglog/">
     <meta property="og:site_name" content="Dimitri Fontaine, Expert PostgreSQL">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Dimitri Fontaine, Expert PostgreSQL">
-    <meta name="twitter:description" content="If you&rsquo;ve been following along at home the newer statistics developments, you might have heard about this new State of The Art Cardinality Estimation Algorithm called HyperLogLog. This technique is now available for PostgreSQL in the extension postgresql-hll available at https://github.com/aggregateknowledge/postgresql-hll and soon to be in debian.
-How to Compute Cardinality?
-Installing postgresql-hll It&rsquo;s as simple as CREATE EXTENSION hll; really, even if to get there you must have installed the package on your system.">
+    <meta name="twitter:description" content="If you&rsquo;ve been following along at home the newer statistics developments,
+you might have heard about this new
+State of The Art Cardinality Estimation Algorithm called
+HyperLogLog. This
+technique is now available for PostgreSQL in the extension
+postgresql-hll
+available at
+https://github.com/aggregateknowledge/postgresql-hll and soon
+to be in
+debian.
+
+">
     
       <meta name="twitter:creator" content="@tapoueh">
     
@@ -295,9 +322,7 @@ ga('send', 'pageview');
           
           <div class="post-content markdown" itemprop="articleBody">
             <div class="main-content-wrap">
-              
-
-<p>If you&rsquo;ve been following along at home the newer statistics developments,
+              <p>If you&rsquo;ve been following along at home the newer statistics developments,
 you might have heard about this new
 <a href="http://research.google.com/pubs/pub40671.html">State of The Art Cardinality Estimation Algorithm</a> called
 <a href="http://metamarkets.com/2012/fast-cheap-and-98-right-cardinality-estimation-for-big-data/">HyperLogLog</a>. This
@@ -308,9 +333,21 @@ available at
 to be in
 <code>debian</code>.</p>
 
+<p></p>
+
 <p><center><em>How to Compute Cardinality?</em></center></p>
 
-<h2 id="installing-postgresql-hll">Installing postgresql-hll</h2>
+<h1 id="table-of-contents"></h1><nav id="TableOfContents">
+<ul>
+<li><a href="#installing-postgresql-hll">Installing postgresql-hll</a></li>
+<li><a href="#concurrency">Concurrency</a></li>
+<li><a href="#empty-set-and-null">∅: Empty Set and NULL</a></li>
+<li><a href="#using-postgresql-hll">Using postgresql-hll</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+</nav>
+
+<h1 id="installing-postgresql-hll">Installing postgresql-hll</h1>
 
 <p>It&rsquo;s as simple as
 <code>CREATE EXTENSION hll;</code> really, even if to get there you
@@ -322,7 +359,7 @@ for
 <p>Then you also need to keep your data in some table, straight from the
 documentation we can use that schema:</p>
 
-<pre><code>-- Create the destination table
+<pre><code class="language-sql">-- Create the destination table
 CREATE TABLE daily_uniques (
 DATE            DATE UNIQUE,
 users           hll
@@ -334,7 +371,7 @@ users           hll
 simple as in the following
 <code>UPDATE</code> statement:</p>
 
-<pre><code>UPDATE daily_uniques
+<pre><code class="language-sql">UPDATE daily_uniques
    SET users = hll_add(users, hll_hash_text('123.123.123.123'))
  WHERE date = current_date;
 </code></pre>
@@ -348,7 +385,7 @@ data then calling
 <p>The current value must be initialized using
 <code>hll_empty()</code>.</p>
 
-<h2 id="concurrency">Concurrency</h2>
+<h1 id="concurrency">Concurrency</h1>
 
 <p>The most awake readers among you have already spotted that: using an
 <code>UPDATE</code>
@@ -364,7 +401,7 @@ aggregate that the extension provides, so that you do only one
 <code>update</code> per
 batch of values to process.</p>
 
-<h2 id="empty-set-and-null">∅: Empty Set and NULL</h2>
+<h1 id="empty-set-and-null">∅: Empty Set and NULL</h1>
 
 <p><center>
 
@@ -421,7 +458,7 @@ new values to add to our current
 to show off one of the most awesome PostgreSQL features here:
 <em>writable CTE</em>.</p>
 
-<pre><code>WITH hll(agg) AS (
+<pre><code class="language-sql">WITH hll(agg) AS (
   SELECT hll_add_agg(hll_hash_text(value)) FROM new_batch
 )
   UPDATE daily_uniques
@@ -442,14 +479,14 @@ making it so that the
 set, and I will report that bug (with that very article as the detailed
 explanation of it).</p>
 
-<h2 id="using-postgresql-hll">Using postgresql-hll</h2>
+<h1 id="using-postgresql-hll">Using postgresql-hll</h1>
 
 <p>When using
 <code>postgresql-hll</code> on the production system, we were able to get some
 good looking numbers from our
 <code>daily_uniques</code> table:</p>
 
-<pre><code>with stats as (
+<pre><code class="language-sql">with stats as (
   select date, #users as daily, #hll_union_agg(users) over() as total
     from daily_uniques
 )
@@ -477,7 +514,7 @@ now and go read about it. Yes, do that now, we&rsquo;re waiting.</p>
 <p>The data here is showing that we did setup the facility in the middle of the
 first day, and that the morning&rsquo;s activity is quite low.</p>
 
-<h2 id="conclusion">Conclusion</h2>
+<h1 id="conclusion">Conclusion</h1>
 
 <p><center>
 
@@ -522,7 +559,6 @@ get out of the
 <em>precision</em>, and you
 might want to read some more about what it means for your intended usage of
 the feature.</p>
-
               
             </div>
           </div>
@@ -599,7 +635,7 @@ the feature.</p>
     
     <li class="post-action">
       
-        <a class="post-action-btn btn btn--default" href="#">
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
       
         <i class="fa fa-list"></i>
       </a>
@@ -680,7 +716,7 @@ the feature.</p>
     
     <li class="post-action">
       
-        <a class="post-action-btn btn btn--default" href="#">
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
       
         <i class="fa fa-list"></i>
       </a>

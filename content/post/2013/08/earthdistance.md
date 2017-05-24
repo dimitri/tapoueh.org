@@ -7,7 +7,7 @@ thumbnailImage = "/img/old/latitude_and_longitude.jpg"
 thumbnailImagePosition = "left"
 coverImage = "/img/old/latitude_and_longitude.jpg"
 coverSize = "partial"
-coverMeta = "out"
+coverMeta = "in"
 aliases = ["/blog/2013/08/05-earthdistance",
            "/blog/2013/08/05-earthdistance.html"]
 +++
@@ -23,10 +23,11 @@ earth expressed as
 going to solve that problem nonetheless, thanks to 
 [PostgreSQL Extensions](http://www.postgresql.org/docs/9.2/interactive/extend-extensions.html).
 
-<center>*Some math are required to go from (long, lat) to distance on earth*</center>
+<!--more-->
+<!--toc-->
 
 
-## The earthdistance PostgreSQL contrib
+# The earthdistance PostgreSQL contrib
 
 As the maths are complex enough to easily make mistakes when implementing
 them again, we want to find an existing implementation that's been tested
@@ -35,7 +36,7 @@ already. PostgreSQL provides several
 named 
 [earthdistance](http://www.postgresql.org/docs/9.2/static/earthdistance.html) and is made to solve our problem. Time to try it!
 
-~~~
+~~~ sql
 # create extension cube;
 # create extension earthdistance;
 ~~~
@@ -48,12 +49,13 @@ distance in miles at the surface of the earth, given points as
 latitude)*. So I had to import our data set again with points in the right
 representation, then I could run this query:
 
-~~~
-#  select id, name, pos,
+~~~ sql
+>  select id, name, pos,
           round((pos <@> point(-0.12,51.516))::numeric, 3) as miles
      from pubnames
  order by pos <-> point(-0.12,51.516)
     limit 10;
+
      id     |          name          |           pos           | miles 
 ------------+------------------------+-------------------------+-------
    21593238 | All Bar One            | (-0.1192746,51.5163499) | 0.039
@@ -78,22 +80,18 @@ apparently. And we can see that adding the computation to get the distance
 in 
 *miles* didn't add that much to the query timing.
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/pubstopslondon.jpg" >}}
-</center>
-
-
-## Pubs and cities
+# Pubs and cities
 
 Just as easily as we have 
 *nearest* pubs we can also of course query for pubs
 *farthest* away from any location.
 
-~~~
-#   select name, round((pos <@> point(-0.12,51.516))::numeric, 3) as miles
+~~~ sql
+>   select name, round((pos <@> point(-0.12,51.516))::numeric, 3) as miles
       from pubnames
   order by pos <-> point(-0.12,51.516) desc
      limit 5;
+      
       name       |  miles  
 -----------------+---------
  Tig Bhric       | 440.194
@@ -119,7 +117,7 @@ was easy, and allowed to import those city names and locations in
 *0.087
 seconds of real time*, with the following schema:
 
-~~~
+~~~ sql
 # create table if not exists cities (id bigint, pos point, name text);
 # create index on cities using gist(pos);
 ~~~
@@ -127,13 +125,14 @@ seconds of real time*, with the following schema:
 
 Now let's see where are those far away pubs:
 
-~~~
-#   select name,
+~~~ sql
+>   select name,
           (select name from cities c order by c.pos <-> p.pos limit 1) as city,
           round((pos <@> point(-0.12,51.516))::numeric, 3) as miles
      from pubnames p
  order by pos <-> point(-0.12,51.516) desc
     limit 5;
+
       name       |  city  |  miles  
 -----------------+--------+---------
  Tig Bhric       | Galway | 440.194
@@ -147,12 +146,6 @@ Time: 686.444 ms
 ~~~
 
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/ninedotslines.gif" >}}
-</center>
-
-<center>*Using `LATERAL` Joins is not a form of lateral thinking*</center>
-
 As you can see we are fetching the pubs at a distance from our given point
 and then the nearest city from where the pub is. The way it's implemented
 here is called a 
@@ -160,8 +153,8 @@ here is called a
 to use the 
 [LATERAL](http://www.postgresql.org/docs/devel/static/queries-table-expressions.html#QUERIES-LATERAL) standard join construct, as in the following example:
 
-~~~
-#   select c.name as city, p.name,
+~~~ sql
+>   select c.name as city, p.name,
            round((pos <@> point(-0.12,51.516))::numeric, 3) as miles
       from pubnames p,
            lateral (select name
@@ -170,6 +163,7 @@ to use the
                      limit 1) c
   order by pos <-> point(-0.12,51.516) desc
      limit 5;
+
   city  |      name       |  miles  
 --------+-----------------+---------
  Galway | Tig Bhric       | 440.194
@@ -196,8 +190,8 @@ the position index of the cities 27878 times (once per pubnames entry).
 
 It's possible to force the planner into doing it the obvious way though:
 
-~~~
-#   with pubs as (
+~~~ sql
+>   with pubs as (
         select name, pos,
                round((pos <@> point(-0.12,51.516))::numeric, 3) as miles
           from pubnames
@@ -209,6 +203,7 @@ It's possible to force the planner into doing it the obvious way though:
                               from cities c
                           order by c.pos <-> p.pos
                              limit 1) c;
+
   city  |      name       |  miles  
 --------+-----------------+---------
  Galway | Tig Bhric       | 440.194
@@ -222,19 +217,14 @@ Time: 76.467 ms
 ~~~
 
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/bite-top-ten-pub-names.jpg" >}}
-</center>
-
-
-## The Most Popular Pub Names, per City
+# The Most Popular Pub Names, per City
 
 Let's now find which cities have the highest count of pubs, considering that
 a pub is affiliated to a city if it's within 5 miles of the single point we
 have as city location in our data set.
 
 ~~~
-#   select c.name, count(cp)
+>   select c.name, count(cp)
       from cities c, lateral (select name
                                 from pubnames p
                                where (p.pos <@> c.pos) < 5) as cp
@@ -270,18 +260,16 @@ from London's count the pubs that are actually in Westminster (when within 1
 mile of the location we have for it). Then extend that query to address any
 other situation like that in the whole data set.
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/sql-logo.png" >}}
-</center>
-
-<center>*Often the most powerful tool you have to make sense of your data...*</center>
-
+{{< image classes="fig50 right fancybox dim-margin"
+              src="/img/sql-logo.png"
+            title="Often the most powerful tool you have to make sense of your data...">}}
+              
 And now what about the most popular pub names per city? Of course we want to
 normalize again our pub names here but only for counting: we still display
 all the names we did count.
 
-~~~
-#   select c.name,
+~~~ sql
+>   select c.name,
            array_to_string(array_agg(distinct(cp.name) order by cp.name), ', '),
            count(*)
       from cities c,
@@ -311,8 +299,7 @@ Time: 729.866 ms
 ~~~
 
 
-
-## Conclusion
+# Conclusion
 
 As said in the previous article on the same theme, SQL when using 
 [PostgreSQL](http://www.postgresql.org/)

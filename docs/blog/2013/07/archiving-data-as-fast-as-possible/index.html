@@ -31,21 +31,45 @@
     
 
     
-    <meta name="description" content="In a recent article here we&rsquo;ve been talking about how do do Batch Updates in a very efficient way, using the Writable CTE features available in PostgreSQL 9.1. I sometime read how Common Table Expressions changed the life of fellow DBAs and developers, and would say that Writable CTE are at least the same boost again.
-Writable CTEs allow to easily implement data processing pipelines
-In the case of archiving data into side tables the pipeline we&rsquo;re talking about aims to move data out of a table (that&rsquo;s a DELETE) then store it on the destination ( archiving) table, and that&rsquo;s an INSERT:">
-    <meta property="og:description" content="In a recent article here we&rsquo;ve been talking about how do do Batch Updates in a very efficient way, using the Writable CTE features available in PostgreSQL 9.1. I sometime read how Common Table Expressions changed the life of fellow DBAs and developers, and would say that Writable CTE are at least the same boost again.
-Writable CTEs allow to easily implement data processing pipelines
-In the case of archiving data into side tables the pipeline we&rsquo;re talking about aims to move data out of a table (that&rsquo;s a DELETE) then store it on the destination ( archiving) table, and that&rsquo;s an INSERT:">
+    <meta name="description" content="In a recent article here we&rsquo;ve been talking about how do do
+Batch Updates in
+a very efficient way, using the
+Writable CTE features available in
+PostgreSQL 9.1. I sometime read how
+Common Table Expressions changed the
+life of fellow DBAs and developers, and would say that
+Writable CTE are at
+least the same boost again.
+
+">
+    <meta property="og:description" content="In a recent article here we&rsquo;ve been talking about how do do
+Batch Updates in
+a very efficient way, using the
+Writable CTE features available in
+PostgreSQL 9.1. I sometime read how
+Common Table Expressions changed the
+life of fellow DBAs and developers, and would say that
+Writable CTE are at
+least the same boost again.
+
+">
     <meta property="og:type" content="blog">
     <meta property="og:title" content="Archiving data as fast as possible">
     <meta property="og:url" content="/blog/2013/07/archiving-data-as-fast-as-possible/">
     <meta property="og:site_name" content="Dimitri Fontaine, Expert PostgreSQL">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Dimitri Fontaine, Expert PostgreSQL">
-    <meta name="twitter:description" content="In a recent article here we&rsquo;ve been talking about how do do Batch Updates in a very efficient way, using the Writable CTE features available in PostgreSQL 9.1. I sometime read how Common Table Expressions changed the life of fellow DBAs and developers, and would say that Writable CTE are at least the same boost again.
-Writable CTEs allow to easily implement data processing pipelines
-In the case of archiving data into side tables the pipeline we&rsquo;re talking about aims to move data out of a table (that&rsquo;s a DELETE) then store it on the destination ( archiving) table, and that&rsquo;s an INSERT:">
+    <meta name="twitter:description" content="In a recent article here we&rsquo;ve been talking about how do do
+Batch Updates in
+a very efficient way, using the
+Writable CTE features available in
+PostgreSQL 9.1. I sometime read how
+Common Table Expressions changed the
+life of fellow DBAs and developers, and would say that
+Writable CTE are at
+least the same boost again.
+
+">
     
       <meta name="twitter:creator" content="@tapoueh">
     
@@ -295,9 +319,7 @@ ga('send', 'pageview');
           
           <div class="post-content markdown" itemprop="articleBody">
             <div class="main-content-wrap">
-              
-
-<p>In a recent article here we&rsquo;ve been talking about how do do
+              <p>In a recent article here we&rsquo;ve been talking about how do do
 <a href="/blog/2013/03/15-batch-update">Batch Updates</a> in
 a very efficient way, using the
 <em>Writable CTE</em> features available in
@@ -306,6 +328,8 @@ PostgreSQL 9.1. I sometime read how
 life of fellow DBAs and developers, and would say that
 <em>Writable CTE</em> are at
 least the same boost again.</p>
+
+<p></p>
 
 <p><center><em>Writable CTEs allow to easily implement data processing pipelines</em></center></p>
 
@@ -316,7 +340,7 @@ the destination (
 <em>archiving</em>) table, and that&rsquo;s an
 <code>INSERT</code>:</p>
 
-<pre><code>WITH archive AS (
+<pre><code class="language-sql">WITH archive AS (
     DELETE FROM source WHERE ...
  RETURNING s.id
 )
@@ -351,7 +375,7 @@ to
 between the Hot Standby you&rsquo;re interested into and the primary server by
 running that query periodically:</p>
 
-<pre><code>select pg_current_xlog_location() as current, replay_location as replay
+<pre><code class="language-sql">select pg_current_xlog_location() as current, replay_location as replay
   from pg_stat_replication
  where application_name = 'standby-name';
 </code></pre>
@@ -361,9 +385,10 @@ running that query periodically:</p>
 <a href="http://www.postgresql.org/docs/current/static/app-pgbasebackup.html">pg_basebackup</a> and
 <a href="http://www.postgresql.org/docs/current/static/app-pgreceivexlog.html">pg_receivexlog</a>:</p>
 
-<pre><code># select application_name, pg_current_xlog_location(),
-         sent_location, replay_location
-    from pg_stat_replication;
+<pre><code class="language-sql"> select application_name, pg_current_xlog_location(),
+        sent_location, replay_location
+   from pg_stat_replication;
+   
  application_name | pg_current_xlog_location | sent_location  | replay_location 
 ------------------+--------------------------+----------------+-----------------
  pg_receivexlog   | 18C85/55DCA900           | 18C85/55DAEC20 | {NULL}
@@ -383,7 +408,7 @@ replicate its implementation in your client application code, it&rsquo;s simple
 enough to do so. Here&rsquo;s a
 <a href="/tags/common-lisp">Common Lisp</a> version of it:</p>
 
-<pre><code>(defun pg-xlog-location-diff (loc1 loc2)
+<pre><code class="language-lisp">(defun pg-xlog-location-diff (loc1 loc2)
   &quot;Compute the difference between WAL locations as WAL bytes.
 
    Locations are expected with the XLOG position format 163A8/210598E8.
@@ -408,7 +433,6 @@ backporting of the
 <code>pg_xlog_location_diff</code> function to previous versions of
 PostgreSQL, and you can find it at
 <a href="https://github.com/credativ/pg_xlog_location_diff">https://github.com/credativ/pg_xlog_location_diff</a>.</p>
-
               
             </div>
           </div>

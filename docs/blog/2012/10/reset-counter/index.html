@@ -31,18 +31,21 @@
     
 
     
-    <meta name="description" content="I&rsquo;ve been given a nice puzzle that I think is a good blog article opportunity, as it involves some thinking and window functions.
-What&rsquo;s to solve Say we store in a table entries from a counter that only increases and the time stamp when we did the measurement. So that when you read 30 then later 40 in fact that means we counted 10 more the second reading when compared to the first, in other words the first 30 are counted again in the second counter value, 40.">
-    <meta property="og:description" content="I&rsquo;ve been given a nice puzzle that I think is a good blog article opportunity, as it involves some thinking and window functions.
-What&rsquo;s to solve Say we store in a table entries from a counter that only increases and the time stamp when we did the measurement. So that when you read 30 then later 40 in fact that means we counted 10 more the second reading when compared to the first, in other words the first 30 are counted again in the second counter value, 40.">
+    <meta name="description" content="I&rsquo;ve been given a nice puzzle that I think is a good blog article
+opportunity, as it involves some thinking
+and window functions.">
+    <meta property="og:description" content="I&rsquo;ve been given a nice puzzle that I think is a good blog article
+opportunity, as it involves some thinking
+and window functions.">
     <meta property="og:type" content="blog">
     <meta property="og:title" content="Reset Counter">
     <meta property="og:url" content="/blog/2012/10/reset-counter/">
     <meta property="og:site_name" content="Dimitri Fontaine, Expert PostgreSQL">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Dimitri Fontaine, Expert PostgreSQL">
-    <meta name="twitter:description" content="I&rsquo;ve been given a nice puzzle that I think is a good blog article opportunity, as it involves some thinking and window functions.
-What&rsquo;s to solve Say we store in a table entries from a counter that only increases and the time stamp when we did the measurement. So that when you read 30 then later 40 in fact that means we counted 10 more the second reading when compared to the first, in other words the first 30 are counted again in the second counter value, 40.">
+    <meta name="twitter:description" content="I&rsquo;ve been given a nice puzzle that I think is a good blog article
+opportunity, as it involves some thinking
+and window functions.">
     
       <meta name="twitter:creator" content="@tapoueh">
     
@@ -292,13 +295,23 @@ ga('send', 'pageview');
           
           <div class="post-content markdown" itemprop="articleBody">
             <div class="main-content-wrap">
-              
+              <p>I&rsquo;ve been given a nice puzzle that I think is a good blog article
+opportunity, as it involves some thinking
+and <a href="/blog/2013/08/understanding-window-functions/">window functions</a>.</p>
 
-<p>I&rsquo;ve been given a nice puzzle that I think is a good blog article
-opportunity, as it involves some thinking and
-<em>window functions</em>.</p>
+<p>
+<h1 id="table-of-contents"></h1><nav id="TableOfContents">
+<ul>
+<li><a href="#what-s-to-solve">What&rsquo;s to solve</a></li>
+<li><a href="#playing-with-some-data">Playing with some data</a></li>
+<li><a href="#finding-the-current-counter-value">Finding the current counter value</a></li>
+<li><a href="#counter-logical-value-over-a-given-period">Counter logical value over a given period</a></li>
+<li><a href="#extending-the-problem">Extending the problem</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+</nav></p>
 
-<h2 id="what-s-to-solve">What&rsquo;s to solve</h2>
+<h1 id="what-s-to-solve">What&rsquo;s to solve</h1>
 
 <p>Say we store in a table entries from a
 <em>counter</em> that only increases and the
@@ -335,7 +348,7 @@ we want is
 <code>40 + 60</code>, that is
 <code>100</code>. Right?</p>
 
-<h2 id="playing-with-some-data">Playing with some data</h2>
+<h1 id="playing-with-some-data">Playing with some data</h1>
 
 <p>Let&rsquo;s model an hypothetical dataset easy enough to play with. What about
 just the previous example? We also need to
@@ -343,7 +356,7 @@ just the previous example? We also need to
 let&rsquo;s just use a
 <em>tick</em> for now, as it&rsquo;s easier to think about:</p>
 
-<pre><code>create table measures(tick int, nb int);
+<pre><code class="language-sql">create table measures(tick int, nb int);
 
 insert into measures
      values (1, 0), (2, 10), (3, 20), (4, 30), (5, 40),
@@ -363,7 +376,7 @@ brings
 <a href="http://www.postgresql.org/docs/9.2/static/tutorial-window.html">window functions</a> on the table, we can easily implement just what we
 said in a readable way:</p>
 
-<pre><code>select tick, nb,
+<pre><code class="language-sql">select tick, nb,
          case when lead(nb) over w &lt; nb then nb
               when lead(nb) over w is null then nb
               else null
@@ -425,7 +438,7 @@ of knowing the current
 
 <p>And we get that encouraging result:</p>
 
-<pre><code>tick | nb  | max 
+<pre><code class="language-sql"> tick | nb  | max 
 ------+-----+-----
     1 |   0 |    
     2 |  10 |    
@@ -441,7 +454,7 @@ of knowing the current
 <p>As you see, we have been able to create a new column out of the dataset, and
 that new column only contains the data we are interested into.</p>
 
-<h2 id="finding-the-current-counter-value">Finding the current counter value</h2>
+<h1 id="finding-the-current-counter-value">Finding the current counter value</h1>
 
 <p>All we have to do now is sum this computed columns entries. Remember that
 the
@@ -449,7 +462,7 @@ the
 have to turn them into a bunch of
 <code>0</code>.</p>
 
-<pre><code>with t(tops) as (
+<pre><code class="language-sql">with t(tops) as (
   select case when lead(nb) over w &lt; nb then nb
               when lead(nb) over w is null then nb
               else null
@@ -494,7 +507,7 @@ select sum(tops) from t;
 
 <p>And here&rsquo;s the expected result:</p>
 
-<pre><code>sum 
+<pre><code class="language-sql"> sum 
 -----
  100
 </code></pre>
@@ -502,14 +515,14 @@ select sum(tops) from t;
 <p>Now what about testing with another set of data or two, just to be sure that
 the counter is allowed to wrap more than once within our solution?</p>
 
-<pre><code>insert into measures
+<pre><code class="language-sql">insert into measures
      values (10, 0), (11, 10), (12, 30), (13, 35), (14, 45),
             (15, 25), (16, 50), (17, 100), (18, 110);
 </code></pre>
 
 <p>Then we have:</p>
 
-<pre><code>with t(tops) as (
+<pre><code class="language-sql">with t(tops) as (
    select case when lead(nb) over w &lt; nb then nb
                when lead(nb) over w is null then nb
                else null
@@ -518,6 +531,7 @@ the counter is allowed to wrap more than once within our solution?</p>
    window w as (order by tick)
 )
 select sum(tops) from t;
+ 
  sum 
 -----
  255
@@ -526,7 +540,7 @@ select sum(tops) from t;
 
 <p>All good!</p>
 
-<h2 id="counter-logical-value-over-a-given-period">Counter logical value over a given period</h2>
+<h1 id="counter-logical-value-over-a-given-period">Counter logical value over a given period</h1>
 
 <p>Now of course what we want is to find the logical value of the counter for a
 given day&rsquo;s or month&rsquo;s worth of measures. We then need to pay attention to
@@ -570,7 +584,7 @@ ticks
 <code>4</code> and
 <code>14</code>, in a completely arbitrary choosing of mine:</p>
 
-<pre><code>with t as (
+<pre><code class="language-sql">with t as (
   select tick,
          first_value(nb) over w as first,
          case when lead(nb) over w &lt; nb then nb
@@ -610,7 +624,7 @@ that
 <p>Let&rsquo;s have a quick look at the raw data in that range, using another nice
 <em>aggregate</em> that PostgreSQL comes with:</p>
 
-<pre><code>select array_agg(nb) from measures where tick &gt;= 4 and tick &lt; 14;
+<pre><code class="language-sql">select array_agg(nb) from measures where tick &gt;= 4 and tick &lt; 14;
            array_agg           
 -------------------------------
  {30,40,0,20,30,60,0,10,30,35}
@@ -621,7 +635,7 @@ that
 <em>logical counter value</em> for that period is computed as the
 following value by the previous query:</p>
 
-<pre><code>sum 
+<pre><code class="language-sql"> sum 
 -----
  105
 (1 row)
@@ -631,7 +645,7 @@ following value by the previous query:</p>
 <code>40 + 60 + 35 - 30</code>, I think we&rsquo;re all good
 again. Don&rsquo;t forget we have to substract the first measure from the period!</p>
 
-<h2 id="extending-the-problem">Extending the problem</h2>
+<h1 id="extending-the-problem">Extending the problem</h1>
 
 <p>Another interesting problem, that we didn&rsquo;t have here but that I find
 interesting enough to extend this article, is finding the ranges of time
@@ -677,7 +691,7 @@ to instead use a
 <em>correlated subquery</em> to go fetch the next
 <em>wraparound</em> value:</p>
 
-<pre><code>with tops as (
+<pre><code class="language-sql">with tops as (
   select tick, nb,
          case when lead(nb) over w &lt; nb then nb
               when lead(nb) over w is null then nb
@@ -721,7 +735,7 @@ to instead use a
 non wrapping set of measures from our counter, and get for each range the
 logical value tat the counter had at the end of it:</p>
 
-<pre><code>with tops as (
+<pre><code class="language-sql">with tops as (
   select tick, nb,
          case when lead(nb) over w &lt; nb then nb
               when lead(nb) over w is null then nb
@@ -757,7 +771,7 @@ select * from ranges where max is not null;
 (4 rows)
 </code></pre>
 
-<h2 id="conclusion">Conclusion</h2>
+<h1 id="conclusion">Conclusion</h1>
 
 <p>What I hope to have shown here, apart from some
 <em>window function</em> tips and
@@ -808,7 +822,6 @@ integer column single row resultset, right?</p>
 <p>If you find this SQL example to be off the limits, it&rsquo;s a good sign that you
 need to improve on your skills so that SQL is a real asset of your developer
 multi languages multi paradygm talents.</p>
-
               
             </div>
           </div>
@@ -885,7 +898,7 @@ multi languages multi paradygm talents.</p>
     
     <li class="post-action">
       
-        <a class="post-action-btn btn btn--default" href="#">
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
       
         <i class="fa fa-list"></i>
       </a>
@@ -966,7 +979,7 @@ multi languages multi paradygm talents.</p>
     
     <li class="post-action">
       
-        <a class="post-action-btn btn btn--default" href="#">
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
       
         <i class="fa fa-list"></i>
       </a>

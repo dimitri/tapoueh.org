@@ -7,7 +7,7 @@ thumbnailImage = "/img/old/Audit-Conseil.jpg"
 thumbnailImagePosition = "left"
 coverImage = "/img/old/Audit-Conseil.jpg"
 coverSize = "partial"
-coverMeta = "out"
+coverMeta = "in"
 aliases = ["/blog/2013/08/27-auditing-changes-with-hstore",
            "/blog/2013/08/27-auditing-changes-with-hstore.html"]
 +++
@@ -23,8 +23,10 @@ passed in as
 use case for 
 *hstore*: we are going to record changes made to our tuples.
 
+<!--more-->
+<!--toc-->
 
-## Comparing hstores
+# Comparing hstores
 
 One of the operators that hstore propose is the 
 `hstore - hstore` operator
@@ -32,8 +34,10 @@ whose documentation says that it will
 *delete matching pairs from left
 operand*.
 
-~~~
-# select 'f1 => a, f2 => x'::hstore - 'f1 => b, f2 => x'::hstore as diff;
+~~~ sql
+> select   'f1 => a, f2 => x'::hstore
+         - 'f1 => b, f2 => x'::hstore
+         as diff;
    diff    
 -----------
  "f1"=>"a"
@@ -46,12 +50,12 @@ That's what we're going to use in our
 it's pretty useful a format to understand what did change.
 
 
-## Auditing changes with a trigger
+# Auditing changes with a trigger
 
 First we need some setup, a couple of tables to use in our worked out
 example:
 
-~~~
+~~~ sql
 create table example
  (
    id   serial,
@@ -77,7 +81,7 @@ value of a row at any time in the history, we're going to store a couple of
 full 
 *hstore* representations here.
 
-~~~
+~~~ sql
 create function audit()
   returns trigger
   language plpgsql
@@ -111,7 +115,7 @@ trigger as
 Be sure to check the 
 [PL/pgSQL Trigger Procedures](http://www.postgresql.org/docs/current/interactive/plpgsql-trigger.html) documentation.
 
-~~~
+~~~ sql
 create trigger audit
       after update on example
           for each row
@@ -120,27 +124,24 @@ create trigger audit
 
 
 
-## Testing it
+# Testing it
 
 With that in place, let's try it out:
 
-~~~
-insert into example(id, f1, f2) values(1, 'a', 'a');
-update example set f1 = 'b' where id = 1;
-update example set f2 = 'c' where id = 1;
+~~~ sql
+> insert into example(id, f1, f2) values(1, 'a', 'a');
+> update example set f1 = 'b' where id = 1;
+> update example set f2 = 'c' where id = 1;
 ~~~
 
 
 And here's what we can see:
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/engine-diff.jpg" >}}
-</center>
-
-<center>*Another kind of differential*</center>
-
-~~~
-# select change_date, after - before as diff from audit;
+~~~ sql
+> select change_date,
+         after - before as diff
+    from audit;
+          
           change_date          |   diff    
 -------------------------------+-----------
  2013-08-27 17:59:19.808217+02 | "f1"=>"b"

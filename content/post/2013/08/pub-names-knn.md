@@ -22,15 +22,7 @@ some nice
 *Open Data* found at the 
 [Open Street Map](http://www.openstreetmap.org/) project.
 
-<center>
-<div class="figure dim-margin">
-  <a href="http://www.openstreetmap.org/">
-    <img src="/img/old/openstreetmap.jpg">
-  </a>
-</div>
-</center>
-
-<center>*The Open Street Map project publishes a lot of information!*</center>
+<!--more-->
 
 I found the idea behind that article really neat: using easily accessible
 data produced by an Open Source project to show off some nice queries with
@@ -38,6 +30,8 @@ real data is what we should do more often. Also, as a PostgreSQL guy I
 couldn't help but feel distracted by the query language used in that article
 and thinking that it would be so much simpler to express the same queries in
 SQL.
+
+<!--toc-->
 
 The idea behind SQL is that the syntax is made for the queries to be easy
 enough to read and maintain while being insanely powerful at times. My take
@@ -49,7 +43,7 @@ At least that's my thinking, and this article is my try at sharing this
 viewpoint with you.
 
 
-## Loading the data
+# Loading the data
 
 The data itself is available in some kind of an XML format where they
 managed to handle the data in a 
@@ -69,7 +63,7 @@ possible. I didn't want to try and see if the
 `id` actually is unique and
 never omitted, for example, so here's the schema I've been working with:
 
-~~~
+~~~ sql
 create table if not exists pubnames (id bigint, pos point, name text);
 ~~~
 
@@ -88,7 +82,7 @@ load the data, available as the
 [pubnames](https://github.com/dimitri/pubnames) project on 
 *GitHub*:
 
-~~~
+~~~ lisp
 (defun parse-osm-file (&key
 			 (pathname *pub-xml-pathname*)
 			 (truncate t)
@@ -121,10 +115,7 @@ same queue and filling our
 `COPY` buffer.
 
 
-## Normalizing the data
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/apples-oranges.gif" >}}
-</center>
+# Normalizing the data
 
 The first query of our reference article 
 [The Most Popular Pub Names](http://blog.mongodb.org/post/56876800071/the-most-popular-pub-names?utm_content=buffer4922c&utm_source=buffer&utm_medium=facebook&utm_campaign=Buffer) shows
@@ -135,12 +126,13 @@ Here, we didn't process the OSM data at all, so what about normalizing it
 directly within a SQL query?
 
 ~~~
-#  select array_to_string(array_agg(distinct(name) order by name), ', '),
-          count(*)
-     from pubnames
- group by replace(replace(name, 'The ', ''), 'And', '&')
- order by 2 desc
- limit 5;
+  select array_to_string(array_agg(distinct(name) order by name), ', '),
+         count(*)
+    from pubnames
+group by replace(replace(name, 'The ', ''), 'And', '&')
+order by 2 desc
+limit 5;
+
        array_to_string        | count 
 ------------------------------+-------
  Red Lion, The Red Lion       |   350
@@ -175,10 +167,7 @@ Again, I'm reproducing the same processing as with the
 *MongoDB* article.
 
 
-## Geolocating nearest pub (KNN search)
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/nearest-pub.jpg" >}}
-</center>
+# Geolocating nearest pub (KNN search)
 
 The spelling of the 
 [KNN](https://en.wikipedia.org/wiki/K-nearest_neighbors_algorithm) search in 
@@ -190,11 +179,11 @@ SQL for searching the pubs nearby our position, or actually the position
 given as an example in the 
 *MongoDB* article:
 
-~~~
-#  select id, name, pos
-     from pubnames
- order by pos <-> point(51.516,-0.12)
-    limit 3;
+~~~ sql
+  select id, name, pos
+    from pubnames
+order by pos <-> point(51.516,-0.12)
+   limit 3;
 
      id     |          name          |           pos           
 ------------+------------------------+-------------------------
@@ -226,10 +215,11 @@ idea, you should read about it, maybe beginning with
 chapter of the documentation.
 
 
-## Using a KNN specific index
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/gist_sample.png" >}}
-</center>
+# Using a KNN specific index
+
+
+{{< image classes="fig50 right fancybox dim-margin"
+              src="/img/gist_sample-320.png" >}}
 
 With a dataset of 27878 rows having an answer in about 20ms is not a great
 achievement. Indeed, we didn't create any indexing whatsoever on the table
@@ -248,10 +238,13 @@ That's exactly the kind of situation that
 designed to be able to solve for you in PostgreSQL, and in particular the
 KNN GiST support. Let's have a try at it:
 
-~~~
-# create index on pubnames using gist(pos);
+~~~ sql
+> create index on pubnames using gist(pos);
 
-# select id, name, pos from pubnames order by pos <-> point(51.516,-0.12) limit 3;
+> select id, name, pos
+    from pubnames
+order by pos <-> point(51.516,-0.12) limit 3;
+     
      id     |          name          |           pos           
 ------------+------------------------+-------------------------
    21593238 | All Bar One            | (51.5163499,-0.1192746)
@@ -272,12 +265,11 @@ as an exercise for you to find that dataset and test the
 it!
 
 
-## Conclusion
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/fdws.320.png" >}}
-</center>
+# Conclusion
 
-<center>*PostgreSQL at the center of your dataverse*</center>
+{{< image classes="fig50 right fancybox dim-margin"
+              src="/img/fdws.320.png"
+            title="PostgreSQL is at the center of your dataverse">}}
 
 What I want to take home from this article is the idea that the plain old
 SQL language still has lots to offer to modern data analysis needs, in

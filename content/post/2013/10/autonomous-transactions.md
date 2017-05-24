@@ -7,7 +7,7 @@ thumbnailImage = "/img/old/autonomous-driving.640.jpg"
 thumbnailImagePosition = "left"
 coverImage = "/img/old/autonomous-driving.640.jpg"
 coverSize = "partial"
-coverMeta = "out"
+coverMeta = "in"
 aliases = ["/blog/2013/10/14-autonomous-transactions",
            "/blog/2013/10/14-autonomous-transactions.html"]
 +++
@@ -22,6 +22,8 @@ innovation for some years now. Still, there's no support for
 Transactions*** within the server itself. Let's have a look at how to easily
 implement them with 
 [PL/Proxy](http://wiki.postgresql.org/wiki/PL/Proxy).
+
+<!--more-->
 
 In PostgreSQL we have 
 *pluggable languages*: it's possible to add support for
@@ -45,8 +47,9 @@ PostgreSQL servers. It's a very good
 *Scaling Out* solution, that we're going
 to use for something quite different here.
 
+<!--toc-->
 
-## Remote Procedure Calls
+# Remote Procedure Calls
 
 Now, the main feature 
 *PL/proxy* provides and that we're going to benefit from
@@ -77,7 +80,7 @@ is. If you want the Autonomous Transaction to happen locally, all is needed
 is to connect the proxy back to the current database.
 
 
-## A practical Use Case: auditing trigger
+# A practical Use Case: auditing trigger
 
 ***Autonomous Transactions*** are useful when several units of processing need to
 be done, and we want to be able to 
@@ -93,9 +96,7 @@ part of the processing while still issuing a
 transaction, so if that's what you need to do, you're already covered with a
 stock install of PostgreSQL.
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/justice-balance.jpg" >}}
-</center>
+{{< image classes="fig25 right dim-margin" src="/img/old/justice-balance.jpg" >}}
 
 Now, say you want to log any attempt to 
 `UPDATE` a row in that specific
@@ -111,17 +112,17 @@ when the main transaction fails. Let's first see what happens with the
 solution we had already when we 
 `ROLLBACK` the main transaction:
 
-~~~
-~# begin;
+~~~ sql
+> begin;
 BEGIN
 
-~*# update example set f1 = 'b' where id = 1;
+*> update example set f1 = 'b' where id = 1;
 UPDATE 1
 
-~*# rollback;
+*> rollback;
 ROLLBACK
 
-~# select * from audit;
+> select * from audit;
  change_date | before | after 
 -------------+--------+-------
 (0 rows)
@@ -131,12 +132,12 @@ ROLLBACK
 The auditing table is not populated.
 
 
-### Installing PLproxy
+## Installing PLproxy
 
  It begins as usual:
 
-~~~
-~# create extension plproxy;
+~~~ sql
+> create extension plproxy;
 CREATE EXTENSION
 ~~~
 
@@ -152,26 +153,22 @@ need to fetch the sources from
 run 
 `make install`.
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/setup-sofa.jpg" >}}
-</center>
 
-
-### The Setup
+## The Setup
 
 Now that we have the extension, we need to use the 
 [CREATE SERVER](http://www.postgresql.org/docs/current/static/sql-createserver.html) command to
 have an entry point to a 
 *remote* transaction on the same connection string.
 
-~~~
-~# create server local foreign data wrapper plproxy options(p0 'dbname=dim');
+~~~ sql
+> create server local foreign data wrapper plproxy options(p0 'dbname=dim');
 CREATE SERVER
 
-~# create user mapping for public server local options(user 'dim');
+> create user mapping for public server local options(user 'dim');
 CREATE USER MAPPING
 
-~# create function test_proxy(i int)
+> create function test_proxy(i int)
            returns int
           language plproxy
 as $$
@@ -180,7 +177,7 @@ as $$
 $$;
 CREATE FUNCTION
 
-~# select test_proxy(1);
+> select test_proxy(1);
  test_proxy 
 ------------
           1
@@ -203,7 +200,7 @@ in our pretty simple example.
 </center>
 
 
-### The remote auditing trigger
+## The remote auditing trigger
 
 We already had a 
 *trigger* function named 
@@ -215,7 +212,7 @@ a
 *remote procedure call* to our 
 *PL/proxy* local connection instead:
 
-~~~
+~~~ sql
 create function audit_trigger()
   returns trigger
   language plpgsql
@@ -271,17 +268,21 @@ want to be able to audit in this fashion.
 Now here's what happens with those definitions and an aborted 
 `UPDATE`:
 
-~~~
-~# begin;
+~~~ sql
+> begin;
 BEGIN
 
-~*# update example set f1 = 'b' where id = 1;
+*> update example set f1 = 'b' where id = 1;
 UPDATE 1
 
-~*# rollback;
+*> rollback;
 ROLLBACK
 
-~# select change_date, before, after, after-before as diff from audit;
+> select change_date,
+         before, after,
+         after-before as diff
+    from audit;
+
 -[ RECORD 1 ]--------------------------------
 change_date | 2013-10-14 14:29:09.685105+02
 before      | "f1"=>"a", "f2"=>"a", "id"=>"1"
@@ -293,7 +294,9 @@ diff        | "f1"=>"b"
 The aborted update has been captured in the audit logs!
 
 
-## Conclusion
+# Conclusion
+
+{{< image classes="fig50 right dim-margin" src="/img/old/fdws.320.png" >}}
 
 Thanks to a design where extensibility is a first class citizen, 
 [PostgreSQL](http://www.postgresql.org/)
@@ -306,9 +309,6 @@ edit its source code. Here we're using a special kind of a
 procedure calls* and 
 *sharding*.
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/fdws.320.png" >}}
-</center>
 
 If you need 
 ***Autonomous Transactions*** and though PostgreSQL might not be

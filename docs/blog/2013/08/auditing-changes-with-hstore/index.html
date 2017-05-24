@@ -31,18 +31,42 @@
     
 
     
-    <meta name="description" content="In a previous article about Trigger Parameters we have been using the extension hstore in order to compute some extra field in our records, where the fields used both for the computation and for storing the results were passed in as dynamic parameters. Today we&rsquo;re going to see another trigger use case for hstore: we are going to record changes made to our tuples.
-Comparing hstores One of the operators that hstore propose is the hstore - hstore operator whose documentation says that it will delete matching pairs from left operand.">
-    <meta property="og:description" content="In a previous article about Trigger Parameters we have been using the extension hstore in order to compute some extra field in our records, where the fields used both for the computation and for storing the results were passed in as dynamic parameters. Today we&rsquo;re going to see another trigger use case for hstore: we are going to record changes made to our tuples.
-Comparing hstores One of the operators that hstore propose is the hstore - hstore operator whose documentation says that it will delete matching pairs from left operand.">
+    <meta name="description" content="In a previous article about
+Trigger Parameters we have been using the
+extension
+hstore in order to compute some extra field in our records, where
+the fields used both for the computation and for storing the results were
+passed in as
+dynamic parameters. Today we&rsquo;re going to see another
+trigger
+use case for
+hstore: we are going to record changes made to our tuples.">
+    <meta property="og:description" content="In a previous article about
+Trigger Parameters we have been using the
+extension
+hstore in order to compute some extra field in our records, where
+the fields used both for the computation and for storing the results were
+passed in as
+dynamic parameters. Today we&rsquo;re going to see another
+trigger
+use case for
+hstore: we are going to record changes made to our tuples.">
     <meta property="og:type" content="blog">
     <meta property="og:title" content="Auditing Changes with Hstore">
     <meta property="og:url" content="/blog/2013/08/auditing-changes-with-hstore/">
     <meta property="og:site_name" content="Dimitri Fontaine, Expert PostgreSQL">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Dimitri Fontaine, Expert PostgreSQL">
-    <meta name="twitter:description" content="In a previous article about Trigger Parameters we have been using the extension hstore in order to compute some extra field in our records, where the fields used both for the computation and for storing the results were passed in as dynamic parameters. Today we&rsquo;re going to see another trigger use case for hstore: we are going to record changes made to our tuples.
-Comparing hstores One of the operators that hstore propose is the hstore - hstore operator whose documentation says that it will delete matching pairs from left operand.">
+    <meta name="twitter:description" content="In a previous article about
+Trigger Parameters we have been using the
+extension
+hstore in order to compute some extra field in our records, where
+the fields used both for the computation and for storing the results were
+passed in as
+dynamic parameters. Today we&rsquo;re going to see another
+trigger
+use case for
+hstore: we are going to record changes made to our tuples.">
     
       <meta name="twitter:creator" content="@tapoueh">
     
@@ -245,17 +269,7 @@ ga('send', 'pageview');
        style="background-image:url('/img/old/Audit-Conseil.jpg')"
        data-behavior="1">
     
-  </div>
-
-
-      <div id="main" data-behavior="1"
-        class="hasCover
-               hasCoverMetaOut
-               ">
-        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
-          
-          
-            <div class="post-header main-content-wrap text-left">
+      <div class="post-header main-content-wrap text-left">
   
     <h1 class="post-title" itemprop="headline">
       Auditing Changes with Hstore
@@ -289,12 +303,20 @@ ga('send', 'pageview');
 </div>
 
 </div>
+    
+  </div>
+
+
+      <div id="main" data-behavior="1"
+        class="hasCover
+               hasCoverMetaIn
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
           
           <div class="post-content markdown" itemprop="articleBody">
             <div class="main-content-wrap">
-              
-
-<p>In a previous article about
+              <p>In a previous article about
 <a href="/blog/2013/08/23-parametrized-triggers">Trigger Parameters</a> we have been using the
 extension
 <a href="http://www.postgresql.org/docs/9.2/static/hstore.html">hstore</a> in order to compute some extra field in our records, where
@@ -305,7 +327,16 @@ passed in as
 use case for
 <em>hstore</em>: we are going to record changes made to our tuples.</p>
 
-<h2 id="comparing-hstores">Comparing hstores</h2>
+<p>
+<h1 id="table-of-contents"></h1><nav id="TableOfContents">
+<ul>
+<li><a href="#comparing-hstores">Comparing hstores</a></li>
+<li><a href="#auditing-changes-with-a-trigger">Auditing changes with a trigger</a></li>
+<li><a href="#testing-it">Testing it</a></li>
+</ul>
+</nav></p>
+
+<h1 id="comparing-hstores">Comparing hstores</h1>
 
 <p>One of the operators that hstore propose is the
 <code>hstore - hstore</code> operator
@@ -313,7 +344,9 @@ whose documentation says that it will
 <em>delete matching pairs from left
 operand</em>.</p>
 
-<pre><code># select 'f1 =&gt; a, f2 =&gt; x'::hstore - 'f1 =&gt; b, f2 =&gt; x'::hstore as diff;
+<pre><code class="language-sql">&gt; select   'f1 =&gt; a, f2 =&gt; x'::hstore
+         - 'f1 =&gt; b, f2 =&gt; x'::hstore
+         as diff;
    diff    
 -----------
  &quot;f1&quot;=&gt;&quot;a&quot;
@@ -324,12 +357,12 @@ operand</em>.</p>
 <em>changes auditing trigger</em> now, because
 it&rsquo;s pretty useful a format to understand what did change.</p>
 
-<h2 id="auditing-changes-with-a-trigger">Auditing changes with a trigger</h2>
+<h1 id="auditing-changes-with-a-trigger">Auditing changes with a trigger</h1>
 
 <p>First we need some setup, a couple of tables to use in our worked out
 example:</p>
 
-<pre><code>create table example
+<pre><code class="language-sql">create table example
  (
    id   serial,
    f1   text,
@@ -353,7 +386,7 @@ value of a row at any time in the history, we&rsquo;re going to store a couple o
 full
 <em>hstore</em> representations here.</p>
 
-<pre><code>create function audit()
+<pre><code class="language-sql">create function audit()
   returns trigger
   language plpgsql
 as $$
@@ -413,58 +446,27 @@ trigger as
 <p>Be sure to check the
 <a href="http://www.postgresql.org/docs/current/interactive/plpgsql-trigger.html">PL/pgSQL Trigger Procedures</a> documentation.</p>
 
-<pre><code>create trigger audit
+<pre><code class="language-sql">create trigger audit
       after update on example
           for each row
  execute procedure audit();
 </code></pre>
 
-<h2 id="testing-it">Testing it</h2>
+<h1 id="testing-it">Testing it</h1>
 
 <p>With that in place, let&rsquo;s try it out:</p>
 
-<pre><code>insert into example(id, f1, f2) values(1, 'a', 'a');
-update example set f1 = 'b' where id = 1;
-update example set f2 = 'c' where id = 1;
+<pre><code class="language-sql">&gt; insert into example(id, f1, f2) values(1, 'a', 'a');
+&gt; update example set f1 = 'b' where id = 1;
+&gt; update example set f2 = 'c' where id = 1;
 </code></pre>
 
 <p>And here&rsquo;s what we can see:</p>
 
-<p><center>
-
-
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/engine-diff.jpg" data-fancybox-group="">
-  
-    <img class="fig-img" src="/img/old/engine-diff.jpg" >
-  
-    </a>
-  
-  
-</div>
-
-</center></p>
-
-<p><center><em>Another kind of differential</em></center></p>
-
-<pre><code># select change_date, after - before as diff from audit;
+<pre><code class="language-sql">&gt; select change_date,
+         after - before as diff
+    from audit;
+          
           change_date          |   diff    
 -------------------------------+-----------
  2013-08-27 17:59:19.808217+02 | &quot;f1&quot;=&gt;&quot;b&quot;
@@ -475,7 +477,6 @@ update example set f2 = 'c' where id = 1;
 <p>The
 <em>hstore</em> extension is really useful and versatile, and we just saw another
 use case for it!</p>
-
               
             </div>
           </div>
@@ -556,7 +557,7 @@ use case for it!</p>
     
     <li class="post-action">
       
-        <a class="post-action-btn btn btn--default" href="#">
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
       
         <i class="fa fa-list"></i>
       </a>
@@ -637,7 +638,7 @@ use case for it!</p>
     
     <li class="post-action">
       
-        <a class="post-action-btn btn btn--default" href="#">
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
       
         <i class="fa fa-list"></i>
       </a>

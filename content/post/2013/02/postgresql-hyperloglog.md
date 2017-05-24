@@ -23,10 +23,13 @@ available at
 to be in 
 `debian`.
 
+<!--more-->
+
 <center>*How to Compute Cardinality?*</center>
 
+<!--toc-->
 
-## Installing postgresql-hll
+# Installing postgresql-hll
 
 It's as simple as 
 `CREATE EXTENSION hll;` really, even if to get there you
@@ -38,7 +41,7 @@ for
 Then you also need to keep your data in some table, straight from the
 documentation we can use that schema:
 
-~~~
+~~~ sql
 -- Create the destination table
 CREATE TABLE daily_uniques (
 DATE            DATE UNIQUE,
@@ -52,7 +55,7 @@ Then to add some data for which you want to know the
 simple as in the following 
 `UPDATE` statement:
 
-~~~
+~~~ sql
 UPDATE daily_uniques
    SET users = hll_add(users, hll_hash_text('123.123.123.123'))
  WHERE date = current_date;
@@ -69,7 +72,7 @@ The current value must be initialized using
 `hll_empty()`.
 
 
-## Concurrency
+# Concurrency
 
 The most awake readers among you have already spotted that: using an 
 `UPDATE`
@@ -86,7 +89,8 @@ aggregate that the extension provides, so that you do only one
 batch of values to process.
 
 
-## ∅: Empty Set and NULL
+# ∅: Empty Set and NULL
+
 <center>
 {{< image classes="fig50 fancybox dim-margin" src="/img/old/EmptySet_L.gif" >}}
 </center>
@@ -114,7 +118,7 @@ new values to add to our current
 to show off one of the most awesome PostgreSQL features here: 
 *writable CTE*.
 
-~~~
+~~~ sql
 WITH hll(agg) AS (
   SELECT hll_add_agg(hll_hash_text(value)) FROM new_batch
 )
@@ -138,14 +142,14 @@ set, and I will report that bug (with that very article as the detailed
 explanation of it).
 
 
-## Using postgresql-hll
+# Using postgresql-hll
 
 When using 
 `postgresql-hll` on the production system, we were able to get some
 good looking numbers from our 
 `daily_uniques` table:
 
-~~~
+~~~ sql
 with stats as (
   select date, #users as daily, #hll_union_agg(users) over() as total
     from daily_uniques
@@ -176,7 +180,8 @@ The data here is showing that we did setup the facility in the middle of the
 first day, and that the morning's activity is quite low.
 
 
-## Conclusion
+# Conclusion
+
 <center>
 {{< image classes="fig50 fancybox dim-margin" src="/img/old/hll-dv-estimator.png" >}}
 </center>

@@ -32,11 +32,9 @@
 
     
     <meta name="description" content="In our Tour of Extensions today&rsquo;s article is about advanced tag indexing. We have a great data collection to play with and our goal today is to be able to quickly find data matching a complex set of tags. So, let&rsquo;s find out those lastfm tracks that are tagged as blues and rhythm and blues, for instance.
-In this article, we&rsquo;re going to play with music related tags
-We&rsquo;re going to use the Last.">
+ In this article, we&rsquo;re going to play with music related tags">
     <meta property="og:description" content="In our Tour of Extensions today&rsquo;s article is about advanced tag indexing. We have a great data collection to play with and our goal today is to be able to quickly find data matching a complex set of tags. So, let&rsquo;s find out those lastfm tracks that are tagged as blues and rhythm and blues, for instance.
-In this article, we&rsquo;re going to play with music related tags
-We&rsquo;re going to use the Last.">
+ In this article, we&rsquo;re going to play with music related tags">
     <meta property="og:type" content="blog">
     <meta property="og:title" content="Denormalizing Tags">
     <meta property="og:url" content="/blog/2013/10/denormalizing-tags/">
@@ -44,8 +42,7 @@ We&rsquo;re going to use the Last.">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Dimitri Fontaine, Expert PostgreSQL">
     <meta name="twitter:description" content="In our Tour of Extensions today&rsquo;s article is about advanced tag indexing. We have a great data collection to play with and our goal today is to be able to quickly find data matching a complex set of tags. So, let&rsquo;s find out those lastfm tracks that are tagged as blues and rhythm and blues, for instance.
-In this article, we&rsquo;re going to play with music related tags
-We&rsquo;re going to use the Last.">
+ In this article, we&rsquo;re going to play with music related tags">
     
       <meta name="twitter:creator" content="@tapoueh">
     
@@ -248,17 +245,7 @@ ga('send', 'pageview');
        style="background-image:url('/img/old/wordpres-seo-categories-tags.jpg')"
        data-behavior="1">
     
-  </div>
-
-
-      <div id="main" data-behavior="1"
-        class="hasCover
-               hasCoverMetaOut
-               ">
-        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
-          
-          
-            <div class="post-header main-content-wrap text-left">
+      <div class="post-header main-content-wrap text-left">
   
     <h1 class="post-title" itemprop="headline">
       Denormalizing Tags
@@ -292,6 +279,16 @@ ga('send', 'pageview');
 </div>
 
 </div>
+    
+  </div>
+
+
+      <div id="main" data-behavior="1"
+        class="hasCover
+               hasCoverMetaIn
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
           
           <div class="post-content markdown" itemprop="articleBody">
             <div class="main-content-wrap">
@@ -307,6 +304,15 @@ those
 <em>rhythm and blues</em>, for
 instance.</p>
 
+<h1 id="table-of-contents"></h1><nav id="TableOfContents">
+<ul>
+<li><a href="#the-setup">The Setup</a></li>
+<li><a href="#advanced-tag-indexing">Advanced tag indexing</a></li>
+<li><a href="#searches">Searches</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+</nav>
+
 <p><center><em>In this article, we&rsquo;re going to play with music related tags</em></center></p>
 
 <p>We&rsquo;re going to use the
@@ -317,7 +323,16 @@ the whole dataset they have as a
 their python script
 <a href="http://labrosa.ee.columbia.edu/millionsong/sites/default/files/lastfm/demo_tags_db.py">demo_tags_db.py</a> to make sense of it.</p>
 
-<h2 id="the-setup">The Setup</h2>
+<h1 id="table-of-contents"></h1><nav id="TableOfContents">
+<ul>
+<li><a href="#the-setup">The Setup</a></li>
+<li><a href="#advanced-tag-indexing">Advanced tag indexing</a></li>
+<li><a href="#searches">Searches</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+</nav>
+
+<h1 id="the-setup">The Setup</h1>
 
 <p>First, we need to import this dataset into a PostgreSQL database. To do that
 the easier path I could think of was to hack the capability into
@@ -337,6 +352,17 @@ course, so here we go:</p>
           Total streaming time          0    9626212          0  2m36.180s
 </code></pre>
 
+
+
+
+<div class="figure fig25 right dim-margin" >
+  
+    <img class="fig-img" src="/img/old/sqlite.gif" >
+  
+  
+</div>
+
+
 <p>Here,
 <em>pgloader</em> extracted the table and index definitions from the SQLite
 database using the
@@ -346,56 +372,25 @@ commands, and migrated the data in a streaming fashion down to PostgreSQL,
 using the
 <em>COPY protocol</em>.</p>
 
-<p><center>
-
-
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/sqlite.gif" data-fancybox-group="">
-  
-    <img class="fig-img" src="/img/old/sqlite.gif" >
-  
-    </a>
-  
-  
-</div>
-
-</center></p>
-
 <p>Having a look at the
 <em>demo_tags.py</em> script we can actually see how to use the
 relations here, and we realize they are using the
 <a href="http://www.sqlite.org/autoinc.html">64-bit signed integer ROWID</a> system column. We need something comparable to
 be able to make sense of the data:</p>
 
-<pre><code>tags# alter table tags add column rowid serial;
+<pre><code class="language-sql">&gt; alter table tags add column rowid serial;
 ALTER TABLE
 Time: 3177.603 ms
 
-tags# alter table tids add column rowid serial;
+&gt; alter table tids add column rowid serial;
 ALTER TABLE
 Time: 2528.680 ms
 
-tags# SELECT tags.tag, COUNT(tid_tag.tid)
-        FROM tid_tag, tags
-       WHERE tid_tag.tag=tags.ROWID and tags.tag ~* 'setzer'
-    GROUP BY tags.tag;
+&gt; SELECT tags.tag, COUNT(tid_tag.tid)
+    FROM tid_tag, tags
+   WHERE tid_tag.tag=tags.ROWID and tags.tag ~* 'setzer'
+GROUP BY tags.tag;
+             
              tag             | count 
 -----------------------------+-------
  the brian setzer orchestra  |     1
@@ -422,39 +417,7 @@ and tags), filtering on the
 we can imagine from reading the query execution time, we don&rsquo;t have any
 index to implement the filtering here.</p>
 
-<p><center>
-
-
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/Last-FM.png" data-fancybox-group="">
-  
-    <img class="fig-img" src="/img/old/Last-FM.png" >
-  
-    </a>
-  
-  
-</div>
-
-</center></p>
-
-<h2 id="advanced-tag-indexing">Advanced tag indexing</h2>
+<h1 id="advanced-tag-indexing">Advanced tag indexing</h1>
 
 <p>PostgreSQL comes with plenty of interesting datatypes, one of them is known
 as the
@@ -474,7 +437,7 @@ Parentheses can be used as needed. For example, the query 1&amp;(2|3) matches
 arrays that contain 1 and also contain either 2 or 3.</p>
 </blockquote>
 
-<pre><code>tags# create extension intarray;
+<pre><code class="language-sql">&gt; create extension intarray;
 CREATE EXTENSION
 </code></pre>
 
@@ -485,10 +448,11 @@ array of integers. We&rsquo;re going to use our
 <em>rowid</em> identifier for that purpose,
 as in the following query:</p>
 
-<pre><code>tags# SELECT tt.tid, array_agg(tags.rowid) as tags
-        FROM tags JOIN tid_tag tt ON tags.rowid = tt.tag
-    GROUP BY tt.tid
-       LIMIT 3;
+<pre><code class="language-sql">&gt;  SELECT tt.tid, array_agg(tags.rowid) as tags
+     FROM tags JOIN tid_tag tt ON tags.rowid = tt.tag
+ GROUP BY tt.tid
+    LIMIT 3;
+    
  tid |   tags    
 -----+-----------
    1 | {1,2}
@@ -501,51 +465,19 @@ Time: 942.074 ms
 
 <p>So let&rsquo;s build the full table then index it:</p>
 
-<pre><code>tags# CREATE TABLE track_tags AS
+<pre><code class="language-sql">&gt; CREATE TABLE track_tags AS
    SELECT tt.tid, array_agg(tags.rowid) as tags
      FROM tags join tid_tag tt on tags.rowid = tt.tag
  GROUP BY tt.tid;
 SELECT 505216
 Time: 45388.424 ms
 
-tags# create index on track_tags using gin(tags gin__int_ops);
+&gt; create index on track_tags using gin(tags gin__int_ops);
 CREATE INDEX
 Time: 18645.931 ms
 </code></pre>
 
-<p><center>
-
-
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/rhythm-and-blues-tag.jpg" data-fancybox-group="">
-  
-    <img class="fig-img" src="/img/old/rhythm-and-blues-tag.jpg" >
-  
-    </a>
-  
-  
-</div>
-
-</center></p>
-
-<h2 id="searches">Searches</h2>
+<h1 id="searches">Searches</h1>
 
 <p>Now
 <a href="http://www.postgresql.org/">PostgreSQL</a> is ready for the real magic. Let&rsquo;s find all the tracks we
@@ -553,9 +485,10 @@ have that have been tagged as both
 <em>blues</em> and
 <em>rhythm and blues</em>:</p>
 
-<pre><code>tags# select array_agg(rowid)
-        from tags
-       where tag = 'blues' or tag = 'rhythm and blues';
+<pre><code class="language-sql">&gt; select array_agg(rowid)
+    from tags
+   where tag = 'blues' or tag = 'rhythm and blues';
+ 
  array_agg 
 -----------
  {3,739}
@@ -570,11 +503,12 @@ Time: 0.684 ms
 <code>array_agg</code> we&rsquo;re going to use the
 following query:</p>
 
-<pre><code>tags# select format('(%s)',
-                array_to_string(array_agg(rowid), '&amp;')
-             )::query_int as query
-        from tags
-       where tag = 'blues' or tag = 'rhythm and blues';
+<pre><code class="language-sql">&gt; select format('(%s)',
+            array_to_string(array_agg(rowid), '&amp;')
+         )::query_int as query
+    from tags
+   where tag = 'blues' or tag = 'rhythm and blues';
+  
   query  
 ---------
  3 &amp; 739
@@ -602,15 +536,16 @@ building part of the SQL.</p>
 <em>rhythm and
 blues</em> tags, will you ask me:</p>
 
-<pre><code>tags# with t(query) as (
+<pre><code class="language-sql">&gt; with t(query) as (
        select format('(%s)',
                 array_to_string(array_agg(rowid), '&amp;')
              )::query_int as query
         from tags
        where tag = 'blues' or tag = 'rhythm and blues'
-)
+  )
 select count(*) from track_tags, t
  where tags @@ query;
+ 
  count 
 -------
   2278
@@ -619,43 +554,11 @@ select count(*) from track_tags, t
 Time: 8.242 ms
 </code></pre>
 
-<p><center>
-
-
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/rhythm-blues-final4.640.jpg" data-fancybox-group="">
-  
-    <img class="fig-img" src="/img/old/rhythm-blues-final4.640.jpg" >
-  
-    </a>
-  
-  
-</div>
-
-</center></p>
-
 <p>Now of course you might want to fetch some track meta-data, here the only
 one we have is the track
 <em>hash id</em>:</p>
 
-<pre><code>tags# with t(query) as (
+<pre><code class="language-sql">&gt; with t(query) as (
     select format('(%s)',
                     array_to_string(array_agg(rowid), '&amp;')
            )::query_int as query
@@ -683,7 +586,18 @@ one we have is the track
 Time: 7.630 ms
 </code></pre>
 
-<h2 id="conclusion">Conclusion</h2>
+<h1 id="conclusion">Conclusion</h1>
+
+
+
+
+<div class="figure fig25 right dim-margin" >
+  
+    <img class="fig-img" src="/img/old/rhythm-blues-final4.320.jpg" >
+  
+  
+</div>
+
 
 <p>The usual way to handle a set of user defined tags and query against it
 involves join against a reference table of tags, but then it&rsquo;s quite
@@ -778,7 +692,7 @@ directly from your application.</p>
     
     <li class="post-action">
       
-        <a class="post-action-btn btn btn--default" href="#">
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
       
         <i class="fa fa-list"></i>
       </a>
@@ -859,7 +773,7 @@ directly from your application.</p>
     
     <li class="post-action">
       
-        <a class="post-action-btn btn btn--default" href="#">
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
       
         <i class="fa fa-list"></i>
       </a>
