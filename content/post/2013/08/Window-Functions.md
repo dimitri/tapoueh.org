@@ -5,7 +5,7 @@ tags = ["PostgreSQL", "Tricks", "Window-Functions", "YeSQL"]
 categories = ["PostgreSQL","YeSQL"]
 thumbnailImage = "/img/old/moving_window.gif"
 thumbnailImagePosition = "left"
-coverImage = "/img/old/moving_window.gif"
+coverImage = "/img/window-functions.jpg"
 coverSize = "partial"
 coverMeta = "out"
 aliases = ["/blog/2013/08/20-Window-Functions",
@@ -21,7 +21,12 @@ it crystal clear so that you can begin using it today and are able to reason
 about it and recognize cases where you want to be using 
 *window functions*.
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/moving_window.gif" >}}
+</center>
 <center>*We see a part of the data as if through a little window*</center>
+
+<!--more-->
 
 The whole idea behind 
 *window functions* is to allow you to process several
@@ -31,8 +36,10 @@ rows and are able to compute a single output value from them, much like when
 using an 
 *aggregate* function.
 
+<!--toc-->
 
-## It's all about frames
+# It's all about frames
+
 <center>
 {{< image classes="fig50 fancybox dim-margin" src="/img/old/segmentation.640.png" >}}
 </center>
@@ -55,9 +62,10 @@ First, meet with
 for you. Let's use this tool to understand 
 *window frames*:
 
-~~~
-# select x, array_agg(x) over (order by x)
-    from generate_series(1, 3) as t(x);
+~~~ sql
+ select x, array_agg(x) over (order by x)
+   from generate_series(1, 3) as t(x);
+ 
  x | array_agg 
 ---+-----------
  1 | {1}
@@ -76,12 +84,13 @@ here is
 `over (order by x rows between
 unbounded preceding and current row)`:
 
-~~~
-# select x,
-         array_agg(x) over (order by x
-                            rows between unbounded preceding
-                                     and current row)
-    from generate_series(1, 3) as t(x);
+~~~ sql
+ select x,
+        array_agg(x) over (order by x
+                           rows between unbounded preceding
+                                    and current row)
+   from generate_series(1, 3) as t(x);
+ 
  x | array_agg 
 ---+-----------
  1 | {1}
@@ -95,11 +104,12 @@ It's possible to work with other kind of
 *frame specifications* too, as in the
 following examples:
 
-~~~
-# select x,
-         array_agg(x) over (rows between current row
-                                     and unbounded following)
-    from generate_series(1, 3) as t(x);
+~~~ sql
+select x,
+       array_agg(x) over (rows between current row
+                                   and unbounded following)
+  from generate_series(1, 3) as t(x);
+ 
  x | array_agg 
 ---+-----------
  1 | {1,2,3}
@@ -113,12 +123,13 @@ If no frame clause is used at all, then the default is too see the whole set
 of rows in each of them, which can be really useful if you want to compute
 sums and percentages for example:
 
-~~~
-# select x,
-         array_agg(x) over () as frame,
-         sum(x) over () as sum,
-         x::float/sum(x) over () as part
-    from generate_series(1, 3) as t(x);
+~~~ sql
+select x,
+       array_agg(x) over () as frame,
+       sum(x) over () as sum,
+       x::float/sum(x) over () as part
+  from generate_series(1, 3) as t(x);
+  
  x |  frame  | sum |       part        
 ---+---------+-----+-------------------
  1 | {1,2,3} |   6 | 0.166666666666667
@@ -135,7 +146,7 @@ query? That's the breakthrough we're talking about now with
 functions*.
 
 
-## Partitioning into different frames
+# Partitioning into different frames
 <center>
 {{< image classes="fig50 fancybox dim-margin" src="/img/old/how-to-frame-a-partition-1.jpg" >}}
 </center>
@@ -150,15 +161,15 @@ values per day for three different days, thanks to an implicit
 `CROSS JOIN`
 construct here:
 
-~~~
-# create table p as
+~~~ sql
+> create table p as
      select date::date as date,
             1 + floor(x * random()) as x
        from generate_series(date 'yesterday', date 'tomorrow', '1 day') as a(date),
             generate_series(1, 3) as b(x);
 SELECT 9
 
-# table p;
+> table p;
     date    | x 
 ------------+---
  2013-08-19 | 1
@@ -178,12 +189,13 @@ Now let's have a better look at the data we have here, counting how many
 times each x has been returned by our 
 `random()` calls, per date:
 
-~~~
-# select date, x,
-         count(x) over (partition by date, x),
-         array_agg(x) over(partition by date),
-         array_agg(x) over(partition by date, x)
-    from p;
+~~~ sql
+select date, x,
+       count(x) over (partition by date, x),
+       array_agg(x) over(partition by date),
+       array_agg(x) over(partition by date, x)
+  from p;
+    
     date    | x | count | array_agg | array_agg 
 ------------+---+-------+-----------+-----------
  2013-08-19 | 1 |     1 | {1,2,3}   | {1}
@@ -200,7 +212,8 @@ times each x has been returned by our
 
 
 
-## Available window functions
+# Available window functions
+
 <center>
 {{< image classes="fig50 fancybox dim-margin" src="/img/old/custom-flat-work-exposwed-aggregate-banding.640.jpg" >}}
 </center>
@@ -237,14 +250,15 @@ PostgreSQL of course is included with
 number of 
 [built-in window functions](http://www.postgresql.org/docs/9.2/static/functions-window.html).
 
-~~~
-# select x,
-         row_number() over(),
-         ntile(4) over w,
-         lag(x, 1) over w,
-         lead(x, 1) over w
-    from generate_series(1, 15, 2) as t(x)
-  window w as (order by x);
+~~~ sql
+select x,
+       row_number() over(),
+       ntile(4) over w,
+       lag(x, 1) over w,
+       lead(x, 1) over w
+  from generate_series(1, 15, 2) as t(x)
+window w as (order by x);
+ 
  x  | row_number | ntile | lag | lead 
 ----+------------+-------+-----+------
   1 |          1 |     1 |     |    3
@@ -264,7 +278,7 @@ In this example you can see that we are reusing the same
 each time, so we're giving it a name to make it simpler.
 
 
-## Conclusion
+# Conclusion
 
 The real magic of what's called 
 *window functions* is actually the 
