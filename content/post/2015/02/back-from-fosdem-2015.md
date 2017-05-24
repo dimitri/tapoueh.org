@@ -18,6 +18,8 @@ with old friends, talking about interesting topics, seeing tremendous
 activity in all Open Source domains, and having Belgium beers in the
 evenings.
 
+<!--more-->
+
 <center>
 <div class="figure dim-margin">
   <a href="https://fosdem.org/2015/">

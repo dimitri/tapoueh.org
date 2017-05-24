@@ -18,6 +18,8 @@ and it's been another awesome edition of the conference. Really smooth,
 everything has been running as it should, with about one hundred people at
 the conference.
 
+<!--more-->
+
 <center>*In action at Nordic pgDay in Copenhaguen*</center>
 
 You can get the slides I've been using for my talk at the 

@@ -19,6 +19,8 @@ de données préférée par des conférencers internationaux, incluant des
 retours d'expérience et une analyse de l'utilisation des derniers
 développements en cours dans notre projet de base de données préféré.
 
+<!--more-->
+
 <center>
 <div class="figure dim-margin">
   <a href="http://pgday.paris/">

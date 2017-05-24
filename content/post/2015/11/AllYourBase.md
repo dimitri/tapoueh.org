@@ -21,6 +21,8 @@ classic meaning of the word (I mean
 *relational database management systems
 here*) or the newer set of trade-offs represented by the NoSQL set of tools.
 
+<!--more-->
+
 <center>
 <div class="figure dim-margin">
   <a href="/images/confs/AllYourBaseConf2015.pdf">

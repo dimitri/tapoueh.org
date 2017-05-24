@@ -17,6 +17,8 @@ Common Lisp users are very happy to use
 downloading and maintaining dependencies between their own code and the
 [librairies](http://quickdocs.org/) it is using.
 
+<!--more-->
+
 Sometimes I am pointed that when compared to other programming languages
 Common Lisp is lacking a lot in the 
 *batteries included* area. After having

@@ -7,7 +7,7 @@ thumbnailImage = "/img/old/wi-killservers.jpg"
 thumbnailImagePosition = "left"
 coverImage = "/img/old/wi-killservers.jpg"
 coverSize = "partial"
-coverMeta = "out"
+coverMeta = "in"
 aliases = ["/blog/2015/01/22-my-first-slashdot-effect",
            "/blog/2015/01/22-my-first-slashdot-effect.html"]
 +++
@@ -20,7 +20,7 @@ Thanks to the
 well seems that I just had my first 
 [Slashdot effect](http://en.wikipedia.org/wiki/Slashdot_effect)...
 
-<center>*Well actually you know what? I don't...*</center>
+<!--more-->
 
 So please consider using the new mirror 
 [http://dimitri.github.io/pgloader/](http://dimitri.github.io/pgloader/)

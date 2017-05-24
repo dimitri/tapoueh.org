@@ -20,6 +20,8 @@ réservé par le
 *JUG* a été parfait et je tiens à les remercier pour une très
 bonne soirée de partage et d'échanges autour de PostgreSQL.
 
+<!--more-->
+
 Les slides des présentations sont disponibles. Nous avons commencé par une
 présentation générale sur comment et pourquoi utiliser PostgreSQL en 2015 :
 

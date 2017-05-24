@@ -23,7 +23,7 @@ in the data set you're importing. That's the reason why
 started: it provides with error handling for the 
 [COPY protocol](http://www.postgresql.org/docs/9.3/static/protocol-flow.html#PROTOCOL-COPY).
 
-<center>*That's basically what pgloader used to be all about*</center>
+<!--more-->
 
 As soon as we have the capability to load data from unreliable sources,
 another use case appears on the horizon, and soon enough 

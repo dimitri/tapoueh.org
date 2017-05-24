@@ -7,7 +7,7 @@ thumbnailImage = "/confs/php-tour-public.jpg"
 thumbnailImagePosition = "left"
 coverImage = "/confs/php-tour-public.jpg"
 coverSize = "partial"
-coverMeta = "out"
+coverMeta = "in"
 aliases = ["/blog/2014/09/10-PHP-Tour-La-Video",
            "/blog/2014/09/10-PHP-Tour-La-Video.html"]
 +++
@@ -16,6 +16,8 @@ En juin dernier se tenait le
 [PHP Tour 2014](http://afup.org/pages/phptourlyon2014/) à Lyon, où j'ai eu le plaisir de
 présenter une conférence sur 
 [PostgreSQL en 2014](http://tapoueh.org/confs/2014/06/23-PHPTour-Lyon-2014).
+
+<!--more-->
 
 <center>
 <div class="figure dim-margin">
@@ -27,13 +29,7 @@ présenter une conférence sur
 
 Cette intervention était filmée, et la vidéo est maintenant disponible :
 
-
-<center>
-
-<iframe width="560" height="315" src="//www.youtube.com/embed/hzn0ODTMNDk" frameborder="0" allowfullscreen></iframe>
-
-</center>
-
+{{< youtube hzn0ODTMNDk >}}
 
 En espérant que vous regarderez cette vidéo avec autant d'intérêt que j'ai
 eu à participer à PHP Tour 2014 !
