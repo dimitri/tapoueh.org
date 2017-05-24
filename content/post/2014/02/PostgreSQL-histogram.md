@@ -21,7 +21,6 @@ producing a nice
 *histogram* right from our SQL console.
 
 
-
 ## PostgreSQL and Mathematics
 
 The other day while giving a 
@@ -66,11 +65,12 @@ order by 1;
 ~~~
 
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/calibrate.gif" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/calibrate.gif" >}}
+<center>*We've just calibrated our games in terms of rebounds here*</center>
 
-
-*We've just calibrated our games in terms of rebounds here*
 
 ## Console Histograms
 
@@ -165,11 +165,11 @@ frequency value from each and every result row.
 
 So... Did I mention lately?
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/220px-Postgresql_elephant.svg.png" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/220px-Postgresql_elephant.svg.png" >}}
-
-
-***PostgreSQL is YeSQL!***
+<center>***PostgreSQL is YeSQL!***</center>
 
 By the way, the whole scripting and data and SQL is available at
 [github/dimitri/nba](https://github.com/dimitri/nba), and there's an 

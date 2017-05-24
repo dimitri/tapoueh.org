@@ -18,7 +18,6 @@ locaux de
 [Mozilla Europe](https://www.mozilla.org/en-US/contact/spaces/paris/), dont la capacité est de 90 personnes ! Venez
 nombreux !
 
-
 Le programme de cette édition est un peu particulier puisque nous avons reçu
 quatre propositions enthousiastes de présentations. Chacun aura donc 15 à
 20 minutes (questions incluses) pour présenter son sujet. Voici le
@@ -35,11 +34,12 @@ programme :
 Nous aurons aussi le plaisir de partager un buffet sponsorisé cette fois par
 [Novapost](http://www.people-doc.fr/), un grand merci à eux.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="http://www.people-doc.fr/">
     <img src="/img/old/novapost.jpg">
   </a>
 </div>
+</center>
 
-À mercredi !
+<center>À mercredi !</center>

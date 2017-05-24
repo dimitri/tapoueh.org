@@ -21,8 +21,7 @@ schema, casting data types, transforming data and default values.
 the traditional MySQL example database, in this article we're going to fully
 migrate it over to PostgreSQL.
 
-
-*What about switching to PostgreSQL, it's easier than ever.*
+<center>*What about switching to PostgreSQL, it's easier than ever.*</center>
 
 Without further ado, here's what happens when you ask 
 *pgloader* to please
@@ -69,9 +68,9 @@ that the indexes are being built in parallel with the data loading, and all
 indexes against the same relation are built in parallel to each other,
 too.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/parallel-build.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/parallel-build.jpg" >}}
+</center>
 
 Here's the 
 *pgloader command* that we used:

@@ -17,14 +17,15 @@ This year again I'm going to
 [PostgreSQL FOSDEM day](http://fosdem2013.pgconf.eu/). It will be the first time that I'm going to be at the
 event for the full week-end rather than just commuting in for the day.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="https://fosdem.org/2013/">
     <img src="/img/old/fosdem.png">
   </a>
 </div>
+</center>
 
-*I'm Going to the FOSDEM, hope to see you there!*
+<center>*I'm Going to the FOSDEM, hope to see you there!*</center>
 
 And I'm presenting two talks over there that are both currently scheduled on
 the Sunday in the 
@@ -50,8 +51,8 @@ of that talk is to introduce what the feature is all about and a bunch of
 use cases that you can address by using it, it will certainly offer a peek
 into the PostgreSQL development cycle and community processes.
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/belgium-beers.jpg" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/belgium-beers.jpg" >}}
-
-
-*See you in Brussels!*
+<center>*See you in Brussels!*</center>

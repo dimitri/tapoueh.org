@@ -18,12 +18,13 @@ Hier se tenait la
 où des intervenants extérieurs sont régulièrement invités. Le thème hier
 était à la fois clair et très vaste : la performance.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/the_need_for_speed.pdf">
     <img src="/img/old/the_need_for_speed-3.png">
   </a>
 </div>
+</center>
 
 J'ai eu le plaisir de réaliser une présentation intitulée « The Need for
 Speed » dans laquelle on replace l'effort d'optimisation dans son contexte

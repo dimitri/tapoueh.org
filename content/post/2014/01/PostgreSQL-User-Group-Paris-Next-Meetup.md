@@ -19,7 +19,6 @@ ici-même : l'article
 création du groupe !
 
 
-
 ## Magnus Hagander, core-team member
 
 Pour notre seconde rencontre, un membre de la “core-team” de PostgreSQL sera
@@ -38,9 +37,9 @@ de nous présenter leur sujet de prédilection autour de PostgreSQL, dans une
 présentation de 5 minutes chrono. Les slides ne sont pas obligatoires, mais
 fortement conseillés.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/lightning_talks_660x3301.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/lightning_talks_660x3301.jpg" >}}
+</center>
 
 Pour ce type de présentation, privilégiés un support très léger : 1 image
 par vignette, ou bien 1 à 5 mots écrits très gros. Venez avec un message

@@ -21,7 +21,6 @@ hinted me that it was high time that I fix that old bug for which I already
 had a patch.
 
 
-
 ## `prefix_range` release 1.2.0
 
 I'm sorry it took that long. It's now done, you can have 

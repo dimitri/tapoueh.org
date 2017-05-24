@@ -21,8 +21,7 @@ it crystal clear so that you can begin using it today and are able to reason
 about it and recognize cases where you want to be using 
 *window functions*.
 
-
-*We see a part of the data as if through a little window*
+<center>*We see a part of the data as if through a little window*</center>
 
 The whole idea behind 
 *window functions* is to allow you to process several
@@ -34,12 +33,11 @@ using an
 
 
 ## It's all about frames
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/segmentation.640.png" >}}
+</center>
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/segmentation.640.png" >}}
-
-
-*When looking through a window we only see a frame at a time*
+<center>*When looking through a window we only see a frame at a time*</center>
 
 [PostgreSQL](http://www.postgresql.org/) comes with plenty of features, one of them will be of great help
 here to get a better grasp at what's happening with 
@@ -138,12 +136,11 @@ functions*.
 
 
 ## Partitioning into different frames
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/how-to-frame-a-partition-1.jpg" >}}
+</center>
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/how-to-frame-a-partition-1.jpg" >}}
-
-
-*How to frame a partition?*
+<center>*How to frame a partition?*</center>
 
 Other frames are possible to define when using the clause 
 `PARTITION BY`. To
@@ -204,12 +201,11 @@ times each x has been returned by our
 
 
 ## Available window functions
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/custom-flat-work-exposwed-aggregate-banding.640.jpg" >}}
+</center>
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/custom-flat-work-exposwed-aggregate-banding.640.jpg" >}}
-
-
-*Do you like custom aggregates?*
+<center>*Do you like custom aggregates?*</center>
 
 Any and all 
 *aggregate* function you already know can be used against a 

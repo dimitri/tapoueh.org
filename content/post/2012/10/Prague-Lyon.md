@@ -21,14 +21,15 @@ walking into interesting people to talk to, and in particular the
 *Hallway
 Track* has been a giant success.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="http://www.flickr.com/photos/obartunov/8128604476/lightbox/">
     <img src="/img/old/prague.jpg">
   </a>
 </div>
+</center>
 
-*Photo by [Oleg Bartunov](http://www.sai.msu.su/~megera/)*
+<center>*Photo by [Oleg Bartunov](http://www.sai.msu.su/~megera/)*</center>
 
 I did have the chance to speak several times at that event, and you can get
 the slides at my 
@@ -41,12 +42,13 @@ and the
 [Large Scale MySQL Migration to PostgreSQL](http://www.postgresql.eu/events/schedule/pgconfeu2012/session/317-large-scale-mysql-migration-to-postgresql/) that I already presented
 before this year.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/high-availability.pdf">
     <img src="/img/old/high-availability.png">
   </a>
 </div>
+</center>
 
 Next conference is in Lyon and will be in French, the talk is called
 [Présentation de PostgreSQL](http://lyon.afup.org/2012/10/17/presentation-de-postgresql-31102012-a-19h30/). The audience is going to be composed of PHP

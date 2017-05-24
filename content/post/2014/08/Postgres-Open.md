@@ -19,12 +19,13 @@ pleasure to host a tutorial about PostgreSQL Extensions
 to make the best out of PostgreSQL, 
 [PostgreSQL for developers](https://postgresopen.org/events/schedule/pgopen2014/session/56-postgresql-for-developers/):
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="https://postgresopen.org/2014/">
     <img src="/img/old/postgresopen.png">
   </a>
 </div>
+</center>
 
 The tutorial is based on first hand experience on the
 [PostgreSQL Extension Packaging System](http://www.postgresql.org/docs/current/interactive/extend-extensions.html) both as a user and a developer. It's a
@@ -51,9 +52,9 @@ the tutorial is for you, as we will cover PostgreSQL based approximate
 searches with suggestions (
 *did you mean ...?*) and autocompletion.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/simplicity.png" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/simplicity.png" >}}
+</center>
 
 The tutorial gives you the toolset you will use to avoid the situation
 depicted here.

@@ -16,12 +16,13 @@ aliases = ["/blog/2012/07/10-solving-sudoku",
 [Solving Every Sudoku Puzzle](http://norvig.com/sudoku.html) wherein he presents a programmatic approach to
 solving that puzzle game.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="http://en.wikipedia.org/wiki/Sudoku">
     <img src="/img/old/sudoku.png">
   </a>
 </div>
+</center>
 
 The article is very well written and makes it easy to think that coming up
 with the code for such a solver is a very easy task, you apply some basic

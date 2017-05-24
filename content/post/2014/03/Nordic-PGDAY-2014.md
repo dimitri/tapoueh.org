@@ -16,14 +16,16 @@ Last week some PostgreSQL users, contributors and advocates have organized a
 really great conference in Stockholm, Sweden, where I had the please to give
 the following talk:
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/NordicPGDAY.pdf">
     <img src="/img/old/NordicPGDAY.png">
   </a>
 </div>
+</center>
 
-*PostgreSQL is YeSQL!*
+<center>*PostgreSQL is YeSQL!*</center>
+
 
 ## Nordic PostgreSQL Conference
 
@@ -53,14 +55,15 @@ build a successful Python project*. I've had the pleasure to answer's
 [PostgreSQL](http://www.postgresql.org/) when coding in
 python, which makes it for an interview chapter within:
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="http://julien.danjou.info/books/the-hacker-guide-to-python">
     <img src="/img/old/the-hacker-guide-to-python.png">
   </a>
 </div>
+</center>
 
-*In this book, we'll see how you can leverage Python to efficiently tackle your problems and build great Python applications.*
+<center>*In this book, we'll see how you can leverage Python to efficiently tackle your problems and build great Python applications.*</center>
 
 And while at it:
 

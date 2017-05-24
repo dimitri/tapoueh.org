@@ -17,20 +17,21 @@ This year's FOSDEM has been a great edition, in particular the
 about PostgreSQL with people not only from our community but also from
 plenty other Open Source communities too: users!
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="https://fosdem.org/2013/">
     <img src="/img/old/fosdem-logo.png">
   </a>
 </div>
 
-<div class="figure center dim-margin">
+<div class="figure dim-margin">
   <a href="http://fosdem2013.pgconf.eu/">
     <img src="/img/old/postgresql-elephant.small.png">
   </a>
 </div>
+</center>
 
-*PostgreSQL at FOSDEM made for a great event*
+<center>*PostgreSQL at FOSDEM made for a great event*</center>
 
 Having had the opportunity to meet more people from those other development
 communities, I really think we should go and reach for them in their own
@@ -66,14 +67,15 @@ If you're interested into that development, have a look at the slide deck
 and possibly ask me some questions about what's not clear on the
 [pgsql-hackers](http://www.postgresql.org/list/pgsql-hackers/) mailing list (preferably).
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/Fosdem2013_Event_Triggers.pdf">
     <img src="/img/old/Fosdem2013_Event_Triggers.png">
   </a>
 </div>
+</center>
 
-*Event Triggers, The Real Mess™*
+<center>*Event Triggers, The Real Mess™*</center>
 
 The other way to get summarized and clear information about Event Triggers
 is the wiki page by the same name: 
@@ -111,14 +113,15 @@ way to achieve
 *service availability*... until you need to think about
 *sharding*, that is.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/Fosdem2013_High_Availability.pdf">
     <img src="/img/old/Fosdem2013_High_Availability.640.png">
   </a>
 </div>
+</center>
 
-*Implementing High Availability of Services and Data with PostgreSQL*
+<center>*Implementing High Availability of Services and Data with PostgreSQL*</center>
 
 So the talk is all about making compromises in between them and getting to
 an architecture able to implement the choosen compromises. While the talk

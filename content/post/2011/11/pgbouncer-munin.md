@@ -21,7 +21,6 @@ plugin. To be honest, I though it already made its way into the official
 munin 
 `1.4` set of plugins, but I've not been following closely enough.
 
-
 As the plugin is 300 lines of python code, it's not a good idea to just
 inline it here, so please grab it at 
 [pgbouncer_](../../../resources/pgbouncer_).

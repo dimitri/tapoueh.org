@@ -24,8 +24,7 @@ and
 *Erlang*, I though I had to try it out with 
 *Common Lisp* too.
 
-
-*Let's have fun with lambda!*
+<center>*Let's have fun with lambda!*</center>
 
 So, here we go with a simple Common Lisp attempt. The 
 *Lost in scope* article
@@ -133,9 +132,9 @@ in all the closures. Those are called
 *callbacks* in the original article, so
 I've kept using that name here.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/callback.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/callback.jpg" >}}
+</center>
 
 ~~~
 (defparameter *callbacks-all-sunday*
@@ -193,11 +192,11 @@ that topic has received a very deep thinking in
 *Common Lisp*, and the
 language is giving all the options to its developers.
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/scope.png" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/scope.png" >}}
-
-
-*What are your language of choice scoping rules?*
+<center>*What are your language of choice scoping rules?*</center>
 
 I want to stress that in 
 *Common Lisp* the scope rules are very clearly

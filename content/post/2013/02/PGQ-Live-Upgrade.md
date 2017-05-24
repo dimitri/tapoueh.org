@@ -23,8 +23,8 @@ ago, and the most recent verion is now
 `3.1.3`, as announced in the
 [Skytools 3.1.3](http://www.postgresql.org/message-id/CACMqXCLD2je5VFqUCzjwC2s5QQVYLe6-4awJaRvqLSBEVw8_MQ@mail.gmail.com) email.
 
+<center>*Upgrade time!*</center>
 
-*Upgrade time!*
 
 ## Skytools 3.1.3 enters debian
 
@@ -130,8 +130,8 @@ to offer. And yes if you're running some cron job to compute things out of
 the database for you, you are doing some 
 *batch processing*.
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/hayseed.jpg" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/hayseed.jpg" >}}
-
-
-*Yes, I did search for Transactional Batch Processing*
+<center>*Yes, I did search for Transactional Batch Processing*</center>

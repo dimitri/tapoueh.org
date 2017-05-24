@@ -21,12 +21,13 @@ implementation of the
 [PostgreSQL Protocol](http://www.postgresql.org/docs/current/static/protocol.html) written in 
 [Emacs Lisp](http://www.gnu.org/software/emacs/emacs-lisp-intro/).
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="http://www.online-marketwatch.com/pgel/pg.html">
     <img src="/img/old/pg-el.png">
   </a>
 </div>
+</center>
 
 One of the things where 
 *Emacs* really shines is that interactive development
@@ -64,9 +65,9 @@ toward the
 *core backend* developers, except for this one I want to talk about
 today (I'll blog about the other ones too I guess).
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/pgdevenv-el-eval-sql.png" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/pgdevenv-el-eval-sql.png" >}}
+</center>
 
 What you can see from that screenshot is that the selected query text has
 been sent to the 

@@ -18,8 +18,8 @@ Another day, another migration from
 that's how it feels sometimes. This time again I've been using some quite
 old scripts to help me do the migration.
 
+<center>*That's how I feel for MySQL users*</center>
 
-*That's how I feel for MySQL users*
 
 ## Migrating the schema
 
@@ -40,11 +40,11 @@ right, and the ability to filter out what you can't readily import in a
 *reject* file proves itself a a must have here. The problems you have in the
 exported MySQL data are quite serious:
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/data-unlocked.320.png" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/data-unlocked.320.png" >}}
-
-
-*Can I have my data please?*
+<center>*Can I have my data please?*</center>
 
 First, date formating is not compatible with what PostgreSQL expects,
 sometimes using 
@@ -205,8 +205,8 @@ put in there). So at this point, yes, I consider that moving to
 is a way to 
 *free your data*:
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/free-our-open-data.jpg" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/free-our-open-data.jpg" >}}
-
-
-*Free your data!*
+<center>*Free your data!*</center>

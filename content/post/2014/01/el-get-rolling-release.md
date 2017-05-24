@@ -23,7 +23,6 @@ providing more and more recipes. That's what you expect from a
 software, and that what allows us to move to a 
 *rolling releases* model.
 
-
 In practice, it means that you won't have to suffer from using a badly
 maintained 
 *stable* branch anymore. The El-Get 

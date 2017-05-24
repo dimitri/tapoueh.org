@@ -27,14 +27,15 @@ when you have proper backups, including recovery testing in place. We are
 waiting for you. Back? Ok, let's see how bad you can end up without backups,
 and how to still recover. With luck.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="http://www.pgbarman.org/">
     <img src="/img/old/pgbarman.png">
   </a>
 </div>
+</center>
 
-*Set a trustworthy backup solution, and review your policy*
+<center>*Set a trustworthy backup solution, and review your policy*</center>
 
 Did I mention that a 
 *trustworthy* backup solution includes automated testing
@@ -65,11 +66,11 @@ quite bulk advices, stop doing any
 *interactive* tool, if you are doing non-interactive scripting, that's
 actually called system programming and you deserve a better tool than that.
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/a-shell-scripting-story.png" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/a-shell-scripting-story.png" >}}
-
-
-*My take: shell script makes it harder to write production quality code.*
+<center>*My take: shell script makes it harder to write production quality code.*</center>
 
 In our very case, the customer did realize that a 
 *production* setup had been
@@ -115,11 +116,11 @@ Exactly, not all the files of the database system had been removed. Surely
 something can be done to recover data from a very small number of important
 tables? Let's now switch to the present tense and see about it.
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/data_loss.gif" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/data_loss.gif" >}}
-
-
-*Can you spell ***data loss***?*
+<center>*Can you spell ***data loss***?*</center>
 
 Remember, there's no 
 *backups*. The 
@@ -142,11 +143,11 @@ Well, unless maybe if we tweak the system. We need to first edit the system
 identifier, then reset the system to only begin replaying at the file we do
 have. With some luck...
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/a-broken-clock-is-right-twice-a-day-michael-flood.640.jpg" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/a-broken-clock-is-right-twice-a-day-michael-flood.640.jpg" >}}
-
-
-*A broken clock is still right twice a day, a broken backup never is...*
+<center>*A broken clock is still right twice a day, a broken backup never is...*</center>
 
 Time to try our luck here:
 
@@ -204,14 +205,15 @@ solved the situation thanks to my colleagues from the 24/7 support at
 ***Andres Freund*** for inspiration and
 tricks:
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="http://2ndquadrant.com/">
     <img src="/img/old/2ndQuadrant-logo.640.jpg">
   </a>
 </div>
+</center>
 
-*We also know how to recover your data, but we first insist in proper backups*
+<center>*We also know how to recover your data, but we first insist in proper backups*</center>
 
 Oh, did I mention about proper backups and how you need to have been
 successfully testing them before you can call a service 
@@ -228,11 +230,12 @@ files. First thing missing is
 `xlogdump` it should be possible to recover just this file if it's been
 changed in the WAL archives we have, but that's not the case.
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/damage-case-bloat.640.jpg" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/damage-case-bloat.640.jpg" >}}
+<center>*Trying to salvage a damage case*</center>
 
-
-*Trying to salvage a damage case*
 
 ### pg_filenode.map
 
@@ -302,9 +305,9 @@ done
 ~~~
 
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/LRN-LNP-database.png" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/LRN-LNP-database.png" >}}
+</center>
 
 
 ### pg_database
@@ -393,11 +396,11 @@ off, which is the case for
 commit 
 [cd3413ec3683918c9cb9cfb39ae5b2c32f231e8b](http://git.postgresql.org/gitweb/?p=postgresql.git;a=commitdiff;h=cd3413ec3683918c9cb9cfb39ae5b2c32f231e8b).
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/indexing-system.jpg" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/indexing-system.jpg" >}}
-
-
-*Another kind of indexing system*
+<center>*Another kind of indexing system*</center>
 
 So yes, it is indeed possible to start 
 [PostgreSQL](http://www.postgresql.org/) and have that marvellous
@@ -479,9 +482,9 @@ other 9.2 system, so we can directly use files created by
 [initdb](http://www.postgresql.org/docs/current/interactive/app-initdb.html) and copy
 them over where the error message leads.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/namespace1.png" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/namespace1.png" >}}
+</center>
 
 
 ### pg_namespace
@@ -516,9 +519,9 @@ relation is actually stored:
 ~~~
 
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/data_factory.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/data_factory.jpg" >}}
+</center>
 
 So it's pretty easy here, actually, when you make the right connections:
 let's import a default 
@@ -590,11 +593,11 @@ the right command, as given by
 [pg_dump](http://www.postgresql.org/docs/current/interactive/app-pgdump.html). By the way, did I mention about
 backups? and automated recovery tests?
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/relation-attributes.jpg" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/relation-attributes.jpg" >}}
-
-
-*We need the data attributes*
+<center>*We need the data attributes*</center>
 
 In some cases though, we are missing the 
 `pg_attrdef` relation, wholesale.
@@ -666,9 +669,9 @@ possible to actually rebuild the
 *cluster* into shape piecemeal and get the
 interesting data back.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/resilience_logo.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/resilience_logo.jpg" >}}
+</center>
 
 I should mention, maybe, that with a proper 
 *production setup* including a

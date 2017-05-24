@@ -24,7 +24,6 @@ the job if we did
 *events* that were
 part of the same transaction in the same transaction, etc.
 
-
 That calls for using 
 [PGQ](http://wiki.postgresql.org/wiki/PGQ_Tutorial), the 
 *jobs queue* solution from 
@@ -76,9 +75,9 @@ queue, and that's what we did. So now we can choose how many
 per queue: one of them has 4 workers, another one see not so much activity
 and 1 worker still fits.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/coop-workers.jpeg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/coop-workers.jpeg" >}}
+</center>
 
 The queue mover script that knows how to subscribe to many queues from the
 same process is going to be contributed to Skytools proper, of course.

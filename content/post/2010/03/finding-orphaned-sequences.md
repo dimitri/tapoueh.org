@@ -19,8 +19,7 @@ systematically as a
 bad idea, but you know the usual excuse with bad ideas and bad code: the
 first 6 months it's experimental, after that it's historic.
 
-
-*Not talking about genome orphaned sequences here, though*
+<center>*Not talking about genome orphaned sequences here, though*</center>
 
 Still, here's a query for 
 `8.4` that will allow you to list those 

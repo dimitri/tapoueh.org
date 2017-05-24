@@ -22,7 +22,6 @@ even has a
 *logo*. That's no joke, I found one, at least:
 
 
-
 ## Why El-Get is relevant
 
 Emacs 24.1 is the first release that includes 

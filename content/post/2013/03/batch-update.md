@@ -17,8 +17,7 @@ over again. One of them is that SQL tends to be so much better at dealing
 with plenty of rows in a single statement when compared to running as many
 statements, each one against a single row.
 
-
-*Another kind of Batch to update*
+<center>*Another kind of Batch to update*</center>
 
 So when you need to 
 `UPDATE` a bunch of rows from a given source, remember
@@ -60,11 +59,11 @@ against the now local source of data is generally faster than looping in the
 application and having to do a whole network 
 *round trip* per row.
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/round-trip.png" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/round-trip.png" >}}
-
-
-*What about* ***that*** *round trip?*
+<center>*What about* ***that*** *round trip?*</center>
 
 Let's see how it goes:
 
@@ -154,11 +153,11 @@ INSERT` dance at the same time? It's a single
 *statement*, so it's a single
 *snapshot*. What can go wrong?
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/gophermegaphones.480.jpg" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/gophermegaphones.480.jpg" >}}
-
-
-*Concurrent processing*
+<center>*Concurrent processing*</center>
 
 What happens is that as soon as the concurrent sources contain some data for
 the same 
@@ -195,13 +194,13 @@ playing the
 
 
 ## Conclusion
-
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="http://www.flickr.com/photos/asquarephotography/6841106459/in/photostream/">
     <img src="/img/old/stack-of-old-books.jpg">
   </a>
 </div>
+</center>
 
 The SQL language has its quirks, that's true. It's been made for efficient
 data processing, and with recent enough 

@@ -22,8 +22,7 @@ those
 *rhythm and blues*, for
 instance.
 
-
-*In this article, we're going to play with music related tags*
+<center>*In this article, we're going to play with music related tags*</center>
 
 We're going to use the 
 [Last.fm dataset from the Million Song Dataset project](http://labrosa.ee.columbia.edu/millionsong/lastfm)
@@ -65,9 +64,9 @@ commands, and migrated the data in a streaming fashion down to PostgreSQL,
 using the 
 *COPY protocol*.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/sqlite.gif" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/sqlite.gif" >}}
+</center>
 
 Having a look at the 
 *demo_tags.py* script we can actually see how to use the
@@ -115,9 +114,9 @@ and tags), filtering on the
 we can imagine from reading the query execution time, we don't have any
 index to implement the filtering here.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/Last-FM.png" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/Last-FM.png" >}}
+</center>
 
 
 ## Advanced tag indexing
@@ -184,9 +183,9 @@ Time: 18645.931 ms
 ~~~
 
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/rhythm-and-blues-tag.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/rhythm-and-blues-tag.jpg" >}}
+</center>
 
 
 ## Searches
@@ -269,9 +268,9 @@ Time: 8.242 ms
 ~~~
 
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/rhythm-blues-final4.640.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/rhythm-blues-final4.640.jpg" >}}
+</center>
 
 Now of course you might want to fetch some track meta-data, here the only
 one we have is the track 

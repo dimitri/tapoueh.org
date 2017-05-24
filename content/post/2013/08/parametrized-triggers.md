@@ -25,8 +25,7 @@ trigger, where you can attach the same
 *stored procedure* to any table even
 when the column names are different from one another.
 
-
-*I found a kind of trigger that I can use!*
+<center>*I found a kind of trigger that I can use!*</center>
 
 The exact problem to solve here is how to code a 
 *dynamic trigger* where the
@@ -73,10 +72,9 @@ of them of course has the
 
 
 ## Playing with hstore
-
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/hstore.png" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/hstore.png" >}}
+</center>
 
 The 
 *hstore* extension is full of goodies, we will only have to discover a
@@ -140,9 +138,9 @@ expand the row type into its full definition.
 
 We should be ready for the next step now...
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/trigger-parameter.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/trigger-parameter.jpg" >}}
+</center>
 
 
 ## The generic trigger, using hstore

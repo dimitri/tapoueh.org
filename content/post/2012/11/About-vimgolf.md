@@ -22,12 +22,13 @@ picking some challenge from
 editor instead. Because 
 [Emacs Rocks](http://emacsrocks.com/) guys.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="http://emacsrocks.com/">
     <img src="/img/old/emacs-rocks-logo.png">
   </a>
 </div>
+</center>
 
 Let me tell you upfront that I really dislike the whole idea of the 
 *vim golf*
@@ -52,14 +53,16 @@ challenges are good excuses to discover new features of your editor. So
 let's use that excuse to talk about some nice 
 *Emacs* features.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="http://vimgolf.com/challenges/4dd3e19aec9eb6000100000d">
     <img src="/img/old/vim_golf_logo.png">
   </a>
 </div>
+</center>
 
-*Vim Golf Challenge: Complete the hex array data*
+<center>*Vim Golf Challenge: Complete the hex array data*</center>
+
 
 ## The challenge
 
@@ -157,12 +160,13 @@ features, which is why
 ~~~
 
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="http://lisperati.com/">
     <img src="/img/old/emacs-on-toaster.jpg">
   </a>
 </div>
+</center>
 
 ~~~
 (require 'cl)  ; destructuring-bind is found there

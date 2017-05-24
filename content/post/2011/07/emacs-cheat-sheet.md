@@ -22,7 +22,7 @@ chords, like for example
 
          
 
-<div class="figure center dim-margin">
+<div class="figure dim-margin">
   <a href="../../../images/emacs-cheat-sheet.png">
     <img src="/img/old/emacs-cheat-sheet-tn.png">
   </a>

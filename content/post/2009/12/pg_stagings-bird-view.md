@@ -19,7 +19,6 @@ it. Well, thanks to
 [ditaa](http://ditaa.sourceforge.net/) and Emacs 
 `picture-mode` here it is:
 
-
 Hope you enjoy, it should not be necessary to comment much if I got to the
 point!
 

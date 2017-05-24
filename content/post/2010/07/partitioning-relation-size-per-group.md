@@ -26,7 +26,6 @@ to see a single category
 partitions underneath 
 `foo`.
 
-
 Here we go:
 
 ~~~

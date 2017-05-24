@@ -19,12 +19,13 @@ eu le plaisir d'y parler des extensions et de leur usage dans le cadre du
 développement applicatif « interne », sous le titre
 [Extensions are good for business logic](http://www.postgresql.eu/events/schedule/pgconfeu2011/session/138-extensions-are-good-for-business-logic/).
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="http://wiki.postgresql.org/images/f/f1/Using-extensions.pdf">
     <img src="/img/old/using-extensions-10.png">
   </a>
 </div>
+</center>
 
 L'idée de ma présentation, que la plupart d'entre vous a loupé je suppose
 (en tout cas je n'avais qu'une petite poignée de français dans la salle, et

@@ -20,14 +20,15 @@ Earlier this year we did compare compare
 that same idea to the next level, with 
 [pgcharts](https://github.com/dimitri/pgcharts):
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="https://github.com/dimitri/pgcharts">
     <img src="/img/old/pgcharts-chart.640.png">
   </a>
 </div>
+</center>
 
-*The new [pgcharts](https://github.com/dimitri/pgcharts) application*
+<center>*The new [pgcharts](https://github.com/dimitri/pgcharts) application*</center>
 
 The application's specifications are quite simple: edit an SQL query, set
 your 
@@ -43,9 +44,9 @@ should be able to add anything that
 [http://www.highcharts.com/](Highcharts) has support
 for.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/pgcharts-query.640.png" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/pgcharts-query.640.png" >}}
+</center>
 
 Currently, you need to compile the application yourself, and for that you
 need to install the 

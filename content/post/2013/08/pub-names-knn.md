@@ -22,14 +22,15 @@ some nice
 *Open Data* found at the 
 [Open Street Map](http://www.openstreetmap.org/) project.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="http://www.openstreetmap.org/">
     <img src="/img/old/openstreetmap.jpg">
   </a>
 </div>
+</center>
 
-*The Open Street Map project publishes a lot of information!*
+<center>*The Open Street Map project publishes a lot of information!*</center>
 
 I found the idea behind that article really neat: using easily accessible
 data produced by an Open Source project to show off some nice queries with
@@ -121,10 +122,9 @@ same queue and filling our
 
 
 ## Normalizing the data
-
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/apples-oranges.gif" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/apples-oranges.gif" >}}
+</center>
 
 The first query of our reference article 
 [The Most Popular Pub Names](http://blog.mongodb.org/post/56876800071/the-most-popular-pub-names?utm_content=buffer4922c&utm_source=buffer&utm_medium=facebook&utm_campaign=Buffer) shows
@@ -176,10 +176,9 @@ Again, I'm reproducing the same processing as with the
 
 
 ## Geolocating nearest pub (KNN search)
-
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/nearest-pub.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/nearest-pub.jpg" >}}
+</center>
 
 The spelling of the 
 [KNN](https://en.wikipedia.org/wiki/K-nearest_neighbors_algorithm) search in 
@@ -228,10 +227,9 @@ chapter of the documentation.
 
 
 ## Using a KNN specific index
-
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/gist_sample.png" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/gist_sample.png" >}}
+</center>
 
 With a dataset of 27878 rows having an answer in about 20ms is not a great
 achievement. Indeed, we didn't create any indexing whatsoever on the table
@@ -275,12 +273,11 @@ it!
 
 
 ## Conclusion
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/fdws.320.png" >}}
+</center>
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/fdws.320.png" >}}
-
-
-*PostgreSQL at the center of your dataverse*
+<center>*PostgreSQL at the center of your dataverse*</center>
 
 What I want to take home from this article is the idea that the plain old
 SQL language still has lots to offer to modern data analysis needs, in

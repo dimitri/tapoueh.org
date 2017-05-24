@@ -20,7 +20,6 @@ today, so that when a developer asked me about reusing the same trigger
 function code from more than one table and for a dynamic column name, I
 didn't remember about it being impossible.
 
-
 Here's what happens in such cases, after a long time on the problem (yes,
 overall, that's a slow day). Note that I'm abusing the 
 `(record_literal).*`

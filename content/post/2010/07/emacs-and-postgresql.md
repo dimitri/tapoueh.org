@@ -49,9 +49,9 @@ have better tool support there. So I've extended Emacs
 to also display the line numbers as computed per PostgreSQL, and here's what
 it looks like:
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/emacs-pgsql-line-numbers.png" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/emacs-pgsql-line-numbers.png" >}}
+</center>
 
 Now, here's also the source code, 
 [pgsql-linum-format](https://github.com/dimitri/pgsql-linum-format). Hope you'll enjoy!

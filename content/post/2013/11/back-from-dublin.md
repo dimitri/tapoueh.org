@@ -21,7 +21,6 @@ new one. Then I also had the opportunity to present the new version of
 [Migrating from MySQL to PostgreSQL](http://www.postgresql.eu/events/schedule/pgconfeu2013/session/464-migrating-from-mysql-to-postgresql/).
 
 
-
 ## Writing and Using PostgreSQL Extensions
 
 This slide set is a series of almost 
@@ -30,14 +29,16 @@ This slide set is a series of almost
 life data sets*** to show off some nice use cases where PostgreSQL Extensions
 are useful.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/extension-tutoriel.pdf">
     <img src="/img/old/extension-tutoriel.png">
   </a>
 </div>
+</center>
 
-*Dive into PostgreSQL Extensions, with detailed use cases*
+<center>*Dive into PostgreSQL Extensions, with detailed use cases*</center>
+
 
 ## From MySQL to PostgreSQL with pgloader
 
@@ -47,14 +48,16 @@ Also goes at lengths to present
 ***pgloader 3.1*** which is going to be the new
 version of pgloader, to be realeased soon, and announced here.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/pgloader-mysql.pdf">
     <img src="/img/old/pgloader-mysql.png">
   </a>
 </div>
+</center>
 
-*How to migrate to MySQL using pgloader... and why*
+<center>*How to migrate to MySQL using pgloader... and why*</center>
+
 
 ## PostgreSQL Conference Europe
 

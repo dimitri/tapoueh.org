@@ -19,12 +19,13 @@ the
 be found under the 
 [Tour of Extensions](../../../tags/extensions) index in this web site.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/Fosdem_2014_Extensions.pdf">
     <img src="/img/old/Fosdem_2014_Extensions.png">
   </a>
 </div>
+</center>
 
 If you're interested into the talk contents, then you might be interested
 into the following list of articles where I actually did all the work

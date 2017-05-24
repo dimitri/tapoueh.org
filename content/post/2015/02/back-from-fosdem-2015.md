@@ -18,12 +18,13 @@ with old friends, talking about interesting topics, seeing tremendous
 activity in all Open Source domains, and having Belgium beers in the
 evenings.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="https://fosdem.org/2015/">
     <img src="/img/old/Fosdem-2015-Tizen-Developer2.jpg">
   </a>
 </div>
+</center>
 
 
 ## FOSDEM PGDAY
@@ -35,14 +36,16 @@ organized a one-day event, the
 conferences about PostgreSQL, where I had the opportunity to present
 [pgloader](http://pgloader.io/) in the context of dealing with database migrations.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/Fosdem_2015_pgloader.pdf">
     <img src="/img/old/Fosdem_2015_pgloader.png">
   </a>
 </div>
+</center>
 
-*Migrate from MySQL to PostgreSQL in one command*
+<center>*Migrate from MySQL to PostgreSQL in one command*</center>
+
 
 ## PostgreSQL User Group, Paris Meetup
 
@@ -60,14 +63,15 @@ Check out our
 At the FOSDEM event proper I had the pleasure to present my recent talk
 about backups:
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/Fosdem_2015_backups.pdf">
     <img src="/img/old/Fosdem_2015_backups.png">
   </a>
 </div>
+</center>
 
-*Nobody cares about backups, think about data recovery*
+<center>*Nobody cares about backups, think about data recovery*</center>
 
 If you want to remember only one thing about that presentation, it must be
 that we don't care about how you take backups, we only care about if you're

@@ -18,7 +18,6 @@ be a good occasion for a blog entry: how to load an
 `XML` file content into a
 single field?
 
-
 The usual tool used to import files is 
 [COPY](http://www.postgresql.org/docs/current/interactive/sql-copy.html), but it'll want each line of the
 file to host a text representation of a database tuple, so it doesn't apply

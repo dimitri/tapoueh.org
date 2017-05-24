@@ -17,8 +17,7 @@ several times a day, and I wonder how I did without it before:
 `C-M-SPC runs
 the command mark-sexp`.
 
-
-*Well, `mark-sexp` apparently is related to the Sex Pistols*
+<center>*Well, `mark-sexp` apparently is related to the Sex Pistols*</center>
 
 It's pretty simple actually, when you have the 
 *point* at the beginning of a

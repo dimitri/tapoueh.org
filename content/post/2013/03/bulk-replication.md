@@ -19,7 +19,6 @@ than one row at a time, under the title
 performances, including network round trips, and did look at the behavior of
 our results when used concurrently.
 
-
 A case where we want to apply the previous article approach is when
 replicating data with a 
 *trigger based solution*, such as 
@@ -93,10 +92,9 @@ The default method is
 
 
 ## Conclusion
-
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/londiste.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/londiste.jpg" >}}
+</center>
 
 Yes, by using that 
 *handler* which is provided by default in 

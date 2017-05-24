@@ -23,7 +23,6 @@ Transactions*** within the server itself. Let's have a look at how to easily
 implement them with 
 [PL/Proxy](http://wiki.postgresql.org/wiki/PL/Proxy).
 
-
 In PostgreSQL we have 
 *pluggable languages*: it's possible to add support for
 programming languages to write your own 
@@ -58,11 +57,11 @@ arguments over there, and fetching the result back. Classic
 *proxying* and
 *RPC*.
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/rpc-code-flow.png" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/rpc-code-flow.png" >}}
-
-
-*PL/Proxy will use binary transfers when possible to avoid marshalling steps here*
+<center>*PL/Proxy will use binary transfers when possible to avoid marshalling steps here*</center>
 
 The main thing to understand with 
 *PL/Proxy* is that the remote procedure call
@@ -94,9 +93,9 @@ part of the processing while still issuing a
 transaction, so if that's what you need to do, you're already covered with a
 stock install of PostgreSQL.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/justice-balance.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/justice-balance.jpg" >}}
+</center>
 
 Now, say you want to log any attempt to 
 `UPDATE` a row in that specific
@@ -153,9 +152,9 @@ need to fetch the sources from
 run 
 `make install`.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/setup-sofa.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/setup-sofa.jpg" >}}
+</center>
 
 
 ### The Setup
@@ -199,9 +198,9 @@ very simple function that just returns whatever integer we give it as
 argument. We can see that the overhead to reconnect locally is not daunting
 in our pretty simple example.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/Stealth-Remote-Trigger.640.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/Stealth-Remote-Trigger.640.jpg" >}}
+</center>
 
 
 ### The remote auditing trigger
@@ -307,9 +306,9 @@ edit its source code. Here we're using a special kind of a
 procedure calls* and 
 *sharding*.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/fdws.320.png" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/fdws.320.png" >}}
+</center>
 
 If you need 
 ***Autonomous Transactions*** and though PostgreSQL might not be

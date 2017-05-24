@@ -14,7 +14,6 @@ aliases = ["/blog/2011/02/01-going-to-fosdem",
 
 A quick blog entry to say that yes:
 
-
 And I will even do my 
 [Extension's talk](http://fosdem.org/2011/schedule/event/pg_extension1) which had a 
 [success at pgday.eu](http://blog.hagander.net/archives/183-Feedback-from-PGDay.EU-the-speakers.html).  The

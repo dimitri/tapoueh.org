@@ -17,12 +17,13 @@ In this
 architectures by Asko Oja himself. It's the talk at Russian PostgreSQL
 Community meeting, October 2008, Moscow, and it's a good read.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="http://postgresqlrussia.org/articles/view/131">
     <img src="/img/old/Moskva_DB_Tools.v3.png">
   </a>
 </div>
+</center>
 
 The presentation page is in russian but the slides are in English, so have a
 nice read!

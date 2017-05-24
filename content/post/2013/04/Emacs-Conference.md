@@ -21,7 +21,6 @@ live stream was available and soon enough (wait for about two weeks) the
 video material will be published, as 
 [sacha](http://sachachua.com/blog/) is working on it.
 
-
 The conference has been packed with awesome really. Among the things that
 I'm going home with are new thoughts, tricks and tips, and new modes to use
 in Emacs.
@@ -51,8 +50,8 @@ think I prefer the contrast and richer color sets of the default Emacs color
 theme, but the black window has some classy visual effect too. And with
 [main-line](https://github.com/jasonm23/emacs-mainline) the effect is quite awesome!
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/Emacs-Tango-2-Main-Line.png" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/Emacs-Tango-2-Main-Line.png" >}}
-
-
-*Look at that!*
+<center>*Look at that!*</center>

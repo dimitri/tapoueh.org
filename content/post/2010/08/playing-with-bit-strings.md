@@ -21,7 +21,6 @@ to abuse
 still missing some facilities, for example going from and to hexadecimal
 representation in text.
 
-
 ~~~
 create or replace function hex_to_varbit(h text)
  returns varbit

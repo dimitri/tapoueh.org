@@ -25,12 +25,13 @@ Here are the slides from the
 [CHAR(11)](http://www.char11.org/) talk I made last month, about that
 very subject:
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/CHAR_2011_Skytools3.pdf">
     <img src="/img/old/CHAR_2011_Skytools3.png">
   </a>
 </div>
+</center>
 
 The new version comes with a lot of new features.  
 `PGQ` now is able to

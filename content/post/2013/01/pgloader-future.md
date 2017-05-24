@@ -23,8 +23,7 @@ appears within your bulk of data, you will have loaded none of it.
 will submit the data again in smaller chunks until it's able to isolate the
 bad from the good, and then the good is loaded in.
 
-
-*Not quite this kind of data loader*
+<center>*Not quite this kind of data loader*</center>
 
 In a recent migration project where we freed data from MySQL into
 PostgreSQL, we used 
@@ -53,11 +52,11 @@ Here, with real data, my one shot attempt has been running more than
 *twice
 as fast* as the python version, after about a day of programming.
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/lisp-python.png" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/lisp-python.png" >}}
-
-
-*See what's happening now?*
+<center>*See what's happening now?*</center>
 
 The other thing here is that I've tempted to get 
 `pgloader` work in parallel,

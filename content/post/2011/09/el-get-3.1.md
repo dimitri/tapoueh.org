@@ -27,9 +27,9 @@ el-get-list-packages`, that you should try as soon as possible.  Of course,
 don't miss 
 `M-x el-get-self-update` that eases the process somehow.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/emacs-el-get-list-packages.png" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/emacs-el-get-list-packages.png" >}}
+</center>
 
 This shows the result of 
 `M-x el-get-list-packages`.  The packages that don't

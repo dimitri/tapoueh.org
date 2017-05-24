@@ -56,12 +56,13 @@ Of course you're managing all those files with your favorite
 *SCM*, to answer
 to some other myth from the blog reference we are loosely following.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="http://postgresqlrussia.org/articles/view/131">
     <img src="/img/old/Moskva_DB_Tools.v3.png">
   </a>
 </div>
+</center>
 
 I wanted to talk about the other side of the scalability problem, which is
 the operations side of it.  What happens when you need to scale the database

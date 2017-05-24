@@ -17,7 +17,6 @@ Common Lisp users are very happy to use
 downloading and maintaining dependencies between their own code and the
 [librairies](http://quickdocs.org/) it is using.
 
-
 Sometimes I am pointed that when compared to other programming languages
 Common Lisp is lacking a lot in the 
 *batteries included* area. After having
@@ -33,9 +32,9 @@ been using it as my upstream for debian packaging purposes. Using Quicklisp
 here makes my life much simpler as I can grovel through its metadata and
 automate most of the maintenance of my cl related packages.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/quicklisp.png" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/quicklisp.png" >}}
+</center>
 
 It's all automated in the 
 [ql-to-deb](https://github.com/dimitri/ql-to-deb) software which, unsurprisingly, has been
@@ -374,9 +373,9 @@ Of course the same text or abouts is then repeated for all the other packages.
 
 Enjoy using Common Lisp in debian!
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/toy-loader.640.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/toy-loader.640.jpg" >}}
+</center>
 
 Oh and remember, the only reason I've written 
 [ql-to-deb](https://github.com/dimitri/ql-to-deb) and signed myself up

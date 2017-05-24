@@ -22,12 +22,13 @@ plaisir certains contenu de
 [Lisperati](http://www.lisperati.com/) dans ma présentation et je vous
 recommande le détour sur ce site !
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/elisp.pdf">
     <img src="/img/old/elisp-1.png">
   </a>
 </div>
+</center>
 
 J'ai dans cette présentation très rapide (5 minutes seulement) mentionné
 l'approche 

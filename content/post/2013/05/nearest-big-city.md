@@ -16,7 +16,6 @@ In this article, we want to find the town with the greatest number of
 inhabitants near a given location.
 
 
-
 ## A very localized example
 
 We first need to find and import some data, and I found at the following
@@ -115,9 +114,9 @@ with some big city around, so let's first fetch and import some worldwide
 data this time, from
 [http://download.maxmind.com/download/worldcities/worldcitiespop.txt.gz](maxmind).
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/map_nearest_city_01.gif" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/map_nearest_city_01.gif" >}}
+</center>
 
 ~~~
 CREATE TABLE maxmind_worldcities (
@@ -232,12 +231,11 @@ select * from maxmind_neighbours where city_lower = 'chinatown';
 
 
 ## Big Cities in the big world
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/Old-Photos-of-Big-Cities-21.jpg" >}}
+</center>
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/Old-Photos-of-Big-Cities-21.jpg" >}}
-
-
-*We might need to change some of our views*
+<center>*We might need to change some of our views*</center>
 
 So, let's see how many smaller towns each of those random big cities have:
 

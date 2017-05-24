@@ -20,8 +20,7 @@ to mainly involve using
 *Common Lisp*, a programming language that ships with
 about all the building blocks you need.
 
-
-*Yes, that old language brings so much on the table*
+<center>*Yes, that old language brings so much on the table*</center>
 
 When using 
 *Common Lisp*, you have an awesome interactive development
@@ -63,11 +62,11 @@ evening on hacking on the new version of pgloader in
 *Common Lisp*, and wanted
 to share some preliminary results.
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/toy-loader.320.jpg" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/toy-loader.320.jpg" >}}
-
-
-*Playing with the loader*
+<center>*Playing with the loader*</center>
 
 The current status of the new 
 *pgloader* still is pretty rough, if you're not
@@ -225,9 +224,9 @@ set of queues and several workers are feeding each from its own queue. It
 didn't help with performances at all. Once again, read about the infamous
 [Global Interpreter Lock](http://docs.python.org/3/c-api/init.html#threads) to understand why not.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/lisplogo_flag_128.png" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/lisplogo_flag_128.png" >}}
+</center>
 
 So actually it's a fair comparison here where the new code is twice as fast
 as the previous one, with only some hours of hacking and before spending any

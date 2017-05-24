@@ -22,8 +22,7 @@ trivial, let's say. But thanks to the awesome
 have some practical ideas on how to address the problem as discussed on
 [pgsql-hackers](http://archives.postgresql.org/pgsql-hackers/), our development mailing list.
 
-
-*PostgreSQL is first an Awesome Community*
+<center>*PostgreSQL is first an Awesome Community*</center>
 
 The solution we talked about is to use 
 *templates*, and so I've been working
@@ -114,11 +113,11 @@ happen when connected as the
 Now that the extension is installed, you might want to update it with some
 new awesome features. Let's have a look at that.
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/extension-update.png" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/extension-update.png" >}}
-
-
-*Upload your Extension Update Scripts*
+<center>*Upload your Extension Update Scripts*</center>
 
 Rather than make a new version of the extension package with the new files
 in there, then asking the operations team to make the new package available
@@ -195,11 +194,11 @@ We did it!
 
 Let's have a look at those new catalogs:
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/octopus-anatomy.jpg" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/octopus-anatomy.jpg" >}}
-
-
-*Oh, that's not quite the internals I expected...*
+<center>*Oh, that's not quite the internals I expected...*</center>
 
 Here we go now:
 
@@ -326,11 +325,11 @@ some more infrastructure to be able to have
 `ALTER RENAME`
 commands.
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/patch-brewing.jpg" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/patch-brewing.jpg" >}}
-
-
-*Warning: patch brewing here! Syntax and other key elements will change.*
+<center>*Warning: patch brewing here! Syntax and other key elements will change.*</center>
 
 All that is pretty technical though, the real thing that patch needs is some
 quality review and maybe some adjustments. I would be surprised if it didn't

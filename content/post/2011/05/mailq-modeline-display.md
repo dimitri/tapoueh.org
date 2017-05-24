@@ -46,9 +46,9 @@ in my
 no mail is queued and waiting for me to open the tunnel, or ✘ as soon as the
 queue is not empty.  Here's what it looks like here:
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/mailq-modeline-display.png" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/mailq-modeline-display.png" >}}
+</center>
 
 Well I'm pretty happy with the setup.  The flag is refreshed every minute,
 and here's as an example how I did setup 

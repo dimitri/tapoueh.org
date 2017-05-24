@@ -19,14 +19,15 @@ de données préférée par des conférencers internationaux, incluant des
 retours d'expérience et une analyse de l'utilisation des derniers
 développements en cours dans notre projet de base de données préféré.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="http://pgday.paris/">
     <img src="/img/old/pgdayparis.png">
   </a>
 </div>
+</center>
 
-*pgDay Paris, ***21 avril 2015*** : 8 conférences PostgreSQL*
+<center>*pgDay Paris, ***21 avril 2015*** : 8 conférences PostgreSQL*</center>
 
 Pour 65 € l'accès à la conférence inclut les pauses cafés (avec thé, eau,
 biscuits, etc) et le déjeuner sur place (repas complet servi à table).

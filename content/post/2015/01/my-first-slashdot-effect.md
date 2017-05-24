@@ -20,8 +20,7 @@ Thanks to the
 well seems that I just had my first 
 [Slashdot effect](http://en.wikipedia.org/wiki/Slashdot_effect)...
 
-
-*Well actually you know what? I don't...*
+<center>*Well actually you know what? I don't...*</center>
 
 So please consider using the new mirror 
 [http://dimitri.github.io/pgloader/](http://dimitri.github.io/pgloader/)

@@ -18,7 +18,6 @@ PostgreSQL geeks were too. I attended to lot of talks and did learn some
 more about our project, its community and its features, but more than that
 it was a perfect occasion to meet with the community.
 
-
 [Dave Page](http://www.postgresql.eu/events/schedule/pgconfeu2011/speaker/2-dave-page/) talked about 
 `SQL/MED` under the title
 [PostgreSQL at the center of your dataverse](http://www.postgresql.eu/events/schedule/pgconfeu2011/session/146-postgresql-at-the-center-of-your-dataverse/) and detailed what to expert from

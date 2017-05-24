@@ -87,9 +87,9 @@ sample of the
 `mailq` mode, where you see the mail queue in colors and the
 *keymap* you're offered.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/mailq-el.png" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/mailq-el.png" >}}
+</center>
 
 So you could even 
 *flush* only a given 

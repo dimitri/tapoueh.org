@@ -30,9 +30,9 @@ that we have included with
 
 Here's an image of what you get:
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/emacs-el-get-list-packages.png" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/emacs-el-get-list-packages.png" >}}
+</center>
 
 The packages with no description are fetched by 
 `M-x el-get-emacswiki-refresh`

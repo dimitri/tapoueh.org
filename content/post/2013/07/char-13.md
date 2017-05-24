@@ -17,8 +17,7 @@ Last week was held the
 countryside. Not only did we discover UK under good weather conditions and
 some local beers, we also did share a lot of good ideas!
 
-
-*The Hordwood House is quite of a maze really!*
+<center>*The Hordwood House is quite of a maze really!*</center>
 
 The conference was run side to side with 
 [PGDAY UK](http://postgresqlusergroup.org.uk/schedule), and those two days were
@@ -32,11 +31,12 @@ Replication*,
 *Skytools* and 
 *PLproxy* are shown.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/distributed.pdf">
     <img src="/img/old/distributed.png">
   </a>
 </div>
+</center>
 
 The main thing to remember might be that replication only is a tool!

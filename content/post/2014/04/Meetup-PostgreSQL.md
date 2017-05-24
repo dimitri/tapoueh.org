@@ -16,7 +16,6 @@ Hier soir se déroulait le troisième
 [Meetup PostgreSQL à Paris](http://www.meetup.com/PostgreSQL-User-Group-Paris/), et je crois
 pouvoir dire que tous les participants étaient ravis de cette édition.
 
-
 Malheureusement, quelques uns sont restés bloqués du mauvais côté de la
 porte hier soir, j'en suis navré. Nous essayerons d'étendre nos horaires
 d'accueil lors des prochaines rencontres, dans la mesure du possible.
@@ -58,14 +57,15 @@ bas des fonctionnalités exploitées dans les applications. La
 *portabilité* du
 SGBD cible ne s'obtient qu'à un coût exhorbitant.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="http://julien.danjou.info/books/the-hacker-guide-to-python">
     <img src="/img/old/the-hacker-guide-to-python.png">
   </a>
 </div>
+</center>
 
-*Learn everything you need to build a successful Python project*
+<center>*Learn everything you need to build a successful Python project*</center>
 
 Si vous voulez approfondir le sujet, je détaille mon point de vue sur les
 problèmes d'intégration liés aux ORM dans l'excellent livre
@@ -81,14 +81,16 @@ un cas d'utilisation convainquant. Ses slides sont déjà disponibles en
 ligne : 
 [Un Tsung vaut mieux que 2 "croisons les doigts"](http://www.slideshare.net/RodolpheQuideville/tsung-meetuppostgresqlparisavr2014).
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="http://tsung.erlang-projects.org/">
     <img src="/img/old/tsung_logo_non_officiel.png">
   </a>
 </div>
+</center>
 
-*Tsung is an open-source multi-protocol distributed load testing tool*
+<center>*Tsung is an open-source multi-protocol distributed load testing tool*</center>
+
 
 ## Prochaine rencontre
 

@@ -85,9 +85,11 @@
 
 (defun unparse-muse-article-to-markdown (stream contents)
   "Produce the Markdown document directly."
-  (loop :for node :in contents :do (who-to-md stream node)))
+  (loop :for previous := nil :then node
+     :for node :in contents
+     :do (who-to-md stream node previous)))
 
-(defun who-to-md (stream who)
+(defun who-to-md (stream who previous)
   "Walk a cl-who tree and output its content as Markdown."
   (typecase who
     (string  (format stream "~a" (unencode-html-entities who)))
@@ -97,19 +99,19 @@
          (ecase tag
            (:p      (format stream "~&~%")
                     (loop :for node :in rest
-                       :do (who-to-md stream node)))
+                       :do (who-to-md stream node who)))
 
            (:h1     (format stream "~%~%# ")
                     (loop :for node :in rest
-                       :do (who-to-md stream node)))
+                       :do (who-to-md stream node who)))
 
            (:h2     (format stream "~%~%## ")
                     (loop :for node :in rest
-                       :do (who-to-md stream node)))
+                       :do (who-to-md stream node who)))
 
            (:h3     (format stream "~%~%### ")
                     (loop :for node :in rest
-                       :do (who-to-md stream node)))
+                       :do (who-to-md stream node who)))
 
            (:pre    (format stream "~%~~~~~~~%")
                     ;; (:pre (:code ...))
@@ -117,15 +119,12 @@
                     (format stream "~a" (unencode-html-entities (cadar rest)))
                     (format stream "~~~~~~~%~%"))
 
-           (:center (format stream "~&~%")
-                    (loop :for node :in rest :do (who-to-md stream node)))
-
            (:blockquote
             (format stream "~%")
             (let ((quote-string (with-output-to-string (s)
                                   ;; (:blockquote (:p ...)) we skip the
                                   ;; :p to get directly at the content
-                                  (who-to-md s (cadar rest)))))
+                                  (who-to-md s (cadar rest) who))))
               (with-input-from-string (quote-stream quote-string)
                 (loop :for line := (read-line quote-stream nil nil)
                    :while line
@@ -135,16 +134,25 @@
            ;; yes the internal representation is wrong, but we won't fix the
            ;; parser now, will we?
            (:ul     (format stream "~%")
-                    (loop :for node :in rest :do (who-to-md stream node)))
+                    (loop :for node :in rest :do (who-to-md stream node who)))
 
            (:li     (format stream "  - ")
-                    (loop :for node :in rest :do (who-to-md stream node))
+                    (loop :for node :in rest :do (who-to-md stream node who))
                     (format stream "~%"))
 
-           (:img    (let ((img (maybe-copy-image who)))
-                      (unless (string= img *current-article-cover-image*)
-                        (format stream "~%{{< image classes=~s src=~s >}}~%~%"
-                                "fig50 center fancybox dim-margin" img))))
+           (:img    (unless (skip-node-p who)
+                      (let ((img (maybe-copy-image who)))
+                        (format stream "~%{{< image classes=~s src=~s >}}~%"
+                                "fig50 fancybox dim-margin" img))))
+
+           (:center ;; skip *legend* subtext of skipped images
+                    (unless (or (skip-node-p who)
+                                (skip-node-p previous)
+                                (and (= 1 (length rest))
+                                     (skip-node-p (car rest))))
+                      (format stream "~%<center>")
+                      (loop :for node :in rest :do (who-to-md stream node who))
+                      (format stream "</center>~%")))
 
            (:a      (destructuring-bind (href link text) rest
                       (declare (ignore href)) ; :href
@@ -157,27 +165,42 @@
   </a>
 </div>
 "
-                                        "figure center dim-margin"
+                                        "figure dim-margin"
                                         (maybe-copy-pdf link)
                                         (maybe-copy-image text))))))
 
 
            (:code   (write-string "`" stream)
-                    (loop :for node :in rest :do (who-to-md stream node))
+                    (loop :for node :in rest :do (who-to-md stream node who))
                     (write-string "`" stream))
 
            (:em     (write-string "*" stream)
-                    (loop :for node :in rest :do (who-to-md stream node))
+                    (loop :for node :in rest :do (who-to-md stream node who))
                     (write-string "*" stream))
 
            (:strong (write-string "**" stream)
-                    (loop :for node :in rest :do (who-to-md stream node))
+                    (loop :for node :in rest :do (who-to-md stream node who))
                     (write-string "**" stream))))))))
 
 (defun tapoueh::tapoueh-list-articles-tagged (tag-name)
   "el cheap'o code toggle"
   (declare (ignore tag-name))
   nil)
+
+(defun skip-node-p (node
+                    &optional (cover *current-article-cover-image*))
+  "Return a non-nil generalized boolean when we are going to skip NODE."
+  (typecase node
+    (string nil)
+    (list
+     (destructuring-bind (tag . rest) node
+       (case tag
+         (:img    (let ((img (maybe-copy-image node)))
+                    (string= img cover)))
+
+         (:center ;; skip (:center (:img ...)) when we skip the image anyway
+          (when (eq :img (car rest))
+            (skip-node-p rest))))))))
 
 (defun maybe-copy-image (image
                          &optional (article-pathname *current-article-path*))
@@ -317,30 +340,29 @@
           (format t "FIRST TAG: ~s~%" (first tag-list)))
          (list (first tag-list)))))
 
+(defvar *new-cover-articles*
+  '(("07-Open-World-Forum"                . "/img/owf-banner.jpg")
+    ("16-AllYourBase"                     . "/confs/ayb-design.jpg")
+    ("18-getting-out-of-sql_ascii-part-1" . "/img/encodings.png")
+    ("23-getting-out-of-sql_ascii-part-2" . "/img/encodings.png")
+    ("29-Postgres-Open"                   .  "/confs/pgopen.jpg")
+    ("16-PostgreSQL-data-recovery"        . "/img/tazzine-barman-fondogrigio.png")
+    ("10-PHP-Tour-La-Video"               . "/confs/php-tour-public.jpg")
+    ("27-phptour-2014"                    . "/confs/php-tour-public.jpg")
+    ("27-back-from-pgcon2010"             . "/img/pgcon2010.jpg")
+    ("01-extensions-in-91"                . "/img/tom-lane-t-shirt.jpg")))
+
+(defvar *new-cover-images*
+  '(("/img/old/postgresql-elephant.small.png" . "/img/postgresql-512.jpg")))
+
 (defun maybe-pick-new-cover-image (&optional
                                      (pathname *current-article-path*)
                                      (cover *current-article-cover-image*))
   "Return another cover image for given article."
-  (let ((name (pathname-name pathname)))
-    (cond ((string= "16-AllYourBase" name)
-          "/confs/ayb-design.jpg")
-
-          ((or (string= "18-getting-out-of-sql_ascii-part-1" name)
-               (string= "23-getting-out-of-sql_ascii-part-2" name))
-           "/img/encodings.png")
-
-          ((string= "29-Postgres-Open" name)
-           "/confs/pgopen.jpg")
-
-          ((string= "16-PostgreSQL-data-recovery" name)
-           "/img/tazzine-barman-fondogrigio.png")
-
-          ((or (string= "10-PHP-Tour-La-Video" name)
-               (string= "27-phptour-2014" name))
-           "/confs/php-tour-public.jpg")
-
-          ((string= "27-back-from-pgcon2010" name)
-           "/img/pgcon2010.jpg")
-
-          ((string= "/img/old/postgresql-elephant.small.png" cover)
-           "/img/postgresql-512.jpg"))))
+  (let* ((name  (pathname-name pathname))
+         (match
+             (or
+              (member name *new-cover-articles* :test #'string= :key #'car)
+              (member cover *new-cover-images* :test #'string= :key #'car))))
+    (when match
+      (cdr (first match)))))

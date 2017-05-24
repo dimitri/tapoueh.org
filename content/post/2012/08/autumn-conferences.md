@@ -21,7 +21,6 @@ next month in September, we have
 about 
 [Large Scale Migration from MySQL to PostgreSQL](http://tapoueh.org/blog/2012/05/24-back-from-pgcon.html) has been selected!
 
-
 This talk shares hindsights about the why and the how of that migration,
 what problems couldn't be solved without moving away and how the solution
 now looks. The tools used for migrating away the data, the methods the new

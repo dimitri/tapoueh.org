@@ -18,7 +18,6 @@ customers in San Francisco, and really enjoying my trip here! Of course
 **SFPUG** meeting and I had the
 pleasure of being the speaker over there.
 
-
 My talk was about the most recent version of 
 [Skytools](https://wiki.postgresql.org/wiki/SkyTools) and the opportunity to
 realise that we're still missing a lot on documentation. One of the attendee
@@ -39,14 +38,15 @@ Mainly as the talk was oriented towards
 cases and architectures*, the questions were centered around how to solve
 problems using the tools.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/Skytools3.pdf">
     <img src="/img/old/Skytools3.png">
   </a>
 </div>
+</center>
 
-*Skytools3: the slides*
+<center>*Skytools3: the slides*</center>
 
 I think the best part of it for me was that our host 
 [Bazaarvoice](http://www.bazaarvoice.com/) actually is

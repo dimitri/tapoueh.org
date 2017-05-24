@@ -21,7 +21,6 @@ things, beginning with the
 [Developer Meeting](http://wiki.postgresql.org/wiki/PgCon_2012_Developer_Meeting) just followed (yes, in the same day) with the
 [In Core Replication Meeting](http://wiki.postgresql.org/wiki/PgCon2012CanadaInCoreReplicationMeeting). That was a packed shedule!
 
-
 The 
 *in core replication* project has been presented with slides titled
 [Future In-Core Replication for PostgreSQL](http://wiki.postgresql.org/images/7/75/BDR_Presentation_PGCon2012.pdf) and got a very good reception. For
@@ -44,12 +43,13 @@ with
 `pl/java`. A quite involved migration project whose slides you now can
 read here:
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/fotolog.pdf">
     <img src="/img/old/fotolog.jpg">
   </a>
 </div>
+</center>
 
 I've heard that we should soon be able to enjoy audio and video recordings
 of the sessions, so if you couldn't make it this year for any reason, don't

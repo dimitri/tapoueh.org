@@ -19,12 +19,13 @@ puisqu'après un détour à Toulon pour les
 Paris puis une conférence 
 [PHP Tour 2014](http://afup.org/pages/phptourlyon2014/) à Lyon.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/PGDayFR_2014_pgloader.pdf">
     <img src="/img/old/PGDayFR_2014_pgloader.png">
   </a>
 </div>
+</center>
 
 
 ## PHP Tour 2014

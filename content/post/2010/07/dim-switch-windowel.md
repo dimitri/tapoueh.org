@@ -21,7 +21,6 @@ the time to present
 know of only one way to present a 
 *visual effect*, and that's with a screenshot:
 
-
 So as you can see, it's all about showing a 
 *big* number in each window,
 tweaking each window's name, and waiting till the user press one of the

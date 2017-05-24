@@ -17,8 +17,7 @@ The
 end of this month in London. Check it out, and register at
 [Emacs Conference Event Brite](http://emacsconf.eventbrite.co.uk/). It's free and there's still some availability.
 
-
-*It's all about Emacs, and it rocks!*
+<center>*It's all about Emacs, and it rocks!*</center>
 
 We have a great line-up for this conference, which makes me proud to be able
 to be there. If you've ever been paying attention when using 
@@ -41,4 +40,4 @@ with
 [elnode](http://elnode.org/). And more! Including 
 [Steve Yegge](http://en.wikipedia.org/wiki/Steve_Yegge)!
 
-See you there in London.
+<center>See you there in London.</center>

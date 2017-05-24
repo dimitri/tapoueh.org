@@ -18,8 +18,7 @@ nowadays that it's soon to be released, the last piece of the
 being full 
 [debian](https://www.debian.org/) packaging of the tool.
 
-
-*The pgloader logo is a loader truck, just because*.
+<center>*The pgloader logo is a loader truck, just because*.</center>
 
 As you might have noticed if you've read my blog before, I decided that
 [pgloader](http://pgloader.io/) needed a full rewrite in order for it to be able to enter the
@@ -45,12 +44,13 @@ last week, in searching for a
 I found was actually 
 [Common Lisp](http://en.wikipedia.org/wiki/Common_Lisp).
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/ELS_2014_pgloader.pdf">
     <img src="/img/old/ELS_2014_pgloader.png">
   </a>
 </div>
+</center>
 
 After some basic performances checking as seen in my
 [Common Lisp Sudoku Solver](https://github.com/dimitri/sudoku) project where I did get up to 
@@ -81,7 +81,7 @@ numbers one user gave me, for some data point:
 ~~~
 
 
-*The raw numbers have been loaded into a PostgreSQL table*
+<center>*The raw numbers have been loaded into a PostgreSQL table*</center>
 
 So what we see in this quite typical 
 [CSV Loading](http://pgloader.io/howto/csv.html) test case is a best case of
@@ -120,11 +120,11 @@ possible to actually benefit from
 *threads* in Common
 Lisp.
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/speedup.jpg" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/speedup.jpg" >}}
-
-
-*That's not how I did it!*
+<center>*That's not how I did it!*</center>
 
 In the 
 [pgloader](http://pgloader.io/) case I've been using the 

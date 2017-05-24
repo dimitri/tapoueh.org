@@ -23,8 +23,8 @@ earth expressed as
 going to solve that problem nonetheless, thanks to 
 [PostgreSQL Extensions](http://www.postgresql.org/docs/9.2/interactive/extend-extensions.html).
 
+<center>*Some math are required to go from (long, lat) to distance on earth*</center>
 
-*Some math are required to go from (long, lat) to distance on earth*
 
 ## The earthdistance PostgreSQL contrib
 
@@ -78,9 +78,9 @@ apparently. And we can see that adding the computation to get the distance
 in 
 *miles* didn't add that much to the query timing.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/pubstopslondon.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/pubstopslondon.jpg" >}}
+</center>
 
 
 ## Pubs and cities
@@ -147,11 +147,11 @@ Time: 686.444 ms
 ~~~
 
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/ninedotslines.gif" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/ninedotslines.gif" >}}
-
-
-*Using `LATERAL` Joins is not a form of lateral thinking*
+<center>*Using `LATERAL` Joins is not a form of lateral thinking*</center>
 
 As you can see we are fetching the pubs at a distance from our given point
 and then the nearest city from where the pub is. The way it's implemented
@@ -222,9 +222,9 @@ Time: 76.467 ms
 ~~~
 
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/bite-top-ten-pub-names.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/bite-top-ten-pub-names.jpg" >}}
+</center>
 
 
 ## The Most Popular Pub Names, per City
@@ -270,11 +270,11 @@ from London's count the pubs that are actually in Westminster (when within 1
 mile of the location we have for it). Then extend that query to address any
 other situation like that in the whole data set.
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/sql-logo.png" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/sql-logo.png" >}}
-
-
-*Often the most powerful tool you have to make sense of your data...*
+<center>*Often the most powerful tool you have to make sense of your data...*</center>
 
 And now what about the most popular pub names per city? Of course we want to
 normalize again our pub names here but only for counting: we still display

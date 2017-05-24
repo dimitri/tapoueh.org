@@ -21,7 +21,6 @@ some Common Lisp hackers: thanks a lot guys, in particular
 [stassats](https://github.com/stassats) who came
 up with the solution we're seeing now.
 
-
 The previous code was a straight rewrite of the provided documentation in
 Common Lisp. See for yourself the docs as found at
 [http://dev.maxmind.com/geoip/legacy/csv/](http://dev.maxmind.com/geoip/legacy/csv/):
@@ -69,9 +68,9 @@ course the python code was spending
 *78.979 seconds* for not doing any
 conversion, but that's not the topic today.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/ip-address.640.png" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/ip-address.640.png" >}}
+</center>
 
 Let's now see one of the micro optimised solution, the one I picked among a
 list of 8 different proposal, each a little more crazy than the previous
@@ -124,11 +123,11 @@ The reason why we only keep 2 bytes in the table is so that we don't require
 about 
 *64 GB* of memory to be able to transform ip addresses...
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/cpu-ram-disk.640.jpg" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/cpu-ram-disk.640.jpg" >}}
-
-
-*Even after all those years, either compute again or store in memory.*
+<center>*Even after all those years, either compute again or store in memory.*</center>
 
 And what do we have now?
 

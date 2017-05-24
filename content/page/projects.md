@@ -20,7 +20,7 @@ look at the full repositories page on my GitHub
 profile: <https://github.com/dimitri?tab=repositories>. I used to still list
 some projects like `M-x mailq` that I've not been using in a long while, or
 `M-x rcirc-groups-mode` that I still use daily, which allows the project to
-have at least one user!
+have at least one user...
 
 Here's a short list of some projects that are maintained and have users!
 

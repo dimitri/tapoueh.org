@@ -22,8 +22,7 @@ row rather than in separate rows. The article from
 ***Craig*** is
 [Pivoting in Postgres](http://www.craigkerstiens.com/2013/06/27/Pivoting-in-Postgres/).
 
-
-*Pivoting a matrix, also known as a matrix transposition*
+<center>*Pivoting a matrix, also known as a matrix transposition*</center>
 
 Let's do the same setup as he did, with a table containing some randomly
 generated data about hypothetical visits to a web page, say, by date then by
@@ -59,7 +58,7 @@ SELECT 303
 ~~~
 
 
-*Yes, `TABLE` is a real SQL statement from the standard!*
+<center>*Yes, `TABLE` is a real SQL statement from the standard!*</center>
 
 Now that we have some data to play with, what we want is the number of
 visits per os as different columns, having a result with 4 columns: the

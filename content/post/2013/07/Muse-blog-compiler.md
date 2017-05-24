@@ -20,8 +20,8 @@ much more friendly to writing articles than both
 that I both use in a regular basis too. The main think that I like in Muse
 that those two others lack is the support for displaying images inline.
 
+<center>*Here's what it looks like to edit with Emacs Muse*</center>
 
-*Here's what it looks like to edit with Emacs Muse*
 
 ## The Muse publishing system
 
@@ -46,12 +46,11 @@ sections, tag files, rss files.
 
 
 ## from Emacs Lisp to Common LIsp
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/lisp-is-different.jpg" >}}
+</center>
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/lisp-is-different.jpg" >}}
-
-
-*and Common Lisp is different from Emacs Lisp*
+<center>*and Common Lisp is different from Emacs Lisp*</center>
 
 When I realized that my motivation to writing new blog articles was going so
 low that I wasn't doing that anymore, I raised the priority of fixing my
@@ -158,10 +157,9 @@ compile the whole set of files anyway.
 
 
 ## The `displaying-time` macro
-
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/lisplogo_fancy_256.png" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/lisplogo_fancy_256.png" >}}
+</center>
 
 While building this little Common Lisp project, I've added to my still very
 little toolbelt a macro that I like. Here's how to use it:

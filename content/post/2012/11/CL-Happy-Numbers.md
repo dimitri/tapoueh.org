@@ -18,7 +18,6 @@ A while ago I stumbled upon
 `SQL` and in
 `Emacs Lisp`. Yeah, I know. Why not, though?
 
-
 Today I'm back on that topic and as I'm toying with 
 *Common Lisp* I though it
 would be a good excuse to learn me some new tricks. As you can see from the

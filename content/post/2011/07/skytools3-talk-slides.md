@@ -22,7 +22,7 @@ enough time available to polish (or write) the documentation.
 
          
 
-<div class="figure center dim-margin">
+<div class="figure dim-margin">
   <a href="/images/confs/skytools3.pdf">
     <img src="/img/old/skytools3-0.png">
   </a>

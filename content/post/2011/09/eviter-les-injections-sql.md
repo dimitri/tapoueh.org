@@ -24,7 +24,7 @@ billet humoristique de
 lecture. L'idée est simple, la mise en place de contre mesure fourmille de
 pièges subtils, à moins d'utiliser la solution décrite ci-après.
 
-[http://imgs.xkcd.com/comics/exploits_of_a_mom.png](http://imgs.xkcd.com/comics/exploits_of_a_mom.png)
+<center>[http://imgs.xkcd.com/comics/exploits_of_a_mom.png](http://imgs.xkcd.com/comics/exploits_of_a_mom.png)</center>
 
 Lorsque l'on envoie une requête SQL à PostgreSQL, celle-ci contient
 pêle-mêle un mélange de mots-clés SQL et de données utilisateurs. Dans la

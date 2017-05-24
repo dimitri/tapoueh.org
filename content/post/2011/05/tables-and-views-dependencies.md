@@ -23,8 +23,7 @@ script wherein you first
 `CREATE
 VIEW` again, all in the same transaction.
 
-
-*A nice view from this table...*
+<center>*A nice view from this table...*</center>
 
 So you have to copy paste also the view definitions.  With large view
 definitions, it quickly gets cumbersome to do so.  Well when you're working

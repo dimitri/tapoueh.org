@@ -16,19 +16,19 @@ A couple of week ago I had the chance to participate into the
 [PGConf NYC 2014](http://nyc.pgconf.us/2014/) Conference, one of the biggest conferences about PostgreSQL
 worldwide.
 
-
 I presented one of my favourite talks over there, where the whole goal is to
 blow the mind of innocent developers and show them how much they can do in
 just SQL.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/PGDAY_NYC_2014.pdf">
     <img src="/img/old/PGDAY_NYC_2014.png">
   </a>
 </div>
+</center>
 
-*PostgreSQL for developers, window functions galore!*
+<center>*PostgreSQL for developers, window functions galore!*</center>
 
 The basis for the talk is this detailed blog entry about the 
 [Reset Counter](http://tapoueh.org/blog/2012/10/05-reset-counter)

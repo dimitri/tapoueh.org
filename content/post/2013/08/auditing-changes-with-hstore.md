@@ -24,7 +24,6 @@ use case for
 *hstore*: we are going to record changes made to our tuples.
 
 
-
 ## Comparing hstores
 
 One of the operators that hstore propose is the 
@@ -92,11 +91,11 @@ $$;
 ~~~
 
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/course-de-domino-bois.jpg" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/course-de-domino-bois.jpg" >}}
-
-
-*I can't help but visualize triggers this way...*
+<center>*I can't help but visualize triggers this way...*</center>
 
 Now, we need to attach the trigger to the table which is the source of our
 events. Note that we could attach the same trigger to any table in fact, as
@@ -134,11 +133,12 @@ update example set f2 = 'c' where id = 1;
 
 And here's what we can see:
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/engine-diff.jpg" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/engine-diff.jpg" >}}
+<center>*Another kind of differential*</center>
 
-
-*Another kind of differential*
 ~~~
 # select change_date, after - before as diff from audit;
           change_date          |   diff    

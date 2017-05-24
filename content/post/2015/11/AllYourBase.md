@@ -21,12 +21,13 @@ classic meaning of the word (I mean
 *relational database management systems
 here*) or the newer set of trade-offs represented by the NoSQL set of tools.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/AllYourBaseConf2015.pdf">
     <img src="/img/old/AllYourBaseConf2015.png">
   </a>
 </div>
+</center>
 
 The conference was very nicely organized and ran smoothly, and I got the
 unique chance to get a back from the trenches story series about people

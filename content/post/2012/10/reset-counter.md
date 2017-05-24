@@ -30,12 +30,13 @@ the first, in other words the first
 counter value, 
 `40`.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="http://xkcd.com/363/">
     <img src="/img/old/reset.png">
   </a>
 </div>
+</center>
 
 Now of course it's a real world counter. Think network traffic counter on a
 network interface, if you want something real to play with in your mind. So
@@ -102,9 +103,9 @@ counter value in case of a
 *wraparound*, so I guess it's easy enough to get
 at.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/reset-circuit-thumbnail.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/reset-circuit-thumbnail.jpg" >}}
+</center>
 
 Then we have a couple of tricks in that query in order to massage the data
 as we want it. First, the last row of the output won't have a 
@@ -160,9 +161,9 @@ select sum(tops) from t;
 ~~~
 
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/reset-elect.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/reset-elect.jpg" >}}
+</center>
 
 And here's the expected result:
 
@@ -212,9 +213,9 @@ given day's or month's worth of measures. We then need to pay attention to
 the value of the counter at the start of our period so that we know to
 substract it from the logical sum over the period.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/reset-coin-counter.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/reset-coin-counter.jpg" >}}
+</center>
 
 Here's an SQL version of the same sentence, applied to the period in between
 ticks 
@@ -295,9 +296,9 @@ Another interesting problem, that we didn't have here but that I find
 interesting enough to extend this article, is finding the ranges of time
 (here, ticks) within which the counter didn't reset.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/reset-A2a.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/reset-A2a.jpg" >}}
+</center>
 
 The query is more complex because we need to split the data into partitions,
 each partition containing data from the same counter series of measures
@@ -401,9 +402,9 @@ some nice use cases for
 adding 
 `SQL` to your tool set is a very good idea.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/skill-set.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/skill-set.jpg" >}}
+</center>
 
 You don't want to have several parts of your code dealing with a logical
 counter like this, because you want the reporting, accounting, quota,

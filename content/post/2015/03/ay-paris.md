@@ -18,8 +18,7 @@ and it's been another awesome edition of the conference. Really smooth,
 everything has been running as it should, with about one hundred people at
 the conference.
 
-
-*In action at Nordic pgDay in Copenhaguen*
+<center>*In action at Nordic pgDay in Copenhaguen*</center>
 
 You can get the slides I've been using for my talk at the 
 [Nordic pgDay 2015](http://tapoueh.org/confs/2015/03/11-Nordic-pgDay-2015)
@@ -33,14 +32,15 @@ just the same in my area, and so we made
 Nordic. It's planned to be all the same, just with a different audience
 given the location.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="http://pgday.paris/">
     <img src="/img/old/pgdayparis.png">
   </a>
 </div>
+</center>
 
-*April 21st, save the date and join us in Paris*
+<center>*April 21st, save the date and join us in Paris*</center>
 
 The 
 [pgDay Paris](http://pgday.paris/) welcomes English Speaking speakers and the Call for Papers

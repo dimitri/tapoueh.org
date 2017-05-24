@@ -44,8 +44,7 @@ Now your colors in an emacs terminal are easy to read, as you can see:
 
     
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/emacs-tango-term-colors.png" >}}
-
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/emacs-tango-term-colors.png" >}}
 
 
 Hope you enjoy!  

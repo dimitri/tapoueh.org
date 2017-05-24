@@ -15,7 +15,6 @@ aliases = ["/blog/2011/10/12-backup-strategy",
 I've been asked about my opinion on backup strategy and best practices, and
 it so happens that I have some kind of an opinion on the matter.
 
-
 I tend to think best practice here begins with defining properly the 
 *backup
 plan* you want to implement. It's quite a complex matter, so be sure to ask

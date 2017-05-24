@@ -35,7 +35,7 @@ made a video demo of uTsung, that you might find interresting:
 
     
 
-<div class="figure center dim-margin">
+<div class="figure dim-margin">
   <a href="http://www.youtube.com/watch?v=rxBhqIP_7ls">
     <img src="/img/old/utsung-demo.png">
   </a>

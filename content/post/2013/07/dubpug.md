@@ -22,14 +22,15 @@ application example all in SQL, using
 *common table
 expressions*.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/postgresql-as-a-developer.pdf">
     <img src="/img/old/postgresql-as-a-developer.png">
   </a>
 </div>
+</center>
 
-*PostgreSQL for developer*
+<center>*PostgreSQL for developer*</center>
 
 And using remote technologies, the presentation have been recorded and made
 available on the internet:

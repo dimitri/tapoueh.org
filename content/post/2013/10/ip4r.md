@@ -23,8 +23,7 @@ awesome
 [ip4r](https://github.com/RhodiumToad/ip4r) extension from 
 [RhodiumToad](http://blog.rhodiumtoad.org.uk/).
 
-
-*The name of the game is to put IP adresses on a map*
+<center>*The name of the game is to put IP adresses on a map*</center>
 
 In this article we are going to 
 *geolocalize* our users given their IP
@@ -105,9 +104,9 @@ Indexes:
 ~~~
 
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/cidr-ip.png" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/cidr-ip.png" >}}
+</center>
 
 
 ## Finding an IP address in our ranges
@@ -139,11 +138,11 @@ datatype output function is smart enough to display ranges either in their
 *start-end* notation when no CIDR
 applies.
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/PlusMinusTimesDivide.png" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/PlusMinusTimesDivide.png" >}}
-
-
-*The ***IP4R*** operators are not written this way*
+<center>*The ***IP4R*** operators are not written this way*</center>
 
 The 
 *ip4r* extension provides several operators to work with the dataset we
@@ -188,9 +187,9 @@ Time: 1.220 ms
 ~~~
 
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/geolocation-clic.png" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/geolocation-clic.png" >}}
+</center>
 
 
 ## Geolocation meta-data
@@ -232,9 +231,9 @@ extension in our recent enouth article
 [How far is the nearest pub?](/blog/2013/08/05-earthdistance) Time to
 try something more interesting then!
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/pubstopslondon.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/pubstopslondon.jpg" >}}
+</center>
 
 
 ## Emergency Pub
@@ -298,9 +297,9 @@ Time: 3.275 ms
 ~~~
 
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/simple-graphical-explain.png" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/simple-graphical-explain.png" >}}
+</center>
 
 For this query to be executed that fast, of course we had to create the
 right set of indexes. Here's the explain plan we got:

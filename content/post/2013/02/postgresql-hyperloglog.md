@@ -23,8 +23,8 @@ available at
 to be in 
 `debian`.
 
+<center>*How to Compute Cardinality?*</center>
 
-*How to Compute Cardinality?*
 
 ## Installing postgresql-hll
 
@@ -87,12 +87,11 @@ batch of values to process.
 
 
 ## ∅: Empty Set and NULL
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/EmptySet_L.gif" >}}
+</center>
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/EmptySet_L.gif" >}}
-
-
-*Yes there's a [unicode](http://www.unicodemap.org/details/0x2205/index.html) entry for that, ∅*
+<center>*Yes there's a [unicode](http://www.unicodemap.org/details/0x2205/index.html) entry for that, ∅*</center>
 
 Now, what happens when the batch of new unique values you want to update
 from is itself empty? Well I would have expected 
@@ -178,12 +177,11 @@ first day, and that the morning's activity is quite low.
 
 
 ## Conclusion
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/hll-dv-estimator.png" >}}
+</center>
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/hll-dv-estimator.png" >}}
-
-
-*The [HyperLogLog DV estimator](http://blog.aggregateknowledge.com/author/wwkae/)*
+<center>*The [HyperLogLog DV estimator](http://blog.aggregateknowledge.com/author/wwkae/)*</center>
 
 When using 
 `postgresql-hll` you need to be careful not to kill your

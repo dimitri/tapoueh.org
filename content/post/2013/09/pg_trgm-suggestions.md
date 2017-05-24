@@ -27,8 +27,7 @@ recent PostgreSQL releases and it's now a poor's man
 [Full Text Search](http://www.postgresql.org/docs/current/static/textsearch.html)
 engine.
 
-
-*Some people are quite serious about trigrams*
+<center>*Some people are quite serious about trigrams*</center>
 
 Of course we also have the rich men version with 
 [Text Search Parsers](http://www.postgresql.org/docs/current/static/textsearch-parsers.html) and
@@ -64,9 +63,9 @@ CREATE EXTENSION
 ~~~
 
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/pellicule.png" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/pellicule.png" >}}
+</center>
 
 
 ## Setting up the use case
@@ -92,11 +91,11 @@ pretend we just filled in a search box to find products by actor name, but
 we don't know the right spelling of the actor's name or maybe the cat really
 wanted to help us on the keyboard that day.
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/ComputerCat.jpg" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/ComputerCat.jpg" >}}
-
-
-*A cat! that picture should at least double the traffic to this article...*
+<center>*A cat! that picture should at least double the traffic to this article...*</center>
 
 The 
 *trigram* extension comes with two operators of interest for this
@@ -155,9 +154,9 @@ Time: 26.972 ms
 ~~~
 
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/macrex-index.640.gif" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/macrex-index.640.gif" >}}
+</center>
 
 
 ## Trigram indexing
@@ -212,14 +211,16 @@ In PostgreSQL 9.3 the trigram extension is able to solve regular expression
 searches. The first production release of 9.3 should happen as soon as next
 week, I hope you're ready for it!
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="http://crm114.sourceforge.net/">
     <img src="/img/old/crm114_tarot_card_logo_small.jpg">
   </a>
 </div>
+</center>
 
-*What about direct support for [CRM114](http://crm114.sourceforge.net/) then?*
+<center>*What about direct support for [CRM114](http://crm114.sourceforge.net/) then?*</center>
+
 
 ## Auto Completion
 
@@ -272,10 +273,10 @@ texts, and how to index that. That's another power tool included with
 PostgreSQL. Another reason why you won't believe how much behind the other
 database systems you know of really are, if you ask me.
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/logo_man_tool_open_300x_watermark.jpg" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/logo_man_tool_open_300x_watermark.jpg" >}}
-
-
-*When all you have is hammer... doesn't apply to PostgreSQL*
+<center>*When all you have is hammer... doesn't apply to PostgreSQL*</center>
 
 Oh, and get ready for PostgreSQL 9.3. Another release packed with awesome.

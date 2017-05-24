@@ -24,7 +24,6 @@ in the timings. Let's update that article with current
 [pgloader](https://github.com/dimitri/pgloader) wonders!
 
 
-
 ## Redoing the python based test
 
 Let's be fair, hardware did evolve in those past 3 years, and the test that
@@ -72,9 +71,9 @@ that's kind of a best run, with run times varying between that and
 ***700
 milliseconds***.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/mph.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/mph.jpg" >}}
+</center>
 
 So the new version is about 
 ***3 to 9 times faster*** depending on the story you
@@ -142,9 +141,9 @@ zip archive file from its http source URL, unzip it locally then work on the
 filename from the archive matching the one we know about: we don't want to
 hardcode in the command the name of the directory contained in the zip file.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/lisp-locator-logo.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/lisp-locator-logo.jpg" >}}
+</center>
 
 Also, contrary to the previous version, it's quite easy to just trim the
 `loc_name` column as we load the data. Here I've been adding a new function to

@@ -22,8 +22,7 @@ life of fellow DBAs and developers, and would say that
 *Writable CTE* are at
 least the same boost again.
 
-
-*Writable CTEs allow to easily implement data processing pipelines*
+<center>*Writable CTEs allow to easily implement data processing pipelines*</center>
 
 In the case of archiving data into side tables the pipeline we're talking
 about aims to move data out of a table (that's a 

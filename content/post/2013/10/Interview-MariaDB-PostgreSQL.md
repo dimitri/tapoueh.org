@@ -20,8 +20,7 @@ and
 [PostgreSQL](http://www.postgresql.org/), and even were both interviewed by the Open World Forum Team.
 The interview is now available online. Dear French readers, it's in English.
 
-
-*Allo Mum? Yeah, I'm on TV. Well, Actually, Internet TV.*
+<center>*Allo Mum? Yeah, I'm on TV. Well, Actually, Internet TV.*</center>
 
 Here's the video:
 

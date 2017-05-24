@@ -21,12 +21,13 @@ logic, including replication.
 You might have guessed it already, I did talk about replication. Here's the
 slide deck I did use, it's in french, sorry if you don't grok that language.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/PGDay_2012_Replications.pdf">
     <img src="/img/old/PGDay_2012_Replications.png">
   </a>
 </div>
+</center>
 
 The conference was very nice and did go smoothly, even if we were “only” 60
 of us I had the pleasure to meet with different users with very different

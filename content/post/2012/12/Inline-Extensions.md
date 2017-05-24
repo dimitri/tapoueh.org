@@ -29,7 +29,6 @@ ship
 `.dll` or 
 `.dylib` things.
 
-
 Now that we have the 
 *Extension* facility though, what we see is a growing
 number of users taking advantage of it for the purpose of managing in house
@@ -67,11 +66,11 @@ brings on the table that a bunch of
 *loose* objects does not? What problems
 can we now solve?
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/multi_function_equipment.jpg" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/multi_function_equipment.jpg" >}}
-
-
-*A Multi Functions Equipment, All Bundled Together*
+<center>*A Multi Functions Equipment, All Bundled Together*</center>
 
 A way to phrase it is to say that 
 *Extensions* are user defined 
@@ -125,11 +124,11 @@ of
 *restoring* experience when using extensions in a database, and we managed to
 do that properly for contrib likes extensions.
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/fly.tn.png" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/fly.tn.png" >}}
-
-
-*A fly in the ointment*
+<center>*A fly in the ointment*</center>
 
 When talking about 
 *Inline Extensions*, the fly in the ointment is how to
@@ -202,11 +201,11 @@ as you want to add objects to it. The
 *control* file properties would need to
 find their way in that design, that sure can be taken care of.
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/empty-extension.jpg" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/empty-extension.jpg" >}}
-
-
-*Look me, an Empty Extension!*
+<center>*Look me, an Empty Extension!*</center>
 
 The main drawback here is that there's no separation anymore in between the
 extension author, the distribution means, the DBA and the database user.
@@ -260,7 +259,7 @@ $$;
 ~~~
 
 
-*An edited version of `hstore--1.1.sql` for vertical space concerns*
+<center>*An edited version of `hstore--1.1.sql` for vertical space concerns*</center>
 
 I've actually proposed a patch to implement that, as you can see in the
 [pg_dump --extension-script](https://commitfest.postgresql.org/action/patch_view?id=981) commit fest entry. As spoiled by the commit fest
@@ -281,11 +280,11 @@ find those. Either on the server's
 and 
 *shared libraries*, there's but a choice), or on the system catalogs.
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/templates.png" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/templates.png" >}}
-
-
-*We Already Have `TEXT SEARCH TEMPLATE` After All*
+<center>*We Already Have `TEXT SEARCH TEMPLATE` After All*</center>
 
 The idea would then be to have some new specific 
 `TEMPLATE` SQL Object that
@@ -324,11 +323,11 @@ to find the right compromise instead. Using the
 brings a lot on the table, if not the whole set of features I would like to
 see.
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/building-blocks.jpg" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/building-blocks.jpg" >}}
-
-
-*PostgreSQL: Building on Solid Foundations*
+<center>*PostgreSQL: Building on Solid Foundations*</center>
 
 What would be missing mainly would be the ability for an 
 *Extension* to switch

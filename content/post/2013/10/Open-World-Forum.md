@@ -3,9 +3,9 @@ date = "2013-10-07T22:05:00.000000+02:00"
 title = "Open World Forum Conference"
 tags = ["PostgreSQL", "PostgreSQLFr", "Conferences", "YeSQL"]
 categories = ["Conferences","PostgreSQL Confs"]
-thumbnailImage = "/img/old/postgresql_is_web_scale.png"
+thumbnailImage = "/img/owf-banner.jpg"
 thumbnailImagePosition = "left"
-coverImage = "/img/old/postgresql_is_web_scale.png"
+coverImage = "/img/owf-banner.jpg"
 coverSize = "partial"
 coverMeta = "out"
 aliases = ["/blog/2013/10/07-Open-World-Forum",
@@ -20,14 +20,15 @@ offerings. Of course, my talk was about explaining how
 [PostgreSQL is Web Scale](http://openworldforum.org/en/tracks/24#talk_41) with some historical background and technical
 examples about what this database engine is currently capable of.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/postgresql_is_web_scale.pdf">
     <img src="/img/old/postgresql_is_web_scale.png">
   </a>
 </div>
+</center>
 
-*PostgreSQL is Web Scale. PostgreSQL is YeSQL!*
+<center>*PostgreSQL is Web Scale. PostgreSQL is YeSQL!*</center>
 
 The conclusion of the talk is that indeed, 
 [PostgreSQL](http://www.postgresql.org/) is 

@@ -21,7 +21,6 @@ Meetup, y compris l'adresse et comment s'inscrire. Il est important de
 s'inscrire car nous prévoyons d'accueillir des sponsors dont
 l'investissement sera employé à nourrir et désaltérer notre joyeux groupe !
 
-
 L'idée de cette rencontre est bien évidemment de faire se 
 *rencontrer* des
 utilisateurs de PostgreSQL et de discutter de notre solution de gestion de
@@ -36,9 +35,9 @@ une façon intéressante d'utiliser PostgreSQL, le fonctionnement d'un projet
 annexe à PostgreSQL, une nouvelle fonctionnalité à découvrir dans une
 prochaine version, etc…
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/lightning_talks_660x3301.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/lightning_talks_660x3301.jpg" >}}
+</center>
 
 Chacun peut facilement être le présentateur en question, et le meilleur
 moyen d'en être convaincu vous-même est de présenter un sujet qui vous
@@ -54,9 +53,9 @@ La première rencontre est organisée pour jeudi 28 novembre 2013, et si vous
 contact avec moi (
 *Dimitri Fontaine*) !
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/calendrier.640.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/calendrier.640.jpg" >}}
+</center>
 
 Pour cette première rencontre, je vous détaillerai comment
 [PostgreSQL est web scale](http://www.openworldforum.org/fr/tracks/24#talk_41), une présentation que j'ai eu le plaisir de donner

@@ -17,8 +17,7 @@ In the article from yesterday we talked about
 some details. The real magic of that extension has been skimmed over though,
 and needs another very small article all by itself, in case you missed it.
 
-
-*Which Set Operation do you want for counting unique values?*
+<center>*Which Set Operation do you want for counting unique values?*</center>
 
 The first query here has the default level of magic in it, really. What
 happens is that each time we do an update of the 
@@ -50,11 +49,12 @@ update the data.
 
 Now on to something way more magic!
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/aggregates2.jpg" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/aggregates2.jpg" >}}
+<center>*Are those the aggregates you're looking for?*</center>
 
-
-*Are those the aggregates you're looking for?*
 ~~~
 => select to_char(date, 'YYYY/MM') as month,
           round(#hll_union_agg(users)) as monthly

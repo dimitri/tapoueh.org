@@ -21,7 +21,6 @@ ask you pretty often to install them some newer dump from the production,
 and you want that operation streamlined and easy.
 
 
-
 ## Usage 
 
 The typical session would be something like this:

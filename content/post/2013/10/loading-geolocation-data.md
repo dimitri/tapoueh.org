@@ -20,8 +20,8 @@ to declaring
 *bankrupcy*, which is both sad news and good news as there's
 suddenly new hope of doing it right this time.
 
+<center>*Let's dive into the python to common lisp rewrite*</center>
 
-*Let's dive into the python to common lisp rewrite*
 
 ## Why rewriting pgloader?
 
@@ -75,9 +75,9 @@ the jazz. And that
 *ip4r* test case actually has been a very good excuse at
 improving what I already had.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/toy-loader.320.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/toy-loader.320.jpg" >}}
+</center>
 
 
 ## The new pgloader command language
@@ -196,11 +196,11 @@ any number of fields into a
 *possibly different* number of columns that are
 dependant on the fields.
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/huge-full-outer-join.gif" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/huge-full-outer-join.gif" >}}
-
-
-*Traditionnaly used for Full Outer Join, but I liked the symbol*
+<center>*Traditionnaly used for Full Outer Join, but I liked the symbol*</center>
 
 In the simplest case possible, each field ends up into a column of the same
 name, and that's still supported of course, it looks like this:
@@ -274,9 +274,9 @@ That generated lambda expression is then
 code that is then executed for each row input. That's the kind of things
 allowing Common Lisp programmers not to resort to C.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/lisplogo_fancy_256.png" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/lisplogo_fancy_256.png" >}}
+</center>
 
 Note that as in the previous 
 *location* example you can also directly write
@@ -406,9 +406,9 @@ module for reading the files, and that module is already written in C in
 fact. So we're actually comparing python and C on the one hand to Common
 Lisp alone on the other hand.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/made-with-lisp.png" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/made-with-lisp.png" >}}
+</center>
 
 
 ### Common Lisp version with fields to columns projection
@@ -460,11 +460,11 @@ really
 ***stable*** base to develop libs, and so even decade old untouched code
 has a really good chance to work as-is.
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/morland_a_carriers_stable2.jpg" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/morland_a_carriers_stable2.jpg" >}}
-
-
-*Another kind of ***stable***, here*
+<center>*Another kind of ***stable***, here*</center>
 
 It's also possible and should be easy enough with 
 [cl-buildapp](http://www.xach.com/lisp/buildapp/) to produce a

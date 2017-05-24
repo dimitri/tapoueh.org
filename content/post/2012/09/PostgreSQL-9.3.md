@@ -27,9 +27,9 @@ that it's time to fully concentrate on preparing
 *season* of which as already begun, by the way, so some amount of work has
 already been done here.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/event-trigger.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/event-trigger.jpg" >}}
+</center>
 
 The list of things I want to be working on for that next release is quite
 long, and looks more like a christmas list than anything else. Let's only
@@ -172,10 +172,9 @@ they should have: early days use cases in a great collection.
 
 
 ## Extensions
-
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/extensions-cords.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/extensions-cords.jpg" >}}
+</center>
 
 So yes, 
 *event triggers* first use case for me is in relation with 

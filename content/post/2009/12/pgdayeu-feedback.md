@@ -24,12 +24,13 @@ and I spoke about
 Here is my try at some nice graphics. Well I'll let you decide how nice the
 result is:
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="../../../images//feedback.png">
     <img src="/img/old/feedback.png">
   </a>
 </div>
+</center>
 
 If you want to see the little python script I used, here it is: 
 [feedback.py](http://git.tapoueh.org/?p=pgconfs.git;a=blob;f=pgday_2009/feedback.py;hb=master),

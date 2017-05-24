@@ -22,8 +22,7 @@ showing up here has been
 migration from MySQL to 
 [PostgreSQL](http://www.postgresql.org/).
 
-
-*[Mark Wong](http://markwkm.blogspot.com/) is doing some serious database crochet work!*
+<center>*[Mark Wong](http://markwkm.blogspot.com/) is doing some serious database crochet work!*</center>
 
 Fotolog is a photo sharing website having more than 
 *32 millions* of users
@@ -35,14 +34,15 @@ cluster of 37 databases to a fully integrated
 hosting each 16 shards, in less than 6 months including complete code
 rewrite, made things... interesting.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/fotolog.pdf">
     <img src="/img/old/archi_v7.png">
   </a>
 </div>
+</center>
 
-*This image is the missing piece in the slide deck*
+<center>*This image is the missing piece in the slide deck*</center>
 
 While in Portland I also had the pleasure to present a talk at the 
 [PGXPUG](http://pdxpug.wordpress.com/)
@@ -56,14 +56,15 @@ User Group, which you can see online at my
 [Dublin User Group](/confs/2013/07/02-dubpug) conference
 report page.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/postgresql-as-a-developer.pdf">
     <img src="/img/old/postgresql-as-a-developer.png">
   </a>
 </div>
+</center>
 
-*You are already using SQL, make the best out of it!*
+<center>*You are already using SQL, make the best out of it!*</center>
 
 Apparently at least one of the attendees really did like the presentation.
 The angle is to convince developpers to consider 

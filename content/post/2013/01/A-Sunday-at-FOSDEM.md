@@ -28,13 +28,14 @@ web using a connected mobile device (you know, you've heard of them, those
 the schedule gets printed on little paper sheets, it's unfortunately too
 late to change it now.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="https://fosdem.org/2013/">
     <img src="/img/old/fosdem.png">
   </a>
 </div>
+</center>
 
-*Those flyers are already printed on paper sheets, the schedule too*
+<center>*Those flyers are already printed on paper sheets, the schedule too*</center>
 
 So it happens that I'll be speaking twice on Sunday and not at all on Friday.

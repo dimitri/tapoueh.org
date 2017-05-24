@@ -26,7 +26,6 @@ fits well an interview style question, so I first solved it yesterday
 evening in 
 [Emacs Lisp](http://www.gnu.org/software/emacs/emacs-lisp-intro/html_node/List-Processing.html#List-Processing) as that's the language I use the most those days.
 
-
 >   A happy number is defined by the following process. Starting with any
 >   positive integer, replace the number by the sum of the squares of its
 >   digits, and repeat the process until the number equals 1 (where it will

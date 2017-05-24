@@ -19,12 +19,13 @@ presenting the project and the main things you want to know to start using
 [PostgreSQL](http://www.postgresql.org/) in production, then I took the opportunity to be talking to
 developers to show off some SQL.
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/developper-avec-pgsql.pdf">
     <img src="/img/old/developper-avec-pgsql-0.png">
   </a>
 </div>
+</center>
 
 That slide deck contains mainly SQL language, but some french too, rather
 than english. Sorry for the inconvenience if that's not something you can

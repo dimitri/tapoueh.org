@@ -20,7 +20,6 @@ to clean up your development environment (because that's what happens to
 development environments, right?), and you want a way to start again from a
 clean empty place.
 
-
 Here we go. It used to be much more simple than that, so if you're still
 using 
 **PGQ** from 

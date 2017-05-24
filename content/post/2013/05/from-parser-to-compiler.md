@@ -20,8 +20,7 @@ stumbled accross a very nice
 *AHAH!* moment, and I now want to share it with
 you, dear reader.
 
-
-*AHAH, you'll see!*
+<center>*AHAH, you'll see!*</center>
 
 The general approach I'm following code wise with that 
 *command language* is
@@ -123,11 +122,12 @@ language, we produce the simplest possible structured data: in lisp that's
 
 The reason why it makes sense doing that is the next rule:
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/the-one-ring.jpg" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/the-one-ring.jpg" >}}
+<center>*The one grammar rule to bind them all*</center>
 
-
-*The one grammar rule to bind them all*
 ~~~
 (defrule program (and colors mix-two-colors)
   (:destructure (graph (c1 c2))
@@ -159,12 +159,11 @@ code, right? So maybe we can just run that code...
 
 
 ## What about a compiler now?
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/aha.jpg" >}}
+</center>
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/aha.jpg" >}}
-
-
-*Here is my AHAH moment!*
+<center>*Here is my AHAH moment!*</center>
 
 Let's see about actually running the code:
 

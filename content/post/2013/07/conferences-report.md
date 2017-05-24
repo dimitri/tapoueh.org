@@ -19,8 +19,8 @@ And of course, some more is on the way, as the
 [PostgreSQL](http://www.postgresql.org/) Conference Tour
 gets busier each year it seems.
 
+<center>*And PostgreSQL Conferences get more attendees each year!*</center>
 
-*And PostgreSQL Conferences get more attendees each year!*
 
 ## PGCON 2013, Ottawa
 
@@ -61,13 +61,13 @@ to talk about what I want to achieve when those tools land in core.
 
 
 ## PGDayFR 2013
-
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/petabyte.pdf">
     <img src="/img/old/petabyte.png">
   </a>
 </div>
+</center>
 
 Then in June was the 
 [PG Day France](https://www.pgday.fr/programme) where I presented a talk about
@@ -85,10 +85,9 @@ to the main french session instead.
 
 
 ## CHAR(13)
-
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/horwoodhouse.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/horwoodhouse.jpg" >}}
+</center>
 
 The next conference on the schedule is now 
 [CHAR(13)](http://char13.info/), a 

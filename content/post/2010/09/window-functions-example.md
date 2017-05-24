@@ -21,8 +21,7 @@ feature helps solving. I've already been using them in some cases here in
 this blog, for getting some nice overview about
 [Partitioning: relation size per “group”](http://tapoueh.org/articles/blog/_Partitioning:_relation_size_per_%E2%80%9Cgroup%E2%80%9D.html).
 
-
-*That's another way to count change*
+<center>*That's another way to count change*</center>
 
 Now, another example use case rose on 
 `IRC` today. I'll quote directly our user here:

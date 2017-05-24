@@ -21,7 +21,6 @@ seeing blog readers exchange directly, but I think a
 `tapoueh.org` mailing
 list would be my answer, here...
 
-
 Anyway, 
 [David Fetter](http://people.planetpostgresql.org/dfetter/) took the time to send me a comment by mail with a
 cleaned up rewrite of the previous entry 

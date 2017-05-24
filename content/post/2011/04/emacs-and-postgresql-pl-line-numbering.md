@@ -19,7 +19,6 @@ That allows to number
 [Emacs](http://www.gnu.org/software/emacs/), and
 it's something very useful to turn on when debugging.
 
-
 The carrets on the 
 *fringe* in the emacs window are the result of
 `(setq-default indicate-buffer-boundaries 'left)` and here it's

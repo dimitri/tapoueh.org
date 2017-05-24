@@ -17,12 +17,13 @@ En juin dernier se tenait le
 présenter une conférence sur 
 [PostgreSQL en 2014](http://tapoueh.org/confs/2014/06/23-PHPTour-Lyon-2014).
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/PHPTour_2014_PostgreSQL.pdf">
     <img src="/img/old/PHPTour_2014_PostgreSQL.png">
   </a>
 </div>
+</center>
 
 Cette intervention était filmée, et la vidéo est maintenant disponible :
 

@@ -20,8 +20,7 @@ time I began consolidating what I know about that topic and am writing a
 software to help me here. Consider it the 
 ***MySQL Migration Toolkit***.
 
-
-*A real classic that I couldn't resist using here...*
+<center>*A real classic that I couldn't resist using here...*</center>
 
 Without further ado, here's a little demo of the test case I have here to
 work on the problem at hand. I've been working from a new version of
@@ -87,9 +86,9 @@ its table list and column definitions and apply
 able to issue the right 
 `CREATE TABLE` statements in PostgreSQL.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/type-casting-machine.640.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/type-casting-machine.640.jpg" >}}
+</center>
 
 Once the tables are in place in PostgreSQL, the data is 
 ***streamed*** from MySQL
@@ -122,11 +121,11 @@ for sometime introducing bugs in
 NULL from empty string on the client), so the only way to convince oneself
 that it works in any specific case is to test it.
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/dolphin-toy.320.jpg" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/dolphin-toy.320.jpg" >}}
-
-
-*This one is not my favourite toy*...
+<center>*This one is not my favourite toy*...</center>
 
 If you're interested into that tool, as several people already told me they
 are, then let's talk about how to reach version 1.0 together so that you

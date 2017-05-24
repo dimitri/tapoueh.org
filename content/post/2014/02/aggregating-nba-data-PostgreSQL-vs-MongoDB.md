@@ -21,8 +21,7 @@ When using
 given the SQL command 
 [create aggregate](http://www.postgresql.org/docs/current/static/sql-createaggregate.html).
 
-
-*Photo Credit: [Copyright All rights reserved by Segward Graupner](https://www.flickr.com/photos/57426425@N07/6005436411/sizes/z/)*
+<center>*Photo Credit: [Copyright All rights reserved by Segward Graupner](https://www.flickr.com/photos/57426425@N07/6005436411/sizes/z/)*</center>
 
 The next step after thinking how obvious the queries written in the
 mentionned article would be to express in SQL was to actually load the data
@@ -84,9 +83,9 @@ create view winners as
 If you're not doing much SQL, remember that creating such a view is common
 practice in the relational world.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/running-aggregates.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/running-aggregates.jpg" >}}
+</center>
 
 
 ## Running the Aggregates
@@ -198,9 +197,9 @@ Time: 24.713 ms
 ~~~
 
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/try_science.png" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/try_science.png" >}}
+</center>
 
 
 ## Correlating stats with wins
@@ -242,9 +241,9 @@ short of computing the
 client tool, maybe using a 
 *spreadsheet* application or something.
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/DReboundsVandy.png" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/DReboundsVandy.png" >}}
+</center>
 
 
 ## Defensive Rebounds and Total Rebounds Versus Win Percentage
@@ -351,9 +350,9 @@ To understand all there's to know about
 article on the topic: 
 [Understanding Window Functions](/blog/2013/08/20-Window-Functions).
 
-
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/reboundsc1.640.jpg" >}}
-
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/reboundsc1.640.jpg" >}}
+</center>
 
 
 ## Total rebounds and wins
@@ -430,11 +429,11 @@ known as
 [Hypothetical-Set Aggregate Functions](http://www.postgresql.org/docs/devel/static/functions-aggregate.html#FUNCTIONS-HYPOTHETICAL-TABLE) (also known as 
 `WITHIN GROUP`).
 
+<center>
+{{< image classes="fig50 fancybox dim-margin" src="/img/old/sql-logo.png" >}}
+</center>
 
-{{< image classes="fig50 center fancybox dim-margin" src="/img/old/sql-logo.png" >}}
-
-
-*PostgreSQL is YeSQL!*
+<center>*PostgreSQL is YeSQL!*</center>
 
 When the problem you have to solve involves analyzing data, one of the more
 advanced tooling you can find around certainly is the SQL language, in

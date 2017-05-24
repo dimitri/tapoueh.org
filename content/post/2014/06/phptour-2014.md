@@ -17,12 +17,13 @@ En début de semaine se tenait le
 privilège d'y être invité afin de présenter comment
 [Utiliser PostgreSQL en 2014](http://afup.org/pages/phptourlyon2014/sessions.php#1007).
 
-
-<div class="figure center dim-margin">
+<center>
+<div class="figure dim-margin">
   <a href="/images/confs/PHPTour_2014_PostgreSQL.pdf">
     <img src="/img/old/PHPTour_2014_PostgreSQL.png">
   </a>
 </div>
+</center>
 
 > À l'heure où le NoSQL passe de mode doucement, il est temps de se poser les
 > bonnes questions vis à vis des technologies de bases de données à utiliser,
