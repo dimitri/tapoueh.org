@@ -36,5 +36,10 @@ unique chance to get a back from the trenches story series about people
 tools of choices and the reason why they do things their way. It has been
 very enlightning!
 
+A video was made of my stage *performance* (for once I can use the singular
+form of that English word):
+
+{{< vimeo 145842298 >}}
+
 If you ever get the chance to attend All Your Base, take my word for it and
 just go!
