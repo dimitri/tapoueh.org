@@ -8,7 +8,9 @@ thumbnailImagePosition = "left"
 coverImage = "/img/old/el-get.big.png"
 coverSize = "partial"
 coverMeta = "out"
-aliases = ["/blog/2011/09/16-el-get-3.1",
+aliases = ["/blog/2011/09/16-el-get-3",
+           "/blog/2011/09/16-el-get-3.html",
+           "/blog/2011/09/16-el-get-3.1",
            "/blog/2011/09/16-el-get-3.1.html"]
 +++
 

@@ -8,7 +8,9 @@ thumbnailImagePosition = "left"
 coverImage = "/img/old/postgresqlfr-logo.png"
 coverSize = "partial"
 coverMeta = "out"
-aliases = ["/blog/2011/09/19-sortie-de-9.1",
+aliases = ["/blog/2011/09/19-sortie-de-9",
+           "/blog/2011/09/19-sortie-de-9.html",
+           "/blog/2011/09/19-sortie-de-9.1",
            "/blog/2011/09/19-sortie-de-9.1.html"]
 +++
 

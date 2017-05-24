@@ -10,8 +10,14 @@ title = "Projects"
 coverImage = "/img/postgresql-emacs.jpg"
 coverSize = "partial"
 coverMeta = "out"
-aliases = ["/projects.html","/projects","/emacs/el-get.html",
-           "/pgsql", "/pgsql/index.html", "/emacs", "/emacs/index.html"]
+aliases = ["/projects.html", "/projects",
+           "/pgsql.html", "/pgsql/index.html",
+           "/emacs.html", "/emacs/index.html",
+           "/emacs/cssh.html", "/emacs/mailq.html", "/emacs/el-get.html",
+           "/emacs/rcirc-groups.html", "/emacs/switch-window.html",
+           "/pgsql/char10.html", "/pgsql/pgcharts.html",
+           "/pgsql/pgloader.html", "/pgsql/pgstaging.html",
+           "/pgsql/prefix.html", "/pgsql/preprepare.html"]
 +++
 
 Along the years I have been contributing to many projects, and I started
