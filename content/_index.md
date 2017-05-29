@@ -23,8 +23,9 @@ has been helpful to many readers! This article is even part of a data driven
 series of post, the [YeSQL](/categories/yesql/) category, check it out!
 
 Also, I'm writing a book
-about [Mastering PostgreSQL in Application Development](/book/), and you can
-subscribe to get sample content before anyone else and be the first to get
-the book when it's available!
+about
+[Mastering PostgreSQL in Application Development](http://masteringpostgresql.com),
+and you can subscribe to get sample content before anyone else and be the
+first to get the book when it's available!
 
 <hr/>
