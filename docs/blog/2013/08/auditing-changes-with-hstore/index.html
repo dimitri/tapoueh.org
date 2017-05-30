@@ -303,15 +303,14 @@ use case for
 whose documentation says that it will
 <em>delete matching pairs from left
 operand</em>.</p>
-
-<pre><code class="language-sql">&gt; select   'f1 =&gt; a, f2 =&gt; x'::hstore
-         - 'f1 =&gt; b, f2 =&gt; x'::hstore
-         as diff;
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>&gt; <span style="color: #0000aa">select</span>   <span style="color: #aa5500">&#39;f1 =&gt; a, f2 =&gt; x&#39;</span>::hstore
+         - <span style="color: #aa5500">&#39;f1 =&gt; b, f2 =&gt; x&#39;</span>::hstore
+         <span style="color: #0000aa">as</span> diff;
    diff    
------------
- &quot;f1&quot;=&gt;&quot;a&quot;
-(1 row)
-</code></pre>
+<span style="color: #aaaaaa; font-style: italic">-----------</span>
+ <span style="color: #0000aa">&quot;f1&quot;</span>=&gt;<span style="color: #0000aa">&quot;a&quot;</span>
+(<span style="color: #009999">1</span> <span style="color: #0000aa">row</span>)
+</pre></div>
 
 <p>That&rsquo;s what we&rsquo;re going to use in our
 <em>changes auditing trigger</em> now, because
@@ -321,21 +320,20 @@ it&rsquo;s pretty useful a format to understand what did change.</p>
 
 <p>First we need some setup, a couple of tables to use in our worked out
 example:</p>
-
-<pre><code class="language-sql">create table example
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">create</span> <span style="color: #0000aa">table</span> example
  (
-   id   serial,
-   f1   text,
-   f2   text
+   id   <span style="color: #00aaaa">serial</span>,
+   f1   <span style="color: #00aaaa">text</span>,
+   f2   <span style="color: #00aaaa">text</span>
  );
 
-create table audit
+<span style="color: #0000aa">create</span> <span style="color: #0000aa">table</span> audit
  (
-  change_date timestamptz default now(),
-  before hstore,
-  after  hstore
+  change_date timestamptz <span style="color: #0000aa">default</span> now(),
+  <span style="color: #0000aa">before</span> hstore,
+  <span style="color: #0000aa">after</span>  hstore
  );
-</code></pre>
+</pre></div>
 
 <p>The idea is to add a row in the
 <code>audit</code> table each time it is updated, with
@@ -345,18 +343,17 @@ So as to avoid the problem of not being able to easily rebuild the current
 value of a row at any time in the history, we&rsquo;re going to store a couple of
 full
 <em>hstore</em> representations here.</p>
-
-<pre><code class="language-sql">create function audit()
-  returns trigger
-  language plpgsql
-as $$
-begin
-  INSERT INTO audit(before, after)
-       SELECT hstore(old), hstore(new);
-  return new;
-end;
-$$;
-</code></pre>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">create</span> <span style="color: #0000aa">function</span> audit()
+  <span style="color: #0000aa">returns</span> <span style="color: #0000aa">trigger</span>
+  <span style="color: #0000aa">language</span> plpgsql
+<span style="color: #0000aa">as</span> <span style="color: #FF0000; background-color: #FFAAAA">$$</span>
+<span style="color: #0000aa">begin</span>
+  <span style="color: #0000aa">INSERT</span> <span style="color: #0000aa">INTO</span> audit(<span style="color: #0000aa">before</span>, <span style="color: #0000aa">after</span>)
+       <span style="color: #0000aa">SELECT</span> hstore(<span style="color: #0000aa">old</span>), hstore(<span style="color: #0000aa">new</span>);
+  <span style="color: #0000aa">return</span> <span style="color: #0000aa">new</span>;
+<span style="color: #0000aa">end</span>;
+<span style="color: #FF0000; background-color: #FFAAAA">$$</span>;
+</pre></div>
 
 <p><center>
 
@@ -405,34 +402,31 @@ trigger as
 
 <p>Be sure to check the
 <a href="http://www.postgresql.org/docs/current/interactive/plpgsql-trigger.html">PL/pgSQL Trigger Procedures</a> documentation.</p>
-
-<pre><code class="language-sql">create trigger audit
-      after update on example
-          for each row
- execute procedure audit();
-</code></pre>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">create</span> <span style="color: #0000aa">trigger</span> audit
+      <span style="color: #0000aa">after</span> <span style="color: #0000aa">update</span> <span style="color: #0000aa">on</span> example
+          <span style="color: #0000aa">for</span> <span style="color: #0000aa">each</span> <span style="color: #0000aa">row</span>
+ <span style="color: #0000aa">execute</span> <span style="color: #0000aa">procedure</span> audit();
+</pre></div>
 
 <h1 id="testing-it">Testing it</h1>
 
 <p>With that in place, let&rsquo;s try it out:</p>
-
-<pre><code class="language-sql">&gt; insert into example(id, f1, f2) values(1, 'a', 'a');
-&gt; update example set f1 = 'b' where id = 1;
-&gt; update example set f2 = 'c' where id = 1;
-</code></pre>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>&gt; <span style="color: #0000aa">insert</span> <span style="color: #0000aa">into</span> example(id, f1, f2) <span style="color: #0000aa">values</span>(<span style="color: #009999">1</span>, <span style="color: #aa5500">&#39;a&#39;</span>, <span style="color: #aa5500">&#39;a&#39;</span>);
+&gt; <span style="color: #0000aa">update</span> example <span style="color: #0000aa">set</span> f1 = <span style="color: #aa5500">&#39;b&#39;</span> <span style="color: #0000aa">where</span> id = <span style="color: #009999">1</span>;
+&gt; <span style="color: #0000aa">update</span> example <span style="color: #0000aa">set</span> f2 = <span style="color: #aa5500">&#39;c&#39;</span> <span style="color: #0000aa">where</span> id = <span style="color: #009999">1</span>;
+</pre></div>
 
 <p>And here&rsquo;s what we can see:</p>
-
-<pre><code class="language-sql">&gt; select change_date,
-         after - before as diff
-    from audit;
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>&gt; <span style="color: #0000aa">select</span> change_date,
+         <span style="color: #0000aa">after</span> - <span style="color: #0000aa">before</span> <span style="color: #0000aa">as</span> diff
+    <span style="color: #0000aa">from</span> audit;
           
           change_date          |   diff    
--------------------------------+-----------
- 2013-08-27 17:59:19.808217+02 | &quot;f1&quot;=&gt;&quot;b&quot;
- 2013-08-27 17:59:19.808217+02 | &quot;f2&quot;=&gt;&quot;c&quot;
-(2 rows)
-</code></pre>
+<span style="color: #aaaaaa; font-style: italic">-------------------------------+-----------</span>
+ <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">27</span> <span style="color: #009999">17</span>:<span style="color: #009999">59</span>:<span style="color: #009999">19</span>.<span style="color: #009999">808217</span>+<span style="color: #009999">02</span> | <span style="color: #0000aa">&quot;f1&quot;</span>=&gt;<span style="color: #0000aa">&quot;b&quot;</span>
+ <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">27</span> <span style="color: #009999">17</span>:<span style="color: #009999">59</span>:<span style="color: #009999">19</span>.<span style="color: #009999">808217</span>+<span style="color: #009999">02</span> | <span style="color: #0000aa">&quot;f2&quot;</span>=&gt;<span style="color: #0000aa">&quot;c&quot;</span>
+(<span style="color: #009999">2</span> <span style="color: #0000aa">rows</span>)
+</pre></div>
 
 <p>The
 <em>hstore</em> extension is really useful and versatile, and we just saw another
@@ -688,6 +682,33 @@ use case for it!</p>
           <div class="media">
             
             <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/05/find-the-missing-integer/">
+                <h3 class="media-heading">Find The Missing Integer</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>A recent interview question that I had to review was spelled like this:</p>
+
+<blockquote>
+<p>Find missing int element into array 1..100</p>
+</blockquote>
+
+<p>Of course at first read I got it wrong, you have only one integer to look
+for into the array. So while the obvious idea was to apply classing
+<em>sorting</em> techniques and minimize array traversal to handle complexity (time
+and space), it turns out there&rsquo;s a much simpler way to do it if you remember
+your math lessons from younger. But is is that much simpler?</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
               <a class="link-unstyled" href="http://tapoueh.org/blog/2016/04/pgconf-us-2016/">
                 <h3 class="media-heading">PGConf US 2016</h3>
               </a>
@@ -905,29 +926,6 @@ started: it provides with error handling for the
             <hr>
           </div>
         
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="http://tapoueh.org/blog/2014/10/meetup-postgresql-%C3%A0-paris/">
-                <h3 class="media-heading">Meetup PostgreSQL à Paris</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Oct 10, 2014
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p>Mercredi 8 octobre se tiendra le prochain
-<a href="http://www.meetup.com/PostgreSQL-User-Group-Paris/events/209650432/">Meetup PostgreSQL à Paris</a> dans les
-locaux de
-<a href="https://www.mozilla.org/en-US/contact/spaces/paris/">Mozilla Europe</a>, dont la capacité est de 90 personnes ! Venez
-nombreux !</p>
-
-<p></p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
       </div>
     </div>
     <div class="modal-footer">
@@ -935,7 +933,7 @@ nombreux !</p>
          data-message-zero=""
          data-message-one=""
          data-message-other="">
-         230 posts found
+         231 posts found
       </p>
     </div>
   </div>

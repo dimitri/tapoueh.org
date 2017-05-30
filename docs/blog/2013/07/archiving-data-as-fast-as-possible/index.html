@@ -299,14 +299,13 @@ about aims to move data out of a table (that&rsquo;s a
 the destination (
 <em>archiving</em>) table, and that&rsquo;s an
 <code>INSERT</code>:</p>
-
-<pre><code class="language-sql">WITH archive AS (
-    DELETE FROM source WHERE ...
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">WITH</span> archive <span style="color: #0000aa">AS</span> (
+    <span style="color: #0000aa">DELETE</span> <span style="color: #0000aa">FROM</span> <span style="color: #0000aa">source</span> <span style="color: #0000aa">WHERE</span> ...
  RETURNING s.id
 )
-INSERT INTO target(id, counter)
-     SELECT * FROM archive;
-</code></pre>
+<span style="color: #0000aa">INSERT</span> <span style="color: #0000aa">INTO</span> target(id, counter)
+     <span style="color: #0000aa">SELECT</span> * <span style="color: #0000aa">FROM</span> archive;
+</pre></div>
 
 <p>That&rsquo;s probably the most efficient way to move data around in PostgreSQL
 when the source and target tables are within the same database. If not, then
@@ -334,27 +333,25 @@ to
 <em>lag</em> in
 between the Hot Standby you&rsquo;re interested into and the primary server by
 running that query periodically:</p>
-
-<pre><code class="language-sql">select pg_current_xlog_location() as current, replay_location as replay
-  from pg_stat_replication
- where application_name = 'standby-name';
-</code></pre>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> pg_current_xlog_location() <span style="color: #0000aa">as</span> <span style="color: #0000aa">current</span>, replay_location <span style="color: #0000aa">as</span> replay
+  <span style="color: #0000aa">from</span> pg_stat_replication
+ <span style="color: #0000aa">where</span> application_name = <span style="color: #aa5500">&#39;standby-name&#39;</span>;
+</pre></div>
 
 <p>Be aware that any replication client that you use will show up in the
 <code>pg_stat_replication</code> view, and that includes
 <a href="http://www.postgresql.org/docs/current/static/app-pgbasebackup.html">pg_basebackup</a> and
 <a href="http://www.postgresql.org/docs/current/static/app-pgreceivexlog.html">pg_receivexlog</a>:</p>
-
-<pre><code class="language-sql"> select application_name, pg_current_xlog_location(),
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span> <span style="color: #0000aa">select</span> application_name, pg_current_xlog_location(),
         sent_location, replay_location
-   from pg_stat_replication;
+   <span style="color: #0000aa">from</span> pg_stat_replication;
    
  application_name | pg_current_xlog_location | sent_location  | replay_location 
-------------------+--------------------------+----------------+-----------------
- pg_receivexlog   | 18C85/55DCA900           | 18C85/55DAEC20 | {NULL}
- standby-name     | 18C85/55DCA900           | 18C85/55DCA900 | 18C76/4B327D0
-(2 lignes)
-</code></pre>
+<span style="color: #aaaaaa; font-style: italic">------------------+--------------------------+----------------+-----------------</span>
+ pg_receivexlog   | <span style="color: #009999">18</span>C85/<span style="color: #009999">55</span>DCA900           | <span style="color: #009999">18</span>C85/<span style="color: #009999">55</span>DAEC20 | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #0000aa">NULL</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>
+ standby-name     | <span style="color: #009999">18</span>C85/<span style="color: #009999">55</span>DCA900           | <span style="color: #009999">18</span>C85/<span style="color: #009999">55</span>DCA900 | <span style="color: #009999">18</span>C76/<span style="color: #009999">4</span>B327D0
+(<span style="color: #009999">2</span> lignes)
+</pre></div>
 
 <p>Then in between loops of running the
 <code>WITH archive AS (DELETE ...) INSERT</code>
@@ -367,21 +364,20 @@ buzy loop around the previous query and a 1 second wait.</p>
 replicate its implementation in your client application code, it&rsquo;s simple
 enough to do so. Here&rsquo;s a
 <a href="/tags/common-lisp">Common Lisp</a> version of it:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>(<span style="color: #00aaaa">defun</span> <span style="color: #aa0000">pg-xlog-location-diff</span> (<span style="color: #aa0000">loc1</span> <span style="color: #aa0000">loc2</span>)
+  <span style="color: #aa5500">&quot;Compute the difference between WAL locations as WAL bytes.</span>
 
-<pre><code class="language-lisp">(defun pg-xlog-location-diff (loc1 loc2)
-  &quot;Compute the difference between WAL locations as WAL bytes.
-
-   Locations are expected with the XLOG position format 163A8/210598E8.
-   Computation from PostgreSQL sources of pg_xlog_location_diff as in
-   src/backend/access/transam/xlogfuncs.c &quot;
-  (flet ((parse-location (pos)
-	   (let ((shift #.(expt 2 32)))
-	     (destructuring-bind (hi lo)
-		 (split-sequence:split-sequence #\/ pos)
-	       (+ (* shift (parse-integer hi :radix 16))
-		  (parse-integer lo :radix 16))))))
-    (- (parse-location loc1) (parse-location loc2))))
-</code></pre>
+<span style="color: #aa5500">   Locations are expected with the XLOG position format 163A8/210598E8.</span>
+<span style="color: #aa5500">   Computation from PostgreSQL sources of pg_xlog_location_diff as in</span>
+<span style="color: #aa5500">   src/backend/access/transam/xlogfuncs.c &quot;</span>
+  (<span style="color: #0000aa">flet</span> ((<span style="color: #aa0000">parse-location</span> (<span style="color: #aa0000">pos</span>)
+	   (<span style="color: #0000aa">let</span> ((<span style="color: #aa0000">shift</span> #.(<span style="color: #00aaaa">expt</span> <span style="color: #009999">2</span> <span style="color: #009999">32</span>)))
+	     (<span style="color: #00aaaa">destructuring-bind</span> (<span style="color: #aa0000">hi</span> <span style="color: #aa0000">lo</span>)
+		 (<span style="color: #aa0000">split-sequence:split-sequence</span> <span style="color: #aa5500">#\/</span> <span style="color: #aa0000">pos</span>)
+	       (<span style="color: #00aaaa">+</span> (<span style="color: #00aaaa">*</span> <span style="color: #aa0000">shift</span> (<span style="color: #00aaaa">parse-integer</span> <span style="color: #aa0000">hi</span> <span style="color: #0000aa">:radix</span> <span style="color: #009999">16</span>))
+		  (<span style="color: #00aaaa">parse-integer</span> <span style="color: #aa0000">lo</span> <span style="color: #0000aa">:radix</span> <span style="color: #009999">16</span>))))))
+    (<span style="color: #00aaaa">-</span> (<span style="color: #aa0000">parse-location</span> <span style="color: #aa0000">loc1</span>) (<span style="color: #aa0000">parse-location</span> <span style="color: #aa0000">loc2</span>))))
+</pre></div>
 
 <p>Exercice for the reader: write a PL version of it with your PL of choice.</p>
 
@@ -642,6 +638,33 @@ PostgreSQL, and you can find it at
           <div class="media">
             
             <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/05/find-the-missing-integer/">
+                <h3 class="media-heading">Find The Missing Integer</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>A recent interview question that I had to review was spelled like this:</p>
+
+<blockquote>
+<p>Find missing int element into array 1..100</p>
+</blockquote>
+
+<p>Of course at first read I got it wrong, you have only one integer to look
+for into the array. So while the obvious idea was to apply classing
+<em>sorting</em> techniques and minimize array traversal to handle complexity (time
+and space), it turns out there&rsquo;s a much simpler way to do it if you remember
+your math lessons from younger. But is is that much simpler?</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
               <a class="link-unstyled" href="http://tapoueh.org/blog/2016/04/pgconf-us-2016/">
                 <h3 class="media-heading">PGConf US 2016</h3>
               </a>
@@ -859,29 +882,6 @@ started: it provides with error handling for the
             <hr>
           </div>
         
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="http://tapoueh.org/blog/2014/10/meetup-postgresql-%C3%A0-paris/">
-                <h3 class="media-heading">Meetup PostgreSQL à Paris</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Oct 10, 2014
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p>Mercredi 8 octobre se tiendra le prochain
-<a href="http://www.meetup.com/PostgreSQL-User-Group-Paris/events/209650432/">Meetup PostgreSQL à Paris</a> dans les
-locaux de
-<a href="https://www.mozilla.org/en-US/contact/spaces/paris/">Mozilla Europe</a>, dont la capacité est de 90 personnes ! Venez
-nombreux !</p>
-
-<p></p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
       </div>
     </div>
     <div class="modal-footer">
@@ -889,7 +889,7 @@ nombreux !</p>
          data-message-zero=""
          data-message-one=""
          data-message-other="">
-         230 posts found
+         231 posts found
       </p>
     </div>
   </div>

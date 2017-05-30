@@ -428,31 +428,29 @@ implement such a trigger in our article
 when the main transaction fails. Let&rsquo;s first see what happens with the
 solution we had already when we
 <code>ROLLBACK</code> the main transaction:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>&gt; <span style="color: #0000aa">begin</span>;
+<span style="color: #0000aa">BEGIN</span>
 
-<pre><code class="language-sql">&gt; begin;
-BEGIN
+*&gt; <span style="color: #0000aa">update</span> example <span style="color: #0000aa">set</span> f1 = <span style="color: #aa5500">&#39;b&#39;</span> <span style="color: #0000aa">where</span> id = <span style="color: #009999">1</span>;
+<span style="color: #0000aa">UPDATE</span> <span style="color: #009999">1</span>
 
-*&gt; update example set f1 = 'b' where id = 1;
-UPDATE 1
+*&gt; <span style="color: #0000aa">rollback</span>;
+<span style="color: #0000aa">ROLLBACK</span>
 
-*&gt; rollback;
-ROLLBACK
-
-&gt; select * from audit;
- change_date | before | after 
--------------+--------+-------
-(0 rows)
-</code></pre>
+&gt; <span style="color: #0000aa">select</span> * <span style="color: #0000aa">from</span> audit;
+ change_date | <span style="color: #0000aa">before</span> | <span style="color: #0000aa">after</span> 
+<span style="color: #aaaaaa; font-style: italic">-------------+--------+-------</span>
+(<span style="color: #009999">0</span> <span style="color: #0000aa">rows</span>)
+</pre></div>
 
 <p>The auditing table is not populated.</p>
 
 <h2 id="installing-plproxy">Installing PLproxy</h2>
 
 <p>It begins as usual:</p>
-
-<pre><code class="language-sql">&gt; create extension plproxy;
-CREATE EXTENSION
-</code></pre>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>&gt; <span style="color: #0000aa">create</span> extension plproxy;
+<span style="color: #0000aa">CREATE</span> EXTENSION
+</pre></div>
 
 <p>For that command to work you need to have installed the Operating System
 Package for plproxy (if using PostgreSQL 9.3 under debian you need to
@@ -471,30 +469,29 @@ run
 <a href="http://www.postgresql.org/docs/current/static/sql-createserver.html">CREATE SERVER</a> command to
 have an entry point to a
 <em>remote</em> transaction on the same connection string.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>&gt; <span style="color: #0000aa">create</span> server <span style="color: #0000aa">local</span> <span style="color: #0000aa">foreign</span> <span style="color: #0000aa">data</span> wrapper plproxy <span style="color: #0000aa">options</span>(p0 <span style="color: #aa5500">&#39;dbname=dim&#39;</span>);
+<span style="color: #0000aa">CREATE</span> SERVER
 
-<pre><code class="language-sql">&gt; create server local foreign data wrapper plproxy options(p0 'dbname=dim');
-CREATE SERVER
+&gt; <span style="color: #0000aa">create</span> <span style="color: #0000aa">user</span> mapping <span style="color: #0000aa">for</span> <span style="color: #0000aa">public</span> server <span style="color: #0000aa">local</span> <span style="color: #0000aa">options</span>(<span style="color: #0000aa">user</span> <span style="color: #aa5500">&#39;dim&#39;</span>);
+<span style="color: #0000aa">CREATE</span> <span style="color: #0000aa">USER</span> MAPPING
 
-&gt; create user mapping for public server local options(user 'dim');
-CREATE USER MAPPING
+&gt; <span style="color: #0000aa">create</span> <span style="color: #0000aa">function</span> test_proxy(i <span style="color: #00aaaa">int</span>)
+           <span style="color: #0000aa">returns</span> <span style="color: #00aaaa">int</span>
+          <span style="color: #0000aa">language</span> plproxy
+<span style="color: #0000aa">as</span> <span style="color: #FF0000; background-color: #FFAAAA">$$</span>
+  <span style="color: #0000aa">cluster</span> <span style="color: #aa5500">&#39;local&#39;</span>;
+  <span style="color: #0000aa">select</span> i;
+<span style="color: #FF0000; background-color: #FFAAAA">$$</span>;
+<span style="color: #0000aa">CREATE</span> <span style="color: #0000aa">FUNCTION</span>
 
-&gt; create function test_proxy(i int)
-           returns int
-          language plproxy
-as $$
-  cluster 'local';
-  select i;
-$$;
-CREATE FUNCTION
-
-&gt; select test_proxy(1);
+&gt; <span style="color: #0000aa">select</span> test_proxy(<span style="color: #009999">1</span>);
  test_proxy 
-------------
-          1
-(1 row)
+<span style="color: #aaaaaa; font-style: italic">------------</span>
+          <span style="color: #009999">1</span>
+(<span style="color: #009999">1</span> <span style="color: #0000aa">row</span>)
 
-Time: 0.866 ms
-</code></pre>
+Time: <span style="color: #009999">0</span>.<span style="color: #009999">866</span> ms
+</pre></div>
 
 <p>So we have a
 <em>PL/proxy</em>
@@ -547,39 +544,38 @@ variables
 a
 <em>remote procedure call</em> to our
 <em>PL/proxy</em> local connection instead:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">create</span> <span style="color: #0000aa">function</span> audit_trigger()
+  <span style="color: #0000aa">returns</span> <span style="color: #0000aa">trigger</span>
+  <span style="color: #0000aa">language</span> plpgsql
+<span style="color: #0000aa">as</span> <span style="color: #FF0000; background-color: #FFAAAA">$$</span>
+<span style="color: #0000aa">begin</span>
+  perform audit_proxy(<span style="color: #0000aa">old</span>, <span style="color: #0000aa">new</span>);
+  <span style="color: #0000aa">return</span> <span style="color: #0000aa">new</span>;
+<span style="color: #0000aa">end</span>;
+<span style="color: #FF0000; background-color: #FFAAAA">$$</span>;
 
-<pre><code class="language-sql">create function audit_trigger()
-  returns trigger
-  language plpgsql
-as $$
-begin
-  perform audit_proxy(old, new);
-  return new;
-end;
-$$;
-
-create function audit_proxy(old example, new example)
-  returns void
-  language plproxy
-as $$
-  cluster 'local';
+<span style="color: #0000aa">create</span> <span style="color: #0000aa">function</span> audit_proxy(<span style="color: #0000aa">old</span> example, <span style="color: #0000aa">new</span> example)
+  <span style="color: #0000aa">returns</span> void
+  <span style="color: #0000aa">language</span> plproxy
+<span style="color: #0000aa">as</span> <span style="color: #FF0000; background-color: #FFAAAA">$$</span>
+  <span style="color: #0000aa">cluster</span> <span style="color: #aa5500">&#39;local&#39;</span>;
   target audit;
-$$;
+<span style="color: #FF0000; background-color: #FFAAAA">$$</span>;
 
-create or replace function audit(old example, new example)
-  returns void
-  language SQL
-as $$
-  INSERT INTO audit(before, after) SELECT hstore(old), hstore(new);   
-$$;
+<span style="color: #0000aa">create</span> <span style="color: #0000aa">or</span> <span style="color: #0000aa">replace</span> <span style="color: #0000aa">function</span> audit(<span style="color: #0000aa">old</span> example, <span style="color: #0000aa">new</span> example)
+  <span style="color: #0000aa">returns</span> void
+  <span style="color: #0000aa">language</span> <span style="color: #0000aa">SQL</span>
+<span style="color: #0000aa">as</span> <span style="color: #FF0000; background-color: #FFAAAA">$$</span>
+  <span style="color: #0000aa">INSERT</span> <span style="color: #0000aa">INTO</span> audit(<span style="color: #0000aa">before</span>, <span style="color: #0000aa">after</span>) <span style="color: #0000aa">SELECT</span> hstore(<span style="color: #0000aa">old</span>), hstore(<span style="color: #0000aa">new</span>);   
+<span style="color: #FF0000; background-color: #FFAAAA">$$</span>;
 
-drop trigger if exists audit on example;
+<span style="color: #0000aa">drop</span> <span style="color: #0000aa">trigger</span> <span style="color: #0000aa">if</span> <span style="color: #0000aa">exists</span> audit <span style="color: #0000aa">on</span> example;
 
-    create trigger audit
-      after update on example
-          for each row          -- defaults to FOR EACH STATEMENT!
- execute procedure audit_trigger();
-</code></pre>
+    <span style="color: #0000aa">create</span> <span style="color: #0000aa">trigger</span> audit
+      <span style="color: #0000aa">after</span> <span style="color: #0000aa">update</span> <span style="color: #0000aa">on</span> example
+          <span style="color: #0000aa">for</span> <span style="color: #0000aa">each</span> <span style="color: #0000aa">row</span>          <span style="color: #aaaaaa; font-style: italic">-- defaults to FOR EACH STATEMENT!</span>
+ <span style="color: #0000aa">execute</span> <span style="color: #0000aa">procedure</span> audit_trigger();
+</pre></div>
 
 <p>What you can see in that new setup is that the trigger calls the function
 <code>audit_trigger</code> which in turns call the function
@@ -601,27 +597,26 @@ want to be able to audit in this fashion.</p>
 
 <p>Now here&rsquo;s what happens with those definitions and an aborted
 <code>UPDATE</code>:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>&gt; <span style="color: #0000aa">begin</span>;
+<span style="color: #0000aa">BEGIN</span>
 
-<pre><code class="language-sql">&gt; begin;
-BEGIN
+*&gt; <span style="color: #0000aa">update</span> example <span style="color: #0000aa">set</span> f1 = <span style="color: #aa5500">&#39;b&#39;</span> <span style="color: #0000aa">where</span> id = <span style="color: #009999">1</span>;
+<span style="color: #0000aa">UPDATE</span> <span style="color: #009999">1</span>
 
-*&gt; update example set f1 = 'b' where id = 1;
-UPDATE 1
+*&gt; <span style="color: #0000aa">rollback</span>;
+<span style="color: #0000aa">ROLLBACK</span>
 
-*&gt; rollback;
-ROLLBACK
+&gt; <span style="color: #0000aa">select</span> change_date,
+         <span style="color: #0000aa">before</span>, <span style="color: #0000aa">after</span>,
+         <span style="color: #0000aa">after</span>-<span style="color: #0000aa">before</span> <span style="color: #0000aa">as</span> diff
+    <span style="color: #0000aa">from</span> audit;
 
-&gt; select change_date,
-         before, after,
-         after-before as diff
-    from audit;
-
--[ RECORD 1 ]--------------------------------
-change_date | 2013-10-14 14:29:09.685105+02
-before      | &quot;f1&quot;=&gt;&quot;a&quot;, &quot;f2&quot;=&gt;&quot;a&quot;, &quot;id&quot;=&gt;&quot;1&quot;
-after       | &quot;f1&quot;=&gt;&quot;b&quot;, &quot;f2&quot;=&gt;&quot;a&quot;, &quot;id&quot;=&gt;&quot;1&quot;
-diff        | &quot;f1&quot;=&gt;&quot;b&quot;
-</code></pre>
+-[ RECORD <span style="color: #009999">1</span> ]<span style="color: #aaaaaa; font-style: italic">--------------------------------</span>
+change_date | <span style="color: #009999">2013</span>-<span style="color: #009999">10</span>-<span style="color: #009999">14</span> <span style="color: #009999">14</span>:<span style="color: #009999">29</span>:<span style="color: #009999">09</span>.<span style="color: #009999">685105</span>+<span style="color: #009999">02</span>
+<span style="color: #0000aa">before</span>      | <span style="color: #0000aa">&quot;f1&quot;</span>=&gt;<span style="color: #0000aa">&quot;a&quot;</span>, <span style="color: #0000aa">&quot;f2&quot;</span>=&gt;<span style="color: #0000aa">&quot;a&quot;</span>, <span style="color: #0000aa">&quot;id&quot;</span>=&gt;<span style="color: #0000aa">&quot;1&quot;</span>
+<span style="color: #0000aa">after</span>       | <span style="color: #0000aa">&quot;f1&quot;</span>=&gt;<span style="color: #0000aa">&quot;b&quot;</span>, <span style="color: #0000aa">&quot;f2&quot;</span>=&gt;<span style="color: #0000aa">&quot;a&quot;</span>, <span style="color: #0000aa">&quot;id&quot;</span>=&gt;<span style="color: #0000aa">&quot;1&quot;</span>
+diff        | <span style="color: #0000aa">&quot;f1&quot;</span>=&gt;<span style="color: #0000aa">&quot;b&quot;</span>
+</pre></div>
 
 <p>The aborted update has been captured in the audit logs!</p>
 
@@ -901,6 +896,33 @@ suitable in your case, now is the time to review your choice!</p>
           <div class="media">
             
             <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/05/find-the-missing-integer/">
+                <h3 class="media-heading">Find The Missing Integer</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>A recent interview question that I had to review was spelled like this:</p>
+
+<blockquote>
+<p>Find missing int element into array 1..100</p>
+</blockquote>
+
+<p>Of course at first read I got it wrong, you have only one integer to look
+for into the array. So while the obvious idea was to apply classing
+<em>sorting</em> techniques and minimize array traversal to handle complexity (time
+and space), it turns out there&rsquo;s a much simpler way to do it if you remember
+your math lessons from younger. But is is that much simpler?</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
               <a class="link-unstyled" href="http://tapoueh.org/blog/2016/04/pgconf-us-2016/">
                 <h3 class="media-heading">PGConf US 2016</h3>
               </a>
@@ -1118,29 +1140,6 @@ started: it provides with error handling for the
             <hr>
           </div>
         
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="http://tapoueh.org/blog/2014/10/meetup-postgresql-%C3%A0-paris/">
-                <h3 class="media-heading">Meetup PostgreSQL à Paris</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Oct 10, 2014
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p>Mercredi 8 octobre se tiendra le prochain
-<a href="http://www.meetup.com/PostgreSQL-User-Group-Paris/events/209650432/">Meetup PostgreSQL à Paris</a> dans les
-locaux de
-<a href="https://www.mozilla.org/en-US/contact/spaces/paris/">Mozilla Europe</a>, dont la capacité est de 90 personnes ! Venez
-nombreux !</p>
-
-<p></p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
       </div>
     </div>
     <div class="modal-footer">
@@ -1148,7 +1147,7 @@ nombreux !</p>
          data-message-zero=""
          data-message-one=""
          data-message-other="">
-         230 posts found
+         231 posts found
       </p>
     </div>
   </div>

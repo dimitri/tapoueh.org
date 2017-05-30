@@ -353,22 +353,20 @@ handful of them now.</p>
 
 <p>First thing to do is make
 <code>hstore</code> available in our test database:</p>
-
-<pre><code class="language-sql"># create extension hstore;
-CREATE EXTENSION
-</code></pre>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span># <span style="color: #0000aa">create</span> extension hstore;
+<span style="color: #0000aa">CREATE</span> EXTENSION
+</pre></div>
 
 <p>And now play with
 <em>hstore</em> in our table.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>&gt; <span style="color: #0000aa">select</span> hstore(foo) <span style="color: #0000aa">from</span> foo <span style="color: #0000aa">limit</span> <span style="color: #009999">1</span>;
 
-<pre><code class="language-sql">&gt; select hstore(foo) from foo limit 1;
-
- &quot;id&quot;=&gt;&quot;1&quot;,
- &quot;d_end&quot;=&gt;&quot;2013-08-23 11:34:53.129109+01&quot;,
- &quot;d_start&quot;=&gt;&quot;2013-08-23 11:16:04.869424+01&quot;,
- &quot;duration&quot;=&gt;NULL
-(1 row)
-</code></pre>
+ <span style="color: #0000aa">&quot;id&quot;</span>=&gt;<span style="color: #0000aa">&quot;1&quot;</span>,
+ <span style="color: #0000aa">&quot;d_end&quot;</span>=&gt;<span style="color: #0000aa">&quot;2013-08-23 11:34:53.129109+01&quot;</span>,
+ <span style="color: #0000aa">&quot;d_start&quot;</span>=&gt;<span style="color: #0000aa">&quot;2013-08-23 11:16:04.869424+01&quot;</span>,
+ <span style="color: #0000aa">&quot;duration&quot;</span>=&gt;<span style="color: #0000aa">NULL</span>
+(<span style="color: #009999">1</span> <span style="color: #0000aa">row</span>)
+</pre></div>
 
 <p>I edited the result for it to be easier to read, splitting it on more than
 one line, so if you try that at home you will have a different result.</p>
@@ -386,16 +384,15 @@ can use it as a
 <p>Now, hstore also provides the
 <code>#=</code> operator which will replace a
 given field in a row, look at that:</p>
-
-<pre><code class="language-sql">&gt; select (foo #= hstore('duration', '10 mins')).*
-    from foo
-   limit 1;
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>&gt; <span style="color: #0000aa">select</span> (foo #= hstore(<span style="color: #aa5500">&#39;duration&#39;</span>, <span style="color: #aa5500">&#39;10 mins&#39;</span>)).*
+    <span style="color: #0000aa">from</span> foo
+   <span style="color: #0000aa">limit</span> <span style="color: #009999">1</span>;
 
  id |            d_start            |             d_end             | duration 
-----+-------------------------------+-------------------------------+----------
-  1 | 2013-08-23 11:16:04.869424+01 | 2013-08-23 11:34:53.129109+01 | 00:10:00
-(1 row)
-</code></pre>
+<span style="color: #aaaaaa; font-style: italic">----+-------------------------------+-------------------------------+----------</span>
+  <span style="color: #009999">1</span> | <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">23</span> <span style="color: #009999">11</span>:<span style="color: #009999">16</span>:<span style="color: #009999">04</span>.<span style="color: #009999">869424</span>+<span style="color: #009999">01</span> | <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">23</span> <span style="color: #009999">11</span>:<span style="color: #009999">34</span>:<span style="color: #009999">53</span>.<span style="color: #009999">129109</span>+<span style="color: #009999">01</span> | <span style="color: #009999">00</span>:<span style="color: #009999">10</span>:<span style="color: #009999">00</span>
+(<span style="color: #009999">1</span> <span style="color: #0000aa">row</span>)
+</pre></div>
 
 <p>We just replaced the
 <code>duration</code> field with the value
@@ -409,29 +406,28 @@ expand the row type into its full definition.</p>
 <h1 id="the-generic-trigger-using-hstore">The generic trigger, using hstore</h1>
 
 <p>Now let&rsquo;s code the trigger:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">create</span> <span style="color: #0000aa">or</span> <span style="color: #0000aa">replace</span> <span style="color: #0000aa">function</span> tg_duration()
+ <span style="color: #aaaaaa; font-style: italic">-- (</span>
+ <span style="color: #aaaaaa; font-style: italic">--  start_name    text,</span>
+ <span style="color: #aaaaaa; font-style: italic">--  end_name      text,</span>
+ <span style="color: #aaaaaa; font-style: italic">--  duration      interval</span>
+ <span style="color: #aaaaaa; font-style: italic">-- )</span>
+ <span style="color: #0000aa">returns</span> <span style="color: #0000aa">trigger</span>
+ <span style="color: #0000aa">language</span> plpgsql
+<span style="color: #0000aa">as</span> <span style="color: #FF0000; background-color: #FFAAAA">$$</span>
+<span style="color: #0000aa">declare</span>
+   hash hstore := hstore(<span style="color: #0000aa">NEW</span>);
+   duration <span style="color: #00aaaa">interval</span>;
+<span style="color: #0000aa">begin</span>
+   duration :=  (hash -&gt; TG_ARGV[<span style="color: #009999">1</span>])::timestamptz
+              - (hash -&gt; TG_ARGV[<span style="color: #009999">0</span>])::timestamptz;
 
-<pre><code class="language-sql">create or replace function tg_duration()
- -- (
- --  start_name    text,
- --  end_name      text,
- --  duration      interval
- -- )
- returns trigger
- language plpgsql
-as $$
-declare
-   hash hstore := hstore(NEW);
-   duration interval;
-begin
-   duration :=  (hash -&gt; TG_ARGV[1])::timestamptz
-              - (hash -&gt; TG_ARGV[0])::timestamptz;
+   <span style="color: #0000aa">NEW</span> := <span style="color: #0000aa">NEW</span> #= hstore(TG_ARGV[<span style="color: #009999">2</span>], duration::<span style="color: #00aaaa">text</span>);
 
-   NEW := NEW #= hstore(TG_ARGV[2], duration::text);
-
-   RETURN NEW;
-end;
-$$;
-</code></pre>
+   <span style="color: #0000aa">RETURN</span> <span style="color: #0000aa">NEW</span>;
+<span style="color: #0000aa">end</span>;
+<span style="color: #FF0000; background-color: #FFAAAA">$$</span>;
+</pre></div>
 
 <p>And here&rsquo;s how to attach the trigger to our table. Don&rsquo;t forget the
 <code>FOR EACH
@@ -443,38 +439,36 @@ details of the
 
 <p>The other important point is how we pass down the column names as argument
 to the stored procedure above.</p>
-
-<pre><code class="language-sql">create trigger compute_duration
-     before insert on foo
-          for each row
- execute procedure tg_duration('d_start', 'd_end', 'duration');
-</code></pre>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">create</span> <span style="color: #0000aa">trigger</span> compute_duration
+     <span style="color: #0000aa">before</span> <span style="color: #0000aa">insert</span> <span style="color: #0000aa">on</span> foo
+          <span style="color: #0000aa">for</span> <span style="color: #0000aa">each</span> <span style="color: #0000aa">row</span>
+ <span style="color: #0000aa">execute</span> <span style="color: #0000aa">procedure</span> tg_duration(<span style="color: #aa5500">&#39;d_start&#39;</span>, <span style="color: #aa5500">&#39;d_end&#39;</span>, <span style="color: #aa5500">&#39;duration&#39;</span>);
+</pre></div>
 
 <p>Equiped with the trigger properly attached to our table, we can truncate it
 and insert again some rows:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>&gt; <span style="color: #0000aa">truncate</span> foo;
+&gt; <span style="color: #0000aa">insert</span> <span style="color: #0000aa">into</span> foo(d_start, d_end)
+       <span style="color: #0000aa">select</span> now() - <span style="color: #009999">10</span> * random() * <span style="color: #00aaaa">interval</span> <span style="color: #aa5500">&#39;1 min&#39;</span>,
+              now() + <span style="color: #009999">10</span> * random() * <span style="color: #00aaaa">interval</span> <span style="color: #aa5500">&#39;1 min&#39;</span>
+         <span style="color: #0000aa">from</span> generate_series(<span style="color: #009999">1</span>, <span style="color: #009999">10</span>);
 
-<pre><code class="language-sql">&gt; truncate foo;
-&gt; insert into foo(d_start, d_end)
-       select now() - 10 * random() * interval '1 min',
-              now() + 10 * random() * interval '1 min'
-         from generate_series(1, 10);
-
-&gt; select d_start, d_end, duration from foo;
+&gt; <span style="color: #0000aa">select</span> d_start, d_end, duration <span style="color: #0000aa">from</span> foo;
 
             d_start            |             d_end             |    duration     
--------------------------------+-------------------------------+-----------------
- 2013-08-23 11:56:20.185563+02 | 2013-08-23 12:00:08.188698+02 | 00:03:48.003135
- 2013-08-23 11:51:10.933982+02 | 2013-08-23 12:02:08.661389+02 | 00:10:57.727407
- 2013-08-23 11:59:44.214844+02 | 2013-08-23 12:00:57.852027+02 | 00:01:13.637183
- 2013-08-23 11:50:18.931533+02 | 2013-08-23 12:00:52.752111+02 | 00:10:33.820578
- 2013-08-23 11:53:18.811819+02 | 2013-08-23 12:06:30.419106+02 | 00:13:11.607287
- 2013-08-23 11:56:33.933842+02 | 2013-08-23 12:01:15.158055+02 | 00:04:41.224213
- 2013-08-23 11:57:26.881887+02 | 2013-08-23 12:05:53.724116+02 | 00:08:26.842229
- 2013-08-23 11:54:10.897691+02 | 2013-08-23 12:06:27.528534+02 | 00:12:16.630843
- 2013-08-23 11:52:17.22929+02  | 2013-08-23 12:02:08.647837+02 | 00:09:51.418547
- 2013-08-23 11:58:18.20224+02  | 2013-08-23 12:07:11.170435+02 | 00:08:52.968195
-(10 rows)
-</code></pre>
+<span style="color: #aaaaaa; font-style: italic">-------------------------------+-------------------------------+-----------------</span>
+ <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">23</span> <span style="color: #009999">11</span>:<span style="color: #009999">56</span>:<span style="color: #009999">20</span>.<span style="color: #009999">185563</span>+<span style="color: #009999">02</span> | <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">23</span> <span style="color: #009999">12</span>:<span style="color: #009999">00</span>:<span style="color: #009999">08</span>.<span style="color: #009999">188698</span>+<span style="color: #009999">02</span> | <span style="color: #009999">00</span>:<span style="color: #009999">03</span>:<span style="color: #009999">48</span>.<span style="color: #009999">003135</span>
+ <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">23</span> <span style="color: #009999">11</span>:<span style="color: #009999">51</span>:<span style="color: #009999">10</span>.<span style="color: #009999">933982</span>+<span style="color: #009999">02</span> | <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">23</span> <span style="color: #009999">12</span>:<span style="color: #009999">02</span>:<span style="color: #009999">08</span>.<span style="color: #009999">661389</span>+<span style="color: #009999">02</span> | <span style="color: #009999">00</span>:<span style="color: #009999">10</span>:<span style="color: #009999">57</span>.<span style="color: #009999">727407</span>
+ <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">23</span> <span style="color: #009999">11</span>:<span style="color: #009999">59</span>:<span style="color: #009999">44</span>.<span style="color: #009999">214844</span>+<span style="color: #009999">02</span> | <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">23</span> <span style="color: #009999">12</span>:<span style="color: #009999">00</span>:<span style="color: #009999">57</span>.<span style="color: #009999">852027</span>+<span style="color: #009999">02</span> | <span style="color: #009999">00</span>:<span style="color: #009999">01</span>:<span style="color: #009999">13</span>.<span style="color: #009999">637183</span>
+ <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">23</span> <span style="color: #009999">11</span>:<span style="color: #009999">50</span>:<span style="color: #009999">18</span>.<span style="color: #009999">931533</span>+<span style="color: #009999">02</span> | <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">23</span> <span style="color: #009999">12</span>:<span style="color: #009999">00</span>:<span style="color: #009999">52</span>.<span style="color: #009999">752111</span>+<span style="color: #009999">02</span> | <span style="color: #009999">00</span>:<span style="color: #009999">10</span>:<span style="color: #009999">33</span>.<span style="color: #009999">820578</span>
+ <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">23</span> <span style="color: #009999">11</span>:<span style="color: #009999">53</span>:<span style="color: #009999">18</span>.<span style="color: #009999">811819</span>+<span style="color: #009999">02</span> | <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">23</span> <span style="color: #009999">12</span>:<span style="color: #009999">06</span>:<span style="color: #009999">30</span>.<span style="color: #009999">419106</span>+<span style="color: #009999">02</span> | <span style="color: #009999">00</span>:<span style="color: #009999">13</span>:<span style="color: #009999">11</span>.<span style="color: #009999">607287</span>
+ <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">23</span> <span style="color: #009999">11</span>:<span style="color: #009999">56</span>:<span style="color: #009999">33</span>.<span style="color: #009999">933842</span>+<span style="color: #009999">02</span> | <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">23</span> <span style="color: #009999">12</span>:<span style="color: #009999">01</span>:<span style="color: #009999">15</span>.<span style="color: #009999">158055</span>+<span style="color: #009999">02</span> | <span style="color: #009999">00</span>:<span style="color: #009999">04</span>:<span style="color: #009999">41</span>.<span style="color: #009999">224213</span>
+ <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">23</span> <span style="color: #009999">11</span>:<span style="color: #009999">57</span>:<span style="color: #009999">26</span>.<span style="color: #009999">881887</span>+<span style="color: #009999">02</span> | <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">23</span> <span style="color: #009999">12</span>:<span style="color: #009999">05</span>:<span style="color: #009999">53</span>.<span style="color: #009999">724116</span>+<span style="color: #009999">02</span> | <span style="color: #009999">00</span>:<span style="color: #009999">08</span>:<span style="color: #009999">26</span>.<span style="color: #009999">842229</span>
+ <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">23</span> <span style="color: #009999">11</span>:<span style="color: #009999">54</span>:<span style="color: #009999">10</span>.<span style="color: #009999">897691</span>+<span style="color: #009999">02</span> | <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">23</span> <span style="color: #009999">12</span>:<span style="color: #009999">06</span>:<span style="color: #009999">27</span>.<span style="color: #009999">528534</span>+<span style="color: #009999">02</span> | <span style="color: #009999">00</span>:<span style="color: #009999">12</span>:<span style="color: #009999">16</span>.<span style="color: #009999">630843</span>
+ <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">23</span> <span style="color: #009999">11</span>:<span style="color: #009999">52</span>:<span style="color: #009999">17</span>.<span style="color: #009999">22929</span>+<span style="color: #009999">02</span>  | <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">23</span> <span style="color: #009999">12</span>:<span style="color: #009999">02</span>:<span style="color: #009999">08</span>.<span style="color: #009999">647837</span>+<span style="color: #009999">02</span> | <span style="color: #009999">00</span>:<span style="color: #009999">09</span>:<span style="color: #009999">51</span>.<span style="color: #009999">418547</span>
+ <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">23</span> <span style="color: #009999">11</span>:<span style="color: #009999">58</span>:<span style="color: #009999">18</span>.<span style="color: #009999">20224</span>+<span style="color: #009999">02</span>  | <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">23</span> <span style="color: #009999">12</span>:<span style="color: #009999">07</span>:<span style="color: #009999">11</span>.<span style="color: #009999">170435</span>+<span style="color: #009999">02</span> | <span style="color: #009999">00</span>:<span style="color: #009999">08</span>:<span style="color: #009999">52</span>.<span style="color: #009999">968195</span>
+(<span style="color: #009999">10</span> <span style="color: #0000aa">rows</span>)
+</pre></div>
 
 <h1 id="conclusion">Conclusion</h1>
 
@@ -734,6 +728,33 @@ procedure that will end up alike and a pain to maintain.</p>
           <div class="media">
             
             <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/05/find-the-missing-integer/">
+                <h3 class="media-heading">Find The Missing Integer</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>A recent interview question that I had to review was spelled like this:</p>
+
+<blockquote>
+<p>Find missing int element into array 1..100</p>
+</blockquote>
+
+<p>Of course at first read I got it wrong, you have only one integer to look
+for into the array. So while the obvious idea was to apply classing
+<em>sorting</em> techniques and minimize array traversal to handle complexity (time
+and space), it turns out there&rsquo;s a much simpler way to do it if you remember
+your math lessons from younger. But is is that much simpler?</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
               <a class="link-unstyled" href="http://tapoueh.org/blog/2016/04/pgconf-us-2016/">
                 <h3 class="media-heading">PGConf US 2016</h3>
               </a>
@@ -951,29 +972,6 @@ started: it provides with error handling for the
             <hr>
           </div>
         
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="http://tapoueh.org/blog/2014/10/meetup-postgresql-%C3%A0-paris/">
-                <h3 class="media-heading">Meetup PostgreSQL à Paris</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Oct 10, 2014
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p>Mercredi 8 octobre se tiendra le prochain
-<a href="http://www.meetup.com/PostgreSQL-User-Group-Paris/events/209650432/">Meetup PostgreSQL à Paris</a> dans les
-locaux de
-<a href="https://www.mozilla.org/en-US/contact/spaces/paris/">Mozilla Europe</a>, dont la capacité est de 90 personnes ! Venez
-nombreux !</p>
-
-<p></p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
       </div>
     </div>
     <div class="modal-footer">
@@ -981,7 +979,7 @@ nombreux !</p>
          data-message-zero=""
          data-message-one=""
          data-message-other="">
-         230 posts found
+         231 posts found
       </p>
     </div>
   </div>

@@ -277,70 +277,67 @@ some numbers of interest for the exercise here.</p>
 
 <p>To import the data set, we first need a table, then a
 <code>COPY</code> command:</p>
-
-<pre><code class="language-sql">CREATE TABLE lion1906 (
-  insee       text,
-  nom         text,
-  altitude    integer,
-  code_postal text,
-  longitude   double precision,
-  latitude    double precision,
-  pop99       bigint,
-  surface     double precision
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">CREATE</span> <span style="color: #0000aa">TABLE</span> lion1906 (
+  insee       <span style="color: #00aaaa">text</span>,
+  nom         <span style="color: #00aaaa">text</span>,
+  altitude    <span style="color: #00aaaa">integer</span>,
+  code_postal <span style="color: #00aaaa">text</span>,
+  longitude   double <span style="color: #0000aa">precision</span>,
+  latitude    double <span style="color: #0000aa">precision</span>,
+  pop99       <span style="color: #00aaaa">bigint</span>,
+  surface     double <span style="color: #0000aa">precision</span>
 );
 
-\copy lion1906 from 'villes.csv' with csv header delimiter ';' encoding 'latin1'
-</code></pre>
+<span style="color: #FF0000; background-color: #FFAAAA">\</span><span style="color: #0000aa">copy</span> lion1906 <span style="color: #0000aa">from</span> <span style="color: #aa5500">&#39;villes.csv&#39;</span> <span style="color: #0000aa">with</span> csv header <span style="color: #0000aa">delimiter</span> <span style="color: #aa5500">&#39;;&#39;</span> <span style="color: #0000aa">encoding</span> <span style="color: #aa5500">&#39;latin1&#39;</span>
+</pre></div>
 
 <p>With that data in place, we can find the 10 nearest towns of a random
 choosing of us, let&rsquo;s pick
 <em>Villeurbanne</em> which is in the region of
 <em>Lyon</em>.</p>
-
-<pre><code class="language-sql">select code_postal, nom, pop99
-     from lion1906
- order by point(longitude, latitude) &lt;-&gt;
-          (select point(longitude, latitude)
-             from lion1906
-            where nom = 'Villeurbanne')
-    limit 10;
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> code_postal, nom, pop99
+     <span style="color: #0000aa">from</span> lion1906
+ <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> point(longitude, latitude) &lt;-&gt;
+          (<span style="color: #0000aa">select</span> point(longitude, latitude)
+             <span style="color: #0000aa">from</span> lion1906
+            <span style="color: #0000aa">where</span> nom = <span style="color: #aa5500">&#39;Villeurbanne&#39;</span>)
+    <span style="color: #0000aa">limit</span> <span style="color: #009999">10</span>;
 
  code_postal |          nom           | pop99  
--------------+------------------------+--------
- 69100       | Villeurbanne           | 124215
- 69300       | Caluire-et-Cuire       |  41233
- 69120       | Vaulx-en-Velin         |  39154
- 69580       | Sathonay-Camp          |   4336
- 69140       | Rillieux-la-Pape       |  28367
- 69000       | Lyon                   | 445452
- 69500       | Bron                   |  37369
- 69580       | Sathonay-Village       |   1693
- 01700       | Neyron                 |   2157
- 69660       | Collonges-au-Mont-d'Or |   3420
-(10 rows)
-</code></pre>
+<span style="color: #aaaaaa; font-style: italic">-------------+------------------------+--------</span>
+ <span style="color: #009999">69100</span>       | Villeurbanne           | <span style="color: #009999">124215</span>
+ <span style="color: #009999">69300</span>       | Caluire-et-Cuire       |  <span style="color: #009999">41233</span>
+ <span style="color: #009999">69120</span>       | Vaulx-en-Velin         |  <span style="color: #009999">39154</span>
+ <span style="color: #009999">69580</span>       | Sathonay-Camp          |   <span style="color: #009999">4336</span>
+ <span style="color: #009999">69140</span>       | Rillieux-la-Pape       |  <span style="color: #009999">28367</span>
+ <span style="color: #009999">69000</span>       | Lyon                   | <span style="color: #009999">445452</span>
+ <span style="color: #009999">69500</span>       | Bron                   |  <span style="color: #009999">37369</span>
+ <span style="color: #009999">69580</span>       | Sathonay-Village       |   <span style="color: #009999">1693</span>
+ <span style="color: #009999">01700</span>       | Neyron                 |   <span style="color: #009999">2157</span>
+ <span style="color: #009999">69660</span>       | Collonges-au-Mont-d<span style="color: #FF0000; background-color: #FFAAAA">&#39;</span><span style="color: #0000aa">Or</span> |   <span style="color: #009999">3420</span>
+(<span style="color: #009999">10</span> <span style="color: #0000aa">rows</span>)
+</pre></div>
 
 <p>We find Lyon in our list in there, and we want the query now to return only
 that one as it has the greatest number of inhabitants in the list:</p>
-
-<pre><code class="language-sql">with neighbours as (
-   select code_postal, nom, pop99
-     from lion1906
- order by point(longitude, latitude) &lt;-&gt;
-          (select point(longitude, latitude)
-             from lion1906 where nom = 'Villeurbanne')
-    limit 10
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">with</span> neighbours <span style="color: #0000aa">as</span> (
+   <span style="color: #0000aa">select</span> code_postal, nom, pop99
+     <span style="color: #0000aa">from</span> lion1906
+ <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> point(longitude, latitude) &lt;-&gt;
+          (<span style="color: #0000aa">select</span> point(longitude, latitude)
+             <span style="color: #0000aa">from</span> lion1906 <span style="color: #0000aa">where</span> nom = <span style="color: #aa5500">&#39;Villeurbanne&#39;</span>)
+    <span style="color: #0000aa">limit</span> <span style="color: #009999">10</span>
 )
-  select *
-    from neighbours
-order by pop99 desc
-   limit 1;
+  <span style="color: #0000aa">select</span> *
+    <span style="color: #0000aa">from</span> neighbours
+<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> pop99 <span style="color: #0000aa">desc</span>
+   <span style="color: #0000aa">limit</span> <span style="color: #009999">1</span>;
 
  code_postal | nom  | pop99  
--------------+------+--------
- 69000       | Lyon | 445452
-(1 row)
-</code></pre>
+<span style="color: #aaaaaa; font-style: italic">-------------+------+--------</span>
+ <span style="color: #009999">69000</span>       | Lyon | <span style="color: #009999">445452</span>
+(<span style="color: #009999">1</span> <span style="color: #0000aa">row</span>)
+</pre></div>
 
 <p>Well, thank you PostgreSQL, that was easy!</p>
 
@@ -390,22 +387,21 @@ data this time, from
 </div>
 
 </center></p>
-
-<pre><code class="language-sql">CREATE TABLE maxmind_worldcities (
-	country_code text,
-	city_lower text,
-	city_normal text,
-	region_code text DEFAULT '',
-	population INT DEFAULT '0',
-	latitude float8 DEFAULT '0',
-	longitude float8 DEFAULT '0'
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">CREATE</span> <span style="color: #0000aa">TABLE</span> maxmind_worldcities (
+	country_code <span style="color: #00aaaa">text</span>,
+	city_lower <span style="color: #00aaaa">text</span>,
+	city_normal <span style="color: #00aaaa">text</span>,
+	region_code <span style="color: #00aaaa">text</span> <span style="color: #0000aa">DEFAULT</span> <span style="color: #aa5500">&#39;&#39;</span>,
+	population <span style="color: #00aaaa">INT</span> <span style="color: #0000aa">DEFAULT</span> <span style="color: #aa5500">&#39;0&#39;</span>,
+	latitude float8 <span style="color: #0000aa">DEFAULT</span> <span style="color: #aa5500">&#39;0&#39;</span>,
+	longitude float8 <span style="color: #0000aa">DEFAULT</span> <span style="color: #aa5500">&#39;0&#39;</span>
 );
  
-\copy maxmind_worldcities FROM '/tmp/worldcitiespop.txt' WITH  DELIMITER ',' QUOTE E'\f' CSV HEADER ENCODING 'LATIN1';
+<span style="color: #FF0000; background-color: #FFAAAA">\</span><span style="color: #0000aa">copy</span> maxmind_worldcities <span style="color: #0000aa">FROM</span> <span style="color: #aa5500">&#39;/tmp/worldcitiespop.txt&#39;</span> <span style="color: #0000aa">WITH</span>  <span style="color: #0000aa">DELIMITER</span> <span style="color: #aa5500">&#39;,&#39;</span> QUOTE E<span style="color: #aa5500">&#39;\f&#39;</span> CSV HEADER <span style="color: #0000aa">ENCODING</span> <span style="color: #aa5500">&#39;LATIN1&#39;</span>;
 
-alter table maxmind_worldcities add column loc point;
-update maxmind_worldcities set loc = point(longitude, latitude);
-</code></pre>
+<span style="color: #0000aa">alter</span> <span style="color: #0000aa">table</span> maxmind_worldcities <span style="color: #0000aa">add</span> <span style="color: #0000aa">column</span> loc point;
+<span style="color: #0000aa">update</span> maxmind_worldcities <span style="color: #0000aa">set</span> loc = point(longitude, latitude);
+</pre></div>
 
 <p>This time you can see that I created an extra column with the
 <em>location</em> in
@@ -414,48 +410,46 @@ before.</p>
 
 <p>Now is the time to test that data set and hopefully fetch the same result as
 before when we only had french cities loaded:</p>
-
-<pre><code class="language-sql">with neighbours as (
-   select country_code, city_lower, population
-     from maxmind_worldcities
-    where population is not null
- order by loc &lt;-&gt;
-          (select loc
-             from maxmind_worldcities
-            where city_lower = 'villeurbanne')
-   limit 10
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">with</span> neighbours <span style="color: #0000aa">as</span> (
+   <span style="color: #0000aa">select</span> country_code, city_lower, population
+     <span style="color: #0000aa">from</span> maxmind_worldcities
+    <span style="color: #0000aa">where</span> population <span style="color: #0000aa">is</span> <span style="color: #0000aa">not</span> <span style="color: #0000aa">null</span>
+ <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> loc &lt;-&gt;
+          (<span style="color: #0000aa">select</span> loc
+             <span style="color: #0000aa">from</span> maxmind_worldcities
+            <span style="color: #0000aa">where</span> city_lower = <span style="color: #aa5500">&#39;villeurbanne&#39;</span>)
+   <span style="color: #0000aa">limit</span> <span style="color: #009999">10</span>
 )
-   select * from neighbours order by population desc limit 1;
+   <span style="color: #0000aa">select</span> * <span style="color: #0000aa">from</span> neighbours <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> population <span style="color: #0000aa">desc</span> <span style="color: #0000aa">limit</span> <span style="color: #009999">1</span>;
 
   country_code | city_lower | population 
---------------+------------+------------
- fr           | lyon       |     463700
-(1 row)
-</code></pre>
+<span style="color: #aaaaaa; font-style: italic">--------------+------------+------------</span>
+ fr           | lyon       |     <span style="color: #009999">463700</span>
+(<span style="color: #009999">1</span> <span style="color: #0000aa">row</span>)
+</pre></div>
 
 <p>Ok, looks like we&rsquo;re all set for the real problem. Now we want to pick for
 each of those cities it&rsquo;s nearest neighboor, so here&rsquo;s how to do that:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">create</span> <span style="color: #0000aa">index</span> <span style="color: #0000aa">on</span> maxmind_worldcities(country_code, region_code, city_lower);
+<span style="color: #0000aa">create</span> <span style="color: #0000aa">index</span> <span style="color: #0000aa">on</span> maxmind_worldcities <span style="color: #0000aa">using</span> gist(loc);
 
-<pre><code class="language-sql">create index on maxmind_worldcities(country_code, region_code, city_lower);
-create index on maxmind_worldcities using gist(loc);
-
-create table maxmind_neighbours as
-  select country_code, region_code, city_lower,
-         (with neighbours as (
-             select country_code, city_lower, population
-               from maxmind_worldcities
-              where population is not null
-                    and country_code = wc.country_code
-                    and region_code = wc.region_code
-           order by loc &lt;-&gt; wc.loc
-             limit 10)
-             select city_lower
-               from neighbours
-           order by population desc
-              limit 1
-         ) as neighbour
-    from maxmind_worldcities wc ;         
-</code></pre>
+<span style="color: #0000aa">create</span> <span style="color: #0000aa">table</span> maxmind_neighbours <span style="color: #0000aa">as</span>
+  <span style="color: #0000aa">select</span> country_code, region_code, city_lower,
+         (<span style="color: #0000aa">with</span> neighbours <span style="color: #0000aa">as</span> (
+             <span style="color: #0000aa">select</span> country_code, city_lower, population
+               <span style="color: #0000aa">from</span> maxmind_worldcities
+              <span style="color: #0000aa">where</span> population <span style="color: #0000aa">is</span> <span style="color: #0000aa">not</span> <span style="color: #0000aa">null</span>
+                    <span style="color: #0000aa">and</span> country_code = wc.country_code
+                    <span style="color: #0000aa">and</span> region_code = wc.region_code
+           <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> loc &lt;-&gt; wc.loc
+             <span style="color: #0000aa">limit</span> <span style="color: #009999">10</span>)
+             <span style="color: #0000aa">select</span> city_lower
+               <span style="color: #0000aa">from</span> neighbours
+           <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> population <span style="color: #0000aa">desc</span>
+              <span style="color: #0000aa">limit</span> <span style="color: #009999">1</span>
+         ) <span style="color: #0000aa">as</span> neighbour
+    <span style="color: #0000aa">from</span> maxmind_worldcities wc ;         
+</pre></div>
 
 <p>To be fair, I have to tell you that this query took almost 2 hours to
 complete on my laptop here, but as I&rsquo;m doing that for friend and a blog
@@ -466,31 +460,29 @@ performances: I didn&rsquo;t try.</p>
 <p>With that in hands we can now check some cities and their
 <em>biggest</em>
 neighbours, as in the following query:</p>
-
-<pre><code class="language-sql">select * from maxmind_neighbours where city_lower = 'villeurbanne';
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> * <span style="color: #0000aa">from</span> maxmind_neighbours <span style="color: #0000aa">where</span> city_lower = <span style="color: #aa5500">&#39;villeurbanne&#39;</span>;
  country_code | region_code |  city_lower  | neighbour 
---------------+-------------+--------------+-----------
+<span style="color: #aaaaaa; font-style: italic">--------------+-------------+--------------+-----------</span>
  fr           | B9          | villeurbanne | lyon
-(1 row)
-</code></pre>
+(<span style="color: #009999">1</span> <span style="color: #0000aa">row</span>)
+</pre></div>
 
 <p>And looking for New-York City suburbs I did find a
 <em>chinatown</em>, which is a
 pretty common smaller town name apparently:</p>
-
-<pre><code class="language-sql">select * from maxmind_neighbours where city_lower = 'chinatown';
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> * <span style="color: #0000aa">from</span> maxmind_neighbours <span style="color: #0000aa">where</span> city_lower = <span style="color: #aa5500">&#39;chinatown&#39;</span>;
  country_code | region_code | city_lower |   neighbour   
---------------+-------------+------------+---------------
- sb           | 08          | chinatown  | honiara
+<span style="color: #aaaaaa; font-style: italic">--------------+-------------+------------+---------------</span>
+ sb           | <span style="color: #009999">08</span>          | chinatown  | honiara
  us           | CA          | chinatown  | san francisco
  us           | DC          | chinatown  | washington
  us           | HI          | chinatown  | honolulu
  us           | IL          | chinatown  | chicago
  us           | MT          | chinatown  | missoula
  us           | NV          | chinatown  | reno
- us           | NY          | chinatown  | new york
-(8 rows)
-</code></pre>
+ us           | NY          | chinatown  | <span style="color: #0000aa">new</span> york
+(<span style="color: #009999">8</span> <span style="color: #0000aa">rows</span>)
+</pre></div>
 
 <h1 id="big-cities-in-the-big-world">Big Cities in the big world</h1>
 
@@ -529,63 +521,61 @@ pretty common smaller town name apparently:</p>
 <p><center><em>We might need to change some of our views</em></center></p>
 
 <p>So, let&rsquo;s see how many smaller towns each of those random big cities have:</p>
-
-<pre><code class="language-sql">select country_code, region_code, neighbour, count(*)
-    from maxmind_neighbours
-   where neighbour in ('london', 'new york', 'moscow',
-                       'paris', 'tokyo', 'sao polo', 'chicago')
-group by country_code, region_code, neighbour;
- country_code | region_code | neighbour | count 
---------------+-------------+-----------+-------
- gb           | H9          | london    |     2
- jp           | 40          | tokyo     |   414
- us           | NY          | new york  |   131
- ca           | 08          | london    |    16
- ru           | 48          | moscow    |   245
- fr           | A8          | paris     |    16
- us           | IL          | chicago   |    13
-(7 rows)
-</code></pre>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> country_code, region_code, neighbour, <span style="color: #0000aa">count</span>(*)
+    <span style="color: #0000aa">from</span> maxmind_neighbours
+   <span style="color: #0000aa">where</span> neighbour <span style="color: #0000aa">in</span> (<span style="color: #aa5500">&#39;london&#39;</span>, <span style="color: #aa5500">&#39;new york&#39;</span>, <span style="color: #aa5500">&#39;moscow&#39;</span>,
+                       <span style="color: #aa5500">&#39;paris&#39;</span>, <span style="color: #aa5500">&#39;tokyo&#39;</span>, <span style="color: #aa5500">&#39;sao polo&#39;</span>, <span style="color: #aa5500">&#39;chicago&#39;</span>)
+<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> country_code, region_code, neighbour;
+ country_code | region_code | neighbour | <span style="color: #0000aa">count</span> 
+<span style="color: #aaaaaa; font-style: italic">--------------+-------------+-----------+-------</span>
+ gb           | H9          | london    |     <span style="color: #009999">2</span>
+ jp           | <span style="color: #009999">40</span>          | tokyo     |   <span style="color: #009999">414</span>
+ us           | NY          | <span style="color: #0000aa">new</span> york  |   <span style="color: #009999">131</span>
+ ca           | <span style="color: #009999">08</span>          | london    |    <span style="color: #009999">16</span>
+ ru           | <span style="color: #009999">48</span>          | moscow    |   <span style="color: #009999">245</span>
+ fr           | A8          | paris     |    <span style="color: #009999">16</span>
+ us           | IL          | chicago   |    <span style="color: #009999">13</span>
+(<span style="color: #009999">7</span> <span style="color: #0000aa">rows</span>)
+</pre></div>
 
 <p>And now let&rsquo;s be fair and see where are the cities with the greatest number
 of towns nearby them, with the following query:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> country_code, region_code, neighbour, <span style="color: #0000aa">count</span>(*)
+    <span style="color: #0000aa">from</span> maxmind_neighbours
+   <span style="color: #0000aa">where</span> neighbour <span style="color: #0000aa">is</span> <span style="color: #0000aa">not</span> <span style="color: #0000aa">null</span>
+<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> country_code, region_code, neighbour
+<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> <span style="color: #009999">4</span> <span style="color: #0000aa">desc</span>
+   <span style="color: #0000aa">limit</span> <span style="color: #009999">25</span>;
 
-<pre><code class="language-sql">select country_code, region_code, neighbour, count(*)
-    from maxmind_neighbours
-   where neighbour is not null
-group by country_code, region_code, neighbour
-order by 4 desc
-   limit 25;
-
- country_code | region_code | neighbour  | count 
---------------+-------------+------------+-------
- cn           | 03          | nanchang   | 16759
- cn           | 26          | xian       | 12864
- id           | 18          | kupang     | 10715
- cn           | 24          | taiyuan    | 10550
- mm           | 11          | taunggyi   | 10253
- id           | 38          | makasar    |  9471
- ir           | 15          | ahvaz      |  9461
- id           | 01          | banda aceh |  9161
- cn           | 14          | lasa       |  8841
- cn           | 15          | lanzhou    |  8618
- ir           | 29          | kerman     |  8579
- id           | 26          | medan      |  7787
- ir           | 04          | iranshahr  |  7249
- ir           | 07          | shiraz     |  7219
- ma           | 55          | agadir     |  7121
- ir           | 42          | mashhad    |  7107
- af           | 08          | gazni      |  7011
- ir           | 33          | tabriz     |  6586
- cn           | 01          | hefei      |  6521
- bd           | 81          | dhaka      |  6480
- ir           | 08          | rasht      |  6471
- id           | 17          | mataram    |  6467
- id           | 33          | cilegon    |  6287
- af           | 23          | qandahar   |  6213
- cn           | 07          | fuzhou     |  6089
-(25 rows)
-</code></pre>
+ country_code | region_code | neighbour  | <span style="color: #0000aa">count</span> 
+<span style="color: #aaaaaa; font-style: italic">--------------+-------------+------------+-------</span>
+ cn           | <span style="color: #009999">03</span>          | nanchang   | <span style="color: #009999">16759</span>
+ cn           | <span style="color: #009999">26</span>          | xian       | <span style="color: #009999">12864</span>
+ id           | <span style="color: #009999">18</span>          | kupang     | <span style="color: #009999">10715</span>
+ cn           | <span style="color: #009999">24</span>          | taiyuan    | <span style="color: #009999">10550</span>
+ mm           | <span style="color: #009999">11</span>          | taunggyi   | <span style="color: #009999">10253</span>
+ id           | <span style="color: #009999">38</span>          | makasar    |  <span style="color: #009999">9471</span>
+ ir           | <span style="color: #009999">15</span>          | ahvaz      |  <span style="color: #009999">9461</span>
+ id           | <span style="color: #009999">01</span>          | banda aceh |  <span style="color: #009999">9161</span>
+ cn           | <span style="color: #009999">14</span>          | lasa       |  <span style="color: #009999">8841</span>
+ cn           | <span style="color: #009999">15</span>          | lanzhou    |  <span style="color: #009999">8618</span>
+ ir           | <span style="color: #009999">29</span>          | kerman     |  <span style="color: #009999">8579</span>
+ id           | <span style="color: #009999">26</span>          | medan      |  <span style="color: #009999">7787</span>
+ ir           | <span style="color: #009999">04</span>          | iranshahr  |  <span style="color: #009999">7249</span>
+ ir           | <span style="color: #009999">07</span>          | shiraz     |  <span style="color: #009999">7219</span>
+ ma           | <span style="color: #009999">55</span>          | agadir     |  <span style="color: #009999">7121</span>
+ ir           | <span style="color: #009999">42</span>          | mashhad    |  <span style="color: #009999">7107</span>
+ af           | <span style="color: #009999">08</span>          | gazni      |  <span style="color: #009999">7011</span>
+ ir           | <span style="color: #009999">33</span>          | tabriz     |  <span style="color: #009999">6586</span>
+ cn           | <span style="color: #009999">01</span>          | hefei      |  <span style="color: #009999">6521</span>
+ bd           | <span style="color: #009999">81</span>          | dhaka      |  <span style="color: #009999">6480</span>
+ ir           | <span style="color: #009999">08</span>          | rasht      |  <span style="color: #009999">6471</span>
+ id           | <span style="color: #009999">17</span>          | mataram    |  <span style="color: #009999">6467</span>
+ id           | <span style="color: #009999">33</span>          | cilegon    |  <span style="color: #009999">6287</span>
+ af           | <span style="color: #009999">23</span>          | qandahar   |  <span style="color: #009999">6213</span>
+ cn           | <span style="color: #009999">07</span>          | fuzhou     |  <span style="color: #009999">6089</span>
+(<span style="color: #009999">25</span> <span style="color: #0000aa">rows</span>)
+</pre></div>
 
               
             </div>
@@ -834,6 +824,33 @@ order by 4 desc
           <div class="media">
             
             <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/05/find-the-missing-integer/">
+                <h3 class="media-heading">Find The Missing Integer</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>A recent interview question that I had to review was spelled like this:</p>
+
+<blockquote>
+<p>Find missing int element into array 1..100</p>
+</blockquote>
+
+<p>Of course at first read I got it wrong, you have only one integer to look
+for into the array. So while the obvious idea was to apply classing
+<em>sorting</em> techniques and minimize array traversal to handle complexity (time
+and space), it turns out there&rsquo;s a much simpler way to do it if you remember
+your math lessons from younger. But is is that much simpler?</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
               <a class="link-unstyled" href="http://tapoueh.org/blog/2016/04/pgconf-us-2016/">
                 <h3 class="media-heading">PGConf US 2016</h3>
               </a>
@@ -1051,29 +1068,6 @@ started: it provides with error handling for the
             <hr>
           </div>
         
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="http://tapoueh.org/blog/2014/10/meetup-postgresql-%C3%A0-paris/">
-                <h3 class="media-heading">Meetup PostgreSQL à Paris</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Oct 10, 2014
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p>Mercredi 8 octobre se tiendra le prochain
-<a href="http://www.meetup.com/PostgreSQL-User-Group-Paris/events/209650432/">Meetup PostgreSQL à Paris</a> dans les
-locaux de
-<a href="https://www.mozilla.org/en-US/contact/spaces/paris/">Mozilla Europe</a>, dont la capacité est de 90 personnes ! Venez
-nombreux !</p>
-
-<p></p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
       </div>
     </div>
     <div class="modal-footer">
@@ -1081,7 +1075,7 @@ nombreux !</p>
          data-message-zero=""
          data-message-one=""
          data-message-other="">
-         230 posts found
+         231 posts found
       </p>
     </div>
   </div>

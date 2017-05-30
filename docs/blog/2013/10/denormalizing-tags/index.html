@@ -337,34 +337,33 @@ using the
 relations here, and we realize they are using the
 <a href="http://www.sqlite.org/autoinc.html">64-bit signed integer ROWID</a> system column. We need something comparable to
 be able to make sense of the data:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>&gt; <span style="color: #0000aa">alter</span> <span style="color: #0000aa">table</span> tags <span style="color: #0000aa">add</span> <span style="color: #0000aa">column</span> rowid <span style="color: #00aaaa">serial</span>;
+<span style="color: #0000aa">ALTER</span> <span style="color: #0000aa">TABLE</span>
+Time: <span style="color: #009999">3177</span>.<span style="color: #009999">603</span> ms
 
-<pre><code class="language-sql">&gt; alter table tags add column rowid serial;
-ALTER TABLE
-Time: 3177.603 ms
+&gt; <span style="color: #0000aa">alter</span> <span style="color: #0000aa">table</span> tids <span style="color: #0000aa">add</span> <span style="color: #0000aa">column</span> rowid <span style="color: #00aaaa">serial</span>;
+<span style="color: #0000aa">ALTER</span> <span style="color: #0000aa">TABLE</span>
+Time: <span style="color: #009999">2528</span>.<span style="color: #009999">680</span> ms
 
-&gt; alter table tids add column rowid serial;
-ALTER TABLE
-Time: 2528.680 ms
-
-&gt; SELECT tags.tag, COUNT(tid_tag.tid)
-    FROM tid_tag, tags
-   WHERE tid_tag.tag=tags.ROWID and tags.tag ~* 'setzer'
-GROUP BY tags.tag;
+&gt; <span style="color: #0000aa">SELECT</span> tags.tag, <span style="color: #0000aa">COUNT</span>(tid_tag.tid)
+    <span style="color: #0000aa">FROM</span> tid_tag, tags
+   <span style="color: #0000aa">WHERE</span> tid_tag.tag=tags.ROWID <span style="color: #0000aa">and</span> tags.tag ~* <span style="color: #aa5500">&#39;setzer&#39;</span>
+<span style="color: #0000aa">GROUP</span> <span style="color: #0000aa">BY</span> tags.tag;
              
-             tag             | count 
------------------------------+-------
- the brian setzer orchestra  |     1
- Setzer                      |    13
- rockabilly Setzer style     |     4
- setzer is a true guitarhero |     9
- brian setzer orchestra      |     3
- brian setzer is GOD         |     1
- Brian Setzer                |     1
- brain setzer orchestra      |     2
-(8 rows)
+             tag             | <span style="color: #0000aa">count</span> 
+<span style="color: #aaaaaa; font-style: italic">-----------------------------+-------</span>
+ the brian setzer orchestra  |     <span style="color: #009999">1</span>
+ Setzer                      |    <span style="color: #009999">13</span>
+ rockabilly Setzer style     |     <span style="color: #009999">4</span>
+ setzer <span style="color: #0000aa">is</span> a <span style="color: #0000aa">true</span> guitarhero |     <span style="color: #009999">9</span>
+ brian setzer orchestra      |     <span style="color: #009999">3</span>
+ brian setzer <span style="color: #0000aa">is</span> GOD         |     <span style="color: #009999">1</span>
+ Brian Setzer                |     <span style="color: #009999">1</span>
+ brain setzer orchestra      |     <span style="color: #009999">2</span>
+(<span style="color: #009999">8</span> <span style="color: #0000aa">rows</span>)
 
-Time: 644.826 ms
-</code></pre>
+Time: <span style="color: #009999">644</span>.<span style="color: #009999">826</span> ms
+</pre></div>
 
 <p>Here the query is mainly doing a
 <em>JOIN</em> in between the
@@ -396,10 +395,9 @@ possibly combined using the operators &amp; (AND), | (OR), and ! (NOT).
 Parentheses can be used as needed. For example, the query 1&amp;(2|3) matches
 arrays that contain 1 and also contain either 2 or 3.</p>
 </blockquote>
-
-<pre><code class="language-sql">&gt; create extension intarray;
-CREATE EXTENSION
-</code></pre>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>&gt; <span style="color: #0000aa">create</span> extension intarray;
+<span style="color: #0000aa">CREATE</span> EXTENSION
+</pre></div>
 
 <p>The way the
 <em>intarray</em> extension works, we need to build a new table that
@@ -407,35 +405,33 @@ contains for each track the list of tags it&rsquo;s been associated with, as an
 array of integers. We&rsquo;re going to use our
 <em>rowid</em> identifier for that purpose,
 as in the following query:</p>
-
-<pre><code class="language-sql">&gt;  SELECT tt.tid, array_agg(tags.rowid) as tags
-     FROM tags JOIN tid_tag tt ON tags.rowid = tt.tag
- GROUP BY tt.tid
-    LIMIT 3;
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>&gt;  <span style="color: #0000aa">SELECT</span> tt.tid, array_agg(tags.rowid) <span style="color: #0000aa">as</span> tags
+     <span style="color: #0000aa">FROM</span> tags <span style="color: #0000aa">JOIN</span> tid_tag tt <span style="color: #0000aa">ON</span> tags.rowid = tt.tag
+ <span style="color: #0000aa">GROUP</span> <span style="color: #0000aa">BY</span> tt.tid
+    <span style="color: #0000aa">LIMIT</span> <span style="color: #009999">3</span>;
     
  tid |   tags    
------+-----------
-   1 | {1,2}
-   2 | {3,4}
-   3 | {5,6,7,8}
-(3 rows)
+<span style="color: #aaaaaa; font-style: italic">-----+-----------</span>
+   <span style="color: #009999">1</span> | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">1</span>,<span style="color: #009999">2</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>
+   <span style="color: #009999">2</span> | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">3</span>,<span style="color: #009999">4</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>
+   <span style="color: #009999">3</span> | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">5</span>,<span style="color: #009999">6</span>,<span style="color: #009999">7</span>,<span style="color: #009999">8</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>
+(<span style="color: #009999">3</span> <span style="color: #0000aa">rows</span>)
 
-Time: 942.074 ms
-</code></pre>
+Time: <span style="color: #009999">942</span>.<span style="color: #009999">074</span> ms
+</pre></div>
 
 <p>So let&rsquo;s build the full table then index it:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>&gt; <span style="color: #0000aa">CREATE</span> <span style="color: #0000aa">TABLE</span> track_tags <span style="color: #0000aa">AS</span>
+   <span style="color: #0000aa">SELECT</span> tt.tid, array_agg(tags.rowid) <span style="color: #0000aa">as</span> tags
+     <span style="color: #0000aa">FROM</span> tags <span style="color: #0000aa">join</span> tid_tag tt <span style="color: #0000aa">on</span> tags.rowid = tt.tag
+ <span style="color: #0000aa">GROUP</span> <span style="color: #0000aa">BY</span> tt.tid;
+<span style="color: #0000aa">SELECT</span> <span style="color: #009999">505216</span>
+Time: <span style="color: #009999">45388</span>.<span style="color: #009999">424</span> ms
 
-<pre><code class="language-sql">&gt; CREATE TABLE track_tags AS
-   SELECT tt.tid, array_agg(tags.rowid) as tags
-     FROM tags join tid_tag tt on tags.rowid = tt.tag
- GROUP BY tt.tid;
-SELECT 505216
-Time: 45388.424 ms
-
-&gt; create index on track_tags using gin(tags gin__int_ops);
-CREATE INDEX
-Time: 18645.931 ms
-</code></pre>
+&gt; <span style="color: #0000aa">create</span> <span style="color: #0000aa">index</span> <span style="color: #0000aa">on</span> track_tags <span style="color: #0000aa">using</span> gin(tags gin__int_ops);
+<span style="color: #0000aa">CREATE</span> <span style="color: #0000aa">INDEX</span>
+Time: <span style="color: #009999">18645</span>.<span style="color: #009999">931</span> ms
+</pre></div>
 
 <h1 id="searches">Searches</h1>
 
@@ -444,38 +440,36 @@ Time: 18645.931 ms
 have that have been tagged as both
 <em>blues</em> and
 <em>rhythm and blues</em>:</p>
-
-<pre><code class="language-sql">&gt; select array_agg(rowid)
-    from tags
-   where tag = 'blues' or tag = 'rhythm and blues';
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>&gt; <span style="color: #0000aa">select</span> array_agg(rowid)
+    <span style="color: #0000aa">from</span> tags
+   <span style="color: #0000aa">where</span> tag = <span style="color: #aa5500">&#39;blues&#39;</span> <span style="color: #0000aa">or</span> tag = <span style="color: #aa5500">&#39;rhythm and blues&#39;</span>;
  
  array_agg 
------------
- {3,739}
-(1 row)
+<span style="color: #aaaaaa; font-style: italic">-----------</span>
+ <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">3</span>,<span style="color: #009999">739</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>
+(<span style="color: #009999">1</span> <span style="color: #0000aa">row</span>)
 
-Time: 0.684 ms
-</code></pre>
+Time: <span style="color: #009999">0</span>.<span style="color: #009999">684</span> ms
+</pre></div>
 
 <p>Now what we want is a
 <em>query_int</em> query string, which looks like
 <code>'(1880&amp;179879)'</code>, so rather than just
 <code>array_agg</code> we&rsquo;re going to use the
 following query:</p>
-
-<pre><code class="language-sql">&gt; select format('(%s)',
-            array_to_string(array_agg(rowid), '&amp;')
-         )::query_int as query
-    from tags
-   where tag = 'blues' or tag = 'rhythm and blues';
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>&gt; <span style="color: #0000aa">select</span> format(<span style="color: #aa5500">&#39;(%s)&#39;</span>,
+            array_to_string(array_agg(rowid), <span style="color: #aa5500">&#39;&amp;&#39;</span>)
+         )::query_int <span style="color: #0000aa">as</span> query
+    <span style="color: #0000aa">from</span> tags
+   <span style="color: #0000aa">where</span> tag = <span style="color: #aa5500">&#39;blues&#39;</span> <span style="color: #0000aa">or</span> tag = <span style="color: #aa5500">&#39;rhythm and blues&#39;</span>;
   
   query  
----------
- 3 &amp; 739
-(1 row)
+<span style="color: #aaaaaa; font-style: italic">---------</span>
+ <span style="color: #009999">3</span> &amp; <span style="color: #009999">739</span>
+(<span style="color: #009999">1</span> <span style="color: #0000aa">row</span>)
 
-Time: 0.747 ms
-</code></pre>
+Time: <span style="color: #009999">0</span>.<span style="color: #009999">747</span> ms
+</pre></div>
 
 <p>That query here allows us to easily inject as many tags as we want to, so
 that it&rsquo;s easy to use it as a
@@ -495,42 +489,40 @@ building part of the SQL.</p>
 <em>blues</em> and the
 <em>rhythm and
 blues</em> tags, will you ask me:</p>
-
-<pre><code class="language-sql">&gt; with t(query) as (
-       select format('(%s)',
-                array_to_string(array_agg(rowid), '&amp;')
-             )::query_int as query
-        from tags
-       where tag = 'blues' or tag = 'rhythm and blues'
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>&gt; <span style="color: #0000aa">with</span> t(query) <span style="color: #0000aa">as</span> (
+       <span style="color: #0000aa">select</span> format(<span style="color: #aa5500">&#39;(%s)&#39;</span>,
+                array_to_string(array_agg(rowid), <span style="color: #aa5500">&#39;&amp;&#39;</span>)
+             )::query_int <span style="color: #0000aa">as</span> query
+        <span style="color: #0000aa">from</span> tags
+       <span style="color: #0000aa">where</span> tag = <span style="color: #aa5500">&#39;blues&#39;</span> <span style="color: #0000aa">or</span> tag = <span style="color: #aa5500">&#39;rhythm and blues&#39;</span>
   )
-select count(*) from track_tags, t
- where tags @@ query;
+<span style="color: #0000aa">select</span> <span style="color: #0000aa">count</span>(*) <span style="color: #0000aa">from</span> track_tags, t
+ <span style="color: #0000aa">where</span> tags @@ query;
  
- count 
--------
-  2278
-(1 row)
+ <span style="color: #0000aa">count</span> 
+<span style="color: #aaaaaa; font-style: italic">-------</span>
+  <span style="color: #009999">2278</span>
+(<span style="color: #009999">1</span> <span style="color: #0000aa">row</span>)
 
-Time: 8.242 ms
-</code></pre>
+Time: <span style="color: #009999">8</span>.<span style="color: #009999">242</span> ms
+</pre></div>
 
 <p>Now of course you might want to fetch some track meta-data, here the only
 one we have is the track
 <em>hash id</em>:</p>
-
-<pre><code class="language-sql">&gt; with t(query) as (
-    select format('(%s)',
-                    array_to_string(array_agg(rowid), '&amp;')
-           )::query_int as query
-      from tags
-       where tag = 'blues' or tag = 'rhythm and blues'
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>&gt; <span style="color: #0000aa">with</span> t(query) <span style="color: #0000aa">as</span> (
+    <span style="color: #0000aa">select</span> format(<span style="color: #aa5500">&#39;(%s)&#39;</span>,
+                    array_to_string(array_agg(rowid), <span style="color: #aa5500">&#39;&amp;&#39;</span>)
+           )::query_int <span style="color: #0000aa">as</span> query
+      <span style="color: #0000aa">from</span> tags
+       <span style="color: #0000aa">where</span> tag = <span style="color: #aa5500">&#39;blues&#39;</span> <span style="color: #0000aa">or</span> tag = <span style="color: #aa5500">&#39;rhythm and blues&#39;</span>
 )
- select track.tid
-   from track_tags tt join tids track on tt.tid = track.rowid, t
-  where tt.tags @@ t.query
-  limit 10;
+ <span style="color: #0000aa">select</span> track.tid
+   <span style="color: #0000aa">from</span> track_tags tt <span style="color: #0000aa">join</span> tids track <span style="color: #0000aa">on</span> tt.tid = track.rowid, t
+  <span style="color: #0000aa">where</span> tt.tags @@ t.query
+  <span style="color: #0000aa">limit</span> <span style="color: #009999">10</span>;
         tid         
---------------------
+<span style="color: #aaaaaa; font-style: italic">--------------------</span>
  TRCJLCC12903CBF4AE
  TRCIFOV128F92F6F4C
  TRCYUVJ128F425C8F1
@@ -541,10 +533,10 @@ one we have is the track
  TRCQCQH128F932E707
  TRCUMTA12903CD67EE
  TRJJYUT12903CFB13B
-(10 rows)
+(<span style="color: #009999">10</span> <span style="color: #0000aa">rows</span>)
 
-Time: 7.630 ms
-</code></pre>
+Time: <span style="color: #009999">7</span>.<span style="color: #009999">630</span> ms
+</pre></div>
 
 <h1 id="conclusion">Conclusion</h1>
 
@@ -823,6 +815,33 @@ directly from your application.</p>
           <div class="media">
             
             <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/05/find-the-missing-integer/">
+                <h3 class="media-heading">Find The Missing Integer</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>A recent interview question that I had to review was spelled like this:</p>
+
+<blockquote>
+<p>Find missing int element into array 1..100</p>
+</blockquote>
+
+<p>Of course at first read I got it wrong, you have only one integer to look
+for into the array. So while the obvious idea was to apply classing
+<em>sorting</em> techniques and minimize array traversal to handle complexity (time
+and space), it turns out there&rsquo;s a much simpler way to do it if you remember
+your math lessons from younger. But is is that much simpler?</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
               <a class="link-unstyled" href="http://tapoueh.org/blog/2016/04/pgconf-us-2016/">
                 <h3 class="media-heading">PGConf US 2016</h3>
               </a>
@@ -1040,29 +1059,6 @@ started: it provides with error handling for the
             <hr>
           </div>
         
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="http://tapoueh.org/blog/2014/10/meetup-postgresql-%C3%A0-paris/">
-                <h3 class="media-heading">Meetup PostgreSQL à Paris</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Oct 10, 2014
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p>Mercredi 8 octobre se tiendra le prochain
-<a href="http://www.meetup.com/PostgreSQL-User-Group-Paris/events/209650432/">Meetup PostgreSQL à Paris</a> dans les
-locaux de
-<a href="https://www.mozilla.org/en-US/contact/spaces/paris/">Mozilla Europe</a>, dont la capacité est de 90 personnes ! Venez
-nombreux !</p>
-
-<p></p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
       </div>
     </div>
     <div class="modal-footer">
@@ -1070,7 +1066,7 @@ nombreux !</p>
          data-message-zero=""
          data-message-one=""
          data-message-other="">
-         230 posts found
+         231 posts found
       </p>
     </div>
   </div>

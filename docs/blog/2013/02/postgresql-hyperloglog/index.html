@@ -318,23 +318,21 @@ for
 
 <p>Then you also need to keep your data in some table, straight from the
 documentation we can use that schema:</p>
-
-<pre><code class="language-sql">-- Create the destination table
-CREATE TABLE daily_uniques (
-DATE            DATE UNIQUE,
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #aaaaaa; font-style: italic">-- Create the destination table</span>
+<span style="color: #0000aa">CREATE</span> <span style="color: #0000aa">TABLE</span> daily_uniques (
+<span style="color: #00aaaa">DATE</span>            <span style="color: #00aaaa">DATE</span> <span style="color: #0000aa">UNIQUE</span>,
 users           hll
 );
-</code></pre>
+</pre></div>
 
 <p>Then to add some data for which you want to know the
 <em>cardinality</em> of, it&rsquo;s as
 simple as in the following
 <code>UPDATE</code> statement:</p>
-
-<pre><code class="language-sql">UPDATE daily_uniques
-   SET users = hll_add(users, hll_hash_text('123.123.123.123'))
- WHERE date = current_date;
-</code></pre>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">UPDATE</span> daily_uniques
+   <span style="color: #0000aa">SET</span> users = hll_add(users, hll_hash_text(<span style="color: #aa5500">&#39;123.123.123.123&#39;</span>))
+ <span style="color: #0000aa">WHERE</span> <span style="color: #00aaaa">date</span> = <span style="color: #0000aa">current_date</span>;
+</pre></div>
 
 <p>So in our example what you see is that we want to decipher how many unique
 IP addresses we saw, and we do that by first creating a
@@ -417,17 +415,16 @@ new values to add to our current
 <em>HyperLogLog</em> hash entry, and I can&rsquo;t resist
 to show off one of the most awesome PostgreSQL features here:
 <em>writable CTE</em>.</p>
-
-<pre><code class="language-sql">WITH hll(agg) AS (
-  SELECT hll_add_agg(hll_hash_text(value)) FROM new_batch
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">WITH</span> hll(agg) <span style="color: #0000aa">AS</span> (
+  <span style="color: #0000aa">SELECT</span> hll_add_agg(hll_hash_text(value)) <span style="color: #0000aa">FROM</span> new_batch
 )
-  UPDATE daily_uniques
-     SET users = CASE WHEN hll.agg IS NULL THEN users
-                      ELSE hll_union(users, hll.agg)
-                  END
-    FROM hll
-   WHERE date = current_date;
-</code></pre>
+  <span style="color: #0000aa">UPDATE</span> daily_uniques
+     <span style="color: #0000aa">SET</span> users = <span style="color: #0000aa">CASE</span> <span style="color: #0000aa">WHEN</span> hll.agg <span style="color: #0000aa">IS</span> <span style="color: #0000aa">NULL</span> <span style="color: #0000aa">THEN</span> users
+                      <span style="color: #0000aa">ELSE</span> hll_union(users, hll.agg)
+                  <span style="color: #0000aa">END</span>
+    <span style="color: #0000aa">FROM</span> hll
+   <span style="color: #0000aa">WHERE</span> <span style="color: #00aaaa">date</span> = <span style="color: #0000aa">current_date</span>;
+</pre></div>
 
 <p>That&rsquo;s how you protect against an empty set being turned into a
 <code>NULL</code>. I
@@ -445,24 +442,23 @@ explanation of it).</p>
 <code>postgresql-hll</code> on the production system, we were able to get some
 good looking numbers from our
 <code>daily_uniques</code> table:</p>
-
-<pre><code class="language-sql">with stats as (
-  select date, #users as daily, #hll_union_agg(users) over() as total
-    from daily_uniques
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">with</span> stats <span style="color: #0000aa">as</span> (
+  <span style="color: #0000aa">select</span> <span style="color: #00aaaa">date</span>, #users <span style="color: #0000aa">as</span> daily, #hll_union_agg(users) over() <span style="color: #0000aa">as</span> total
+    <span style="color: #0000aa">from</span> daily_uniques
 )
-  select date,
-         round(daily) as daily,
-         round((daily/total*100)::numeric, 2) as percent
-    from stats
-order by date;
-    date    | daily  | percent 
-------------+--------+---------
- 2013-02-22 | 401677 |   25.19
- 2013-02-23 | 660187 |   41.41
- 2013-02-24 | 869980 |   54.56
- 2013-02-25 | 154996 |    9.72
-(4 rows)
-</code></pre>
+  <span style="color: #0000aa">select</span> <span style="color: #00aaaa">date</span>,
+         round(daily) <span style="color: #0000aa">as</span> daily,
+         round((daily/total*<span style="color: #009999">100</span>)::<span style="color: #00aaaa">numeric</span>, <span style="color: #009999">2</span>) <span style="color: #0000aa">as</span> percent
+    <span style="color: #0000aa">from</span> stats
+<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> <span style="color: #00aaaa">date</span>;
+    <span style="color: #00aaaa">date</span>    | daily  | percent 
+<span style="color: #aaaaaa; font-style: italic">------------+--------+---------</span>
+ <span style="color: #009999">2013</span>-<span style="color: #009999">02</span>-<span style="color: #009999">22</span> | <span style="color: #009999">401677</span> |   <span style="color: #009999">25</span>.<span style="color: #009999">19</span>
+ <span style="color: #009999">2013</span>-<span style="color: #009999">02</span>-<span style="color: #009999">23</span> | <span style="color: #009999">660187</span> |   <span style="color: #009999">41</span>.<span style="color: #009999">41</span>
+ <span style="color: #009999">2013</span>-<span style="color: #009999">02</span>-<span style="color: #009999">24</span> | <span style="color: #009999">869980</span> |   <span style="color: #009999">54</span>.<span style="color: #009999">56</span>
+ <span style="color: #009999">2013</span>-<span style="color: #009999">02</span>-<span style="color: #009999">25</span> | <span style="color: #009999">154996</span> |    <span style="color: #009999">9</span>.<span style="color: #009999">72</span>
+(<span style="color: #009999">4</span> <span style="color: #0000aa">rows</span>)
+</pre></div>
 
 <p>I coulnd&rsquo;t resist to show off two of my favorite SQL constructs in that
 example query here, which are the
@@ -766,6 +762,33 @@ the feature.</p>
           <div class="media">
             
             <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/05/find-the-missing-integer/">
+                <h3 class="media-heading">Find The Missing Integer</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>A recent interview question that I had to review was spelled like this:</p>
+
+<blockquote>
+<p>Find missing int element into array 1..100</p>
+</blockquote>
+
+<p>Of course at first read I got it wrong, you have only one integer to look
+for into the array. So while the obvious idea was to apply classing
+<em>sorting</em> techniques and minimize array traversal to handle complexity (time
+and space), it turns out there&rsquo;s a much simpler way to do it if you remember
+your math lessons from younger. But is is that much simpler?</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
               <a class="link-unstyled" href="http://tapoueh.org/blog/2016/04/pgconf-us-2016/">
                 <h3 class="media-heading">PGConf US 2016</h3>
               </a>
@@ -983,29 +1006,6 @@ started: it provides with error handling for the
             <hr>
           </div>
         
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="http://tapoueh.org/blog/2014/10/meetup-postgresql-%C3%A0-paris/">
-                <h3 class="media-heading">Meetup PostgreSQL à Paris</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Oct 10, 2014
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p>Mercredi 8 octobre se tiendra le prochain
-<a href="http://www.meetup.com/PostgreSQL-User-Group-Paris/events/209650432/">Meetup PostgreSQL à Paris</a> dans les
-locaux de
-<a href="https://www.mozilla.org/en-US/contact/spaces/paris/">Mozilla Europe</a>, dont la capacité est de 90 personnes ! Venez
-nombreux !</p>
-
-<p></p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
       </div>
     </div>
     <div class="modal-footer">
@@ -1013,7 +1013,7 @@ nombreux !</p>
          data-message-zero=""
          data-message-one=""
          data-message-other="">
-         230 posts found
+         231 posts found
       </p>
     </div>
   </div>

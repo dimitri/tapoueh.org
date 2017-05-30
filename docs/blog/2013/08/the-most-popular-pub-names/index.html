@@ -334,9 +334,8 @@ managed to handle the data in a
 possible. I didn&rsquo;t want to try and see if the
 <code>id</code> actually is unique and
 never omitted, for example, so here&rsquo;s the schema I&rsquo;ve been working with:</p>
-
-<pre><code class="language-sql">create table if not exists pubnames (id bigint, pos point, name text);
-</code></pre>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">create</span> <span style="color: #0000aa">table</span> <span style="color: #0000aa">if</span> <span style="color: #0000aa">not</span> <span style="color: #0000aa">exists</span> pubnames (id <span style="color: #00aaaa">bigint</span>, pos point, name <span style="color: #00aaaa">text</span>);
+</pre></div>
 
 <p>Where the
 <em>MongoDB</em> article used
@@ -351,29 +350,28 @@ right?</p>
 load the data, available as the
 <a href="https://github.com/dimitri/pubnames">pubnames</a> project on
 <em>GitHub</em>:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>(<span style="color: #00aaaa">defun</span> <span style="color: #aa0000">parse-osm-file</span> (<span style="color: #0000aa">&amp;key</span>
+			 (<span style="color: #00aaaa">pathname</span> <span style="color: #aa0000">*pub-xml-pathname*</span>)
+			 (<span style="color: #00aaaa">truncate</span> <span style="color: #aa0000">t</span>)
+			 (<span style="color: #aa0000">drop</span> <span style="color: #aa0000">nil</span>))
+  <span style="color: #aa5500">&quot;Parse the given PATHNAME file, formated as OSM XML.&quot;</span>
+  (<span style="color: #aa0000">maybe-create-postgresql-table</span> <span style="color: #0000aa">:drop</span> <span style="color: #aa0000">drop</span> <span style="color: #0000aa">:truncate</span> <span style="color: #00aaaa">truncate</span>)
 
-<pre><code class="language-lisp">(defun parse-osm-file (&amp;key
-			 (pathname *pub-xml-pathname*)
-			 (truncate t)
-			 (drop nil))
-  &quot;Parse the given PATHNAME file, formated as OSM XML.&quot;
-  (maybe-create-postgresql-table :drop drop :truncate truncate)
+  (<span style="color: #aa0000">klacks:with-open-source</span> (<span style="color: #aa0000">s</span> (<span style="color: #aa0000">cxml:make-source</span> <span style="color: #00aaaa">pathname</span>))
+    (<span style="color: #00aaaa">loop</span>
+       <span style="color: #aa0000">with</span> <span style="color: #00aa00; text-decoration: underline">stream</span> <span style="color: #00aaaa">=</span>
+	 (<span style="color: #aa0000">cl-postgres:open-db-writer</span> (<span style="color: #00aaaa">remove</span> <span style="color: #0000aa">:port</span> <span style="color: #aa0000">*pgconn*</span>) <span style="color: #aa0000">*pg-table-name*</span> <span style="color: #aa0000">nil</span>)
+       <span style="color: #aa0000">for</span> <span style="color: #aa0000">key</span> <span style="color: #00aaaa">=</span> (<span style="color: #aa0000">klacks:peek</span> <span style="color: #aa0000">s</span>)
+       <span style="color: #aa0000">while</span> <span style="color: #aa0000">key</span>
+       <span style="color: #00aaaa">do</span>
+	 (<span style="color: #00aaaa">case</span> <span style="color: #aa0000">key</span>
+	   (<span style="color: #0000aa">:start-element</span> (<span style="color: #aa0000">parse-osm-start-element</span> <span style="color: #aa0000">s</span>))
+           <span style="color: #aaaaaa; font-style: italic">; parse-osm-end-element calls cl-postgres:db-write-row</span>
+	   (<span style="color: #0000aa">:end-element</span>   (<span style="color: #aa0000">parse-osm-end-element</span> <span style="color: #aa0000">s</span> <span style="color: #00aa00; text-decoration: underline">stream</span>)))
+	 (<span style="color: #aa0000">klacks:consume</span> <span style="color: #aa0000">s</span>)
 
-  (klacks:with-open-source (s (cxml:make-source pathname))
-    (loop
-       with stream =
-	 (cl-postgres:open-db-writer (remove :port *pgconn*) *pg-table-name* nil)
-       for key = (klacks:peek s)
-       while key
-       do
-	 (case key
-	   (:start-element (parse-osm-start-element s))
-           ; parse-osm-end-element calls cl-postgres:db-write-row
-	   (:end-element   (parse-osm-end-element s stream)))
-	 (klacks:consume s)
-
-       finally (return (cl-postgres:close-db-writer stream)))))
-</code></pre>
+       <span style="color: #aa0000">finally</span> (<span style="color: #00aaaa">return</span> (<span style="color: #aa0000">cl-postgres:close-db-writer</span> <span style="color: #00aa00; text-decoration: underline">stream</span>)))))
+</pre></div>
 
 <p>Given that code, we can parse the data in the XML file and load it into our
 PostgreSQL table in about 5.5 seconds on my laptop. If I had to optimize
@@ -442,21 +440,20 @@ set with a
 SQL for searching the pubs nearby our position, or actually the position
 given as an example in the
 <em>MongoDB</em> article:</p>
-
-<pre><code class="language-sql">  select id, name, pos
-    from pubnames
-order by pos &lt;-&gt; point(51.516,-0.12)
-   limit 3;
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>  <span style="color: #0000aa">select</span> id, name, pos
+    <span style="color: #0000aa">from</span> pubnames
+<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> pos &lt;-&gt; point(<span style="color: #009999">51</span>.<span style="color: #009999">516</span>,-<span style="color: #009999">0</span>.<span style="color: #009999">12</span>)
+   <span style="color: #0000aa">limit</span> <span style="color: #009999">3</span>;
 
      id     |          name          |           pos           
-------------+------------------------+-------------------------
-   21593238 | All Bar One            | (51.5163499,-0.1192746)
-   26848690 | The Shakespeare's Head | (51.5167871,-0.1194731)
-  371049718 | The Newton Arms        | (51.5163032,-0.1209811)
-(3 rows)
+<span style="color: #aaaaaa; font-style: italic">------------+------------------------+-------------------------</span>
+   <span style="color: #009999">21593238</span> | <span style="color: #0000aa">All</span> Bar One            | (<span style="color: #009999">51</span>.<span style="color: #009999">5163499</span>,-<span style="color: #009999">0</span>.<span style="color: #009999">1192746</span>)
+   <span style="color: #009999">26848690</span> | The Shakespeare<span style="color: #FF0000; background-color: #FFAAAA">&#39;</span>s Head | (<span style="color: #009999">51</span>.<span style="color: #009999">5167871</span>,-<span style="color: #009999">0</span>.<span style="color: #009999">1194731</span>)
+  <span style="color: #009999">371049718</span> | The Newton Arms        | (<span style="color: #009999">51</span>.<span style="color: #009999">5163032</span>,-<span style="color: #009999">0</span>.<span style="color: #009999">1209811</span>)
+(<span style="color: #009999">3</span> <span style="color: #0000aa">rows</span>)
 
-Time: 18.679 ms
-</code></pre>
+Time: <span style="color: #009999">18</span>.<span style="color: #009999">679</span> ms
+</pre></div>
 
 <p>As we&rsquo;re using the
 <a href="http://www.postgresql.org/docs/current/interactive/datatype-geometric.html#AEN6473">point datatype</a> in PostgreSQL, there&rsquo;s no simple way that
@@ -528,22 +525,21 @@ search instead.</p>
 <a href="http://www.postgresql.org/docs/9.2/interactive/spgist.html">SP-GiST</a> indexes have been
 designed to be able to solve for you in PostgreSQL, and in particular the
 KNN GiST support. Let&rsquo;s have a try at it:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>&gt; <span style="color: #0000aa">create</span> <span style="color: #0000aa">index</span> <span style="color: #0000aa">on</span> pubnames <span style="color: #0000aa">using</span> gist(pos);
 
-<pre><code class="language-sql">&gt; create index on pubnames using gist(pos);
-
-&gt; select id, name, pos
-    from pubnames
-order by pos &lt;-&gt; point(51.516,-0.12) limit 3;
+&gt; <span style="color: #0000aa">select</span> id, name, pos
+    <span style="color: #0000aa">from</span> pubnames
+<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> pos &lt;-&gt; point(<span style="color: #009999">51</span>.<span style="color: #009999">516</span>,-<span style="color: #009999">0</span>.<span style="color: #009999">12</span>) <span style="color: #0000aa">limit</span> <span style="color: #009999">3</span>;
      
      id     |          name          |           pos           
-------------+------------------------+-------------------------
-   21593238 | All Bar One            | (51.5163499,-0.1192746)
-   26848690 | The Shakespeare's Head | (51.5167871,-0.1194731)
-  371049718 | The Newton Arms        | (51.5163032,-0.1209811)
-(3 rows)
+<span style="color: #aaaaaa; font-style: italic">------------+------------------------+-------------------------</span>
+   <span style="color: #009999">21593238</span> | <span style="color: #0000aa">All</span> Bar One            | (<span style="color: #009999">51</span>.<span style="color: #009999">5163499</span>,-<span style="color: #009999">0</span>.<span style="color: #009999">1192746</span>)
+   <span style="color: #009999">26848690</span> | The Shakespeare<span style="color: #FF0000; background-color: #FFAAAA">&#39;</span>s Head | (<span style="color: #009999">51</span>.<span style="color: #009999">5167871</span>,-<span style="color: #009999">0</span>.<span style="color: #009999">1194731</span>)
+  <span style="color: #009999">371049718</span> | The Newton Arms        | (<span style="color: #009999">51</span>.<span style="color: #009999">5163032</span>,-<span style="color: #009999">0</span>.<span style="color: #009999">1209811</span>)
+(<span style="color: #009999">3</span> <span style="color: #0000aa">rows</span>)
 
-Time: 0.849 ms
-</code></pre>
+Time: <span style="color: #009999">0</span>.<span style="color: #009999">849</span> ms
+</pre></div>
 
 <p>Now we talk! With a dataset of 27878 rows in total, finding the 3 nearest
 pubs in less than a millisecond is something we can actually be happy with,
@@ -863,6 +859,33 @@ PostgreSQL. And for them to coexist peacefully, we even offer you
           <div class="media">
             
             <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/05/find-the-missing-integer/">
+                <h3 class="media-heading">Find The Missing Integer</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>A recent interview question that I had to review was spelled like this:</p>
+
+<blockquote>
+<p>Find missing int element into array 1..100</p>
+</blockquote>
+
+<p>Of course at first read I got it wrong, you have only one integer to look
+for into the array. So while the obvious idea was to apply classing
+<em>sorting</em> techniques and minimize array traversal to handle complexity (time
+and space), it turns out there&rsquo;s a much simpler way to do it if you remember
+your math lessons from younger. But is is that much simpler?</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
               <a class="link-unstyled" href="http://tapoueh.org/blog/2016/04/pgconf-us-2016/">
                 <h3 class="media-heading">PGConf US 2016</h3>
               </a>
@@ -1080,29 +1103,6 @@ started: it provides with error handling for the
             <hr>
           </div>
         
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="http://tapoueh.org/blog/2014/10/meetup-postgresql-%C3%A0-paris/">
-                <h3 class="media-heading">Meetup PostgreSQL à Paris</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Oct 10, 2014
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p>Mercredi 8 octobre se tiendra le prochain
-<a href="http://www.meetup.com/PostgreSQL-User-Group-Paris/events/209650432/">Meetup PostgreSQL à Paris</a> dans les
-locaux de
-<a href="https://www.mozilla.org/en-US/contact/spaces/paris/">Mozilla Europe</a>, dont la capacité est de 90 personnes ! Venez
-nombreux !</p>
-
-<p></p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
       </div>
     </div>
     <div class="modal-footer">
@@ -1110,7 +1110,7 @@ nombreux !</p>
          data-message-zero=""
          data-message-one=""
          data-message-other="">
-         230 posts found
+         231 posts found
       </p>
     </div>
   </div>

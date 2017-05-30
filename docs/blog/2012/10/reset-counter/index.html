@@ -315,13 +315,12 @@ just the previous example? We also need to
 <em>time stamp</em> the measurements,
 let&rsquo;s just use a
 <em>tick</em> for now, as it&rsquo;s easier to think about:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">create</span> <span style="color: #0000aa">table</span> measures(tick <span style="color: #00aaaa">int</span>, nb <span style="color: #00aaaa">int</span>);
 
-<pre><code class="language-sql">create table measures(tick int, nb int);
-
-insert into measures
-     values (1, 0), (2, 10), (3, 20), (4, 30), (5, 40),
-            (6, 0), (7, 20), (8, 30), (9, 60);
-</code></pre>
+<span style="color: #0000aa">insert</span> <span style="color: #0000aa">into</span> measures
+     <span style="color: #0000aa">values</span> (<span style="color: #009999">1</span>, <span style="color: #009999">0</span>), (<span style="color: #009999">2</span>, <span style="color: #009999">10</span>), (<span style="color: #009999">3</span>, <span style="color: #009999">20</span>), (<span style="color: #009999">4</span>, <span style="color: #009999">30</span>), (<span style="color: #009999">5</span>, <span style="color: #009999">40</span>),
+            (<span style="color: #009999">6</span>, <span style="color: #009999">0</span>), (<span style="color: #009999">7</span>, <span style="color: #009999">20</span>), (<span style="color: #009999">8</span>, <span style="color: #009999">30</span>), (<span style="color: #009999">9</span>, <span style="color: #009999">60</span>);
+</pre></div>
 
 <p>Now that we have some data in a table to play with, let&rsquo;s try to find out
 the numbers we are interested in: we only want to keep the latest measure we
@@ -335,15 +334,14 @@ value.</p>
 brings
 <a href="http://www.postgresql.org/docs/9.2/static/tutorial-window.html">window functions</a> on the table, we can easily implement just what we
 said in a readable way:</p>
-
-<pre><code class="language-sql">select tick, nb,
-         case when lead(nb) over w &lt; nb then nb
-              when lead(nb) over w is null then nb
-              else null
-          end as max
-    from measures
-  window w as (order by tick);
-</code></pre>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> tick, nb,
+         <span style="color: #0000aa">case</span> <span style="color: #0000aa">when</span> lead(nb) over w &lt; nb <span style="color: #0000aa">then</span> nb
+              <span style="color: #0000aa">when</span> lead(nb) over w <span style="color: #0000aa">is</span> <span style="color: #0000aa">null</span> <span style="color: #0000aa">then</span> nb
+              <span style="color: #0000aa">else</span> <span style="color: #0000aa">null</span>
+          <span style="color: #0000aa">end</span> <span style="color: #0000aa">as</span> <span style="color: #0000aa">max</span>
+    <span style="color: #0000aa">from</span> measures
+  window w <span style="color: #0000aa">as</span> (<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> tick);
+</pre></div>
 
 <p>The firt
 <em>case</em> is the exact translation of the problem as spelled in english
@@ -397,19 +395,18 @@ of knowing the current
 <em>logical</em> value of the counter, that is.</p>
 
 <p>And we get that encouraging result:</p>
-
-<pre><code class="language-sql"> tick | nb  | max 
-------+-----+-----
-    1 |   0 |    
-    2 |  10 |    
-    3 |  20 |    
-    4 |  30 |    
-    5 |  40 |  40
-    6 |   0 |    
-    7 |  20 |    
-    8 |  30 |    
-    9 |  60 |  60
-</code></pre>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span> tick | nb  | <span style="color: #0000aa">max</span> 
+<span style="color: #aaaaaa; font-style: italic">------+-----+-----</span>
+    <span style="color: #009999">1</span> |   <span style="color: #009999">0</span> |    
+    <span style="color: #009999">2</span> |  <span style="color: #009999">10</span> |    
+    <span style="color: #009999">3</span> |  <span style="color: #009999">20</span> |    
+    <span style="color: #009999">4</span> |  <span style="color: #009999">30</span> |    
+    <span style="color: #009999">5</span> |  <span style="color: #009999">40</span> |  <span style="color: #009999">40</span>
+    <span style="color: #009999">6</span> |   <span style="color: #009999">0</span> |    
+    <span style="color: #009999">7</span> |  <span style="color: #009999">20</span> |    
+    <span style="color: #009999">8</span> |  <span style="color: #009999">30</span> |    
+    <span style="color: #009999">9</span> |  <span style="color: #009999">60</span> |  <span style="color: #009999">60</span>
+</pre></div>
 
 <p>As you see, we have been able to create a new column out of the dataset, and
 that new column only contains the data we are interested into.</p>
@@ -421,17 +418,16 @@ the
 <code>sum()</code> aggregate function will simply discard nulls, so that we don&rsquo;t
 have to turn them into a bunch of
 <code>0</code>.</p>
-
-<pre><code class="language-sql">with t(tops) as (
-  select case when lead(nb) over w &lt; nb then nb
-              when lead(nb) over w is null then nb
-              else null
-          end as max
-    from measures
-  window w as (order by tick)
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">with</span> t(tops) <span style="color: #0000aa">as</span> (
+  <span style="color: #0000aa">select</span> <span style="color: #0000aa">case</span> <span style="color: #0000aa">when</span> lead(nb) over w &lt; nb <span style="color: #0000aa">then</span> nb
+              <span style="color: #0000aa">when</span> lead(nb) over w <span style="color: #0000aa">is</span> <span style="color: #0000aa">null</span> <span style="color: #0000aa">then</span> nb
+              <span style="color: #0000aa">else</span> <span style="color: #0000aa">null</span>
+          <span style="color: #0000aa">end</span> <span style="color: #0000aa">as</span> <span style="color: #0000aa">max</span>
+    <span style="color: #0000aa">from</span> measures
+  window w <span style="color: #0000aa">as</span> (<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> tick)
 )
-select sum(tops) from t;
-</code></pre>
+<span style="color: #0000aa">select</span> <span style="color: #0000aa">sum</span>(tops) <span style="color: #0000aa">from</span> t;
+</pre></div>
 
 <p><center>
 
@@ -466,37 +462,34 @@ select sum(tops) from t;
 </center></p>
 
 <p>And here&rsquo;s the expected result:</p>
-
-<pre><code class="language-sql"> sum 
------
- 100
-</code></pre>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span> <span style="color: #0000aa">sum</span> 
+<span style="color: #aaaaaa; font-style: italic">-----</span>
+ <span style="color: #009999">100</span>
+</pre></div>
 
 <p>Now what about testing with another set of data or two, just to be sure that
 the counter is allowed to wrap more than once within our solution?</p>
-
-<pre><code class="language-sql">insert into measures
-     values (10, 0), (11, 10), (12, 30), (13, 35), (14, 45),
-            (15, 25), (16, 50), (17, 100), (18, 110);
-</code></pre>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">insert</span> <span style="color: #0000aa">into</span> measures
+     <span style="color: #0000aa">values</span> (<span style="color: #009999">10</span>, <span style="color: #009999">0</span>), (<span style="color: #009999">11</span>, <span style="color: #009999">10</span>), (<span style="color: #009999">12</span>, <span style="color: #009999">30</span>), (<span style="color: #009999">13</span>, <span style="color: #009999">35</span>), (<span style="color: #009999">14</span>, <span style="color: #009999">45</span>),
+            (<span style="color: #009999">15</span>, <span style="color: #009999">25</span>), (<span style="color: #009999">16</span>, <span style="color: #009999">50</span>), (<span style="color: #009999">17</span>, <span style="color: #009999">100</span>), (<span style="color: #009999">18</span>, <span style="color: #009999">110</span>);
+</pre></div>
 
 <p>Then we have:</p>
-
-<pre><code class="language-sql">with t(tops) as (
-   select case when lead(nb) over w &lt; nb then nb
-               when lead(nb) over w is null then nb
-               else null
-           end as max
-     from measures
-   window w as (order by tick)
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">with</span> t(tops) <span style="color: #0000aa">as</span> (
+   <span style="color: #0000aa">select</span> <span style="color: #0000aa">case</span> <span style="color: #0000aa">when</span> lead(nb) over w &lt; nb <span style="color: #0000aa">then</span> nb
+               <span style="color: #0000aa">when</span> lead(nb) over w <span style="color: #0000aa">is</span> <span style="color: #0000aa">null</span> <span style="color: #0000aa">then</span> nb
+               <span style="color: #0000aa">else</span> <span style="color: #0000aa">null</span>
+           <span style="color: #0000aa">end</span> <span style="color: #0000aa">as</span> <span style="color: #0000aa">max</span>
+     <span style="color: #0000aa">from</span> measures
+   window w <span style="color: #0000aa">as</span> (<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> tick)
 )
-select sum(tops) from t;
+<span style="color: #0000aa">select</span> <span style="color: #0000aa">sum</span>(tops) <span style="color: #0000aa">from</span> t;
  
- sum 
------
- 255
-(1 row)
-</code></pre>
+ <span style="color: #0000aa">sum</span> 
+<span style="color: #aaaaaa; font-style: italic">-----</span>
+ <span style="color: #009999">255</span>
+(<span style="color: #009999">1</span> <span style="color: #0000aa">row</span>)
+</pre></div>
 
 <p>All good!</p>
 
@@ -543,21 +536,20 @@ substract it from the logical sum over the period.</p>
 ticks
 <code>4</code> and
 <code>14</code>, in a completely arbitrary choosing of mine:</p>
-
-<pre><code class="language-sql">with t as (
-  select tick,
-         first_value(nb) over w as first,
-         case when lead(nb) over w &lt; nb then nb
-              when lead(nb) over w is null then nb
-              else null
-          end as max
-    from measures
-   where tick &gt;= 4 and tick &lt; 14
-  window w as (order by tick)
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">with</span> t <span style="color: #0000aa">as</span> (
+  <span style="color: #0000aa">select</span> tick,
+         first_value(nb) over w <span style="color: #0000aa">as</span> <span style="color: #0000aa">first</span>,
+         <span style="color: #0000aa">case</span> <span style="color: #0000aa">when</span> lead(nb) over w &lt; nb <span style="color: #0000aa">then</span> nb
+              <span style="color: #0000aa">when</span> lead(nb) over w <span style="color: #0000aa">is</span> <span style="color: #0000aa">null</span> <span style="color: #0000aa">then</span> nb
+              <span style="color: #0000aa">else</span> <span style="color: #0000aa">null</span>
+          <span style="color: #0000aa">end</span> <span style="color: #0000aa">as</span> <span style="color: #0000aa">max</span>
+    <span style="color: #0000aa">from</span> measures
+   <span style="color: #0000aa">where</span> tick &gt;= <span style="color: #009999">4</span> <span style="color: #0000aa">and</span> tick &lt; <span style="color: #009999">14</span>
+  window w <span style="color: #0000aa">as</span> (<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> tick)
 )
-select sum(max) - min(first) as sum
- from t;
-</code></pre>
+<span style="color: #0000aa">select</span> <span style="color: #0000aa">sum</span>(<span style="color: #0000aa">max</span>) - <span style="color: #0000aa">min</span>(<span style="color: #0000aa">first</span>) <span style="color: #0000aa">as</span> <span style="color: #0000aa">sum</span>
+ <span style="color: #0000aa">from</span> t;
+</pre></div>
 
 <p>Here we are using the
 <em>first_value()</em> window function to retain it in the
@@ -583,23 +575,21 @@ that
 
 <p>Let&rsquo;s have a quick look at the raw data in that range, using another nice
 <em>aggregate</em> that PostgreSQL comes with:</p>
-
-<pre><code class="language-sql">select array_agg(nb) from measures where tick &gt;= 4 and tick &lt; 14;
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> array_agg(nb) <span style="color: #0000aa">from</span> measures <span style="color: #0000aa">where</span> tick &gt;= <span style="color: #009999">4</span> <span style="color: #0000aa">and</span> tick &lt; <span style="color: #009999">14</span>;
            array_agg           
--------------------------------
- {30,40,0,20,30,60,0,10,30,35}
-(1 row)
-</code></pre>
+<span style="color: #aaaaaa; font-style: italic">-------------------------------</span>
+ <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">30</span>,<span style="color: #009999">40</span>,<span style="color: #009999">0</span>,<span style="color: #009999">20</span>,<span style="color: #009999">30</span>,<span style="color: #009999">60</span>,<span style="color: #009999">0</span>,<span style="color: #009999">10</span>,<span style="color: #009999">30</span>,<span style="color: #009999">35</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>
+(<span style="color: #009999">1</span> <span style="color: #0000aa">row</span>)
+</pre></div>
 
 <p>And now, the
 <em>logical counter value</em> for that period is computed as the
 following value by the previous query:</p>
-
-<pre><code class="language-sql"> sum 
------
- 105
-(1 row)
-</code></pre>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span> <span style="color: #0000aa">sum</span> 
+<span style="color: #aaaaaa; font-style: italic">-----</span>
+ <span style="color: #009999">105</span>
+(<span style="color: #009999">1</span> <span style="color: #0000aa">row</span>)
+</pre></div>
 
 <p>We can verify it manually, we want
 <code>40 + 60 + 35 - 30</code>, I think we&rsquo;re all good
@@ -650,86 +640,84 @@ each given row we have a set of rows from the same partition, we are going
 to instead use a
 <em>correlated subquery</em> to go fetch the next
 <em>wraparound</em> value:</p>
-
-<pre><code class="language-sql">with tops as (
-  select tick, nb,
-         case when lead(nb) over w &lt; nb then nb
-              when lead(nb) over w is null then nb
-             else null
-         end as max
-    from measures
-  window w as (order by tick)
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">with</span> tops <span style="color: #0000aa">as</span> (
+  <span style="color: #0000aa">select</span> tick, nb,
+         <span style="color: #0000aa">case</span> <span style="color: #0000aa">when</span> lead(nb) over w &lt; nb <span style="color: #0000aa">then</span> nb
+              <span style="color: #0000aa">when</span> lead(nb) over w <span style="color: #0000aa">is</span> <span style="color: #0000aa">null</span> <span style="color: #0000aa">then</span> nb
+             <span style="color: #0000aa">else</span> <span style="color: #0000aa">null</span>
+         <span style="color: #0000aa">end</span> <span style="color: #0000aa">as</span> <span style="color: #0000aa">max</span>
+    <span style="color: #0000aa">from</span> measures
+  window w <span style="color: #0000aa">as</span> (<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> tick)
 )
-  select tick, nb, max,
-         (select tick
-            from tops t2
-           where t2.tick &gt;= t1.tick and max is not null
-        order by t2.tick
-           limit 1) as p
-    from tops t1;
+  <span style="color: #0000aa">select</span> tick, nb, <span style="color: #0000aa">max</span>,
+         (<span style="color: #0000aa">select</span> tick
+            <span style="color: #0000aa">from</span> tops t2
+           <span style="color: #0000aa">where</span> t2.tick &gt;= t1.tick <span style="color: #0000aa">and</span> <span style="color: #0000aa">max</span> <span style="color: #0000aa">is</span> <span style="color: #0000aa">not</span> <span style="color: #0000aa">null</span>
+        <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> t2.tick
+           <span style="color: #0000aa">limit</span> <span style="color: #009999">1</span>) <span style="color: #0000aa">as</span> p
+    <span style="color: #0000aa">from</span> tops t1;
 
- tick | nb  | max | p  
-------+-----+-----+----
-    1 |   0 |     |  5
-    2 |  10 |     |  5
-    3 |  20 |     |  5
-    4 |  30 |     |  5
-    5 |  40 |  40 |  5
-    6 |   0 |     |  9
-    7 |  20 |     |  9
-    8 |  30 |     |  9
-    9 |  60 |  60 |  9
-   10 |   0 |     | 14
-   11 |  10 |     | 14
-   12 |  30 |     | 14
-   13 |  35 |     | 14
-   14 |  45 |  45 | 14
-   15 |  25 |     | 18
-   16 |  50 |     | 18
-   17 | 100 |     | 18
-   18 | 110 | 110 | 18
-(18 rows)
-</code></pre>
+ tick | nb  | <span style="color: #0000aa">max</span> | p  
+<span style="color: #aaaaaa; font-style: italic">------+-----+-----+----</span>
+    <span style="color: #009999">1</span> |   <span style="color: #009999">0</span> |     |  <span style="color: #009999">5</span>
+    <span style="color: #009999">2</span> |  <span style="color: #009999">10</span> |     |  <span style="color: #009999">5</span>
+    <span style="color: #009999">3</span> |  <span style="color: #009999">20</span> |     |  <span style="color: #009999">5</span>
+    <span style="color: #009999">4</span> |  <span style="color: #009999">30</span> |     |  <span style="color: #009999">5</span>
+    <span style="color: #009999">5</span> |  <span style="color: #009999">40</span> |  <span style="color: #009999">40</span> |  <span style="color: #009999">5</span>
+    <span style="color: #009999">6</span> |   <span style="color: #009999">0</span> |     |  <span style="color: #009999">9</span>
+    <span style="color: #009999">7</span> |  <span style="color: #009999">20</span> |     |  <span style="color: #009999">9</span>
+    <span style="color: #009999">8</span> |  <span style="color: #009999">30</span> |     |  <span style="color: #009999">9</span>
+    <span style="color: #009999">9</span> |  <span style="color: #009999">60</span> |  <span style="color: #009999">60</span> |  <span style="color: #009999">9</span>
+   <span style="color: #009999">10</span> |   <span style="color: #009999">0</span> |     | <span style="color: #009999">14</span>
+   <span style="color: #009999">11</span> |  <span style="color: #009999">10</span> |     | <span style="color: #009999">14</span>
+   <span style="color: #009999">12</span> |  <span style="color: #009999">30</span> |     | <span style="color: #009999">14</span>
+   <span style="color: #009999">13</span> |  <span style="color: #009999">35</span> |     | <span style="color: #009999">14</span>
+   <span style="color: #009999">14</span> |  <span style="color: #009999">45</span> |  <span style="color: #009999">45</span> | <span style="color: #009999">14</span>
+   <span style="color: #009999">15</span> |  <span style="color: #009999">25</span> |     | <span style="color: #009999">18</span>
+   <span style="color: #009999">16</span> |  <span style="color: #009999">50</span> |     | <span style="color: #009999">18</span>
+   <span style="color: #009999">17</span> | <span style="color: #009999">100</span> |     | <span style="color: #009999">18</span>
+   <span style="color: #009999">18</span> | <span style="color: #009999">110</span> | <span style="color: #009999">110</span> | <span style="color: #009999">18</span>
+(<span style="color: #009999">18</span> <span style="color: #0000aa">rows</span>)
+</pre></div>
 
 <p>With that as an input it&rsquo;s then possible to build ranges of ticks including
 non wrapping set of measures from our counter, and get for each range the
 logical value tat the counter had at the end of it:</p>
-
-<pre><code class="language-sql">with tops as (
-  select tick, nb,
-         case when lead(nb) over w &lt; nb then nb
-              when lead(nb) over w is null then nb
-             else null
-         end as max
-    from measures
-  window w as (order by tick)
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">with</span> tops <span style="color: #0000aa">as</span> (
+  <span style="color: #0000aa">select</span> tick, nb,
+         <span style="color: #0000aa">case</span> <span style="color: #0000aa">when</span> lead(nb) over w &lt; nb <span style="color: #0000aa">then</span> nb
+              <span style="color: #0000aa">when</span> lead(nb) over w <span style="color: #0000aa">is</span> <span style="color: #0000aa">null</span> <span style="color: #0000aa">then</span> nb
+             <span style="color: #0000aa">else</span> <span style="color: #0000aa">null</span>
+         <span style="color: #0000aa">end</span> <span style="color: #0000aa">as</span> <span style="color: #0000aa">max</span>
+    <span style="color: #0000aa">from</span> measures
+  window w <span style="color: #0000aa">as</span> (<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> tick)
 ),
-     parts as (
-  select tick, nb, max,
-         (select tick
-            from tops t2
-           where t2.tick &gt;= t1.tick and max is not null
-        order by t2.tick
-           limit 1) as p
-    from tops t1
+     parts <span style="color: #0000aa">as</span> (
+  <span style="color: #0000aa">select</span> tick, nb, <span style="color: #0000aa">max</span>,
+         (<span style="color: #0000aa">select</span> tick
+            <span style="color: #0000aa">from</span> tops t2
+           <span style="color: #0000aa">where</span> t2.tick &gt;= t1.tick <span style="color: #0000aa">and</span> <span style="color: #0000aa">max</span> <span style="color: #0000aa">is</span> <span style="color: #0000aa">not</span> <span style="color: #0000aa">null</span>
+        <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> t2.tick
+           <span style="color: #0000aa">limit</span> <span style="color: #009999">1</span>) <span style="color: #0000aa">as</span> p
+    <span style="color: #0000aa">from</span> tops t1
 ),
-     ranges as (
-  select first_value(tick) over w as start,
-         last_value(tick) over w as end,
-         max(max) over w
-    from parts
-  window w as (partition by p order by tick)
+     ranges <span style="color: #0000aa">as</span> (
+  <span style="color: #0000aa">select</span> first_value(tick) over w <span style="color: #0000aa">as</span> <span style="color: #0000aa">start</span>,
+         last_value(tick) over w <span style="color: #0000aa">as</span> <span style="color: #0000aa">end</span>,
+         <span style="color: #0000aa">max</span>(<span style="color: #0000aa">max</span>) over w
+    <span style="color: #0000aa">from</span> parts
+  window w <span style="color: #0000aa">as</span> (partition <span style="color: #0000aa">by</span> p <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> tick)
 )
-select * from ranges where max is not null;
+<span style="color: #0000aa">select</span> * <span style="color: #0000aa">from</span> ranges <span style="color: #0000aa">where</span> <span style="color: #0000aa">max</span> <span style="color: #0000aa">is</span> <span style="color: #0000aa">not</span> <span style="color: #0000aa">null</span>;
 
- start | end | max 
--------+-----+-----
-     1 |   5 |  40
-     6 |   9 |  60
-    10 |  14 |  45
-    15 |  18 | 110
-(4 rows)
-</code></pre>
+ <span style="color: #0000aa">start</span> | <span style="color: #0000aa">end</span> | <span style="color: #0000aa">max</span> 
+<span style="color: #aaaaaa; font-style: italic">-------+-----+-----</span>
+     <span style="color: #009999">1</span> |   <span style="color: #009999">5</span> |  <span style="color: #009999">40</span>
+     <span style="color: #009999">6</span> |   <span style="color: #009999">9</span> |  <span style="color: #009999">60</span>
+    <span style="color: #009999">10</span> |  <span style="color: #009999">14</span> |  <span style="color: #009999">45</span>
+    <span style="color: #009999">15</span> |  <span style="color: #009999">18</span> | <span style="color: #009999">110</span>
+(<span style="color: #009999">4</span> <span style="color: #0000aa">rows</span>)
+</pre></div>
 
 <h1 id="conclusion">Conclusion</h1>
 
@@ -1029,6 +1017,33 @@ multi languages multi paradygm talents.</p>
           <div class="media">
             
             <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/05/find-the-missing-integer/">
+                <h3 class="media-heading">Find The Missing Integer</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>A recent interview question that I had to review was spelled like this:</p>
+
+<blockquote>
+<p>Find missing int element into array 1..100</p>
+</blockquote>
+
+<p>Of course at first read I got it wrong, you have only one integer to look
+for into the array. So while the obvious idea was to apply classing
+<em>sorting</em> techniques and minimize array traversal to handle complexity (time
+and space), it turns out there&rsquo;s a much simpler way to do it if you remember
+your math lessons from younger. But is is that much simpler?</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
               <a class="link-unstyled" href="http://tapoueh.org/blog/2016/04/pgconf-us-2016/">
                 <h3 class="media-heading">PGConf US 2016</h3>
               </a>
@@ -1246,29 +1261,6 @@ started: it provides with error handling for the
             <hr>
           </div>
         
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="http://tapoueh.org/blog/2014/10/meetup-postgresql-%C3%A0-paris/">
-                <h3 class="media-heading">Meetup PostgreSQL à Paris</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Oct 10, 2014
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p>Mercredi 8 octobre se tiendra le prochain
-<a href="http://www.meetup.com/PostgreSQL-User-Group-Paris/events/209650432/">Meetup PostgreSQL à Paris</a> dans les
-locaux de
-<a href="https://www.mozilla.org/en-US/contact/spaces/paris/">Mozilla Europe</a>, dont la capacité est de 90 personnes ! Venez
-nombreux !</p>
-
-<p></p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
       </div>
     </div>
     <div class="modal-footer">
@@ -1276,7 +1268,7 @@ nombreux !</p>
          data-message-zero=""
          data-message-one=""
          data-message-other="">
-         230 posts found
+         231 posts found
       </p>
     </div>
   </div>
