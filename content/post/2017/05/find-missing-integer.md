@@ -18,10 +18,10 @@ A recent interview question that I had to review was spelled like this:
 > Find missing int element into array 1..100
 
 Of course at first read I got it wrong, you have only one integer to look
-for into the array. So while the obvious idea was to apply classing
-*sorting* techniques and minimize array traversal to handle complexity (time
-and space), it turns out there's a much simpler way to do it if you remember
-your math lessons from younger. But is is that much simpler?
+for into the array. So while the obvious idea was to apply classic *sorting*
+techniques and minimize array traversal to handle complexity (time and
+space), it turns out there's a much simpler way to do it if you remember
+your math lessons from younger. But is it that much simpler?
 
 <!--more-->
 <!--toc-->
