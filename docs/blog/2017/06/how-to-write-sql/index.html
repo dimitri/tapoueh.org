@@ -1,0 +1,1112 @@
+
+
+  
+    
+  
+
+
+  
+
+
+
+
+  
+
+
+  
+
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Hugo 0.20.7">
+    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
+    <title>How to Write SQL</title>
+    <meta name="author" content="Dimitri Fontaine">
+    <meta name="keywords" content="">
+
+    <link rel="icon" href="/favicon.ico">
+    
+
+    
+    <meta name="description" content="Kris Jenkins cooked up a very nice way
+to embed SQL in your
+code: YeSQL for Clojure. The main
+idea is that you should be writing your SQL queries in .sql files in your
+code repository and maintain them there.
+
+The idea is very good and it is now possible to find alternative
+implementations of the Clojure yesql library in
+other languages. Today, we are going to have a look at one of them for
+the python programming
+language: anosql.">
+    <meta property="og:description" content="Kris Jenkins cooked up a very nice way
+to embed SQL in your
+code: YeSQL for Clojure. The main
+idea is that you should be writing your SQL queries in .sql files in your
+code repository and maintain them there.
+
+The idea is very good and it is now possible to find alternative
+implementations of the Clojure yesql library in
+other languages. Today, we are going to have a look at one of them for
+the python programming
+language: anosql.">
+    <meta property="og:type" content="blog">
+    <meta property="og:title" content="How to Write SQL">
+    <meta property="og:url" content="/blog/2017/06/how-to-write-sql/">
+    <meta property="og:site_name" content="Dimitri Fontaine, PostgreSQL Expert">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Dimitri Fontaine, PostgreSQL Expert">
+    <meta name="twitter:description" content="Kris Jenkins cooked up a very nice way
+to embed SQL in your
+code: YeSQL for Clojure. The main
+idea is that you should be writing your SQL queries in .sql files in your
+code repository and maintain them there.
+
+The idea is very good and it is now possible to find alternative
+implementations of the Clojure yesql library in
+other languages. Today, we are going to have a look at one of them for
+the python programming
+language: anosql.">
+    
+      <meta name="twitter:creator" content="@tapoueh">
+    
+    
+
+    
+    
+
+    
+      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
+    
+
+    
+      <meta property="og:image" content="http://tapoueh.org/img/sql-filetype.svg">
+    
+    
+      <meta property="og:image" content="http://tapoueh.org/img/matrix-code.jpg">
+    
+    
+
+    
+
+    
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
+    
+    
+    <link rel="stylesheet" href="/css/style-u6mk0ojoywresbx8iepslrmmhl4stuhrsxuwhkpwrkrx7mryjcaimasnk4pi.min.css" />
+    
+    
+      <link rel="stylesheet" href="http://tapoueh.org//css/dim.css">
+    
+
+    
+      
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-47059482-1', 'auto');
+ga('send', 'pageview');
+</script>
+
+    
+    
+  </head>
+
+  <body>
+    <div id="blog">
+      <header id="header" data-behavior="2">
+  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+  <div class="header-title">
+    <a class="header-title-link" href="/">Dimitri Fontaine, PostgreSQL Expert</a>
+  </div>
+  
+</header>
+
+      <nav id="sidebar" data-behavior="2">
+  <div class="sidebar-container">
+    
+      <div class="sidebar-profile">
+        <a href="/#about">
+          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+        </a>
+        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
+        
+          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
+        
+      </div>
+    
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
+      
+      <span class="sidebar-button-desc">Blog</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/about/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
+      
+      <span class="sidebar-button-desc">About</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="http://masteringpostgresql.com" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
+      
+      <span class="sidebar-button-desc">Mastering PostgreSQL</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+      
+      <span class="sidebar-button-desc">GitHub</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+      
+      <span class="sidebar-button-desc">Twitter</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+      
+      <span class="sidebar-button-desc">Categories</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/index.xml">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+      
+      <span class="sidebar-button-desc">RSS</span>
+    </a>
+  </li>
+
+    </ul>
+  </div>
+</nav>
+
+      
+  <div class="post-header-cover
+              text-left
+              post-header-cover--partial"
+       style="background-image:url('/img/matrix-code.jpg')"
+       data-behavior="2">
+    
+      <div class="post-header main-content-wrap text-left">
+  
+    <h1 class="post-title" itemprop="headline">
+      How to Write SQL
+    </h1>
+  
+  <div class="postShorten-meta post-meta">
+  
+    <time itemprop="datePublished" datetime="2017-06-08T13:23:26&#43;02:00">
+      
+  
+  
+  
+  
+    Thursday 08 Jun 2017
+  
+
+    </time>
+  
+  
+  
+  
+    <span></span>
+    
+      <a class="category-link" href="/categories/postgresql">PostgreSQL</a>, 
+    
+      <a class="category-link" href="/categories/yesql">YeSQL</a>
+    
+  
+
+
+</div>
+
+</div>
+    
+  </div>
+
+
+      <div id="main" data-behavior="2"
+        class="hasCover
+               hasCoverMetaIn
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
+          
+          <div class="post-content markdown" itemprop="articleBody">
+            <div class="main-content-wrap">
+              <p><a href="https://twitter.com/krisajenkins">Kris Jenkins</a> cooked up a very nice way
+to embed SQL in your
+code: <a href="https://github.com/krisajenkins/yesql">YeSQL for Clojure</a>. The main
+idea is that you should be writing your SQL queries in <code>.sql</code> files in your
+code repository and maintain them there.</p>
+
+<p>The idea is very good and it is now possible to find alternative
+implementations of the <a href="https://clojure.org">Clojure</a> <em>yesql</em> library in
+other languages. Today, we are going to have a look at one of them for
+the <a href="https://www.python.org">python</a> programming
+language: <a href="https://github.com/honza/anosql">anosql</a>.</p>
+
+<p>
+<h1 id="table-of-contents"></h1><nav id="TableOfContents">
+<ul>
+<li><a href="#sql-is-code">SQL is code</a></li>
+<li><a href="#psql-variables">psql variables</a></li>
+<li><a href="#dynamically-building-sql-queries">Dynamically building SQL queries</a></li>
+<li><a href="#integrating-sql-code-in-python-with-anosql">Integrating SQL code in python with anosql</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+</nav></p>
+
+<h1 id="sql-is-code">SQL is code</h1>
+
+<p>When you have to write SQL code, several options are available. One of them
+is to consider that SQL is nothing more than a static literal string
+embedded in your code, and use the tools that your programming language
+provide for that,
+e.g.
+<a href="http://php.net/manual/en/language.types.string.php#language.types.string.syntax.heredoc">PHP Heredoc</a> or
+<a href="https://docs.python.org/3.2/tutorial/introduction.html#strings">python triple-quoted strings</a>.</p>
+
+<p>Then, often enough you also want to integrate dynamic parts in your <em>query
+string</em>&hellip; and now either you concatenate string parts and variables or you
+need a templating facility of sorts. Or maybe you&rsquo;re thinking that your ORM
+offers the perfect solution to that problem, allowing you to never resort to
+writing <em>raw</em> SQL yourself&hellip;</p>
+
+<p>In any case, a time will come when you need to debug a query that runs in
+production, and now you need to find it again in your source code and edit
+it. When you&rsquo;re lucky enough, you have a SQL savvy guy in the team, maybe
+even a DBA, and so you&rsquo;re analyzing the query
+using
+<a href="https://www.postgresql.org/docs/current/static/sql-explain.html">Explain</a>
+and rewriting it to solve your problem, maybe an efficiency related one.</p>
+
+<p>How easy it is for you to find the problematic query in your code, and then
+to replace it with the new version you just came up with? In a lot of cases,
+the new version will look nothing like the previous one. It might even use
+constructs that your ORM knows nothing about.</p>
+
+<p>Let&rsquo;s see an example query that works against
+the <a href="https://github.com/lerocha/chinook-database">Chinook</a> database. This
+database models a digital media store, including tables for artists, albums,
+media tracks, invoices, and customers. We have a table <code>track</code> with a
+<code>milliseconds</code> column and we want to display both the time in a proper human
+readable form and the percentage of each track duration with respect to the
+total duration of the album:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>   <span style="color: #0000aa">select</span> name <span style="color: #0000aa">as</span> title,
+          milliseconds * <span style="color: #00aaaa">interval</span> <span style="color: #aa5500">&#39;1ms&#39;</span> <span style="color: #0000aa">as</span> duration,
+          round(  milliseconds
+                / <span style="color: #0000aa">sum</span>(milliseconds) over ()
+                * <span style="color: #009999">100</span>, <span style="color: #009999">2</span>)
+          <span style="color: #0000aa">as</span> pct
+    <span style="color: #0000aa">from</span> track
+   <span style="color: #0000aa">where</span> albumid = :id
+<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> trackid;
+</pre></div>
+
+<p>And here&rsquo;s the output for <code>:id = 1</code>:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #888888">                  title                  |       duration       |  pct  </span>
+<span style="color: #888888">-----------------------------------------+----------------------+-------</span>
+<span style="color: #888888"> For Those About To Rock (We Salute You) | @ 5 mins 43.719 secs | 14.32</span>
+<span style="color: #888888"> Put The Finger On You                   | @ 3 mins 25.662 secs |  8.57</span>
+<span style="color: #888888"> Let&#39;s Get It Up                         | @ 3 mins 53.926 secs |  9.75</span>
+<span style="color: #888888"> Inject The Venom                        | @ 3 mins 30.834 secs |  8.78</span>
+<span style="color: #888888"> Snowballed                              | @ 3 mins 23.102 secs |  8.46</span>
+<span style="color: #888888"> Evil Walks                              | @ 4 mins 23.497 secs | 10.98</span>
+<span style="color: #888888"> C.O.D.                                  | @ 3 mins 19.836 secs |  8.33</span>
+<span style="color: #888888"> Breaking The Rules                      | @ 4 mins 23.288 secs | 10.97</span>
+<span style="color: #888888"> Night Of The Long Knives                | @ 3 mins 25.688 secs |  8.57</span>
+<span style="color: #888888"> Spellbound                              | @ 4 mins 30.863 secs | 11.28</span>
+<span style="color: #888888">(10 rows)</span>
+</pre></div>
+
+<h1 id="psql-variables">psql variables</h1>
+
+<p>So, how did I run the previous query, may you ask?
+Well <a href="https://www.postgresql.org/docs/current/static/app-psql.html">psql</a> is
+a wonderful PostgreSQL
+interactive <a href="https://en.wikipedia.org/wiki/Read–eval–print_loop">REPL</a> with
+<em>variables</em> support.</p>
+
+<p>Say I saved my query in a <code>album.sql</code> file and want to execute it against
+the particular album I know the id of:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>psql --variable <span style="color: #aa5500">&quot;id=1&quot;</span> -f album.sql chinook
+</pre></div>
+
+<p>Of course, it is also possible to create and edit the variables
+interactively so instead I could have done the following from within a psql
+session:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>&gt; <span style="color: #0000aa">\cd</span> <span style="color: #0000aa">path/to/my/sources</span>
+&gt; <span style="color: #0000aa">\set</span> <span style="color: #0000aa">i</span> <span style="color: #0000aa">1</span>
+&gt; <span style="color: #0000aa">\i</span> <span style="color: #0000aa">album.sql</span>
+</pre></div>
+
+<p>The psql console being handy, you have <em>autocompletion</em> when entering the
+file paths in both the <code>\cd</code> and <code>\i</code> commands.</p>
+
+<p>So it is now quite easy to have your SQL query opened in your favorite
+editor and a terminal window with the interactive psql console wherein you
+can easily try your query with different values of your variables.</p>
+
+<h1 id="dynamically-building-sql-queries">Dynamically building SQL queries</h1>
+
+<p>In some cases, your code will use almost the same query in different places,
+and it&rsquo;s easy to want to reduce duplication. Then what happens is that you
+have conditional code to build the query string with entirely optional
+clauses: a <em>where</em> clause might be omitted in some cases, or maybe even a
+<em>join</em>. My advice is simple: don&rsquo;t do that.</p>
+
+<p>SQL has support for
+complex
+<a href="https://www.postgresql.org/docs/current/static/functions-conditional.html">conditional expressions</a> with
+<em>CASE</em>, <em>COALESCE</em> and even <a href="http://modern-sql.com/feature/filter">filter</a>
+if you want to count it there.</p>
+
+<p>In particular, it is possible to use the <code>CASE</code> clause within your <code>WHERE</code>
+conditions if you need to, and the PostgreSQL documentation shows the
+following example that also shows the evaluation rules of the clause:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">SELECT</span> ... <span style="color: #0000aa">WHERE</span> <span style="color: #0000aa">CASE</span> <span style="color: #0000aa">WHEN</span> x &lt;&gt; <span style="color: #009999">0</span> <span style="color: #0000aa">THEN</span> y/x &gt; <span style="color: #009999">1</span>.<span style="color: #009999">5</span> <span style="color: #0000aa">ELSE</span> <span style="color: #0000aa">false</span> <span style="color: #0000aa">END</span>;
+</pre></div>
+
+<p>So my advice is
+to <a href="https://en.wikipedia.org/wiki/KISS_principle">Keep It Simple</a> and have a
+SQL file for each main set of conditions. Then in your application code, you
+can pick the SQL file you need depending on the situation. You might have
+some SQL code duplication when doing so, that&rsquo;s true and it is the main
+<em>cons</em> argument against doing so. On the <em>pros</em> side though you have
+achieved better modularity: it is now really easy to fix that query you
+discover being problematic in your production logs. And it is even dead
+simple to replay and <em>explain</em> the query interactively, either on your
+developer environment or even in production if necessary (it is, sometimes).</p>
+
+<h1 id="integrating-sql-code-in-python-with-anosql">Integrating SQL code in python with anosql</h1>
+
+<p>Kris Jenkin&rsquo;s <a href="https://github.com/krisajenkins/yesql">yesql</a> makes it easy
+to implement your SQL in a <code>query.sql</code> file and then expose your queries as
+functions. It is now possible to do so in python too thanks
+to <a href="https://github.com/honza/anosql">anosql</a>, which is available
+in <a href="http://pip-python3.readthedocs.io">pip</a>.</p>
+
+<p>Here&rsquo;s an example of what the <code>album.sql</code> file would look like with AnoSQL
+integration:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #aaaaaa; font-style: italic">-- name: list-tracks-by-albumid</span>
+<span style="color: #aaaaaa; font-style: italic">-- List the tracks of an album, includes duration and position</span>
+   <span style="color: #0000aa">select</span> name <span style="color: #0000aa">as</span> title,
+          milliseconds * <span style="color: #00aaaa">interval</span> <span style="color: #aa5500">&#39;1ms&#39;</span> <span style="color: #0000aa">as</span> duration,
+          round(  milliseconds
+                / <span style="color: #0000aa">sum</span>(milliseconds) over ()
+                * <span style="color: #009999">100</span>, <span style="color: #009999">2</span>)
+          <span style="color: #0000aa">as</span> pct
+    <span style="color: #0000aa">from</span> track
+   <span style="color: #0000aa">where</span> albumid = :id
+<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> trackid;
+</pre></div>
+
+<p>The main difference with the previous example is that we added a couple of
+<em>documentation strings</em>. The first comment line gives a name to the
+function, and the second one a python docstring. Here&rsquo;s how you would use
+such a query file in your python code now:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">import</span> <span style="color: #00aaaa; text-decoration: underline">anosql</span>
+<span style="color: #0000aa">import</span> <span style="color: #00aaaa; text-decoration: underline">psycopg2</span>
+<span style="color: #0000aa">import</span> <span style="color: #00aaaa; text-decoration: underline">sqlite3</span>
+<span style="color: #0000aa">import</span> <span style="color: #00aaaa; text-decoration: underline">argparse</span>
+<span style="color: #0000aa">import</span> <span style="color: #00aaaa; text-decoration: underline">sys</span>
+
+<span style="color: #0000aa">class</span> <span style="color: #00aa00; text-decoration: underline">chinook</span>(<span style="color: #00aaaa">object</span>):
+    <span style="color: #aa5500">&quot;&quot;&quot;Our database model and queries&quot;&quot;&quot;</span>
+    <span style="color: #0000aa">def</span> <span style="color: #00aa00">__init__</span>(<span style="color: #00aaaa">self</span>,
+                 pgconnstring = <span style="color: #aa5500">&quot;dbname=chinook application_name=cdstore&quot;</span>):
+        <span style="color: #00aaaa">self</span>.pgconn = psycopg2.connect(pgconnstring)
+        <span style="color: #00aaaa">self</span>.genre  = anosql.load_queries(<span style="color: #aa5500">&#39;postgres&#39;</span>, <span style="color: #aa5500">&#39;genre.sql&#39;</span>)
+        <span style="color: #00aaaa">self</span>.artist = anosql.load_queries(<span style="color: #aa5500">&#39;postgres&#39;</span>, <span style="color: #aa5500">&#39;artist.sql&#39;</span>)
+        <span style="color: #00aaaa">self</span>.album  = anosql.load_queries(<span style="color: #aa5500">&#39;postgres&#39;</span>, <span style="color: #aa5500">&#39;album.sql&#39;</span>)
+
+    <span style="color: #0000aa">def</span> <span style="color: #00aa00">genre_list</span>(<span style="color: #00aaaa">self</span>):
+        <span style="color: #0000aa">return</span> <span style="color: #00aaaa">self</span>.genre.tracks_by_genre(<span style="color: #00aaaa">self</span>.pgconn)
+
+    <span style="color: #0000aa">def</span> <span style="color: #00aa00">genre_top_n</span>(<span style="color: #00aaaa">self</span>, n):
+        <span style="color: #0000aa">return</span> <span style="color: #00aaaa">self</span>.genre.genre_top_n(<span style="color: #00aaaa">self</span>.pgconn, n=n)
+
+    <span style="color: #0000aa">def</span> <span style="color: #00aa00">artist_by_albums</span>(<span style="color: #00aaaa">self</span>, n):
+        <span style="color: #0000aa">return</span> <span style="color: #00aaaa">self</span>.artist.top_artists_by_album(<span style="color: #00aaaa">self</span>.pgconn, n=n)
+
+    <span style="color: #0000aa">def</span> <span style="color: #00aa00">album_details</span>(<span style="color: #00aaaa">self</span>, albumid):
+        <span style="color: #0000aa">return</span> <span style="color: #00aaaa">self</span>.album.list_tracks_by_albumid(<span style="color: #00aaaa">self</span>.pgconn, <span style="color: #00aaaa">id</span>=albumid)
+        
+<span style="color: #0000aa">def</span> <span style="color: #00aa00">foo</span>(albumid):
+    db = chinook()
+    <span style="color: #0000aa">for</span> (title, duration, pct) <span style="color: #0000aa">in</span> db.album_details(albumid):
+        ... do something here ...
+</pre></div>
+
+<p>The <em>anosql</em> library automatically exposes python functions with <em>kwargs</em>
+support for your queries, so that not only do you get to write proper SQL in
+the good way™ — which means in SQL files that you can version control — but
+also, all you have to do in your code is call functions or methods. And I
+guess you already know how to do that!</p>
+
+<p>You might have seen that I use <em>application_name=cdstore</em> in my connection
+string. You can then see it in the PostgreSQL activity system view and in
+the logs. This very simple thing helps tremendously when you want to relate
+production activity with SQL embedded in your application&rsquo;s code. Do it now,
+and be as granular as you can (module names, class names, package names,
+etc).</p>
+
+<h1 id="conclusion">Conclusion</h1>
+
+
+
+
+<div class="figure fig25 right dim-margin" >
+  
+    <img class="fig-img" src="/img/old/sql-logo.png"  alt="PostgreSQL is YeSQL">
+  
+   
+    <span class="caption">PostgreSQL is YeSQL</span>
+  
+</div>
+
+
+<p>One aspect of using SQL to its full capacity is having a productive editing
+environment with the same level of support you have when writing in another
+programming language, and more. With <em>psql</em> you also get an interactive REPL
+console to play with your code and adjust it.</p>
+
+<p>Compared to using concatenated strings sprinkled all over your code, I don&rsquo;t
+suppose I have to explain the benefits. Compared with an ORM, it means you
+have control of the SQL queries you send to your production server and are
+now actually able to have a productive talk and optimization session with
+your friendly DBA. He might as well just send you <em>pull requests</em> with
+better versions of your SQL, and if you already implement <em>peer review</em> you
+will learn a lot very fast!</p>
+
+<p>Finally, the same idea is available
+in <a href="https://github.com/krisajenkins/yesql#other-languages">other languages</a>
+than Clojure and Python, I can see Javascript, Perl and Go over there, in
+the middle of PHP and C#. Maybe you know of an alternative implementation
+not yet listed?</p>
+
+<p>This topic is an important one and you will find more about <em>How to Write
+SQL</em> in the book I am currently
+writing:
+<a href="http://masteringpostgresql.com">Mastering PostgreSQL in Application Development</a>!</p>
+              
+            </div>
+          </div>
+          <div id="post-footer" class="post-footer main-content-wrap">
+            
+              
+                
+                
+                  <div class="post-footer-tags">
+                    <span class="text-color-light text-small"></span><br/>
+                    
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/postgresql/">PostgreSQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/yesql/">YeSQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/anosql/">AnoSQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/python/">Python</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/sql/">SQL</a>
+
+                  </div>
+                
+              
+            
+            <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    <script async id="_ck_218061" src="https://forms.convertkit.com/218061?v=6"></script>
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2017/05/find-the-missing-integer/" data-tooltip="Find The Missing Integer">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f06%2fhow-to-write-sql%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f06%2fhow-to-write-sql%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=How%20to%20Write%20SQL with @tapoueh: http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f06%2fhow-to-write-sql%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+            
+              
+                <div id="disqus_thread">
+  <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+              
+            
+          </div>
+        </article>
+        <footer id="footer" class="main-content-wrap">
+  <span class="copyrights">
+    &copy; 2017 Dimitri Fontaine. 
+  </span>
+</footer>
+
+      </div>
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="2">
+        <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    <script async id="_ck_218061" src="https://forms.convertkit.com/218061?v=6"></script>
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2017/05/find-the-missing-integer/" data-tooltip="Find The Missing Integer">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f06%2fhow-to-write-sql%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f06%2fhow-to-write-sql%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=How%20to%20Write%20SQL with @tapoueh: http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f06%2fhow-to-write-sql%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+      </div>
+      <div id="share-options-bar" class="share-options-bar" data-behavior="2">
+  <ul class="share-options">
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f06%2fhow-to-write-sql%2f">
+        <i class="fa fa-google-plus"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f06%2fhow-to-write-sql%2f">
+        <i class="fa fa-facebook-official"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=How%20to%20Write%20SQL with @tapoueh: http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f06%2fhow-to-write-sql%2f">
+        <i class="fa fa-twitter"></i><span></span>
+      </a>
+    </li>
+  </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
+    </div>
+    
+    <div id="about">
+  <div id="about-card">
+    <div id="about-btn-close">
+      <i class="fa fa-remove"></i>
+    </div>
+    
+      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+    
+    <h4 id="about-card-name">Dimitri Fontaine</h4>
+    
+      <div id="about-card-bio">PostgreSQL Major Contributor</div>
+    
+    
+      <div id="about-card-job">
+        <i class="fa fa-briefcase"></i>
+        <br/>
+        Open Source Software Engineer
+      </div>
+    
+    
+      <div id="about-card-location">
+        <i class="fa fa-map-marker"></i>
+        <br/>
+        France
+      </div>
+    
+  </div>
+</div>
+
+    <div id="algolia-search-modal" class="modal-container">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="close-button"><i class="fa fa-close"></i></span>
+      <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+        <span class="searchby-algolia-text text-color-light text-small">by</span>
+        <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+      </a>
+      <i class="search-icon fa fa-search"></i>
+      <form id="algolia-search-form">
+        <input type="text" id="algolia-search-input" name="search"
+          class="form-control input--large search-input" placeholder="" />
+      </form>
+    </div>
+    <div class="modal-body">
+      <div class="no-result text-color-light text-center"></div>
+      <div class="results">
+        
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/06/how-to-write-sql/">
+                <h3 class="media-heading">How to Write SQL</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p><a href="https://twitter.com/krisajenkins">Kris Jenkins</a> cooked up a very nice way
+to embed SQL in your
+code: <a href="https://github.com/krisajenkins/yesql">YeSQL for Clojure</a>. The main
+idea is that you should be writing your SQL queries in <code>.sql</code> files in your
+code repository and maintain them there.</p>
+
+<p>The idea is very good and it is now possible to find alternative
+implementations of the <a href="https://clojure.org">Clojure</a> <em>yesql</em> library in
+other languages. Today, we are going to have a look at one of them for
+the <a href="https://www.python.org">python</a> programming
+language: <a href="https://github.com/honza/anosql">anosql</a>.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/05/find-the-missing-integer/">
+                <h3 class="media-heading">Find The Missing Integer</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>A recent interview question that I had to review was spelled like this:</p>
+
+<blockquote>
+<p>Find missing int element into array 1..100</p>
+</blockquote>
+
+<p>Of course at first read I got it wrong, you have only one integer to look
+for into the array. So while the obvious idea was to apply classic <em>sorting</em>
+techniques and minimize array traversal to handle complexity (time and
+space), it turns out there&rsquo;s a much simpler way to do it if you remember
+your math lessons from younger. But is it that much simpler?</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2016/04/pgconf-us-2016/">
+                <h3 class="media-heading">PGConf US 2016</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2016
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p><a href="https://www.pgconf.us/conferences/2016">PostgreSQL Conference US</a> took
+place in New York City and I had the pleasure to be a speaker there. I
+presented there a talk about why <em>You’d Better Have Tested Backups</em>. The
+important bit is that backups are not interesting, recoveries are. Also the
+only way to make sure a backup is successful is to be able to use it for
+recovery.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/11/all-your-base-conference-2015/">
+                <h3 class="media-heading">All Your Base Conference 2015</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Nov 11, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>I had the pleasure to be invited to speak at
+<a href="http://allyourbaseconf.com/2015/speakers#dimitri-fontaine">All Your Base Conference 2015</a>
+about
+<a href="http://www.postgresql.org">PostgreSQL</a> (of course). The conference gathers together lots of user
+experience around data management and database products, either in the now
+classic meaning of the word (I mean
+<em>relational database management systems
+here</em>) or the newer set of trade-offs represented by the NoSQL set of tools.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/05/postgresql-au-jug-de-montpellier/">
+                <h3 class="media-heading">PostgreSQL au JUG de Montpellier</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>J&rsquo;ai eu le plaisir de présenter PostgreSQL au
+<a href="http://www.jug-montpellier.org/">Java User Group de Montpellier</a>
+le 20 mai dernier dans le cadre d&rsquo;une soirée
+<a href="http://www.jug-montpellier.org/event/36">PostgreSQL is YeSQL</a>. L&rsquo;accueil
+réservé par le
+<em>JUG</em> a été parfait et je tiens à les remercier pour une très
+bonne soirée de partage et d&rsquo;échanges autour de PostgreSQL.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/05/quicklisp-and-debian/">
+                <h3 class="media-heading">Quicklisp and debian</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Common Lisp users are very happy to use
+<a href="https://www.quicklisp.org/beta/">Quicklisp</a> when it comes to
+downloading and maintaining dependencies between their own code and the
+<a href="http://quickdocs.org/">librairies</a> it is using.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/04/pgday-paris/">
+                <h3 class="media-heading">pgDay Paris</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Le 21 avril prochain se tient le premier
+<a href="http://pgday.paris/">pgDay Paris</a>: une conférence
+<a href="http://www.postgresql.org/">PostgreSQL</a> d&rsquo;une journée complète. Il s&rsquo;agit de 8 conférences sur votre base
+de données préférée par des conférencers internationaux, incluant des
+retours d&rsquo;expérience et une analyse de l&rsquo;utilisation des derniers
+développements en cours dans notre projet de base de données préféré.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/03/a-pgday-in-paris/">
+                <h3 class="media-heading">a pgDay in Paris!</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Mar 3, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>I was lucky to participate as a speaker to the
+<a href="http://2015.nordicpgday.org/">Nordic PostgreSQL Day 2015</a>
+and it&rsquo;s been another awesome edition of the conference. Really smooth,
+everything has been running as it should, with about one hundred people at
+the conference.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/02/back-from-fosdem-2015/">
+                <h3 class="media-heading">Back From FOSDEM 2015</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Feb 2, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>The
+<a href="https://fosdem.org/2015/">FOSDEM 2015</a> edition has been awesome this year, the usual mix of meeting
+with old friends, talking about interesting topics, seeing tremendous
+activity in all Open Source domains, and having Belgium beers in the
+evenings.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/01/my-first-slashdot-effect/">
+                <h3 class="media-heading">My First Slashdot Effect</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jan 1, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Thanks to the
+<a href="http://postgresweekly.com/issues/89">Postgres Weekly issue #89</a> and a post to
+<a href="https://news.ycombinator.com/news">Hacker News</a> front page
+(see
+<a href="https://news.ycombinator.com/item?id=8924270">Pgloader: A High-speed PostgreSQL Swiss Army Knife, Written in Lisp</a> it
+well seems that I just had my first
+<a href="http://en.wikipedia.org/wiki/Slashdot_effect">Slashdot effect</a>&hellip;</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+      </div>
+    </div>
+    <div class="modal-footer">
+      <p class="results-count text-medium"
+         data-message-zero=""
+         data-message-one=""
+         data-message-other="">
+         232 posts found
+      </p>
+    </div>
+  </div>
+</div>
+    
+  
+    
+    <div id="cover" style="background-image:url('http://tapoueh.org/images/Tree_Of_Light_by_lowapproach.jpg');"></div>
+  
+
+
+    
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.8.0/highlight.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.js"></script>
+
+
+<script src="/js/script-wl33z0n6ocaypepiqrazthtivfrliqijej4rq8ek8gvrv1awftmgjuv8k4zc.min.js"></script>
+
+<script>
+$(document).ready(function() {
+  hljs.configure({ classPrefix: '', useBR: false });
+  $('pre.code-highlight').each(function(i, block) {
+    var code = "";
+    hljs.highlightAuto(block.innerText).value.split(/\r\n|\r|\n/).forEach(function(line) {
+      code += "<span class=\"line\">" + line + "</span><br>";
+    });
+    if (code.length > 0) {
+      block.innerHTML = code;  
+    }
+  });
+  $('pre > code').each(function(i, block) {
+    $(this).addClass('codeblock');
+    hljs.highlightBlock(block);
+  });
+});
+</script>
+
+  
+    
+      <script>
+        var disqus_config = function () {
+          this.page.url = 'http:\/\/tapoueh.org\/blog\/2017\/06\/how-to-write-sql\/';
+          
+            this.page.identifier = '\/blog\/2017\/06\/how-to-write-sql\/'
+          
+        };
+        (function() {
+          
+          
+          if (window.location.hostname == "localhost") {
+            return;
+          }
+          var d = document, s = d.createElement('script');
+          var disqus_shortname = 'tapoueh';
+          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+          s.setAttribute('data-timestamp', +new Date());
+          (d.head || d.body).appendChild(s);
+        })();
+      </script>
+    
+  
+
+
+
+
+
+    
+  </body>
+</html>
+
