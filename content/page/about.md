@@ -47,7 +47,7 @@ about
 and you can subscribe to get sample content before anyone else and be the
 first to get the book when it's available!
 
-
+{{< ckbook >}}
 
 <hr>
 
