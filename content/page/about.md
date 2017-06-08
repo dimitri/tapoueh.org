@@ -7,14 +7,11 @@ showPagination = false
 showSocial = false
 showTags = false
 title = "About Dimitri Fontaine"
-coverImage = "Tree_Of_Light_by_lowapproach.jpg"
-coverSize = "partial"
-coverMeta = "in"
 aliases = ["/about.html","/about"]
 +++
 
-{{< image classes="fig50 left fancybox dim-margin"
-              src="/img/dimitri-320.jpg"
+{{< image classes="fig50 right fancybox dim-margin"
+              src="/img/dimface.320.png"
             title="Dimitri, picture by Oleg Bartunov" >}}
 
 Hi! My name is Dimitri. I have been using and contributing to Open Source
@@ -31,6 +28,26 @@ read
 there's something to that in my career up to now, definitely. From the
 hacker guy to the CEO of a small company, from the PostgreSQL Major
 Contributor to the CTO of a big company.
+
+<hr/>
+
+{{< image classes="fig50 left fancybox dim-margin" src="/images/book-320.jpg" >}}
+            
+In this place I share my [PostgreSQL](/tags/postgresql/) expertise. You will
+find about my [projects](/projects/) of course, and the blog is full of
+interesting articles: have a try
+at
+[Understanding Window Functions](/blog/2013/08/understanding-window-functions/) which
+has been helpful to many readers! This article is even part of a data driven
+series of post, the [YeSQL](/categories/yesql/) category, check it out!
+
+Also, I'm writing a book
+about
+[Mastering PostgreSQL in Application Development](http://masteringpostgresql.com),
+and you can subscribe to get sample content before anyone else and be the
+first to get the book when it's available!
+
+
 
 <hr>
 
