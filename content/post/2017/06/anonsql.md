@@ -114,7 +114,7 @@ session:
 
 ~~~ psql
 > \cd path/to/my/sources
-> \set i 1
+> \set id 1
 > \i album.sql
 ~~~
 
