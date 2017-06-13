@@ -1,0 +1,1470 @@
+
+
+  
+    
+  
+
+
+  
+
+
+
+
+  
+
+
+  
+
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Hugo 0.20.7">
+    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
+    <title>Exploring a Data Set in SQL</title>
+    <meta name="author" content="Dimitri Fontaine">
+    <meta name="keywords" content="">
+
+    <link rel="icon" href="/favicon.ico">
+    
+
+    
+    <meta name="description" content="Sometimes you need to dive in an existing data set that you know very little
+about. Let&rsquo;s say we&rsquo;ve been lucky to have had a high level description of
+the business case covered by a database, and then access to it. Our next
+step is figuring out data organisation, content and quality. Our tool box:
+the world&rsquo;s most advanced open source
+database, PostgreSQL, and its Structured
+Query Language, SQL.
+
+">
+    <meta property="og:description" content="Sometimes you need to dive in an existing data set that you know very little
+about. Let&rsquo;s say we&rsquo;ve been lucky to have had a high level description of
+the business case covered by a database, and then access to it. Our next
+step is figuring out data organisation, content and quality. Our tool box:
+the world&rsquo;s most advanced open source
+database, PostgreSQL, and its Structured
+Query Language, SQL.
+
+">
+    <meta property="og:type" content="blog">
+    <meta property="og:title" content="Exploring a Data Set in SQL">
+    <meta property="og:url" content="/blog/2017/06/exploring-a-data-set-in-sql/">
+    <meta property="og:site_name" content="Dimitri Fontaine, PostgreSQL Expert">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Dimitri Fontaine, PostgreSQL Expert">
+    <meta name="twitter:description" content="Sometimes you need to dive in an existing data set that you know very little
+about. Let&rsquo;s say we&rsquo;ve been lucky to have had a high level description of
+the business case covered by a database, and then access to it. Our next
+step is figuring out data organisation, content and quality. Our tool box:
+the world&rsquo;s most advanced open source
+database, PostgreSQL, and its Structured
+Query Language, SQL.
+
+">
+    
+      <meta name="twitter:creator" content="@tapoueh">
+    
+    
+
+    
+    
+
+    
+      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
+    
+
+    
+      <meta property="og:image" content="http://tapoueh.org/img/explore-data.png">
+    
+    
+      <meta property="og:image" content="http://tapoueh.org/img/explorer.jpg">
+    
+    
+
+    
+
+    
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
+    
+    
+    <link rel="stylesheet" href="/css/style-u6mk0ojoywresbx8iepslrmmhl4stuhrsxuwhkpwrkrx7mryjcaimasnk4pi.min.css" />
+    
+    
+      <link rel="stylesheet" href="http://tapoueh.org//css/dim.css">
+    
+
+    
+      
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-47059482-1', 'auto');
+ga('send', 'pageview');
+</script>
+
+    
+    
+  </head>
+
+  <body>
+    <div id="blog">
+      <header id="header" data-behavior="2">
+  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+  <div class="header-title">
+    <a class="header-title-link" href="/">Dimitri Fontaine, PostgreSQL Expert</a>
+  </div>
+  
+</header>
+
+      <nav id="sidebar" data-behavior="2">
+  <div class="sidebar-container">
+    
+      <div class="sidebar-profile">
+        <a href="/#about">
+          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+        </a>
+        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
+        
+          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
+        
+      </div>
+    
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
+      
+      <span class="sidebar-button-desc">Blog</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/about/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
+      
+      <span class="sidebar-button-desc">About</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories/yesql/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-database"></i>
+      
+      <span class="sidebar-button-desc">YeSQL</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="http://masteringpostgresql.com" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
+      
+      <span class="sidebar-button-desc">Mastering PostgreSQL</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+      
+      <span class="sidebar-button-desc">GitHub</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+      
+      <span class="sidebar-button-desc">Twitter</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+      
+      <span class="sidebar-button-desc">Categories</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/index.xml">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+      
+      <span class="sidebar-button-desc">RSS</span>
+    </a>
+  </li>
+
+    </ul>
+  </div>
+</nav>
+
+      
+  <div class="post-header-cover
+              text-left
+              post-header-cover--partial"
+       style="background-image:url('/img/explorer.jpg')"
+       data-behavior="2">
+    
+      <div class="post-header main-content-wrap text-left">
+  
+    <h1 class="post-title" itemprop="headline">
+      Exploring a Data Set in SQL
+    </h1>
+  
+  <div class="postShorten-meta post-meta">
+  
+    <time itemprop="datePublished" datetime="2017-06-13T13:47:08&#43;02:00">
+      
+  
+  
+  
+  
+    Tuesday 13 Jun 2017
+  
+
+    </time>
+  
+  
+  
+  
+    <span></span>
+    
+      <a class="category-link" href="/categories/postgresql">PostgreSQL</a>, 
+    
+      <a class="category-link" href="/categories/yesql">YeSQL</a>
+    
+  
+
+
+</div>
+
+</div>
+    
+  </div>
+
+
+      <div id="main" data-behavior="2"
+        class="hasCover
+               hasCoverMetaIn
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
+          
+          <div class="post-content markdown" itemprop="articleBody">
+            <div class="main-content-wrap">
+              <p>Sometimes you need to dive in an existing data set that you know very little
+about. Let&rsquo;s say we&rsquo;ve been lucky to have had a high level description of
+the business case covered by a database, and then access to it. Our next
+step is figuring out data organisation, content and quality. Our tool box:
+<em>the world&rsquo;s most advanced open source
+database</em>, <a href="https://www.postgresql.org">PostgreSQL</a>, and its <em>Structured
+Query Language</em>, SQL.</p>
+
+<p></p>
+
+<p>In this article we are going to explore the music catalog parts of
+the <a href="https://github.com/lerocha/chinook-database">Chinook</a> sample database,
+so that you can easily reproduce our queries locally should you want to.</p>
+
+<p>Being the author of <a href="http://pgloader.io">pgloader</a> I use
+the
+<a href="https://github.com/lerocha/chinook-database/blob/master/ChinookDatabase/DataSources/Chinook_Sqlite_AutoIncrementPKs.sqlite">Chinook SQLite</a> distribution
+and then load it with pgloader. It&rsquo;s a good test case for its migration
+capabilities. Nowadays a PostgreSQL specific distribution is available tho.</p>
+
+<h1 id="table-of-contents"></h1><nav id="TableOfContents">
+<ul>
+<li><a href="#artists-albums-tracks-genre">Artists, Albums, Tracks, Genre</a></li>
+<li><a href="#album-genres">Album genres</a></li>
+<li><a href="#multi-genres-albums">Multi-genres albums</a></li>
+<li><a href="#selecting-a-single-genre-per-album">Selecting a single genre per album</a></li>
+<li><a href="#statistics-per-genre">Statistics per genre</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+</nav>
+
+<h1 id="artists-albums-tracks-genre">Artists, Albums, Tracks, Genre</h1>
+
+<p>The Chinook database model contains a music collection of tracks, artists,
+albums and genre. Each track has a <em>genreid</em> which is a <em>foreign key</em> to the
+<em>genre</em> reference table, and also an <em>albumid</em> which is a <em>foreing key</em> to
+the album table. Then album has a <em>foreign key</em> to artist. To discover that
+we use the <code>\d</code> facility of <em>psql</em>, here&rsquo;s an example for the track table:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>chinook# <span style="color: #0000aa">\d</span> <span style="color: #0000aa">track</span>
+                               <span style="color: #0000aa">Table</span> <span style="color: #aa5500">&quot;public.track&quot;</span>
+    <span style="color: #0000aa">Column</span>    |  <span style="color: #0000aa">Type</span>   |                        Modifiers                        
+<span style="color: #aaaaaa; font-style: italic">--------------+---------+---------------------------------------------------------</span>
+ trackid      | <span style="color: #00aaaa">bigint</span>  | <span style="color: #0000aa">not</span> <span style="color: #0000aa">null</span> <span style="color: #0000aa">default</span> nextval(<span style="color: #aa5500">&#39;track_trackid_seq&#39;</span>::regclass)
+ <span style="color: #0000aa">name</span>         | <span style="color: #00aaaa">text</span>    | 
+ albumid      | <span style="color: #00aaaa">bigint</span>  | 
+ mediatypeid  | <span style="color: #00aaaa">bigint</span>  | 
+ genreid      | <span style="color: #00aaaa">bigint</span>  | 
+ composer     | <span style="color: #00aaaa">text</span>    | 
+ milliseconds | <span style="color: #00aaaa">bigint</span>  | 
+ bytes        | <span style="color: #00aaaa">bigint</span>  | 
+ unitprice    | <span style="color: #00aaaa">numeric</span> | 
+<span style="color: #0000aa">Indexes</span>:
+    <span style="color: #aa5500">&quot;idx_51519_ipk_track&quot;</span> <span style="color: #0000aa">PRIMARY</span> <span style="color: #0000aa">KEY</span>, btree (trackid)
+    <span style="color: #aa5500">&quot;idx_51519_ifk_trackalbumid&quot;</span> btree (albumid)
+    <span style="color: #aa5500">&quot;idx_51519_ifk_trackgenreid&quot;</span> btree (genreid)
+    <span style="color: #aa5500">&quot;idx_51519_ifk_trackmediatypeid&quot;</span> btree (mediatypeid)
+<span style="color: #0000aa">Foreign</span>-<span style="color: #0000aa">key</span> <span style="color: #0000aa">constraints</span>:
+    <span style="color: #aa5500">&quot;track_albumid_fkey&quot;</span> <span style="color: #0000aa">FOREIGN</span> <span style="color: #0000aa">KEY</span> (albumid) <span style="color: #0000aa">REFERENCES</span> album(albumid)
+    <span style="color: #aa5500">&quot;track_genreid_fkey&quot;</span> <span style="color: #0000aa">FOREIGN</span> <span style="color: #0000aa">KEY</span> (genreid) <span style="color: #0000aa">REFERENCES</span> genre(genreid)
+    <span style="color: #aa5500">&quot;track_mediatypeid_fkey&quot;</span> <span style="color: #0000aa">FOREIGN</span> <span style="color: #0000aa">KEY</span> (mediatypeid) <span style="color: #0000aa">REFERENCES</span> mediatype(mediatypeid)
+Referenced <span style="color: #0000aa">by</span>:
+    <span style="color: #0000aa">TABLE</span> <span style="color: #aa5500">&quot;invoiceline&quot;</span> <span style="color: #0000aa">CONSTRAINT</span> <span style="color: #aa5500">&quot;invoiceline_trackid_fkey&quot;</span> <span style="color: #0000aa">FOREIGN</span> <span style="color: #0000aa">KEY</span> (trackid) <span style="color: #0000aa">REFERENCES</span> track(trackid)
+    <span style="color: #0000aa">TABLE</span> <span style="color: #aa5500">&quot;playlisttrack&quot;</span> <span style="color: #0000aa">CONSTRAINT</span> <span style="color: #aa5500">&quot;playlisttrack_trackid_fkey&quot;</span> <span style="color: #0000aa">FOREIGN</span> <span style="color: #0000aa">KEY</span> (trackid) <span style="color: #0000aa">REFERENCES</span> track(trackid)
+</pre></div>
+
+<p>I could offer a diagram of the relations in between those tables but instead
+let&rsquo;s write our first query against this model, showing some details about a
+single album:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>&gt; <span style="color: #FF0000; background-color: #FFAAAA">\</span><span style="color: #0000aa">set</span> albumid <span style="color: #009999">193</span>
+&gt; <span style="color: #0000aa">select</span> artist.name <span style="color: #0000aa">as</span> artist,
+         album.title <span style="color: #0000aa">as</span> album,
+         track.name <span style="color: #0000aa">as</span> track
+    <span style="color: #0000aa">from</span> track
+         <span style="color: #0000aa">join</span> album <span style="color: #0000aa">using</span>(albumid)
+         <span style="color: #0000aa">join</span> artist <span style="color: #0000aa">using</span>(artistid)
+   <span style="color: #0000aa">where</span> albumid = :albumid;
+</pre></div>
+
+<div class="alert info ">
+  <p>Note: we saw the <code>\set</code> trick in our previous
+entry <a href="/blog/2017/06/how-to-write-sql/">How to Write SQL</a>.</p>
+</div>
+
+<p>We see that the model has been done with <em>surrogate keys</em>: the primary keys
+are all derived from a sequence. Also, those key names embed the table
+names, which makes them unique in the whole schema, allowing us to use the
+<code>JOIN ... USING(...)</code> syntax. This syntax has a nice side effect: in the
+query output we find the joining column only once.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>        artist         |         album         |            track             
+<span style="color: #aaaaaa; font-style: italic">-----------------------+-----------------------+------------------------------</span>
+ Red Hot Chili Peppers | Blood Sugar Sex Magik | The Power <span style="color: #0000aa">Of</span> Equality
+ Red Hot Chili Peppers | Blood Sugar Sex Magik | <span style="color: #0000aa">If</span> You Have <span style="color: #0000aa">To</span> Ask
+ Red Hot Chili Peppers | Blood Sugar Sex Magik | Breaking The Girl
+ Red Hot Chili Peppers | Blood Sugar Sex Magik | Funky Monks
+ Red Hot Chili Peppers | Blood Sugar Sex Magik | Suck My Kiss
+ Red Hot Chili Peppers | Blood Sugar Sex Magik | I Could Have Lied
+ Red Hot Chili Peppers | Blood Sugar Sex Magik | Mellowship Slinky <span style="color: #0000aa">In</span> B Major
+ Red Hot Chili Peppers | Blood Sugar Sex Magik | The Righteous &amp; The Wicked
+ Red Hot Chili Peppers | Blood Sugar Sex Magik | Give It Away
+ Red Hot Chili Peppers | Blood Sugar Sex Magik | Blood Sugar Sex Magik
+ Red Hot Chili Peppers | Blood Sugar Sex Magik | Under The Bridge
+ Red Hot Chili Peppers | Blood Sugar Sex Magik | Naked <span style="color: #0000aa">In</span> The Rain
+ Red Hot Chili Peppers | Blood Sugar Sex Magik | Apache Rose Peacock
+ Red Hot Chili Peppers | Blood Sugar Sex Magik | The Greeting Song
+ Red Hot Chili Peppers | Blood Sugar Sex Magik | My Lovely Man
+ Red Hot Chili Peppers | Blood Sugar Sex Magik | Sir Psycho Sexy
+ Red Hot Chili Peppers | Blood Sugar Sex Magik | They<span style="color: #aa5500">&#39;re Red Hot</span>
+<span style="color: #aa5500">(17 rows)</span>
+</pre></div>
+
+<p>In the <em>track</em> table we saw some more interesting columns, such as
+<em>milliseconds</em> and <em>bytes</em>:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> name,
+       milliseconds * <span style="color: #00aaaa">interval</span> <span style="color: #aa5500">&#39;1 millisecond&#39;</span> <span style="color: #0000aa">as</span> duration,
+       pg_size_pretty(bytes) <span style="color: #0000aa">as</span> bytes
+  <span style="color: #0000aa">from</span> track
+ <span style="color: #0000aa">where</span> albumid = :albumid;
+</pre></div>
+
+<p>Which gives the following view of the album of choice here:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>             <span style="color: #0000aa">name</span>             |       duration       |  bytes  
+<span style="color: #aaaaaa; font-style: italic">------------------------------+----------------------+---------</span>
+ The Power <span style="color: #0000aa">Of</span> Equality        | @ <span style="color: #009999">4</span> mins <span style="color: #009999">3.591</span> secs  | <span style="color: #009999">7957</span> kB
+ <span style="color: #0000aa">If</span> You Have <span style="color: #0000aa">To</span> Ask           | @ <span style="color: #009999">3</span> mins <span style="color: #009999">36.79</span> secs  | <span style="color: #009999">7030</span> kB
+ Breaking The Girl            | @ <span style="color: #009999">4</span> mins <span style="color: #009999">55.497</span> secs | <span style="color: #009999">9576</span> kB
+ Funky Monks                  | @ <span style="color: #009999">5</span> mins <span style="color: #009999">23.395</span> secs | <span style="color: #009999">10</span> MB
+ Suck My Kiss                 | @ <span style="color: #009999">3</span> mins <span style="color: #009999">37.234</span> secs | <span style="color: #009999">6962</span> kB
+ I Could Have Lied            | @ <span style="color: #009999">4</span> mins <span style="color: #009999">4.506</span> secs  | <span style="color: #009999">7899</span> kB
+ Mellowship Slinky <span style="color: #0000aa">In</span> B Major | @ <span style="color: #009999">4</span> mins <span style="color: #009999">0.091</span> secs  | <span style="color: #009999">7785</span> kB
+ The Righteous &amp; The Wicked   | @ <span style="color: #009999">4</span> mins <span style="color: #009999">8.084</span> secs  | <span style="color: #009999">7943</span> kB
+ Give It Away                 | @ <span style="color: #009999">4</span> mins <span style="color: #009999">43.01</span> secs  | <span style="color: #009999">9091</span> kB
+ Blood Sugar Sex Magik        | @ <span style="color: #009999">4</span> mins <span style="color: #009999">31.229</span> secs | <span style="color: #009999">8731</span> kB
+ Under The Bridge             | @ <span style="color: #009999">4</span> mins <span style="color: #009999">24.359</span> secs | <span style="color: #009999">8479</span> kB
+ Naked <span style="color: #0000aa">In</span> The Rain            | @ <span style="color: #009999">4</span> mins <span style="color: #009999">25.717</span> secs | <span style="color: #009999">8520</span> kB
+ Apache Rose Peacock          | @ <span style="color: #009999">4</span> mins <span style="color: #009999">42.226</span> secs | <span style="color: #009999">9094</span> kB
+ The Greeting Song            | @ <span style="color: #009999">3</span> mins <span style="color: #009999">13.593</span> secs | <span style="color: #009999">6198</span> kB
+ My Lovely Man                | @ <span style="color: #009999">4</span> mins <span style="color: #009999">39.118</span> secs | <span style="color: #009999">9004</span> kB
+ Sir Psycho Sexy              | @ <span style="color: #009999">8</span> mins <span style="color: #009999">16.692</span> secs | <span style="color: #009999">16</span> MB
+ They<span style="color: #aa5500">&#39;re Red Hot              | @ 1 min 11.941 secs  | 2326 kB</span>
+<span style="color: #aa5500">(17 rows)</span>
+</pre></div>
+
+<p>If you&rsquo;re interested into compression at the album level, you might want to
+compare <em>rolling sum</em> of both the album duration and its size in bytes,
+track after track. The following query uses <em>window functions</em> to track
+that:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>  <span style="color: #0000aa">select</span> name,
+         round(  <span style="color: #0000aa">sum</span>(bytes::<span style="color: #00aaaa">numeric</span>) over(<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> trackid)
+               / <span style="color: #0000aa">sum</span>(milliseconds) over(<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> trackid), <span style="color: #009999">2</span>)
+           <span style="color: #0000aa">as</span> bps,
+  
+         pg_size_pretty(
+            <span style="color: #0000aa">sum</span>(bytes) over(<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> trackid)
+         ) <span style="color: #0000aa">as</span> album_bytes,
+         
+         <span style="color: #0000aa">sum</span>(milliseconds) over(<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> trackid)
+            * <span style="color: #00aaaa">interval</span> <span style="color: #aa5500">&#39;1 millisecond&#39;</span> <span style="color: #0000aa">as</span> progres
+
+    <span style="color: #0000aa">from</span> track
+   <span style="color: #0000aa">where</span> albumid = :albumid
+<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> trackid;
+</pre></div>
+
+<p>And here&rsquo;s our <em>rolling aggregate</em> result where we can see the <em>bps</em> column
+for <em>bytes per second</em>, computed after the accumulated sum of milliseconds
+and bytes throughout the album&rsquo;s track data:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>             <span style="color: #0000aa">name</span>             |  bps  | album_bytes |           progres            
+<span style="color: #aaaaaa; font-style: italic">------------------------------+-------+-------------+------------------------------</span>
+ The Power <span style="color: #0000aa">Of</span> Equality        | <span style="color: #009999">33.45</span> | <span style="color: #009999">7957</span> kB     | @ <span style="color: #009999">4</span> mins <span style="color: #009999">3.591</span> secs
+ <span style="color: #0000aa">If</span> You Have <span style="color: #0000aa">To</span> Ask           | <span style="color: #009999">33.34</span> | <span style="color: #009999">15</span> MB       | @ <span style="color: #009999">7</span> mins <span style="color: #009999">40.381</span> secs
+ Breaking The Girl            | <span style="color: #009999">33.28</span> | <span style="color: #009999">24</span> MB       | @ <span style="color: #009999">12</span> mins <span style="color: #009999">35.878</span> secs
+ Funky Monks                  | <span style="color: #009999">33.23</span> | <span style="color: #009999">34</span> MB       | @ <span style="color: #009999">17</span> mins <span style="color: #009999">59.273</span> secs
+ Suck My Kiss                 | <span style="color: #009999">33.16</span> | <span style="color: #009999">41</span> MB       | @ <span style="color: #009999">21</span> mins <span style="color: #009999">36.507</span> secs
+ I Could Have Lied            | <span style="color: #009999">33.15</span> | <span style="color: #009999">49</span> MB       | @ <span style="color: #009999">25</span> mins <span style="color: #009999">41.013</span> secs
+ Mellowship Slinky <span style="color: #0000aa">In</span> B Major | <span style="color: #009999">33.15</span> | <span style="color: #009999">56</span> MB       | @ <span style="color: #009999">29</span> mins <span style="color: #009999">41.104</span> secs
+ The Righteous &amp; The Wicked   | <span style="color: #009999">33.11</span> | <span style="color: #009999">64</span> MB       | @ <span style="color: #009999">33</span> mins <span style="color: #009999">49.188</span> secs
+ Give It Away                 | <span style="color: #009999">33.08</span> | <span style="color: #009999">73</span> MB       | @ <span style="color: #009999">38</span> mins <span style="color: #009999">32.198</span> secs
+ Blood Sugar Sex Magik        | <span style="color: #009999">33.07</span> | <span style="color: #009999">81</span> MB       | @ <span style="color: #009999">43</span> mins <span style="color: #009999">3.427</span> secs
+ Under The Bridge             | <span style="color: #009999">33.05</span> | <span style="color: #009999">90</span> MB       | @ <span style="color: #009999">47</span> mins <span style="color: #009999">27.786</span> secs
+ Naked <span style="color: #0000aa">In</span> The Rain            | <span style="color: #009999">33.03</span> | <span style="color: #009999">98</span> MB       | @ <span style="color: #009999">51</span> mins <span style="color: #009999">53.503</span> secs
+ Apache Rose Peacock          | <span style="color: #009999">33.03</span> | <span style="color: #009999">107</span> MB      | @ <span style="color: #009999">56</span> mins <span style="color: #009999">35.729</span> secs
+ The Greeting Song            | <span style="color: #009999">33.01</span> | <span style="color: #009999">113</span> MB      | @ <span style="color: #009999">59</span> mins <span style="color: #009999">49.322</span> secs
+ My Lovely Man                | <span style="color: #009999">33.02</span> | <span style="color: #009999">122</span> MB      | @ <span style="color: #009999">1</span> <span style="color: #0000aa">hour</span> <span style="color: #009999">4</span> mins <span style="color: #009999">28.44</span> secs
+ Sir Psycho Sexy              | <span style="color: #009999">33.01</span> | <span style="color: #009999">137</span> MB      | @ <span style="color: #009999">1</span> <span style="color: #0000aa">hour</span> <span style="color: #009999">12</span> mins <span style="color: #009999">45.132</span> secs
+ They<span style="color: #aa5500">&#39;re Red Hot              | 33.01 | 140 MB      | @ 1 hour 13 mins 57.073 secs</span>
+<span style="color: #aa5500">(17 rows)</span>
+</pre></div>
+
+<div class="alert success ">
+  <p>If that&rsquo;s your first encounter with a window function you might want to
+read
+<a href="/blog/2013/08/understanding-window-functions/">Understanding Window Functions</a>,
+an all time favorite article of this website.</p>
+</div>
+
+<h1 id="album-genres">Album genres</h1>
+
+<p>So, what kind of music do we have in this collection of Chinook data:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>  <span style="color: #0000aa">select</span> genre.name, <span style="color: #0000aa">count</span>(*),
+         <span style="color: #0000aa">sum</span>(<span style="color: #0000aa">count</span>(*)) over () <span style="color: #0000aa">as</span> tracks,
+         round(<span style="color: #009999">100</span>.<span style="color: #009999">0</span> * <span style="color: #0000aa">count</span>(*) / <span style="color: #0000aa">sum</span>(<span style="color: #0000aa">count</span>(*)) over(), <span style="color: #009999">2</span>) <span style="color: #0000aa">as</span> pct
+    <span style="color: #0000aa">from</span>           genre
+         <span style="color: #0000aa">left</span> <span style="color: #0000aa">join</span> track <span style="color: #0000aa">using</span>(genreid)
+<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> genre.name <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> genre.name;
+</pre></div>
+
+<p>We have here the repartition of tracks per genre and the percentage (in the
+<em>pct</em> column) of them with respect to the whole set of our 25 different
+music genres here:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>        <span style="color: #0000aa">name</span>        | count | tracks |  pct  
+<span style="color: #aaaaaa; font-style: italic">--------------------+-------+--------+-------</span>
+ Alternative        |    <span style="color: #009999">40</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">1.14</span>
+ Alternative &amp; Punk |   <span style="color: #009999">332</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">9.48</span>
+ Blues              |    <span style="color: #009999">81</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">2.31</span>
+ Bossa Nova         |    <span style="color: #009999">15</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">0.43</span>
+ Classical          |    <span style="color: #009999">74</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">2.11</span>
+ Comedy             |    <span style="color: #009999">17</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">0.49</span>
+ Drama              |    <span style="color: #009999">64</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">1.83</span>
+ Easy Listening     |    <span style="color: #009999">24</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">0.69</span>
+ Electronica/Dance  |    <span style="color: #009999">30</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">0.86</span>
+ Heavy Metal        |    <span style="color: #009999">28</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">0.80</span>
+ Hip Hop/Rap        |    <span style="color: #009999">35</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">1.00</span>
+ Jazz               |   <span style="color: #009999">130</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">3.71</span>
+ Latin              |   <span style="color: #009999">579</span> |   <span style="color: #009999">3503</span> | <span style="color: #009999">16.53</span>
+ Metal              |   <span style="color: #009999">374</span> |   <span style="color: #009999">3503</span> | <span style="color: #009999">10.68</span>
+ Opera              |     <span style="color: #009999">1</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">0.03</span>
+ Pop                |    <span style="color: #009999">48</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">1.37</span>
+ R&amp;B/Soul           |    <span style="color: #009999">61</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">1.74</span>
+ Reggae             |    <span style="color: #009999">58</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">1.66</span>
+ Rock               |  <span style="color: #009999">1297</span> |   <span style="color: #009999">3503</span> | <span style="color: #009999">37.03</span>
+ Rock <span style="color: #0000aa">And</span> Roll      |    <span style="color: #009999">12</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">0.34</span>
+ Sci Fi &amp; Fantasy   |    <span style="color: #009999">26</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">0.74</span>
+ Science Fiction    |    <span style="color: #009999">13</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">0.37</span>
+ Soundtrack         |    <span style="color: #009999">43</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">1.23</span>
+ TV Shows           |    <span style="color: #009999">93</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">2.65</span>
+ World              |    <span style="color: #009999">28</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">0.80</span>
+(<span style="color: #009999">25</span> <span style="color: #0000aa">rows</span>)
+</pre></div>
+
+<p>A more visual way to have a look at this data right from the console is with
+the following query:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>  <span style="color: #0000aa">select</span> genre.name, <span style="color: #0000aa">count</span>(*),
+         repeat(<span style="color: #aa5500">&#39;*&#39;</span>, (  <span style="color: #009999">100</span>.<span style="color: #009999">0</span>
+                      * <span style="color: #0000aa">count</span>(*)
+                      / <span style="color: #0000aa">sum</span>(<span style="color: #0000aa">count</span>(*)) over()
+                     )::<span style="color: #00aaaa">integer</span>
+               ) <span style="color: #0000aa">as</span> pct
+    <span style="color: #0000aa">from</span> genre
+         <span style="color: #0000aa">left</span> <span style="color: #0000aa">join</span> track <span style="color: #0000aa">using</span>(genreid)
+<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> genre.name
+<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> genre.name;
+</pre></div>
+
+<p>Which gives this time:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>        <span style="color: #0000aa">name</span>        | count |                  pct                  
+<span style="color: #aaaaaa; font-style: italic">--------------------+-------+---------------------------------------</span>
+ Alternative        |    <span style="color: #009999">40</span> | *
+ Alternative &amp; Punk |   <span style="color: #009999">332</span> | *********
+ Blues              |    <span style="color: #009999">81</span> | **
+ Bossa Nova         |    <span style="color: #009999">15</span> | 
+ Classical          |    <span style="color: #009999">74</span> | **
+ Comedy             |    <span style="color: #009999">17</span> | 
+ Drama              |    <span style="color: #009999">64</span> | **
+ Easy Listening     |    <span style="color: #009999">24</span> | *
+ Electronica/Dance  |    <span style="color: #009999">30</span> | *
+ Heavy Metal        |    <span style="color: #009999">28</span> | *
+ Hip Hop/Rap        |    <span style="color: #009999">35</span> | *
+ Jazz               |   <span style="color: #009999">130</span> | ****
+ Latin              |   <span style="color: #009999">579</span> | *****************
+ Metal              |   <span style="color: #009999">374</span> | ***********
+ Opera              |     <span style="color: #009999">1</span> | 
+ Pop                |    <span style="color: #009999">48</span> | *
+ R&amp;B/Soul           |    <span style="color: #009999">61</span> | **
+ Reggae             |    <span style="color: #009999">58</span> | **
+ Rock               |  <span style="color: #009999">1297</span> | *************************************
+ Rock <span style="color: #0000aa">And</span> Roll      |    <span style="color: #009999">12</span> | 
+ Sci Fi &amp; Fantasy   |    <span style="color: #009999">26</span> | *
+ Science Fiction    |    <span style="color: #009999">13</span> | 
+ Soundtrack         |    <span style="color: #009999">43</span> | *
+ TV Shows           |    <span style="color: #009999">93</span> | ***
+ World              |    <span style="color: #009999">28</span> | *
+(<span style="color: #009999">25</span> <span style="color: #0000aa">rows</span>)
+</pre></div>
+
+<p>Now we easily spot that the music collection distribution by genre is skewed
+over Rock, Latin, Metal and Punk music. Also there&rsquo;s a non trivial amount of
+TV Shows in there.</p>
+
+<h1 id="multi-genres-albums">Multi-genres albums</h1>
+
+<p>In order to dive into the data, let&rsquo;s have a look at it from the genre point
+of view. As we saw in the <em>Chinook</em> database model a given album is always
+edited by a single artist, but might contain several different genres, one
+per track. Do we have multi-genre albums?</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>  <span style="color: #0000aa">select</span> title <span style="color: #0000aa">as</span> album,
+         array_agg(<span style="color: #0000aa">distinct</span> genre.name <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> genre.name) <span style="color: #0000aa">as</span> genres
+    <span style="color: #0000aa">from</span>      track
+         <span style="color: #0000aa">join</span> genre <span style="color: #0000aa">using</span>(genreid)
+         <span style="color: #0000aa">join</span> album <span style="color: #0000aa">using</span> (albumid)
+<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> title
+  <span style="color: #0000aa">having</span> <span style="color: #0000aa">count</span>(<span style="color: #0000aa">distinct</span> genre.name) &gt; <span style="color: #009999">1</span>;
+</pre></div>
+
+<p>In this query, we use the <em>array_agg</em> PostgreSQL aggregates. As is name
+suggests, <em>array_agg</em> build an <em>array</em> in which it <em>aggregates</em> all the data
+it sees, in this case the data is <em>distinct</em> <code>genre.names</code> in a specific
+ordering.</p>
+
+<p>So apparently we have 11 albums with tracks from different genres:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>             album              |                      genres                       
+<span style="color: #aaaaaa; font-style: italic">--------------------------------+---------------------------------------------------</span>
+ Battlestar Galactica, Season <span style="color: #009999">3</span> | {<span style="color: #aa5500">&quot;Sci Fi &amp; Fantasy&quot;</span>,<span style="color: #aa5500">&quot;Science Fiction&quot;</span>,<span style="color: #aa5500">&quot;TV Shows&quot;</span>}
+ <span style="color: #0000aa">Greatest</span> Hits                  | {Metal,Reggae,Rock}
+ Heroes, Season <span style="color: #009999">1</span>               | {Drama,<span style="color: #aa5500">&quot;TV Shows&quot;</span>}
+ LOST, Season <span style="color: #009999">4</span>                 | {Drama,<span style="color: #aa5500">&quot;TV Shows&quot;</span>}
+ Live <span style="color: #0000aa">After</span> Death               | {<span style="color: #aa5500">&quot;Heavy Metal&quot;</span>,Metal}
+ Lost, Season <span style="color: #009999">2</span>                 | {Drama,<span style="color: #aa5500">&quot;TV Shows&quot;</span>}
+ Lost, Season <span style="color: #009999">3</span>                 | {Drama,<span style="color: #aa5500">&quot;TV Shows&quot;</span>}
+ Rock <span style="color: #0000aa">In</span> Rio [CD2]              | {Metal,Rock}
+ The Number <span style="color: #0000aa">of</span> The Beast        | {Metal,Rock}
+ The Office, Season <span style="color: #009999">3</span>           | {Comedy,<span style="color: #aa5500">&quot;TV Shows&quot;</span>}
+ Unplugged                      | {Blues,Latin}
+(<span style="color: #009999">11</span> <span style="color: #0000aa">rows</span>)
+</pre></div>
+
+<p>Many of those seem to not actually be music but rather video based content
+such as TV Shows and Drama, maybe we can filter them out? What I would like
+to do is to filter out entire albums based on a list of genres we&rsquo;re not
+interested into (such as <em>TV Shows</em> and <em>Drama</em>, not that we don&rsquo;t like
+them, but they won&rsquo;t probably compare well with the rest of the music
+collection).</p>
+
+<p>If we have a look at the <em>Unplugged</em> album, we can see that we have a data quality problem here:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>  <span style="color: #0000aa">select</span> genre.name,
+         array_agg(track.name <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> trackid) <span style="color: #0000aa">as</span> tracks
+    <span style="color: #0000aa">from</span>      track
+         <span style="color: #0000aa">join</span> album <span style="color: #0000aa">using</span>(albumid)
+         <span style="color: #0000aa">join</span> genre <span style="color: #0000aa">using</span>(genreid)
+   <span style="color: #0000aa">where</span> album.title = <span style="color: #aa5500">&#39;Unplugged&#39;</span>
+<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> genre.name;
+</pre></div>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>-[ <span style="color: #00aaaa">RECORD</span> <span style="color: #009999">1</span> ]<span style="color: #aaaaaa; font-style: italic">---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------</span>
+<span style="color: #0000aa">name</span>   | Blues
+tracks | {Signe,<span style="color: #aa5500">&quot;Before You Accuse Me&quot;</span>,<span style="color: #aa5500">&quot;Hey Hey&quot;</span>,<span style="color: #aa5500">&quot;Tears In Heaven&quot;</span>,<span style="color: #aa5500">&quot;Lonely Stranger&quot;</span>,<span style="color: #aa5500">&quot;Nobody Knows You When You&#39;re Down &amp; Out&quot;</span>,Layla,<span style="color: #aa5500">&quot;Running On Faith&quot;</span>,<span style="color: #aa5500">&quot;Walkin&#39; Blues&quot;</span>,Alberta,<span style="color: #aa5500">&quot;San Francisco Bay Blues&quot;</span>,<span style="color: #aa5500">&quot;Malted Milk&quot;</span>,<span style="color: #aa5500">&quot;Old Love&quot;</span>,<span style="color: #aa5500">&quot;Rollin&#39; And Tumblin&#39;&quot;</span>}
+-[ <span style="color: #00aaaa">RECORD</span> <span style="color: #009999">2</span> ]<span style="color: #aaaaaa; font-style: italic">---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------</span>
+<span style="color: #0000aa">name</span>   | Latin
+tracks | {<span style="color: #aa5500">&quot;A Novidade&quot;</span>,<span style="color: #aa5500">&quot;Tenho Sede&quot;</span>,Refazenda,Realce,Esotérico,Drão,<span style="color: #aa5500">&quot;A Paz&quot;</span>,<span style="color: #aa5500">&quot;Beira Mar&quot;</span>,Sampa,Parabolicamará,<span style="color: #aa5500">&quot;Tempo Rei&quot;</span>,<span style="color: #aa5500">&quot;Expresso 2222&quot;</span>,<span style="color: #aa5500">&quot;Aquele Abraço&quot;</span>,Palco,<span style="color: #aa5500">&quot;Toda Menina Baiana&quot;</span>,<span style="color: #aa5500">&quot;Sítio Do Pica-Pau Amarelo&quot;</span>}
+</pre></div>
+
+<p>My guess is that the <em>Latin</em> tracks associated with the album are actually
+from another album and got there erroneously. That situation with a real
+production data set might trigger some data quality assessment work.</p>
+
+<p>The way to have the complete list of tracks per genre for each multi-genred
+album is the following:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">with</span> multi_genre_albums(albumid, artistid, title) <span style="color: #0000aa">as</span>
+ (
+    <span style="color: #0000aa">select</span> albumid, artistid, title
+      <span style="color: #0000aa">from</span>      track
+           <span style="color: #0000aa">join</span> genre <span style="color: #0000aa">using</span>(genreid)
+           <span style="color: #0000aa">join</span> album <span style="color: #0000aa">using</span> (albumid)
+  <span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> albumid, artistid, title
+    <span style="color: #0000aa">having</span> <span style="color: #0000aa">count</span>(<span style="color: #0000aa">distinct</span> genre.name) &gt; <span style="color: #009999">1</span>
+ )
+  <span style="color: #0000aa">select</span> artist.name <span style="color: #0000aa">as</span> artist,
+         title <span style="color: #0000aa">as</span> album,
+         genre.name <span style="color: #0000aa">as</span> genre,
+         array_agg(track.name <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> trackid) <span style="color: #0000aa">as</span> tracks
+    <span style="color: #0000aa">from</span> multi_genre_albums
+         <span style="color: #0000aa">join</span> track <span style="color: #0000aa">using</span>(albumid)
+         <span style="color: #0000aa">join</span> genre <span style="color: #0000aa">using</span>(genreid)
+         <span style="color: #0000aa">join</span> artist <span style="color: #0000aa">using</span>(artistid)
+<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> artist, album, genre;
+</pre></div>
+
+<p>We reuse the previous query in a <em>Common Table Expression</em> and this time
+only output interesting columns: those we&rsquo;re going to reuse in the main
+query, either for reference in later <em>joins</em>, or because we already have it
+at this stage.</p>
+
+<h1 id="selecting-a-single-genre-per-album">Selecting a single genre per album</h1>
+
+<p>In order to be able to filter by genre at the album level, we need to first
+be able to assign a single genre per album. Let&rsquo;s have some more statistics
+about the multi-genred albums:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> artist.name <span style="color: #0000aa">as</span> artist,
+       album.title <span style="color: #0000aa">as</span> album,
+       track.name <span style="color: #0000aa">as</span> track,
+       row_number()
+         over(partition <span style="color: #0000aa">by</span> albumid
+                  <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> trackid)
+         <span style="color: #0000aa">as</span> n,
+       <span style="color: #0000aa">count</span>(genreid)
+         over(partition <span style="color: #0000aa">by</span> albumid, genreid)
+         <span style="color: #0000aa">as</span> same
+
+  <span style="color: #0000aa">from</span> track
+       <span style="color: #0000aa">join</span>
+       (
+          <span style="color: #0000aa">select</span> albumid,
+                 array_agg(<span style="color: #0000aa">distinct</span> genre.name
+                           <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> genre.name)
+                   <span style="color: #0000aa">as</span> genres
+            <span style="color: #0000aa">from</span> track
+                 <span style="color: #0000aa">join</span> genre <span style="color: #0000aa">using</span>(genreid)
+        <span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> albumid
+          <span style="color: #0000aa">having</span> <span style="color: #0000aa">count</span>(<span style="color: #0000aa">distinct</span> genre.name) &gt; <span style="color: #009999">1</span>
+        )
+        <span style="color: #0000aa">as</span> multi_genre_album(albumid, genres) <span style="color: #0000aa">using</span> (albumid)
+
+        <span style="color: #0000aa">join</span> genre <span style="color: #0000aa">using</span>(genreid)
+        <span style="color: #0000aa">join</span> album <span style="color: #0000aa">using</span>(albumid)
+        <span style="color: #0000aa">join</span> artist <span style="color: #0000aa">using</span>(artistid)
+        
+<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> artist, album, trackid;
+</pre></div>
+
+<p>In this query <em>n</em> is the track order within its album and <em>same</em> is how many
+tracks of the same genre do we have in said album. It&rsquo;s meant as an
+intermediate query, the one you would cook just to have a manual look over
+the data. Also you might notice that this time rather than using
+<em>multi_genre_album</em> as a <em>Common Table Expression</em> we inlined it as a
+<em>subquery</em>.</p>
+
+<p>What we learn from the result of this query is that we can select the genre
+having the highest number of tracks attached in an album as being the
+album&rsquo;s genre. In particular we don&rsquo;t see equal scores when using that
+simple rule, so we don&rsquo;t need a tie-breaker. Let&rsquo;s have a try at that:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">with</span> album_genre_count(albumid, genreid, <span style="color: #0000aa">count</span>, <span style="color: #0000aa">max</span>)
+ <span style="color: #0000aa">as</span> (
+      <span style="color: #0000aa">select</span> albumid,
+             genreid,
+             <span style="color: #0000aa">count</span>(trackid) <span style="color: #0000aa">as</span> tracks,
+             <span style="color: #0000aa">max</span>(<span style="color: #0000aa">count</span>(trackid)) over(partition <span style="color: #0000aa">by</span> albumid)
+        <span style="color: #0000aa">from</span> track
+    <span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> albumid, genreid
+    <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> albumid
+ )
+ <span style="color: #0000aa">select</span> artist.name <span style="color: #0000aa">as</span> artist,
+        album.title <span style="color: #0000aa">as</span> title,
+        genre.name <span style="color: #0000aa">as</span> genre
+   <span style="color: #0000aa">from</span>      album_genre_count
+        <span style="color: #0000aa">join</span> genre <span style="color: #0000aa">using</span>(genreid)
+        <span style="color: #0000aa">join</span> album <span style="color: #0000aa">using</span>(albumid)
+        <span style="color: #0000aa">join</span> artist <span style="color: #0000aa">using</span> (artistid)
+  <span style="color: #0000aa">where</span> <span style="color: #0000aa">count</span> = <span style="color: #0000aa">max</span>
+    <span style="color: #0000aa">and</span> albumid <span style="color: #0000aa">in</span> (<span style="color: #0000aa">select</span> albumid
+                      <span style="color: #0000aa">from</span> track
+                  <span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> albumid
+                    <span style="color: #0000aa">having</span> <span style="color: #0000aa">count</span>(<span style="color: #0000aa">distinct</span> genreid) &gt; <span style="color: #009999">1</span>
+                  <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> albumid);
+</pre></div>
+
+<p>In the query we limit the output to those albums with more than one genre
+attached to their tracks so that we can manually check our query. If you
+remove this restriction by <em>albumid</em>, the query applies as-is to the whole
+data set we have, so it could be made a view for later use. So let&rsquo;s have a
+look at our problematic cases:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>        artist        |             title              |      genre      
+<span style="color: #aaaaaa; font-style: italic">----------------------+--------------------------------+-----------------</span>
+ Eric Clapton         | Unplugged                      | Latin
+ Iron Maiden          | Live <span style="color: #0000aa">After</span> Death               | Metal
+ Iron Maiden          | Rock <span style="color: #0000aa">In</span> Rio [CD2]              | Rock
+ Iron Maiden          | The Number <span style="color: #0000aa">of</span> The Beast        | Metal
+ Lenny Kravitz        | <span style="color: #0000aa">Greatest</span> Hits                  | Rock
+ Battlestar Galactica | Battlestar Galactica, Season <span style="color: #009999">3</span> | Science Fiction
+ Heroes               | Heroes, Season <span style="color: #009999">1</span>               | Drama
+ Lost                 | Lost, Season <span style="color: #009999">3</span>                 | Drama
+ Lost                 | Lost, Season <span style="color: #009999">2</span>                 | TV Shows
+ The Office           | The Office, Season <span style="color: #009999">3</span>           | Comedy
+ Lost                 | LOST, Season <span style="color: #009999">4</span>                 | Drama
+(<span style="color: #009999">11</span> <span style="color: #0000aa">rows</span>)
+</pre></div>
+
+<p>All those albums are successfully assigned a single genre now. The genre we
+chose is the most common value found in the album&rsquo;s track, and for our
+interactive discovery of the data set, it&rsquo;s plenty good enough.</p>
+
+<h1 id="statistics-per-genre">Statistics per genre</h1>
+
+<p>Now that we are able to actually play with a single genre per album, what
+can we learn about musical genre in that music collection? What about the
+average track length? Well as we all know averages are not saying much (if
+anything at all) about the data, let&rsquo;s have a look at the median, 90, 95,
+and 99 percentiles instead:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">with</span> album_genre_count(albumid, genreid, <span style="color: #0000aa">count</span>, <span style="color: #0000aa">max</span>)
+ <span style="color: #0000aa">as</span> (
+      <span style="color: #0000aa">select</span> albumid,
+             genreid,
+             <span style="color: #0000aa">count</span>(trackid) <span style="color: #0000aa">as</span> tracks,
+             <span style="color: #0000aa">max</span>(<span style="color: #0000aa">count</span>(trackid)) over(partition <span style="color: #0000aa">by</span> albumid)
+        <span style="color: #0000aa">from</span> track
+    <span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> albumid, genreid
+    <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> albumid
+ )
+  <span style="color: #0000aa">select</span> genre.name, 
+
+         percentile_cont(<span style="color: #00aaaa">array</span>[<span style="color: #009999">0</span>.<span style="color: #009999">5</span>, <span style="color: #009999">0</span>.<span style="color: #009999">9</span>, <span style="color: #009999">0</span>.<span style="color: #009999">95</span>, <span style="color: #009999">0</span>.<span style="color: #009999">99</span>])
+           within <span style="color: #0000aa">group</span> (<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> ceil(milliseconds/<span style="color: #009999">60000</span>))
+         <span style="color: #0000aa">as</span> distribution,
+
+         repeat(<span style="color: #aa5500">&#39;*&#39;</span>,
+            ceil(
+              percentile_cont(<span style="color: #009999">0</span>.<span style="color: #009999">99</span>)
+                within <span style="color: #0000aa">group</span> (<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> ceil(milliseconds/<span style="color: #009999">60000</span>))
+            )::<span style="color: #00aaaa">integer</span>
+         )
+         <span style="color: #0000aa">as</span> hist
+
+    <span style="color: #0000aa">from</span> genre
+         <span style="color: #0000aa">left</span> <span style="color: #0000aa">join</span> track <span style="color: #0000aa">using</span>(genreid)
+         <span style="color: #0000aa">left</span> <span style="color: #0000aa">join</span>
+         (
+             <span style="color: #0000aa">select</span> trackid, album_genre_count.genreid
+               <span style="color: #0000aa">from</span> track 
+                    <span style="color: #0000aa">join</span> album_genre_count <span style="color: #0000aa">using</span>(albumid)
+              <span style="color: #0000aa">where</span> <span style="color: #0000aa">count</span> = <span style="color: #0000aa">max</span>
+         )
+         <span style="color: #0000aa">as</span> normalized_track_genre <span style="color: #0000aa">using</span>(genreid)
+<span style="color: #0000aa">where</span> genre.name <span style="color: #0000aa">not</span> <span style="color: #0000aa">in</span> (<span style="color: #aa5500">&#39;Comedy&#39;</span>,
+                         <span style="color: #aa5500">&#39;Drama&#39;</span>,
+                         <span style="color: #aa5500">&#39;Sci Fi &amp; Fantasy&#39;</span>,
+                         <span style="color: #aa5500">&#39;Science Fiction&#39;</span>,
+                         <span style="color: #aa5500">&#39;TV Shows&#39;</span> 
+                         )
+<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> genre.name
+<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> genre.name;
+</pre></div>
+
+<p>And now we can see our genre stats applied to only the music selection:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>        <span style="color: #0000aa">name</span>        |       distribution        |      hist      
+<span style="color: #aaaaaa; font-style: italic">--------------------+---------------------------+----------------</span>
+ Alternative        | {<span style="color: #009999">3.5</span>,<span style="color: #009999">5</span>,<span style="color: #009999">6</span>,<span style="color: #009999">11</span>}              | ***********
+ Alternative &amp; Punk | {<span style="color: #009999">3</span>,<span style="color: #009999">5</span>,<span style="color: #009999">6</span>,<span style="color: #009999">8</span>}                 | ********
+ Blues              | {<span style="color: #009999">4</span>,<span style="color: #009999">6</span>,<span style="color: #009999">7</span>,<span style="color: #009999">9</span>}                 | *********
+ Bossa Nova         | {<span style="color: #009999">3</span>,<span style="color: #009999">6</span>,<span style="color: #009999">6</span>,<span style="color: #009999">6</span>}                 | ******
+ Classical          | {<span style="color: #009999">4</span>,<span style="color: #009999">8</span>,<span style="color: #009999">9</span>,<span style="color: #009999">9</span>}                 | *********
+ Easy Listening     | {<span style="color: #009999">3</span>,<span style="color: #009999">4</span>,<span style="color: #009999">4</span>,<span style="color: #009999">4</span>}                 | ****
+ Electronica/Dance  | {<span style="color: #009999">5</span>,<span style="color: #009999">6</span>,<span style="color: #009999">7</span>,<span style="color: #009999">8</span>}                 | ********
+ Heavy Metal        | {<span style="color: #009999">4.5</span>,<span style="color: #009999">7</span>,<span style="color: #009999">8</span>,<span style="color: #009999">8</span>}               | ********
+ Hip Hop/Rap        | {<span style="color: #009999">3</span>,<span style="color: #009999">3</span>,<span style="color: #009999">5</span>,<span style="color: #009999">6</span>}                 | ******
+ Jazz               | {<span style="color: #009999">4</span>,<span style="color: #009999">6.10000000000036</span>,<span style="color: #009999">9</span>,<span style="color: #009999">14</span>} | **************
+ Latin              | {<span style="color: #009999">3</span>,<span style="color: #009999">5</span>,<span style="color: #009999">5</span>,<span style="color: #009999">7</span>}                 | *******
+ Metal              | {<span style="color: #009999">4</span>,<span style="color: #009999">7</span>,<span style="color: #009999">8</span>,<span style="color: #009999">10</span>}                | **********
+ Opera              | {<span style="color: #009999">2</span>,<span style="color: #009999">2</span>,<span style="color: #009999">2</span>,<span style="color: #009999">2</span>}                 | **
+ Pop                | {<span style="color: #009999">3</span>,<span style="color: #009999">4</span>,<span style="color: #009999">5</span>,<span style="color: #009999">11</span>}                | ***********
+ R&amp;B/Soul           | {<span style="color: #009999">3</span>,<span style="color: #009999">5</span>,<span style="color: #009999">5</span>,<span style="color: #009999">6</span>}                 | ******
+ Reggae             | {<span style="color: #009999">3</span>,<span style="color: #009999">5</span>,<span style="color: #009999">5</span>,<span style="color: #009999">6</span>}                 | ******
+ Rock               | {<span style="color: #009999">4</span>,<span style="color: #009999">6</span>,<span style="color: #009999">8</span>,<span style="color: #009999">13</span>}                | *************
+ Rock <span style="color: #0000aa">And</span> Roll      | {<span style="color: #009999">2</span>,<span style="color: #009999">2</span>,<span style="color: #009999">2</span>,<span style="color: #009999">2</span>}                 | **
+ Soundtrack         | {<span style="color: #009999">4</span>,<span style="color: #009999">4</span>,<span style="color: #009999">5</span>,<span style="color: #009999">6</span>}                 | ******
+ World              | {<span style="color: #009999">3</span>,<span style="color: #009999">4</span>,<span style="color: #009999">4</span>,<span style="color: #009999">5</span>}                 | *****
+(<span style="color: #009999">20</span> <span style="color: #0000aa">rows</span>)
+</pre></div>
+
+<p>The array of numbers are the <em>median</em> and then the 0.90, 0.95 and 0.99
+percentiles of the duration of tracks per genre, to the next minute. It
+means that the <em>median</em> duration of a Rock track is under 4 minutes and up
+to 5 minutes in Electronica/Dance genre. Also the longest tracks are to be
+found in Jazz and Rock with up to respectively 14 and 13 minutes.</p>
+
+<p>The quick histogram is based on the 0.99 percentile, so we have a visual of
+the longest tracks per genre.</p>
+
+<p>The genre we skipped in the query have duration distribution in between 21
+and 88 minutes, so they would have ruined our quick analysis here.</p>
+
+<h1 id="conclusion">Conclusion</h1>
+
+
+
+
+<div class="figure fig25 right dim-margin" >
+  
+    <img class="fig-img" src="/img/old/sql-logo.png"  alt="PostgreSQL is YeSQL">
+  
+   
+    <span class="caption">PostgreSQL is YeSQL</span>
+  
+</div>
+
+
+<p>When given a new database we know nothing about, it&rsquo;s good to do some
+preliminary exporation of the data. Which angle we pick exactly is not that
+important first, because we want to have grasp of what we are playing with.
+It&rsquo;s all about having a taste of what&rsquo;s in there.</p>
+
+<p>In this article we took the choice of not creating any SQL object. We could
+have chosen to create <em>views</em> and maybe even to store their result for the
+next query thanks to
+a
+<a href="https://www.postgresql.org/docs/current/static/sql-creatematerializedview.html">Materialized View</a>.</p>
+
+<p>When the dataset is too big to explore that way, we can also use the
+<em>TABLESAMPLE</em> clause, as per
+the
+<a href="https://www.postgresql.org/docs/9.6/static/sql-select.html">PostgreSQL SELECT</a> documentation.</p>
+
+<p>Mainly this exploration exercise is meant to teach some SQL, so I hope you
+did discover several tricks you didn&rsquo;t know yet!</p>
+              
+            </div>
+          </div>
+          <div id="post-footer" class="post-footer main-content-wrap">
+            
+              
+                
+                
+                  <div class="post-footer-tags">
+                    <span class="text-color-light text-small"></span><br/>
+                    
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/postgresql/">PostgreSQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/yesql/">YeSQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/sql/">SQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/exploration/">exploration</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/window-functions/">window functions</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/data/">data</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/statistics/">statistics</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/percentile/">percentile</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/median/">median</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/histogram/">histogram</a>
+
+                  </div>
+                
+              
+            
+            <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    <script async id="_ck_218061" src="https://forms.convertkit.com/218061?v=6"></script>
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2017/06/how-to-write-sql/" data-tooltip="How to Write SQL">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f06%2fexploring-a-data-set-in-sql%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f06%2fexploring-a-data-set-in-sql%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=Exploring%20a%20Data%20Set%20in%20SQL with @tapoueh: http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f06%2fexploring-a-data-set-in-sql%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+            
+              
+                <div id="disqus_thread">
+  <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+              
+            
+          </div>
+        </article>
+        <footer id="footer" class="main-content-wrap">
+  <span class="copyrights">
+    &copy; 2017 Dimitri Fontaine. 
+  </span>
+</footer>
+
+      </div>
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="2">
+        <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    <script async id="_ck_218061" src="https://forms.convertkit.com/218061?v=6"></script>
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2017/06/how-to-write-sql/" data-tooltip="How to Write SQL">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f06%2fexploring-a-data-set-in-sql%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f06%2fexploring-a-data-set-in-sql%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=Exploring%20a%20Data%20Set%20in%20SQL with @tapoueh: http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f06%2fexploring-a-data-set-in-sql%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+      </div>
+      <div id="share-options-bar" class="share-options-bar" data-behavior="2">
+  <ul class="share-options">
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f06%2fexploring-a-data-set-in-sql%2f">
+        <i class="fa fa-google-plus"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f06%2fexploring-a-data-set-in-sql%2f">
+        <i class="fa fa-facebook-official"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=Exploring%20a%20Data%20Set%20in%20SQL with @tapoueh: http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f06%2fexploring-a-data-set-in-sql%2f">
+        <i class="fa fa-twitter"></i><span></span>
+      </a>
+    </li>
+  </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
+    </div>
+    
+    <div id="about">
+  <div id="about-card">
+    <div id="about-btn-close">
+      <i class="fa fa-remove"></i>
+    </div>
+    
+      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+    
+    <h4 id="about-card-name">Dimitri Fontaine</h4>
+    
+      <div id="about-card-bio">PostgreSQL Major Contributor</div>
+    
+    
+      <div id="about-card-job">
+        <i class="fa fa-briefcase"></i>
+        <br/>
+        Open Source Software Engineer
+      </div>
+    
+    
+      <div id="about-card-location">
+        <i class="fa fa-map-marker"></i>
+        <br/>
+        France
+      </div>
+    
+  </div>
+</div>
+
+    <div id="algolia-search-modal" class="modal-container">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="close-button"><i class="fa fa-close"></i></span>
+      <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+        <span class="searchby-algolia-text text-color-light text-small">by</span>
+        <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+      </a>
+      <i class="search-icon fa fa-search"></i>
+      <form id="algolia-search-form">
+        <input type="text" id="algolia-search-input" name="search"
+          class="form-control input--large search-input" placeholder="" />
+      </form>
+    </div>
+    <div class="modal-body">
+      <div class="no-result text-color-light text-center"></div>
+      <div class="results">
+        
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/06/exploring-a-data-set-in-sql/">
+                <h3 class="media-heading">Exploring a Data Set in SQL</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Sometimes you need to dive in an existing data set that you know very little
+about. Let&rsquo;s say we&rsquo;ve been lucky to have had a high level description of
+the business case covered by a database, and then access to it. Our next
+step is figuring out data organisation, content and quality. Our tool box:
+<em>the world&rsquo;s most advanced open source
+database</em>, <a href="https://www.postgresql.org">PostgreSQL</a>, and its <em>Structured
+Query Language</em>, SQL.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/06/how-to-write-sql/">
+                <h3 class="media-heading">How to Write SQL</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p><a href="https://twitter.com/krisajenkins">Kris Jenkins</a> cooked up a very nice way
+to embed SQL in your
+code: <a href="https://github.com/krisajenkins/yesql">YeSQL for Clojure</a>. The main
+idea is that you should be writing your SQL queries in <code>.sql</code> files in your
+code repository and maintain them there.</p>
+
+<p>The idea is very good and it is now possible to find alternative
+implementations of the <a href="https://clojure.org">Clojure</a> <em>yesql</em> library in
+other languages. Today, we are going to have a look at one of them for
+the <a href="https://www.python.org">python</a> programming
+language: <a href="https://github.com/honza/anosql">anosql</a>.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/05/find-the-missing-integer/">
+                <h3 class="media-heading">Find The Missing Integer</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>A recent interview question that I had to review was spelled like this:</p>
+
+<blockquote>
+<p>Find missing int element into array 1..100</p>
+</blockquote>
+
+<p>Of course at first read I got it wrong, you have only one integer to look
+for into the array. So while the obvious idea was to apply classic <em>sorting</em>
+techniques and minimize array traversal to handle complexity (time and
+space), it turns out there&rsquo;s a much simpler way to do it if you remember
+your math lessons from younger. But is it that much simpler?</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2016/04/pgconf-us-2016/">
+                <h3 class="media-heading">PGConf US 2016</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2016
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p><a href="https://www.pgconf.us/conferences/2016">PostgreSQL Conference US</a> took
+place in New York City and I had the pleasure to be a speaker there. I
+presented there a talk about why <em>You’d Better Have Tested Backups</em>. The
+important bit is that backups are not interesting, recoveries are. Also the
+only way to make sure a backup is successful is to be able to use it for
+recovery.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/11/all-your-base-conference-2015/">
+                <h3 class="media-heading">All Your Base Conference 2015</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Nov 11, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>I had the pleasure to be invited to speak at
+<a href="http://allyourbaseconf.com/2015/speakers#dimitri-fontaine">All Your Base Conference 2015</a>
+about
+<a href="http://www.postgresql.org">PostgreSQL</a> (of course). The conference gathers together lots of user
+experience around data management and database products, either in the now
+classic meaning of the word (I mean
+<em>relational database management systems
+here</em>) or the newer set of trade-offs represented by the NoSQL set of tools.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/05/postgresql-au-jug-de-montpellier/">
+                <h3 class="media-heading">PostgreSQL au JUG de Montpellier</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>J&rsquo;ai eu le plaisir de présenter PostgreSQL au
+<a href="http://www.jug-montpellier.org/">Java User Group de Montpellier</a>
+le 20 mai dernier dans le cadre d&rsquo;une soirée
+<a href="http://www.jug-montpellier.org/event/36">PostgreSQL is YeSQL</a>. L&rsquo;accueil
+réservé par le
+<em>JUG</em> a été parfait et je tiens à les remercier pour une très
+bonne soirée de partage et d&rsquo;échanges autour de PostgreSQL.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/05/quicklisp-and-debian/">
+                <h3 class="media-heading">Quicklisp and debian</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Common Lisp users are very happy to use
+<a href="https://www.quicklisp.org/beta/">Quicklisp</a> when it comes to
+downloading and maintaining dependencies between their own code and the
+<a href="http://quickdocs.org/">librairies</a> it is using.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/04/pgday-paris/">
+                <h3 class="media-heading">pgDay Paris</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Le 21 avril prochain se tient le premier
+<a href="http://pgday.paris/">pgDay Paris</a>: une conférence
+<a href="http://www.postgresql.org/">PostgreSQL</a> d&rsquo;une journée complète. Il s&rsquo;agit de 8 conférences sur votre base
+de données préférée par des conférencers internationaux, incluant des
+retours d&rsquo;expérience et une analyse de l&rsquo;utilisation des derniers
+développements en cours dans notre projet de base de données préféré.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/03/a-pgday-in-paris/">
+                <h3 class="media-heading">a pgDay in Paris!</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Mar 3, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>I was lucky to participate as a speaker to the
+<a href="http://2015.nordicpgday.org/">Nordic PostgreSQL Day 2015</a>
+and it&rsquo;s been another awesome edition of the conference. Really smooth,
+everything has been running as it should, with about one hundred people at
+the conference.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/02/back-from-fosdem-2015/">
+                <h3 class="media-heading">Back From FOSDEM 2015</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Feb 2, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>The
+<a href="https://fosdem.org/2015/">FOSDEM 2015</a> edition has been awesome this year, the usual mix of meeting
+with old friends, talking about interesting topics, seeing tremendous
+activity in all Open Source domains, and having Belgium beers in the
+evenings.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+      </div>
+    </div>
+    <div class="modal-footer">
+      <p class="results-count text-medium"
+         data-message-zero=""
+         data-message-one=""
+         data-message-other="">
+         233 posts found
+      </p>
+    </div>
+  </div>
+</div>
+    
+  
+    
+    <div id="cover" style="background-image:url('http://tapoueh.org/images/Tree_Of_Light_by_lowapproach.jpg');"></div>
+  
+
+
+    
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.8.0/highlight.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.js"></script>
+
+
+<script src="/js/script-wl33z0n6ocaypepiqrazthtivfrliqijej4rq8ek8gvrv1awftmgjuv8k4zc.min.js"></script>
+
+<script>
+$(document).ready(function() {
+  hljs.configure({ classPrefix: '', useBR: false });
+  $('pre.code-highlight').each(function(i, block) {
+    var code = "";
+    hljs.highlightAuto(block.innerText).value.split(/\r\n|\r|\n/).forEach(function(line) {
+      code += "<span class=\"line\">" + line + "</span><br>";
+    });
+    if (code.length > 0) {
+      block.innerHTML = code;  
+    }
+  });
+  $('pre > code').each(function(i, block) {
+    $(this).addClass('codeblock');
+    hljs.highlightBlock(block);
+  });
+});
+</script>
+
+  
+    
+      <script>
+        var disqus_config = function () {
+          this.page.url = 'http:\/\/tapoueh.org\/blog\/2017\/06\/exploring-a-data-set-in-sql\/';
+          
+            this.page.identifier = '\/blog\/2017\/06\/exploring-a-data-set-in-sql\/'
+          
+        };
+        (function() {
+          
+          
+          if (window.location.hostname == "localhost") {
+            return;
+          }
+          var d = document, s = d.createElement('script');
+          var disqus_shortname = 'tapoueh';
+          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+          s.setAttribute('data-timestamp', +new Date());
+          (d.head || d.body).appendChild(s);
+        })();
+      </script>
+    
+  
+
+
+
+
+
+    
+  </body>
+</html>
+

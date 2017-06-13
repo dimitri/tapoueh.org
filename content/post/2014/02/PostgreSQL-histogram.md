@@ -1,7 +1,7 @@
 +++
 date = "2014-02-21T13:25:00.000000+01:00"
 title = "PostgreSQL, Aggregates and Histograms"
-tags = ["PostgreSQL", "MongoDB", "YeSQL"]
+tags = ["PostgreSQL", "MongoDB", "YeSQL", "histograms", "statistics"]
 categories = ["PostgreSQL","YeSQL"]
 thumbnailImage = "/img/old/histogram.jpg"
 thumbnailImagePosition = "left"
