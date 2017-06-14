@@ -18,6 +18,8 @@ configuration du paraléllisme de chargement des données.  Une fois de plus,
 je vous réfère à l'article de référence en anglais : 
 [Parallel pgloader](http://tapoueh.org/blog/2011/08/01-parallel-pgloader.html).
 
+<!--more-->
+
 L'ensemble des articles de cette série permettra de constituer un tutoriel
 pgloader plus étoffé que l'actuel.  Si vous êtes intéressés par une version
 française, un mail de votre part justifierait l'effort que cela représente !

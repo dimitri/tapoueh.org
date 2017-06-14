@@ -1,5 +1,5 @@
 +++
-date = "2014-05-14T14:59:00.000000+02:00"
+date = "2014-05-14T14:59:00+02:00"
 title = "Why is pgloader so much faster?"
 tags = ["PostgreSQL", "pgloader", "Common-Lisp"]
 categories = ["Projects","pgloader"]
@@ -18,16 +18,18 @@ nowadays that it's soon to be released, the last piece of the
 being full 
 [debian](https://www.debian.org/) packaging of the tool.
 
-<center>*The pgloader logo is a loader truck, just because*.</center>
+<!--more-->
 
-As you might have noticed if you've read my blog before, I decided that
-[pgloader](http://pgloader.io/) needed a full rewrite in order for it to be able to enter the
-current decade as a relevant tool. pgloader used to be written in the
-[python programming language](https://www.python.org/), which is used by lots of people and generally
-quite appreciated by its users.
+As you might have noticed if you've read my blog before, I decided
+that [pgloader](http://pgloader.io/) needed a full rewrite in order for it
+to be able to enter the current decade as a relevant tool. pgloader used to
+be written in the [python programming language](https://www.python.org/),
+which is used by lots of people and generally quite appreciated by its
+users.
 
+<!--toc-->
 
-## Why changing
+# Why changing
 
 Still, python is not without problems, the main ones I had to deal with
 being 
@@ -59,18 +61,19 @@ code when compared to python, it felt like the amazing set of features of
 the language could be put to good use here.
 
 
-## So, what about performances after rewrite?
+# So, what about performances after rewrite?
 
 The main reason why I'm now writing this blog post is receiving emails from
 pgloader users with strange feelings about the speedup. Let's see at the
 numbers one user gave me, for some data point:
 
-~~~
+~~~ sql
  select rows, v2, v3,
         round((  extract(epoch from v2)
                / extract(epoch from v3))::numeric, 2) as speedup
    from timing;
-        
+~~~
+~~~ psql
   rows   |        v2         |       v3        | speedup 
 ---------+-------------------+-----------------+---------
  4768765 | @ 37 mins 10.878  | @ 1 min 26.917  |   25.67
@@ -88,7 +91,7 @@ So what we see in this quite typical
 ***30 times faster*** import. Which brings some questions on the table, of course.
 
 
-## Wait, you're still using `COPY` right?
+# Wait, you're still using *copy*, right?
 
 The 
 [PostgreSQL](http://www.postgresql.org/docs/9.3/interactive/index.html) database system provides a really neat 
@@ -105,10 +108,12 @@ Before that, back when pgloader was python code, it was using the very good
 [psycopg](http://initd.org/psycopg/) driver, which also exposes the COPY protocol.
 
 
-## So, what did happen here?
+# So, what did happen here?
 
 Well it happens that pgloader is now built using Common Lisp technologies,
 and those are really great, powerful and fast!
+
+{{< image classes="fig25 right dim-margin" src="/img/old/speedup.jpg" >}}
 
 Not only is Common Lisp code compiled to 
 *machine code* when using most
@@ -119,12 +124,6 @@ possible to actually benefit from
 *parallel computing* and 
 *threads* in Common
 Lisp.
-
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/speedup.jpg" >}}
-</center>
-
-<center>*That's not how I did it!*</center>
 
 In the 
 [pgloader](http://pgloader.io/) case I've been using the 
@@ -143,7 +142,7 @@ pgloader to enter a whole new field of
 *data loading performances*.
 
 
-## Conclusion
+# Conclusion
 
 Not only is pgloader so much faster now, it's also full of new capabilities
 and supports several sources of data such as 

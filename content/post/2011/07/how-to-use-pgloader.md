@@ -12,35 +12,46 @@ aliases = ["/blog/2011/07/22-how-to-use-pgloader",
            "/blog/2011/07/22-how-to-use-pgloader.html"]
 +++
 
-This question about 
-[pgloader](../../../pgsql/pgloader.html) usage coms in quite frequently, and I think the
-examples 
-[README](https://github.com/dimitri/pgloader/tree/master/examples) goes a long way in answering it.  It's not exactly a
-*tutorial* but is almost there. Let me paste it here for reference:
+This question about [pgloader](../../../pgsql/pgloader.html) usage coms in
+quite frequently, and I think the
+examples [README](https://github.com/dimitri/pgloader/tree/master/examples)
+goes a long way in answering it. It's not exactly a *tutorial* but is almost
+there.
+
+<!--more-->
+
+{{< alert danger >}}
+
+This article is about versions series 2.x of pgloader, which are not
+supported anymore. Consider using [pgloader](http://pgloader.io) version 3.x
+instead. Also the following examples are still available in the 3.x series
+and you can see the *command files* at the GitHub repository for pgloader:
+
+<https://github.com/dimitri/pgloader/blob/master/test/>.
+
+{{< /alert >}}
 
 
+Let me paste it here for reference:
+ 
 # installing pgloader
 
-Either use the 
-[debian package](http://packages.debian.org/source/pgloader) or the one for your distribution of choice if
-you use another one.  RedHat, CentOS, FreeBSD, OpenBSD and some more already
-include a binary package that you can use directly.
+Either use the [debian package](http://packages.debian.org/source/pgloader)
+or the one for your distribution of choice if you use another one. RedHat,
+CentOS, FreeBSD, OpenBSD and some more already include a binary package that
+you can use directly.
 
-Or you could 
-`git clone https://github.com/dimitri/pgloader.git` and go from
-there.  As it's all 
-`python` code, it runs fine interpreted from the source
-directory, you don't 
-*need* to install it in a special place in your system.
+Or you could `git clone https://github.com/dimitri/pgloader.git` and go from
+there. As it's all `python` code, it runs fine interpreted from the source
+directory, you don't *need* to install it in a special place in your system.
 
 
 # setting up the test environment
 
-To use them, please first create a 
-`pgloader` database, then for each example
-the tables it needs, then issue the pgloader command:
+To use them, please first create a `pgloader` database, then for each
+example the tables it needs, then issue the pgloader command:
 
-~~~
+~~~ bash
 $ createdb --encoding=utf-8 pgloader
 $ cd examples
 $ psql pgloader < simple/simple.sql
@@ -58,56 +69,54 @@ The provided examples are:
 
   - simple
 
-  This dataset shows basic case, with trailing separator and data
-  reordering.
+    This dataset shows basic case, with trailing separator and data
+    reordering.
 
   - xzero
 
-  Same as simple but using 
-`\0` as the null marker (
-`^@`)
+    Same as simple but using `\0` as the null marker ( `^@`)
 
   - errors
 
-  Same test, but with impossible dates. Should report some errors. If it
-  does not report errors, check you're not using psycopg 1.1.21.
+    Same test, but with impossible dates. Should report some errors. If it
+    does not report errors, check you're not using psycopg 1.1.21.
 
-  Should report 3 errors out of 7 lines (4 updates).
+    Should report 3 errors out of 7 lines (4 updates).
 
   - clob
 
-  This dataset shows some text large object importing to PostgreSQL text
-  datatype.
+    This dataset shows some text large object importing to PostgreSQL text
+    datatype.
 
   - cluttured
 
-  A dataset with newline escaped and multi-line input (without quoting)
-  Beware of data reordering, too.
+    A dataset with newline escaped and multi-line input (without quoting)
+    Beware of data reordering, too.
 
   - csv
 
-  A dataset with csv delimiter ',' and quoting '"'.
+    A dataset with csv delimiter ',' and quoting '"'.
 
   - partial
 
-  A dataset from which we only load some columns of the provided one.
+    A dataset from which we only load some columns of the provided one.
 
   - serial
 
-  In this dataset the id field is ommited, it's a serial which will be
-  automatically set by PostgreSQL while COPYing.
+    In this dataset the id field is ommited, it's a serial which will be
+    automatically set by PostgreSQL while COPYing.
 
   - reformat
 
-  A timestamp column is formated the way MySQL dump its timestamp,
-  which is not the same as the way PostgreSQL reads them. The
-  reformat.mysql module is used to reformat the data on-the-fly.
+    A timestamp column is formated the way MySQL dump its timestamp, which
+    is not the same as the way PostgreSQL reads them. The reformat.mysql
+    module is used to reformat the data on-the-fly.
 
   - udc
 
-  A used defined column test, where all file columns are not used but
-  a new constant one, not found in the input datafile, is added while
-  loading data.
+    A used defined column test, where all file columns are not used but a
+    new constant one, not found in the input datafile, is added while
+    loading data.
 
 
 # running the import
@@ -115,7 +124,7 @@ The provided examples are:
 You can launch all those pgloader tests in one run, provided you created the
 necessary tables:
 
-~~~
+~~~ bash
 $ for sql in */*sql; do psql pgloader < $sql; done
  $ ../pgloader.py -Tsc pgloader.conf
 

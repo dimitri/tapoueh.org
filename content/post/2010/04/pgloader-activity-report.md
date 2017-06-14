@@ -18,6 +18,8 @@ active. Development happens when I receive a complaint, either about a bug
 in existing code or a feature in yet-to-write code. If you have a bug to
 report, just send me an email!
 
+<!--more-->
+
 If you're following the development of it, the sources just moved from 
 `CVS`
 at 

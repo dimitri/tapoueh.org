@@ -12,16 +12,26 @@ aliases = ["/blog/2013/01/17-pgloader-auto-setup",
            "/blog/2013/01/17-pgloader-auto-setup.html"]
 +++
 
-Another day, another migration from 
-*MySQL* to 
-[PostgreSQL](http://www.postgresql.org/)... or at least
-that's how it feels sometimes. This time again I've been using some quite
-old scripts to help me do the migration.
+Another day, another migration from *MySQL*
+to [PostgreSQL](http://www.postgresql.org/)... or at least that's how it
+feels sometimes. This time again I've been using some quite old scripts to
+help me do the migration.
 
-<center>*That's how I feel for MySQL users*</center>
+{{< alert danger >}}
+
+This article is about versions 2.x of pgloader, which are not supported
+anymore. Consider using [pgloader](http://pgloader.io) version 3.x instead.
+You won't need to generate the configuration anymore as pgloader now
+connects to a live instance of the source database and query its system
+catalogs for you.
+
+{{< /alert >}}
 
 
-## Migrating the schema
+<!--more-->
+<!--toc-->
+
+# Migrating the schema
 
 For the 
 *schema* parts, I've been using 
@@ -32,7 +42,7 @@ I think that the schema should always be validated manually when doing a
 migration anyway, I happen to think that it's good news.
 
 
-## Getting the data out
+# Getting the data out
 
 Then for the data parts I keep on using 
 [pgloader](../../../pgsql/pgloader.html). The data is never quite
@@ -86,14 +96,14 @@ that data to feed
 [pgloader](../../../pgsql/pgloader.html).
 
 
-## Loading the data in
+# Loading the data in
 
 Now, we have to write down a configuration file for pgloader to know what to
 load and where to find the data. What about generating the file from the
 database schema instead, using the query in 
 [generate-pgloader-config.sql](generate-pgloader-config.sql):
 
-~~~
+~~~ sql
 with reformat as (
    select relname, attnum, attname, typname,
           case typname
@@ -158,7 +168,7 @@ To work with the setup generated, you will have to prepend a global section
 for pgloader and to include a reformating module in python, that I named
 [mynull.py](mynull.py):
 
-~~~
+~~~ python
 # Author: Dimitri Fontaine <dimitri@2ndQuadrant.fr>
 #
 # pgloader mysql reformating module
@@ -183,11 +193,10 @@ def date(reject, input):
 ~~~
 
 
-Now you can launch 
-`pgloader` and profit!
+Now you can launch `pgloader` and profit!
 
 
-## Conclusion
+# Conclusion
 
 There are plenty of tools to assist you migrating away from MySQL and other
 databases. When you make that decision, you're not alone, and it's easy

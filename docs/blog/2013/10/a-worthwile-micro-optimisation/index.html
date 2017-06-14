@@ -31,18 +31,42 @@
     
 
     
-    <meta name="description" content="In our previous article about Loading Geolocation Data, we did load some data into PostgreSQL and saw the quite noticable impact of a user transformation. As it happens, the function that did the integer to IP representation was so naive as to scratch the micro optimisation itch of some Common Lisp hackers: thanks a lot guys, in particular stassats who came up with the solution we&rsquo;re seeing now.
-The previous code was a straight rewrite of the provided documentation in Common Lisp.">
-    <meta property="og:description" content="In our previous article about Loading Geolocation Data, we did load some data into PostgreSQL and saw the quite noticable impact of a user transformation. As it happens, the function that did the integer to IP representation was so naive as to scratch the micro optimisation itch of some Common Lisp hackers: thanks a lot guys, in particular stassats who came up with the solution we&rsquo;re seeing now.
-The previous code was a straight rewrite of the provided documentation in Common Lisp.">
+    <meta name="description" content="In our previous article about
+Loading Geolocation Data, we did load some
+data into PostgreSQL and saw the quite noticable impact of a user
+transformation. As it happens, the function that did the integer to IP
+representation was so naive as to scratch the micro optimisation itch of
+some Common Lisp hackers: thanks a lot guys, in particular
+stassats who came
+up with the solution we&rsquo;re seeing now.
+
+">
+    <meta property="og:description" content="In our previous article about
+Loading Geolocation Data, we did load some
+data into PostgreSQL and saw the quite noticable impact of a user
+transformation. As it happens, the function that did the integer to IP
+representation was so naive as to scratch the micro optimisation itch of
+some Common Lisp hackers: thanks a lot guys, in particular
+stassats who came
+up with the solution we&rsquo;re seeing now.
+
+">
     <meta property="og:type" content="blog">
     <meta property="og:title" content="A Worthwile Micro Optimisation">
     <meta property="og:url" content="/blog/2013/10/a-worthwile-micro-optimisation/">
     <meta property="og:site_name" content="Dimitri Fontaine, PostgreSQL Expert">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Dimitri Fontaine, PostgreSQL Expert">
-    <meta name="twitter:description" content="In our previous article about Loading Geolocation Data, we did load some data into PostgreSQL and saw the quite noticable impact of a user transformation. As it happens, the function that did the integer to IP representation was so naive as to scratch the micro optimisation itch of some Common Lisp hackers: thanks a lot guys, in particular stassats who came up with the solution we&rsquo;re seeing now.
-The previous code was a straight rewrite of the provided documentation in Common Lisp.">
+    <meta name="twitter:description" content="In our previous article about
+Loading Geolocation Data, we did load some
+data into PostgreSQL and saw the quite noticable impact of a user
+transformation. As it happens, the function that did the integer to IP
+representation was so naive as to scratch the micro optimisation itch of
+some Common Lisp hackers: thanks a lot guys, in particular
+stassats who came
+up with the solution we&rsquo;re seeing now.
+
+">
     
       <meta name="twitter:creator" content="@tapoueh">
     
@@ -271,6 +295,8 @@ some Common Lisp hackers: thanks a lot guys, in particular
 <a href="https://github.com/stassats">stassats</a> who came
 up with the solution we&rsquo;re seeing now.</p>
 
+<p></p>
+
 <p>The previous code was a straight rewrite of the provided documentation in
 Common Lisp. See for yourself the docs as found at
 <a href="http://dev.maxmind.com/geoip/legacy/csv/">http://dev.maxmind.com/geoip/legacy/csv/</a>:</p>
@@ -286,24 +312,23 @@ address = ( o1, o2, o3, o4 ).join('.')
 </code></pre>
 
 <p>And the code I came up with:</p>
-
-<pre><code>(defun ip-range (start-integer-string end-integer-string)
-  &quot;Transform a couple of integers to an IP4R ip range notation.&quot;
-  (declare (inline)
-	   (optimize speed)
-	   (type string start-integer-string end-integer-string))
-  (flet ((integer-to-ip-string (int)
-	   &quot;see http://dev.maxmind.com/geoip/legacy/csv/&quot;
-	   (declare (inline) (optimize speed) (type fixnum int))
-	   (format nil &quot;~a.~a.~a.~a&quot;
-		   (mod (truncate int #. (expt 2 24)) 256)
-		   (mod (truncate int #. (expt 2 16)) 256)
-		   (mod (truncate int #. (expt 2 8)) 256)
-		   (mod int 256))))
-    (let ((ip-start (integer-to-ip-string (parse-integer start-integer-string)))
-	  (ip-end   (integer-to-ip-string (parse-integer end-integer-string))))
-      (format nil &quot;~a-~a&quot; ip-start ip-end))))
-</code></pre>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>(<span style="color: #00aaaa">defun</span> <span style="color: #aa0000">ip-range</span> (<span style="color: #aa0000">start-integer-string</span> <span style="color: #aa0000">end-integer-string</span>)
+  <span style="color: #aa5500">&quot;Transform a couple of integers to an IP4R ip range notation.&quot;</span>
+  (<span style="color: #0000aa">declare</span> (<span style="color: #0000aa">inline</span>)
+	   (<span style="color: #0000aa">optimize</span> <span style="color: #aa0000">speed</span>)
+	   (<span style="color: #0000aa">type</span> <span style="color: #00aaaa">string</span> <span style="color: #aa0000">start-integer-string</span> <span style="color: #aa0000">end-integer-string</span>))
+  (<span style="color: #0000aa">flet</span> ((<span style="color: #aa0000">integer-to-ip-string</span> (<span style="color: #aa0000">int</span>)
+	   <span style="color: #aa5500">&quot;see http://dev.maxmind.com/geoip/legacy/csv/&quot;</span>
+	   (<span style="color: #0000aa">declare</span> (<span style="color: #0000aa">inline</span>) (<span style="color: #0000aa">optimize</span> <span style="color: #aa0000">speed</span>) (<span style="color: #0000aa">type</span> <span style="color: #00aaaa">fixnum</span> <span style="color: #aa0000">int</span>))
+	   (<span style="color: #00aaaa">format</span> <span style="color: #aa0000">nil</span> <span style="color: #aa5500">&quot;~a.~a.~a.~a&quot;</span>
+		   (<span style="color: #00aaaa">mod</span> (<span style="color: #00aaaa">truncate</span> <span style="color: #aa0000">int</span> #. (<span style="color: #00aaaa">expt</span> <span style="color: #009999">2</span> <span style="color: #009999">24</span>)) <span style="color: #009999">256</span>)
+		   (<span style="color: #00aaaa">mod</span> (<span style="color: #00aaaa">truncate</span> <span style="color: #aa0000">int</span> #. (<span style="color: #00aaaa">expt</span> <span style="color: #009999">2</span> <span style="color: #009999">16</span>)) <span style="color: #009999">256</span>)
+		   (<span style="color: #00aaaa">mod</span> (<span style="color: #00aaaa">truncate</span> <span style="color: #aa0000">int</span> #. (<span style="color: #00aaaa">expt</span> <span style="color: #009999">2</span> <span style="color: #009999">8</span>)) <span style="color: #009999">256</span>)
+		   (<span style="color: #00aaaa">mod</span> <span style="color: #aa0000">int</span> <span style="color: #009999">256</span>))))
+    (<span style="color: #0000aa">let</span> ((<span style="color: #aa0000">ip-start</span> (<span style="color: #aa0000">integer-to-ip-string</span> (<span style="color: #00aaaa">parse-integer</span> <span style="color: #aa0000">start-integer-string</span>)))
+	  (<span style="color: #aa0000">ip-end</span>   (<span style="color: #aa0000">integer-to-ip-string</span> (<span style="color: #00aaaa">parse-integer</span> <span style="color: #aa0000">end-integer-string</span>))))
+      (<span style="color: #00aaaa">format</span> <span style="color: #aa0000">nil</span> <span style="color: #aa5500">&quot;~a-~a&quot;</span> <span style="color: #aa0000">ip-start</span> <span style="color: #aa0000">ip-end</span>))))
+</pre></div>
 
 <p>Quite a direct naive implementation. Which is good to show what you can
 expect in a kind of a worst case, and that worst case was using
@@ -349,38 +374,37 @@ conversion, but that&rsquo;s not the topic today.</p>
 <p>Let&rsquo;s now see one of the micro optimised solution, the one I picked among a
 list of 8 different proposal, each a little more crazy than the previous
 one:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>(<span style="color: #00aaaa">declaim</span> (<span style="color: #0000aa">inline</span> <span style="color: #aa0000">int-to-ip</span>))
+(<span style="color: #00aaaa">defun</span> <span style="color: #aa0000">int-to-ip</span> (<span style="color: #aa0000">int</span>)
+  <span style="color: #aa5500">&quot;Transform an IP as integer into its dotted notation, optimised code from</span>
+<span style="color: #aa5500">   stassats.&quot;</span>
+  (<span style="color: #0000aa">declare</span> (<span style="color: #0000aa">optimize</span> <span style="color: #aa0000">speed</span>)
+           (<span style="color: #0000aa">type</span> (<span style="color: #00aaaa">unsigned-byte</span> <span style="color: #009999">32</span>) <span style="color: #aa0000">int</span>))
+  (<span style="color: #0000aa">let</span> ((<span style="color: #aa0000">table</span> (<span style="color: #0000aa">load-time-value</span>
+                (<span style="color: #0000aa">let</span> ((<span style="color: #aa0000">vec</span> (<span style="color: #00aaaa">make-array</span> (<span style="color: #00aaaa">+</span> <span style="color: #009999">1</span> <span style="color: #009999">#xFFFF</span>))))
+                  (<span style="color: #00aaaa">loop</span> <span style="color: #aa0000">for</span> <span style="color: #aa0000">i</span> <span style="color: #aa0000">to</span> <span style="color: #009999">#xFFFF</span>
+		     <span style="color: #00aaaa">do</span> (<span style="color: #00aaaa">setf</span> (<span style="color: #00aaaa">aref</span> <span style="color: #aa0000">vec</span> <span style="color: #aa0000">i</span>)
+			      (<span style="color: #00aaaa">coerce</span> (<span style="color: #00aaaa">format</span> <span style="color: #aa0000">nil</span> <span style="color: #aa5500">&quot;~a.~a&quot;</span>
+					      (<span style="color: #00aaaa">ldb</span> (<span style="color: #00aaaa">byte</span> <span style="color: #009999">8</span> <span style="color: #009999">8</span>) <span style="color: #aa0000">i</span>)
+					      (<span style="color: #00aaaa">ldb</span> (<span style="color: #00aaaa">byte</span> <span style="color: #009999">8</span> <span style="color: #009999">0</span>) <span style="color: #aa0000">i</span>))
+				      <span style="color: #0000aa">&#39;simple-base-string</span>)))
+                  <span style="color: #aa0000">vec</span>)
+                <span style="color: #aa0000">t</span>)))
+    (<span style="color: #0000aa">declare</span> (<span style="color: #0000aa">type</span> (<span style="color: #00aaaa">simple-array</span> <span style="color: #00aaaa">simple-base-string</span> (<span style="color: #00aaaa">*</span>)) <span style="color: #aa0000">table</span>))
+    (<span style="color: #00aaaa">concatenate</span> <span style="color: #0000aa">&#39;simple-base-string</span>
+		 (<span style="color: #00aaaa">aref</span> <span style="color: #aa0000">table</span> (<span style="color: #00aaaa">ldb</span> (<span style="color: #00aaaa">byte</span> <span style="color: #009999">16</span> <span style="color: #009999">16</span>) <span style="color: #aa0000">int</span>))
+		 <span style="color: #aa5500">&quot;.&quot;</span>
+		 (<span style="color: #00aaaa">aref</span> <span style="color: #aa0000">table</span> (<span style="color: #00aaaa">ldb</span> (<span style="color: #00aaaa">byte</span> <span style="color: #009999">16</span> <span style="color: #009999">0</span>) <span style="color: #aa0000">int</span>)))))
 
-<pre><code>(declaim (inline int-to-ip))
-(defun int-to-ip (int)
-  &quot;Transform an IP as integer into its dotted notation, optimised code from
-   stassats.&quot;
-  (declare (optimize speed)
-           (type (unsigned-byte 32) int))
-  (let ((table (load-time-value
-                (let ((vec (make-array (+ 1 #xFFFF))))
-                  (loop for i to #xFFFF
-		     do (setf (aref vec i)
-			      (coerce (format nil &quot;~a.~a&quot;
-					      (ldb (byte 8 8) i)
-					      (ldb (byte 8 0) i))
-				      'simple-base-string)))
-                  vec)
-                t)))
-    (declare (type (simple-array simple-base-string (*)) table))
-    (concatenate 'simple-base-string
-		 (aref table (ldb (byte 16 16) int))
-		 &quot;.&quot;
-		 (aref table (ldb (byte 16 0) int)))))
-
-(declaim (inline ip-range))
-(defun ip-range (start-integer-string end-integer-string)
-  &quot;Transform a couple of integers to an IP4R ip range notation.&quot;
-  (declare (optimize speed)
-	   (type string start-integer-string end-integer-string))
-  (let ((ip-start (int-to-ip (parse-integer start-integer-string)))
-	(ip-end   (int-to-ip (parse-integer end-integer-string))))
-    (concatenate 'simple-base-string ip-start &quot;-&quot; ip-end)))
-</code></pre>
+(<span style="color: #00aaaa">declaim</span> (<span style="color: #0000aa">inline</span> <span style="color: #aa0000">ip-range</span>))
+(<span style="color: #00aaaa">defun</span> <span style="color: #aa0000">ip-range</span> (<span style="color: #aa0000">start-integer-string</span> <span style="color: #aa0000">end-integer-string</span>)
+  <span style="color: #aa5500">&quot;Transform a couple of integers to an IP4R ip range notation.&quot;</span>
+  (<span style="color: #0000aa">declare</span> (<span style="color: #0000aa">optimize</span> <span style="color: #aa0000">speed</span>)
+	   (<span style="color: #0000aa">type</span> <span style="color: #00aaaa">string</span> <span style="color: #aa0000">start-integer-string</span> <span style="color: #aa0000">end-integer-string</span>))
+  (<span style="color: #0000aa">let</span> ((<span style="color: #aa0000">ip-start</span> (<span style="color: #aa0000">int-to-ip</span> (<span style="color: #00aaaa">parse-integer</span> <span style="color: #aa0000">start-integer-string</span>)))
+	(<span style="color: #aa0000">ip-end</span>   (<span style="color: #aa0000">int-to-ip</span> (<span style="color: #00aaaa">parse-integer</span> <span style="color: #aa0000">end-integer-string</span>))))
+    (<span style="color: #00aaaa">concatenate</span> <span style="color: #0000aa">&#39;simple-base-string</span> <span style="color: #aa0000">ip-start</span> <span style="color: #aa5500">&quot;-&quot;</span> <span style="color: #aa0000">ip-end</span>)))
+</pre></div>
 
 <p>As usual the idea is to compute all you can in advance, here thanks to the
 <a href="http://www.lispworks.com/documentation/HyperSpec/Body/s_ld_tim.htm">load-time-value</a> special operator that&rsquo;s part of the Common Lisp Standard. So
@@ -458,7 +482,6 @@ minute, that basically means that the transformation is now free.</p>
 
 <p>Despite what you might have read elsewhere, my experience with the Common
 Lisp Community so far really is great!</p>
-
               
             </div>
           </div>

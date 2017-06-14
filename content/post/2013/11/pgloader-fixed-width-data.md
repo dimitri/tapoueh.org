@@ -13,18 +13,21 @@ aliases = ["/blog/2013/11/18-pgloader-fixed-width-data",
 +++
 
 A long time ago we talked about how to
-[Import fixed width data with pgloader](http://tapoueh.org/blog/2010/04/27-import-fixed-width-data-with-pgloader.html), following up on other stories still
+[Import fixed width data with pgloader](/blog/2010/04/27-import-fixed-width-data-with-pgloader.html), following up on other stories still
 online at 
 [Postgres OnLine Journal](http://www.postgresonline.com/journal/index.php?/archives/157-Import-fixed-width-data-into-PostgreSQL-with-just-PSQL.html) and on 
-[David Fetter's blog](http://people.planetpostgresql.org/dfetter/index.php?/archives/58-psql,-Paste,-Perl-Pefficiency!.html). Back then, I
-showed that using pgloader made it easier to import the data, but also
-showed quite poor performances characteristics due to using the 
-`debug` mode
-in the timings. Let's update that article with current 
-[pgloader](https://github.com/dimitri/pgloader) wonders!
+[David Fetter's blog](http://people.planetpostgresql.org/dfetter/index.php?/archives/58-psql,-Paste,-Perl-Pefficiency!.html).
+
+Back then, I showed that using pgloader made it easier to import the data,
+but also showed quite poor performances characteristics due to using the
+`debug` mode in the timings. Let's update that article with
+current [pgloader](https://github.com/dimitri/pgloader) wonders!
+
+<!--more-->
+<!--toc-->
 
 
-## Redoing the python based test
+# Redoing the python based test
 
 Let's be fair, hardware did evolve in those past 3 years, and the test that
 ran in 14 seconds was done with debug information level, which is the wrong
@@ -44,7 +47,7 @@ I got timings anywhere betseen
 ***1.834 seconds*** here.
 
 
-## The new pgloader
+# The new pgloader
 
 Now with the current version of pgloader, what do we get:
 
@@ -64,6 +67,7 @@ $ pgloader.exe census-place.load
              Total import time      25375      25375          0          2.977s
 ~~~
 
+{{< image classes="fig25 right dim-margin" src="/img/old/mph.jpg" >}}
 
 So the loading itself took as much as 
 ***366 milliseconds*** to run. To be fair
@@ -71,17 +75,13 @@ that's kind of a best run, with run times varying between that and
 ***700
 milliseconds***.
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/mph.jpg" >}}
-</center>
-
 So the new version is about 
 ***3 to 9 times faster*** depending on the story you
 want to tell. Let's stick with 
 *much faster* for the sake of this article.
 
 
-## The command
+# The command
 
 The new loader takes a full command as its input, rather than a
 configuration file. Here's what the command I've used this time looks like:
@@ -141,10 +141,6 @@ zip archive file from its http source URL, unzip it locally then work on the
 filename from the archive matching the one we know about: we don't want to
 hardcode in the command the name of the directory contained in the zip file.
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/lisp-locator-logo.jpg" >}}
-</center>
-
 Also, contrary to the previous version, it's quite easy to just trim the
 `loc_name` column as we load the data. Here I've been adding a new function to
 do that, because I wanted to play with optimizing it (adding type
@@ -167,7 +163,7 @@ The
 [string-right-trim](http://www.lispworks.com/documentation/HyperSpec/Body/f_stg_tr.htm) function is part of the Common Lisp Standard. The
 optimisation here looks like:
 
-~~~
+~~~ lisp
 (declaim (inline right-trim))
 
 (defun right-trim (string)
@@ -185,7 +181,7 @@ would then compile that to machine code for you before processing your data
 file.
 
 
-## Conclusion
+# Conclusion
 
 If you're already using pgloader, you will enjoy the new version of it! The
 new version comes with a command line option to migrate the old

@@ -12,30 +12,39 @@ aliases = ["/blog/2011/08/05-reformating-modules-for-pgloader",
            "/blog/2011/08/05-reformating-modules-for-pgloader.html"]
 +++
 
-Back to our series about 
-[pgloader](../../../pgsql/pgloader.html).  The previous articles detailed
-[How To Use PgLoader](http://tapoueh.org/blog/2011/07/22-how-to-use-pgloader.html) then 
-[How to Setup pgloader](http://tapoueh.org/blog/2011/07/29-how-to-setup-pgloader.html), then what to expect from a
-[parallel pgloader](http://tapoueh.org/blog/2011/08/01-parallel-pgloader.html) setup.  This article will detail how to 
-*reformat* input
-columns so that what 
-[PostgreSQL](http://www.postgresql.org/) sees is not what's in the data file, but the
-result of a 
-*transformation* from this data into something acceptable as an
-*input* for the target data type.
+Back to our series about [pgloader](http://pgloader.io). The previous
+articles
+detailed
+[How To Use PgLoader](http://tapoueh.org/blog/2011/07/22-how-to-use-pgloader.html) then
+[How to Setup pgloader](http://tapoueh.org/blog/2011/07/29-how-to-setup-pgloader.html),
+then what to expect from
+a
+[parallel pgloader](http://tapoueh.org/blog/2011/08/01-parallel-pgloader.html) setup.
+This article will detail how to *reformat* input columns so that
+what [PostgreSQL](http://www.postgresql.org/) sees is not what's in the data
+file, but the result of a *transformation* from this data into something
+acceptable as an *input* for the target data type.
 
-Here's what the 
-[pgloader documentation](http://pgloader.projects.postgresql.org/) has to say about this 
-*reformat*
-parameter: 
-*The value of this option is a comma separated list of columns to
-rewrite, which are a colon separated list of column name, reformat module
-name, reformat function name*.
+<!--more-->
+
+{{< alert danger >}}
+
+This article is about versions 2.x of pgloader, which are not supported
+anymore. Consider using [pgloader](http://pgloader.io) version 3.x instead.
+
+{{< /alert >}}
+
+
+Here's what
+the [pgloader documentation](http://pgloader.io/howto/pgloader.1.html) has
+to say about this *reformat* parameter: *The value of this option is a comma
+separated list of columns to rewrite, which are a colon separated list of
+column name, reformat module name, reformat function name*.
 
 And here's the 
 [examples/pgloader.conf](https://github.com/dimitri/pgloader/blob/master/examples/pgloader.conf) section that deals with reformat:
 
-~~~
+~~~ ini
 [reformat]
 table           = reformat
 format          = text

@@ -20,6 +20,8 @@ time I began consolidating what I know about that topic and am writing a
 software to help me here. Consider it the 
 ***MySQL Migration Toolkit***.
 
+<!--more-->
+
 <center>*A real classic that I couldn't resist using here...*</center>
 
 Without further ado, here's a little demo of the test case I have here to

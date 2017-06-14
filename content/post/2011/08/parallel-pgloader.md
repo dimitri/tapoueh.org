@@ -12,12 +12,26 @@ aliases = ["/blog/2011/08/01-parallel-pgloader",
            "/blog/2011/08/01-parallel-pgloader.html"]
 +++
 
-This article continues the series that began with 
+This article continues the series that began
+with
 [How To Use PgLoader](http://tapoueh.org/blog/2011/07/22-how-to-use-pgloader.html) then
-detailed 
-[How to Setup pgloader](http://tapoueh.org/blog/2011/07/29-how-to-setup-pgloader.html).  We have some more fine points to talk about
-here, today's article is about loading your data in parallel with 
-[pgloader](../../../pgsql/pgloader.html).
+detailed
+[How to Setup pgloader](http://tapoueh.org/blog/2011/07/29-how-to-setup-pgloader.html).
+We have some more fine points to talk about here, today's article is about
+loading your data in parallel with [pgloader](../../../pgsql/pgloader.html).
+
+<!--more-->
+
+{{< alert danger >}}
+
+This article is about version series 2.x of pgloader, which are not
+supported anymore. Consider using [pgloader](http://pgloader.io) version 3.x
+instead. Is is much better including at parallelism!
+
+{{< /alert >}}
+
+
+<!--toc-->
 
 
 # several files at a time

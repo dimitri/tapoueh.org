@@ -12,31 +12,46 @@ aliases = ["/blog/2011/08/12-pgloader-udc",
            "/blog/2011/08/12-pgloader-udc.html"]
 +++
 
-The previous articles in the 
-[pgloader](../../../pgsql/pgloader.html) series detailed 
-[How To Use PgLoader](http://tapoueh.org/blog/2011/07/22-how-to-use-pgloader.html)
-then 
-[How to Setup pgloader](http://tapoueh.org/blog/2011/07/29-how-to-setup-pgloader.html), then what to expect from a 
-[parallel pgloader](http://tapoueh.org/blog/2011/08/01-parallel-pgloader.html)
-setup, and then 
-[pgloader reformating](http://tapoueh.org/blog/2011/08/05-reformating-modules-for-pgloader.html).  Another need you might encounter when
-you get to use 
-[pgloader](../../../pgsql/pgloader.html) is adding 
-*constant* values into a table's column.
+The previous articles in the [pgloader](http://pgloader.io) series
+detailed
+[How To Use PgLoader](http://tapoueh.org/blog/2011/07/22-how-to-use-pgloader.html) then
+[How to Setup pgloader](http://tapoueh.org/blog/2011/07/29-how-to-setup-pgloader.html),
+then what to expect from
+a
+[parallel pgloader](http://tapoueh.org/blog/2011/08/01-parallel-pgloader.html) setup,
+and
+then
+[pgloader reformating](http://tapoueh.org/blog/2011/08/05-reformating-modules-for-pgloader.html).
+Another need you might encounter when you get to
+use [pgloader](../../../pgsql/pgloader.html) is adding *constant* values
+into a table's column.
 
-The basic situation where you need to do so is adding an 
-*origin* field to
-your table.  The value of that is not to be found in the data file itself,
-typically, but known in the pgloader setup.  That could even be the 
-`filename`
-you are importing data from.
+<!--more-->
 
-In 
-[pgloader](../../../pgsql/pgloader.html) that's called a 
-*user defined column*.  Here's what the relevant
-[examples/pgloader.conf](https://github.com/dimitri/pgloader/blob/master/examples/pgloader.conf) setup looks like:
+{{< alert danger >}}
 
-~~~
+This article is about version series 2.x of pgloader, which are not
+supported anymore. Consider using [pgloader](http://pgloader.io) version 3.x
+instead. Also the following example is still available in the 3.x series and
+you can see the *command file* at the GitHub repository for pgloader:
+
+<https://github.com/dimitri/pgloader/blob/master/test/udc.load>.
+
+{{< /alert >}}
+
+
+The basic situation where you need to do so is adding an *origin* field to
+your table. The value of that is not to be found in the data file itself,
+typically, but known in the pgloader setup. That could even be the
+`filename` you are importing data from.
+
+In [pgloader](http://pgloader.io) that's called a *user defined column*.
+Here's what the
+relevant
+[examples/pgloader.conf](https://github.com/dimitri/pgloader/blob/master/examples/pgloader.conf) setup
+looks like:
+
+~~~ ini
 [udc]
 table           = udc
 format          = text
@@ -62,7 +77,7 @@ And the data file is:
 
 And here's what the loaded table looks like:
 
-~~~
+~~~ psql
 pgloader/examples$ pgloader -Tsc pgloader.conf udc
 Table name        |    duration |    size |  copy rows |     errors 
 ====================================================================

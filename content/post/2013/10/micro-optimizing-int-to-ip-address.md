@@ -21,6 +21,8 @@ some Common Lisp hackers: thanks a lot guys, in particular
 [stassats](https://github.com/stassats) who came
 up with the solution we're seeing now.
 
+<!--more-->
+
 The previous code was a straight rewrite of the provided documentation in
 Common Lisp. See for yourself the docs as found at
 [http://dev.maxmind.com/geoip/legacy/csv/](http://dev.maxmind.com/geoip/legacy/csv/):
@@ -39,7 +41,7 @@ address = ( o1, o2, o3, o4 ).join('.')
 
 And the code I came up with:
 
-~~~
+~~~ lisp
 (defun ip-range (start-integer-string end-integer-string)
   "Transform a couple of integers to an IP4R ip range notation."
   (declare (inline)
@@ -76,7 +78,7 @@ Let's now see one of the micro optimised solution, the one I picked among a
 list of 8 different proposal, each a little more crazy than the previous
 one:
 
-~~~
+~~~ lisp
 (declaim (inline int-to-ip))
 (defun int-to-ip (int)
   "Transform an IP as integer into its dotted notation, optimised code from

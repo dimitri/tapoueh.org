@@ -31,21 +31,36 @@
     
 
     
-    <meta name="description" content="So, following previous blog entries about importing fixed width data, from Postgres Online Journal and David (perl) Fetter, I couldn&rsquo;t resist following the meme and showing how to achieve the same thing with pgloader.
-I can&rsquo;t say how much I dislike such things as the following, and I can&rsquo;t help thinking that non IT people are right looking at us like this when encountering such prose.
-map {s/\D*(\d&#43;)-(\d&#43;).*/$a.=&quot;A&quot;.(1&#43;$2-$1). &quot; &quot;/e} split(/\n/,&lt;&lt;&#39;EOT&#39;);  So, the pgloader way.">
-    <meta property="og:description" content="So, following previous blog entries about importing fixed width data, from Postgres Online Journal and David (perl) Fetter, I couldn&rsquo;t resist following the meme and showing how to achieve the same thing with pgloader.
-I can&rsquo;t say how much I dislike such things as the following, and I can&rsquo;t help thinking that non IT people are right looking at us like this when encountering such prose.
-map {s/\D*(\d&#43;)-(\d&#43;).*/$a.=&quot;A&quot;.(1&#43;$2-$1). &quot; &quot;/e} split(/\n/,&lt;&lt;&#39;EOT&#39;);  So, the pgloader way.">
+    <meta name="description" content="So, following previous blog entries about importing
+fixed width data, from
+Postgres Online Journal and
+David (perl) Fetter, I couldn&rsquo;t resist following
+the meme and showing how to achieve the same thing with
+pgloader.
+
+">
+    <meta property="og:description" content="So, following previous blog entries about importing
+fixed width data, from
+Postgres Online Journal and
+David (perl) Fetter, I couldn&rsquo;t resist following
+the meme and showing how to achieve the same thing with
+pgloader.
+
+">
     <meta property="og:type" content="blog">
     <meta property="og:title" content="Import fixed width data with pgloader">
     <meta property="og:url" content="/blog/2010/04/import-fixed-width-data-with-pgloader/">
     <meta property="og:site_name" content="Dimitri Fontaine, PostgreSQL Expert">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Dimitri Fontaine, PostgreSQL Expert">
-    <meta name="twitter:description" content="So, following previous blog entries about importing fixed width data, from Postgres Online Journal and David (perl) Fetter, I couldn&rsquo;t resist following the meme and showing how to achieve the same thing with pgloader.
-I can&rsquo;t say how much I dislike such things as the following, and I can&rsquo;t help thinking that non IT people are right looking at us like this when encountering such prose.
-map {s/\D*(\d&#43;)-(\d&#43;).*/$a.=&quot;A&quot;.(1&#43;$2-$1). &quot; &quot;/e} split(/\n/,&lt;&lt;&#39;EOT&#39;);  So, the pgloader way.">
+    <meta name="twitter:description" content="So, following previous blog entries about importing
+fixed width data, from
+Postgres Online Journal and
+David (perl) Fetter, I couldn&rsquo;t resist following
+the meme and showing how to achieve the same thing with
+pgloader.
+
+">
     
       <meta name="twitter:creator" content="@tapoueh">
     
@@ -272,83 +287,98 @@ ga('send', 'pageview');
 the meme and showing how to achieve the same thing with
 <a href="http://pgloader.projects.postgresql.org/#toc9">pgloader</a>.</p>
 
+<p></p>
+
+<div class="alert success ">
+  <p>A companion article using more recent software is available
+at
+<a href="/blog/2013/11/import-fixed-width-data-with-pgloader">Import fixed width data with pgloader</a>,
+check it out!</p>
+</div>
+
 <p>I can&rsquo;t say how much I dislike such things as the following, and I can&rsquo;t
 help thinking that non IT people are right looking at us like this when
 encountering such prose.</p>
-
-<pre><code>map {s/\D*(\d+)-(\d+).*/$a.=&quot;A&quot;.(1+$2-$1). &quot; &quot;/e} split(/\n/,&lt;&lt;'EOT');
-</code></pre>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #00aaaa">map</span> {<span style="color: #009999">s/\D*(\d+)-(\d+).*/$a.=&quot;A&quot;.(1+$2-$1). &quot; &quot;/e</span>} <span style="color: #00aaaa">split</span>(<span style="color: #009999">/\n/</span>,&lt;&lt;<span style="color: #aa5500">&#39;EOT&#39;</span>);
+</pre></div>
 
 <p>So, the
 <em>pgloader</em> way. First you need to have setup a database, I called it
 <code>pgloader</code> here. Then you need the same
 <code>CREATE TABLE</code> as on the original
 article, here is it for completeness:</p>
-
-<pre><code>CREATE TABLE places(usps char(2) NOT NULL,
-    fips char(2) NOT NULL, 
-    fips_code char(5),
-    loc_name varchar(64));
-</code></pre>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">CREATE</span> <span style="color: #0000aa">TABLE</span> places(usps <span style="color: #00aaaa">char</span>(<span style="color: #009999">2</span>) <span style="color: #0000aa">NOT</span> <span style="color: #0000aa">NULL</span>,
+    fips <span style="color: #00aaaa">char</span>(<span style="color: #009999">2</span>) <span style="color: #0000aa">NOT</span> <span style="color: #0000aa">NULL</span>, 
+    fips_code <span style="color: #00aaaa">char</span>(<span style="color: #009999">5</span>),
+    loc_name <span style="color: #00aaaa">varchar</span>(<span style="color: #009999">64</span>));
+</pre></div>
 
 <p>Now the data file I&rsquo;ve taken here:
 <a href="http://www.census.gov/tiger/tms/gazetteer/places2k.txt">http://www.census.gov/tiger/tms/gazetteer/places2k.txt</a>.</p>
 
+<div class="alert danger ">
+  <p>This article is about versions 2.x of pgloader, which are not supported
+anymore. Consider using <a href="http://pgloader.io">pgloader</a> version 3.x instead.
+Alos the following example is still available in the 3.x series and you can
+see the <em>command file</em> at the GitHub repository for
+pgloader:</p>
+
+<p><a href="https://github.com/dimitri/pgloader/blob/master/test/census-places.load">https://github.com/dimitri/pgloader/blob/master/test/census-places.load</a>.</p>
+</div>
+
 <p>Then we translate the file description into
 <em>pgloader</em> setup:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">[pgsql]</span>
+<span style="color: #1e90ff">host</span> = <span style="color: #aa5500">localhost</span>
+<span style="color: #1e90ff">port</span> = <span style="color: #aa5500">5432</span>
+<span style="color: #1e90ff">base</span> = <span style="color: #aa5500">pgloader</span>
+<span style="color: #1e90ff">user</span> = <span style="color: #aa5500">dim</span>
+<span style="color: #1e90ff">pass</span> = <span style="color: #aa5500">None</span>
 
-<pre><code>[pgsql]
-host = localhost
-port = 5432
-base = pgloader
-user = dim
-pass = None
+<span style="color: #1e90ff">log_file</span>            = <span style="color: #aa5500">/tmp/pgloader.log</span>
+<span style="color: #1e90ff">log_min_messages</span>    = <span style="color: #aa5500">DEBUG</span>
+<span style="color: #1e90ff">client_min_messages</span> = <span style="color: #aa5500">WARNING</span>
 
-log_file            = /tmp/pgloader.log
-log_min_messages    = DEBUG
-client_min_messages = WARNING
+<span style="color: #1e90ff">client_encoding</span> = <span style="color: #aa5500">&#39;latin1&#39;</span>
+<span style="color: #1e90ff">lc_messages</span>         = <span style="color: #aa5500">C</span>
+<span style="color: #1e90ff">pg_option_standard_conforming_strings</span> = <span style="color: #aa5500">on</span>
 
-client_encoding = 'latin1'
-lc_messages         = C
-pg_option_standard_conforming_strings = on
-
-[fixed]
-table           = places
-format          = fixed
-filename        = places2k.txt
-columns         = *
-fixed_specs     = usps:0:2, fips:2:2, fips_code:4:5, loc_name:9:64, p:73:9, h:82:9, land:91:14, water:105:14, ldm:119:14, wtm:131:14, lat:143:10, long:153:11
-</code></pre>
+<span style="color: #0000aa">[fixed]</span>
+<span style="color: #1e90ff">table</span>           = <span style="color: #aa5500">places</span>
+<span style="color: #1e90ff">format</span>          = <span style="color: #aa5500">fixed</span>
+<span style="color: #1e90ff">filename</span>        = <span style="color: #aa5500">places2k.txt</span>
+<span style="color: #1e90ff">columns</span>         = <span style="color: #aa5500">*</span>
+<span style="color: #1e90ff">fixed_specs</span>     = <span style="color: #aa5500">usps:0:2, fips:2:2, fips_code:4:5, loc_name:9:64, p:73:9, h:82:9, land:91:14, water:105:14, ldm:119:14, wtm:131:14, lat:143:10, long:153:11</span>
+</pre></div>
 
 <p>We&rsquo;re ready to import the data now:</p>
-
-<pre><code>dim ~/PostgreSQL/examples pgloader -vsTc pgloader.conf 
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>dim ~/PostgreSQL/examples pgloader -vsTc pgloader.conf 
 pgloader     INFO     Logger initialized
-pgloader     WARNING  path entry '/usr/share/python-support/pgloader/reformat' does not exists, ignored
+pgloader     WARNING  path entry <span style="color: #aa5500">&#39;/usr/share/python-support/pgloader/reformat&#39;</span> does not exists, ignored
 pgloader     INFO     Reformat path is []
 pgloader     INFO     Will consider following sections:
 pgloader     INFO       fixed
-pgloader     INFO     Will load 1 section at a time
-fixed        INFO     columns = *, got [('usps', 1), ('fips', 2), ('fips_code', 3), ('loc_name', 4)]
-fixed        INFO     Loading threads: 1
+pgloader     INFO     Will load <span style="color: #009999">1</span> section at a <span style="color: #00aaaa">time</span>
+fixed        INFO     <span style="color: #aa0000">columns</span> = *, got [(<span style="color: #aa5500">&#39;usps&#39;</span>, <span style="color: #009999">1</span>), (<span style="color: #aa5500">&#39;fips&#39;</span>, <span style="color: #009999">2</span>), (<span style="color: #aa5500">&#39;fips_code&#39;</span>, <span style="color: #009999">3</span>), (<span style="color: #aa5500">&#39;loc_name&#39;</span>, <span style="color: #009999">4</span>)]
+fixed        INFO     Loading threads: <span style="color: #009999">1</span>
 fixed        INFO     closing current database connection
 fixed        INFO     fixed processing
 fixed        INFO     TRUNCATE TABLE places;
-pgloader     INFO     All threads are started, wait for them to terminate
-fixed        INFO     COPY 1: 10000 rows copied in 5.769s
-fixed        INFO     COPY 2: 10000 rows copied in 5.904s
-fixed        INFO     COPY 3: 5375 rows copied in 3.187s
+pgloader     INFO     All threads are started, <span style="color: #00aaaa">wait</span> <span style="color: #0000aa">for</span> them to terminate
+fixed        INFO     COPY <span style="color: #009999">1</span>: <span style="color: #009999">10000</span> rows copied in <span style="color: #009999">5</span>.769s
+fixed        INFO     COPY <span style="color: #009999">2</span>: <span style="color: #009999">10000</span> rows copied in <span style="color: #009999">5</span>.904s
+fixed        INFO     COPY <span style="color: #009999">3</span>: <span style="color: #009999">5375</span> rows copied in <span style="color: #009999">3</span>.187s
 fixed        INFO     No data were rejected
-fixed        INFO      25375 rows copied in 3 commits took 14.907 seconds
+fixed        INFO      <span style="color: #009999">25375</span> rows copied in <span style="color: #009999">3</span> commits took <span style="color: #009999">14</span>.907 seconds
 fixed        INFO     No database error occured
 fixed        INFO     closing current database connection
 fixed        INFO     releasing fixed semaphore
-fixed        INFO     Announce it's over
+fixed        INFO     Announce it<span style="color: #FF0000; background-color: #FFAAAA">&#39;</span>s over
 
-Table name        |    duration |    size |  copy rows |     errors 
+Table name        |    duration |    size |  copy rows |     <span style="color: #aa0000">errors</span> 
 ====================================================================
-fixed             |     14.901s |       - |      25375 |          0
-</code></pre>
+fixed             |     <span style="color: #009999">14</span>.901s |       - |      <span style="color: #009999">25375</span> |          <span style="color: #009999">0</span>
+</pre></div>
 
 <p>Note the
 <code>-T</code> option is for
@@ -377,9 +407,8 @@ yet. Still, it&rsquo;s not necessary here, so you can forget about it.</p>
 funny for the
 <em>places</em> column. That&rsquo;s a drawback of the fixed width format
 that you can work on two ways here, either by means of</p>
-
-<p>~~~
-UPDATE places SET loc_name = trim(loc_name) ;~~~</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">UPDATE</span> places <span style="color: #0000aa">SET</span> loc_name = <span style="color: #0000aa">trim</span>(loc_name);
+</pre></div>
 
 <p>or a custom
 reformat module for
@@ -389,7 +418,6 @@ it allows for
 
 <p>Send me a mail if you want me to show here how to setup such a reformatting
 module in a next blog entry!</p>
-
               
             </div>
           </div>

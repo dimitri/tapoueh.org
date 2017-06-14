@@ -20,10 +20,13 @@ to declaring
 *bankrupcy*, which is both sad news and good news as there's
 suddenly new hope of doing it right this time.
 
+<!--more-->
+
 <center>*Let's dive into the python to common lisp rewrite*</center>
 
+<!--toc-->
 
-## Why rewriting pgloader?
+# Why rewriting pgloader?
 
 Several problems hinted me into doing something other than maintaining the
 code I had for 
@@ -59,7 +62,7 @@ really good preliminary performances results with a programming language I
 can actually like, I decided to go with Common Lisp.
 
 
-## A Test case
+# A Test case
 
 The blog post I actually wanted to write would have been about the awesome
 [ip4r](https://github.com/RhodiumToad/ip4r) extension, which is about indexing IP range searches as mostly used
@@ -68,6 +71,8 @@ nowadays in
 and load them, and wanting to do that I realised we were lacking an
 all-integrated tool easy enough to use.
 
+{{< image classes="fig25 right dim-margin" src="/img/old/toy-loader.320.jpg" >}}
+
 And that's exactly the reason why I'm working on 
 *pgloader* in the first
 place, to make it really easy to load data, converting it on the fly and all
@@ -75,12 +80,8 @@ the jazz. And that
 *ip4r* test case actually has been a very good excuse at
 improving what I already had.
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/toy-loader.320.jpg" >}}
-</center>
 
-
-## The new pgloader command language
+# The new pgloader command language
 
 Here's the current way of doing things with the new 
 *pgloader* written in
@@ -185,22 +186,17 @@ from
 [http://www.maxmind.com](http://www.maxmind.com).
 
 
-## Transforming and Projecting
+# Transforming and Projecting
 
-The former 
-*pgloader* was capable of using dynamic python code to reformat
+{{< image classes="fig25 left dim-margin"
+              src="/img/old/huge-full-outer-join.gif"
+            title="Traditionnaly used for Full Outer Join, but I liked the symbol">}}
+
+The former *pgloader* was capable of using dynamic python code to reformat
 fields on the fly, which was already quite good, but not up to the task
-described just above. What we really want to be able to do here is 
-*project*
-any number of fields into a 
-*possibly different* number of columns that are
+described just above. What we really want to be able to do here is *project*
+any number of fields into a *possibly different* number of columns that are
 dependant on the fields.
-
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/huge-full-outer-join.gif" >}}
-</center>
-
-<center>*Traditionnaly used for Full Outer Join, but I liked the symbol*</center>
 
 In the simplest case possible, each field ends up into a column of the same
 name, and that's still supported of course, it looks like this:
@@ -226,7 +222,7 @@ included in
 *iprange*.
 Here's the Common Lisp sources for that function:
 
-~~~
+~~~ lisp
 (defun ip-range (start-integer-string end-integer-string)
   "Transform a couple of integers to an IP4R ip range notation."
   (declare (inline)
@@ -261,22 +257,19 @@ Internally, pgloader generates a
 *lambda* expression to process each row, in
 that very case the expression looks like this:
 
-~~~
+~~~ lisp
 (lambda (row)
   (destructuring-bind (startIpNum endIpNum locId) row
     (list (pgloader.transforms::ip-range startIpNum endIpNum)
           locId)))
 ~~~
 
+{{< image classes="fig25 right dim-margin" src="/img/old/lisplogo_fancy_256.png" >}}
 
 That generated lambda expression is then 
 ***compiled*** on the fly into machine
 code that is then executed for each row input. That's the kind of things
 allowing Common Lisp programmers not to resort to C.
-
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/lisplogo_fancy_256.png" >}}
-</center>
 
 Note that as in the previous 
 *location* example you can also directly write
@@ -293,18 +286,18 @@ INTO postgresql://dim@localhost:54393/ip4r?geolite.location
 
 
 
-## Simple benchmarking
+# Simple benchmarking
 
 Enough presenting the software already, let's run it!
 
 
-### Python version
+## Python version
 
 First, let's run the current python pgloader code against our dataset. Note
 that you will have to download and unzip the data yourself here, then
 prepare that kind of configuration file:
 
-~~~
+~~~ ini
 [pgsql]
 base = pgloader
 
@@ -348,7 +341,7 @@ skip_head_lines = 2
 
 And with that we can do:
 
-~~~
+~~~ bash
 ./pgloader.py -R reformat -sTv -c ~/dev/temp/pgloader.geolite.conf
    ... edited ...
 Table name        |    duration |    size |  copy rows |     errors 
@@ -361,7 +354,7 @@ Total             |  01m54.713s |       - |    2228847 |          0
 
 
 
-### Common Lisp version, no projection
+## Common Lisp version, no projection
 
 With a command doing the same amount of work as the previous one for the
 *blocks* table (I still kept the longitude and latitude to point formating):
@@ -386,6 +379,8 @@ the
 `CREATE TABLE IF NOT EXISTS` steps, and then actually parsing the files
 and loading the data.
 
+{{< image classes="fig25 left dim-margin" src="/img/old/made-with-lisp.320.png" >}}
+
 So for doing the same work, we went from nearly 
 ***2 minutes*** with the previous
 solution down to less than 
@@ -406,12 +401,7 @@ module for reading the files, and that module is already written in C in
 fact. So we're actually comparing python and C on the one hand to Common
 Lisp alone on the other hand.
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/made-with-lisp.png" >}}
-</center>
-
-
-### Common Lisp version with fields to columns projection
+## Common Lisp version with fields to columns projection
 
 Now, as we have some time budget left, let's have the loader actually do
 more work for us and convert on the fly to the data representation we are
@@ -446,7 +436,7 @@ that gives us
 text to iprange as text* transformation calls. Not too bad.
 
 
-## Conclusion
+# Conclusion
 
 Earlier in the article I said I would tell you why it's ok to use a 
 *parser
@@ -464,7 +454,9 @@ has a really good chance to work as-is.
 {{< image classes="fig50 fancybox dim-margin" src="/img/old/morland_a_carriers_stable2.jpg" >}}
 </center>
 
-<center>*Another kind of ***stable***, here*</center>
+<center>
+_Another kind of ***stable***, here_
+</center>
 
 It's also possible and should be easy enough with 
 [cl-buildapp](http://www.xach.com/lisp/buildapp/) to produce a
@@ -479,7 +471,7 @@ performances characteristics we're seeing here and in almost any other test,
 o why are so much people still using python?
 
 
-## Can I use that new software today?
+# Can I use that new software today?
 
 Yes you can, be aware that it's not for the faint of heart in the current
 shape of things. Most of the development time has been spent on features

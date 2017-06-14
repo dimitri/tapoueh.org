@@ -19,11 +19,22 @@ So, following previous blog entries about importing
 the meme and showing how to achieve the same thing with 
 [pgloader](http://pgloader.projects.postgresql.org/#toc9).
 
+<!--more-->
+
+{{< alert success >}}
+
+A companion article using more recent software is available
+at
+[Import fixed width data with pgloader](/blog/2013/11/import-fixed-width-data-with-pgloader),
+check it out!
+
+{{< /alert >}}
+
 I can't say how much I dislike such things as the following, and I can't
 help thinking that non IT people are right looking at us like this when
 encountering such prose.
 
-~~~
+~~~ perl
 map {s/\D*(\d+)-(\d+).*/$a.="A".(1+$2-$1). " "/e} split(/\n/,<<'EOT');
 ~~~
 
@@ -34,7 +45,7 @@ So, the
 `CREATE TABLE` as on the original
 article, here is it for completeness:
 
-~~~
+~~~ sql
 CREATE TABLE places(usps char(2) NOT NULL,
     fips char(2) NOT NULL, 
     fips_code char(5),
@@ -45,10 +56,23 @@ CREATE TABLE places(usps char(2) NOT NULL,
 Now the data file I've taken here:
 [http://www.census.gov/tiger/tms/gazetteer/places2k.txt](http://www.census.gov/tiger/tms/gazetteer/places2k.txt).
 
+{{< alert danger >}}
+
+This article is about versions 2.x of pgloader, which are not supported
+anymore. Consider using [pgloader](http://pgloader.io) version 3.x instead.
+Alos the following example is still available in the 3.x series and you can
+see the *command file* at the GitHub repository for
+pgloader:
+
+<https://github.com/dimitri/pgloader/blob/master/test/census-places.load>.
+
+{{< /alert >}}
+
+
 Then we translate the file description into 
 *pgloader* setup:
 
-~~~
+~~~ ini
 [pgsql]
 host = localhost
 port = 5432
@@ -75,7 +99,7 @@ fixed_specs     = usps:0:2, fips:2:2, fips_code:4:5, loc_name:9:64, p:73:9, h:82
 
 We're ready to import the data now:
 
-~~~
+~~~ bash
 dim ~/PostgreSQL/examples pgloader -vsTc pgloader.conf 
 pgloader     INFO     Logger initialized
 pgloader     WARNING  path entry '/usr/share/python-support/pgloader/reformat' does not exists, ignored
@@ -133,8 +157,9 @@ funny for the
 *places* column. That's a drawback of the fixed width format
 that you can work on two ways here, either by means of 
 
+~~~ sql
+UPDATE places SET loc_name = trim(loc_name);
 ~~~
-UPDATE places SET loc_name = trim(loc_name) ;~~~
 
 
  or a custom
