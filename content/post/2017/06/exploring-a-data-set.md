@@ -623,7 +623,7 @@ and 88 minutes, so they would have ruined our quick analysis here.
            title="PostgreSQL is YeSQL" >}}
            
 When given a new database we know nothing about, it's good to do some
-preliminary exporation of the data. Which angle we pick exactly is not that
+preliminary exploration of the data. Which angle we pick exactly is not that
 important first, because we want to have grasp of what we are playing with.
 It's all about having a taste of what's in there.
 
