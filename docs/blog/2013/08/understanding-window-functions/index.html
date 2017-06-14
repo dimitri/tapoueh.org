@@ -31,14 +31,14 @@
     
 
     
-    <meta name="description" content="There was SQL before
-window functions and SQL after
-window functions: that&rsquo;s
-how powerful this tool is. Being that of a deal breaker unfortunately means
-that it can be quite hard to grasp the feature. This article aims at making
-it crystal clear so that you can begin using it today and are able to reason
-about it and recognize cases where you want to be using
-window functions.
+    <meta name="description" content="There was SQL
+before
+window functions and
+SQL after window functions: that&rsquo;s how powerful this tool is. Being that
+of a deal breaker unfortunately means that it can be quite hard to grasp the
+feature. This article aims at making it crystal clear so that you can begin
+using it today and are able to reason about it and recognize cases where you
+want to be using window functions.
 
 
 
@@ -74,14 +74,14 @@ window functions.
 We see a part of the data as if through a little window
 
 ">
-    <meta property="og:description" content="There was SQL before
-window functions and SQL after
-window functions: that&rsquo;s
-how powerful this tool is. Being that of a deal breaker unfortunately means
-that it can be quite hard to grasp the feature. This article aims at making
-it crystal clear so that you can begin using it today and are able to reason
-about it and recognize cases where you want to be using
-window functions.
+    <meta property="og:description" content="There was SQL
+before
+window functions and
+SQL after window functions: that&rsquo;s how powerful this tool is. Being that
+of a deal breaker unfortunately means that it can be quite hard to grasp the
+feature. This article aims at making it crystal clear so that you can begin
+using it today and are able to reason about it and recognize cases where you
+want to be using window functions.
 
 
 
@@ -123,14 +123,14 @@ We see a part of the data as if through a little window
     <meta property="og:site_name" content="Dimitri Fontaine, PostgreSQL Expert">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Dimitri Fontaine, PostgreSQL Expert">
-    <meta name="twitter:description" content="There was SQL before
-window functions and SQL after
-window functions: that&rsquo;s
-how powerful this tool is. Being that of a deal breaker unfortunately means
-that it can be quite hard to grasp the feature. This article aims at making
-it crystal clear so that you can begin using it today and are able to reason
-about it and recognize cases where you want to be using
-window functions.
+    <meta name="twitter:description" content="There was SQL
+before
+window functions and
+SQL after window functions: that&rsquo;s how powerful this tool is. Being that
+of a deal breaker unfortunately means that it can be quite hard to grasp the
+feature. This article aims at making it crystal clear so that you can begin
+using it today and are able to reason about it and recognize cases where you
+want to be using window functions.
 
 
 
@@ -385,14 +385,14 @@ ga('send', 'pageview');
           
           <div class="post-content markdown" itemprop="articleBody">
             <div class="main-content-wrap">
-              <p>There was SQL before
-<a href="http://www.postgresql.org/docs/current/static/tutorial-window.html">window functions</a> and SQL after
-<em>window functions</em>: that&rsquo;s
-how powerful this tool is. Being that of a deal breaker unfortunately means
-that it can be quite hard to grasp the feature. This article aims at making
-it crystal clear so that you can begin using it today and are able to reason
-about it and recognize cases where you want to be using
-<em>window functions</em>.</p>
+              <p>There was SQL
+before
+<a href="http://www.postgresql.org/docs/current/static/tutorial-window.html">window functions</a> and
+SQL after <em>window functions</em>: that&rsquo;s how powerful this tool is. Being that
+of a deal breaker unfortunately means that it can be quite hard to grasp the
+feature. This article aims at making it crystal clear so that you can begin
+using it today and are able to reason about it and recognize cases where you
+want to be using <em>window functions</em>.</p>
 
 <p><center>
 
@@ -429,13 +429,10 @@ about it and recognize cases where you want to be using
 
 <p></p>
 
-<p>The whole idea behind
-<em>window functions</em> is to allow you to process several
-values of the result set at a time: you see through the window some
-<em>peer</em>
+<p>The whole idea behind <em>window functions</em> is to allow you to process several
+values of the result set at a time: you see through the window some <em>peer</em>
 rows and are able to compute a single output value from them, much like when
-using an
-<em>aggregate</em> function.</p>
+using an <em>aggregate</em> function.</p>
 
 <h1 id="table-of-contents"></h1><nav id="TableOfContents">
 <ul>
@@ -448,101 +445,56 @@ using an
 
 <h1 id="it-s-all-about-frames">It&rsquo;s all about frames</h1>
 
-<p><center>
+<p><a href="http://www.postgresql.org/">PostgreSQL</a> comes with plenty of features, one
+of them will be of great help here to get a better grasp at what&rsquo;s happening
+with <em>window functions</em>. The first step we are going through here is
+understanding which <strong><em>data</em></strong> the function has access to. For each input
+row you have access to a <strong><em>frame</em></strong> of the data, and the first thing to
+understand here is that <em>frame</em>.</p>
 
-
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/segmentation.640.png" data-fancybox-group="">
-  
-    <img class="fig-img" src="/img/old/segmentation.640.png" >
-  
-    </a>
-  
-  
-</div>
-
-</center></p>
-
-<p><center><em>When looking through a window we only see a frame at a time</em></center></p>
-
-<p><a href="http://www.postgresql.org/">PostgreSQL</a> comes with plenty of features, one of them will be of great help
-here to get a better grasp at what&rsquo;s happening with
-<em>window functions</em>. The
-first step we are going through here is understanding which
-<strong><em>data</em></strong> the
-function has access to. For each input row you have access to a
-<strong><em>frame</em></strong> of the
-data, and the first thing to understand here is that
-<em>frame</em>.</p>
-
-<p>First, meet with
-<code>array_agg</code>, an
-<em>aggregate</em> function that will build an array
-for you. Let&rsquo;s use this tool to understand
-<em>window frames</em>:</p>
+<p>First, meet with <code>array_agg</code>, an <em>aggregate</em> function that will build an
+array for you. Let&rsquo;s use this tool to understand <em>window frames</em>:</p>
 <div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span> <span style="color: #0000aa">select</span> x, array_agg(x) over (<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> x)
    <span style="color: #0000aa">from</span> generate_series(<span style="color: #009999">1</span>, <span style="color: #009999">3</span>) <span style="color: #0000aa">as</span> t(x);
- 
- x | array_agg 
+</pre></div>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span> x | array_agg 
 <span style="color: #aaaaaa; font-style: italic">---+-----------</span>
- <span style="color: #009999">1</span> | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">1</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>
- <span style="color: #009999">2</span> | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">1</span>,<span style="color: #009999">2</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>
- <span style="color: #009999">3</span> | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">1</span>,<span style="color: #009999">2</span>,<span style="color: #009999">3</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>
+ <span style="color: #009999">1</span> | {<span style="color: #009999">1</span>}
+ <span style="color: #009999">2</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">2</span>}
+ <span style="color: #009999">3</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">2</span>,<span style="color: #009999">3</span>}
 (<span style="color: #009999">3</span> <span style="color: #0000aa">rows</span>)
 </pre></div>
 
-<p>The
-<code>array_agg</code> column in the previous query output allows us to see the full
-exact content of the
-<em>windowing</em> we&rsquo;re going to process. The window definition
-here is
-<code>over (order by x)</code> and actually means
-<code>over (order by x rows between
-unbounded preceding and current row)</code>:</p>
+<p>The <em>array_agg</em> column in the previous query output allows us to see the
+full exact content of the <em>windowing</em> we&rsquo;re going to process. The window
+definition here is <code>over (order by x)</code> and actually means <code>over (order by x
+rows between unbounded preceding and current row)</code>:</p>
 <div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span> <span style="color: #0000aa">select</span> x,
         array_agg(x) over (<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> x
                            <span style="color: #0000aa">rows</span> <span style="color: #0000aa">between</span> unbounded preceding
                                     <span style="color: #0000aa">and</span> <span style="color: #0000aa">current</span> <span style="color: #0000aa">row</span>)
    <span style="color: #0000aa">from</span> generate_series(<span style="color: #009999">1</span>, <span style="color: #009999">3</span>) <span style="color: #0000aa">as</span> t(x);
- 
- x | array_agg 
+</pre></div>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span> x | array_agg 
 <span style="color: #aaaaaa; font-style: italic">---+-----------</span>
- <span style="color: #009999">1</span> | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">1</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>
- <span style="color: #009999">2</span> | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">1</span>,<span style="color: #009999">2</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>
- <span style="color: #009999">3</span> | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">1</span>,<span style="color: #009999">2</span>,<span style="color: #009999">3</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>
+ <span style="color: #009999">1</span> | {<span style="color: #009999">1</span>}
+ <span style="color: #009999">2</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">2</span>}
+ <span style="color: #009999">3</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">2</span>,<span style="color: #009999">3</span>}
 (<span style="color: #009999">3</span> <span style="color: #0000aa">rows</span>)
 </pre></div>
 
-<p>It&rsquo;s possible to work with other kind of
-<em>frame specifications</em> too, as in the
-following examples:</p>
+<p>It&rsquo;s possible to work with other kind of <em>frame specifications</em> too, as in
+the following examples:</p>
 <div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> x,
        array_agg(x) over (<span style="color: #0000aa">rows</span> <span style="color: #0000aa">between</span> <span style="color: #0000aa">current</span> <span style="color: #0000aa">row</span>
                                    <span style="color: #0000aa">and</span> unbounded following)
   <span style="color: #0000aa">from</span> generate_series(<span style="color: #009999">1</span>, <span style="color: #009999">3</span>) <span style="color: #0000aa">as</span> t(x);
- 
- x | array_agg 
+</pre></div>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span> x | array_agg 
 <span style="color: #aaaaaa; font-style: italic">---+-----------</span>
- <span style="color: #009999">1</span> | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">1</span>,<span style="color: #009999">2</span>,<span style="color: #009999">3</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>
- <span style="color: #009999">2</span> | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">2</span>,<span style="color: #009999">3</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>
- <span style="color: #009999">3</span> | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">3</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>
+ <span style="color: #009999">1</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">2</span>,<span style="color: #009999">3</span>}
+ <span style="color: #009999">2</span> | {<span style="color: #009999">2</span>,<span style="color: #009999">3</span>}
+ <span style="color: #009999">3</span> | {<span style="color: #009999">3</span>}
 (<span style="color: #009999">3</span> <span style="color: #0000aa">rows</span>)
 </pre></div>
 
@@ -554,173 +506,99 @@ sums and percentages for example:</p>
        <span style="color: #0000aa">sum</span>(x) over () <span style="color: #0000aa">as</span> <span style="color: #0000aa">sum</span>,
        x::<span style="color: #00aaaa">float</span>/<span style="color: #0000aa">sum</span>(x) over () <span style="color: #0000aa">as</span> part
   <span style="color: #0000aa">from</span> generate_series(<span style="color: #009999">1</span>, <span style="color: #009999">3</span>) <span style="color: #0000aa">as</span> t(x);
-  
- x |  frame  | <span style="color: #0000aa">sum</span> |       part        
+</pre></div>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span> x |  frame  | sum |       part        
 <span style="color: #aaaaaa; font-style: italic">---+---------+-----+-------------------</span>
- <span style="color: #009999">1</span> | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">1</span>,<span style="color: #009999">2</span>,<span style="color: #009999">3</span><span style="color: #FF0000; background-color: #FFAAAA">}</span> |   <span style="color: #009999">6</span> | <span style="color: #009999">0</span>.<span style="color: #009999">166666666666667</span>
- <span style="color: #009999">2</span> | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">1</span>,<span style="color: #009999">2</span>,<span style="color: #009999">3</span><span style="color: #FF0000; background-color: #FFAAAA">}</span> |   <span style="color: #009999">6</span> | <span style="color: #009999">0</span>.<span style="color: #009999">333333333333333</span>
- <span style="color: #009999">3</span> | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">1</span>,<span style="color: #009999">2</span>,<span style="color: #009999">3</span><span style="color: #FF0000; background-color: #FFAAAA">}</span> |   <span style="color: #009999">6</span> |               <span style="color: #009999">0</span>.<span style="color: #009999">5</span>
+ <span style="color: #009999">1</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">2</span>,<span style="color: #009999">3</span>} |   <span style="color: #009999">6</span> | <span style="color: #009999">0.166666666666667</span>
+ <span style="color: #009999">2</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">2</span>,<span style="color: #009999">3</span>} |   <span style="color: #009999">6</span> | <span style="color: #009999">0.333333333333333</span>
+ <span style="color: #009999">3</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">2</span>,<span style="color: #009999">3</span>} |   <span style="color: #009999">6</span> |               <span style="color: #009999">0.5</span>
 (<span style="color: #009999">3</span> <span style="color: #0000aa">rows</span>)
 </pre></div>
 
 <p>Did you know you could compute both the total sum of a column and the
 proportion of the current value against this total within a single SQL
-query? That&rsquo;s the breakthrough we&rsquo;re talking about now with
-<em>window
+query? That&rsquo;s the breakthrough we&rsquo;re talking about now with <em>window
 functions</em>.</p>
 
 <h1 id="partitioning-into-different-frames">Partitioning into different frames</h1>
 
-<p><center>
-
-
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/how-to-frame-a-partition-1.jpg" data-fancybox-group="">
-  
-    <img class="fig-img" src="/img/old/how-to-frame-a-partition-1.jpg" >
-  
-    </a>
-  
-  
-</div>
-
-</center></p>
-
-<p><center><em>How to frame a partition?</em></center></p>
-
-<p>Other frames are possible to define when using the clause
-<code>PARTITION BY</code>. To
+<p>Other frames are possible to define when using the clause <code>PARTITION BY</code>. To
 see that in action though we need some more data to work with. The following
 query is setting up an example for us to work with and will produce three
-values per day for three different days, thanks to an implicit
-<code>CROSS JOIN</code>
+values per day for three different days, thanks to an implicit <code>CROSS JOIN</code>
 construct here:</p>
 <div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>&gt; <span style="color: #0000aa">create</span> <span style="color: #0000aa">table</span> p <span style="color: #0000aa">as</span>
      <span style="color: #0000aa">select</span> <span style="color: #00aaaa">date</span>::<span style="color: #00aaaa">date</span> <span style="color: #0000aa">as</span> <span style="color: #00aaaa">date</span>,
             <span style="color: #009999">1</span> + floor(x * random()) <span style="color: #0000aa">as</span> x
-       <span style="color: #0000aa">from</span> generate_series(<span style="color: #00aaaa">date</span> <span style="color: #aa5500">&#39;yesterday&#39;</span>, <span style="color: #00aaaa">date</span> <span style="color: #aa5500">&#39;tomorrow&#39;</span>, <span style="color: #aa5500">&#39;1 day&#39;</span>) <span style="color: #0000aa">as</span> a(<span style="color: #00aaaa">date</span>),
-            generate_series(<span style="color: #009999">1</span>, <span style="color: #009999">3</span>) <span style="color: #0000aa">as</span> b(x);
-<span style="color: #0000aa">SELECT</span> <span style="color: #009999">9</span>
-
-&gt; <span style="color: #0000aa">table</span> p;
-    <span style="color: #00aaaa">date</span>    | x 
-<span style="color: #aaaaaa; font-style: italic">------------+---</span>
- <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">19</span> | <span style="color: #009999">1</span>
- <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">19</span> | <span style="color: #009999">2</span>
- <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">19</span> | <span style="color: #009999">3</span>
- <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">20</span> | <span style="color: #009999">1</span>
- <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">20</span> | <span style="color: #009999">1</span>
- <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">20</span> | <span style="color: #009999">3</span>
- <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">21</span> | <span style="color: #009999">1</span>
- <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">21</span> | <span style="color: #009999">1</span>
- <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">21</span> | <span style="color: #009999">3</span>
-(<span style="color: #009999">9</span> <span style="color: #0000aa">rows</span>)
+       <span style="color: #0000aa">from</span> generate_series(<span style="color: #00aaaa">date</span> <span style="color: #aa5500">&#39;yesterday&#39;</span>,
+                            <span style="color: #00aaaa">date</span> <span style="color: #aa5500">&#39;tomorrow&#39;</span>,
+                            <span style="color: #aa5500">&#39;1 day&#39;</span>)
+              <span style="color: #0000aa">as</span> a(<span style="color: #00aaaa">date</span>),
+            generate_series(<span style="color: #009999">1</span>, <span style="color: #009999">3</span>)
+              <span style="color: #0000aa">as</span> b(x);
+</pre></div>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>&gt; <span style="color: #0000aa">table</span> p;
+<span style="color: #888888">    date    | x </span>
+<span style="color: #888888">------------+---</span>
+<span style="color: #888888"> 2013-08-19 | 1</span>
+<span style="color: #888888"> 2013-08-19 | 2</span>
+<span style="color: #888888"> 2013-08-19 | 3</span>
+<span style="color: #888888"> 2013-08-20 | 1</span>
+<span style="color: #888888"> 2013-08-20 | 1</span>
+<span style="color: #888888"> 2013-08-20 | 3</span>
+<span style="color: #888888"> 2013-08-21 | 1</span>
+<span style="color: #888888"> 2013-08-21 | 1</span>
+<span style="color: #888888"> 2013-08-21 | 3</span>
+<span style="color: #888888">(9 rows)</span>
 </pre></div>
 
 <p>Now let&rsquo;s have a better look at the data we have here, counting how many
-times each x has been returned by our
-<code>random()</code> calls, per date:</p>
+times each x has been returned by our <code>random()</code> calls, per date:</p>
 <div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> <span style="color: #00aaaa">date</span>, x,
        <span style="color: #0000aa">count</span>(x) over (partition <span style="color: #0000aa">by</span> <span style="color: #00aaaa">date</span>, x),
        array_agg(x) over(partition <span style="color: #0000aa">by</span> <span style="color: #00aaaa">date</span>),
        array_agg(x) over(partition <span style="color: #0000aa">by</span> <span style="color: #00aaaa">date</span>, x)
   <span style="color: #0000aa">from</span> p;
-    
-    <span style="color: #00aaaa">date</span>    | x | <span style="color: #0000aa">count</span> | array_agg | array_agg 
+</pre></div>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>    <span style="color: #00aaaa">date</span>    | x | count | array_agg | array_agg 
 <span style="color: #aaaaaa; font-style: italic">------------+---+-------+-----------+-----------</span>
- <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">19</span> | <span style="color: #009999">1</span> |     <span style="color: #009999">1</span> | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">1</span>,<span style="color: #009999">2</span>,<span style="color: #009999">3</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>   | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">1</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>
- <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">19</span> | <span style="color: #009999">2</span> |     <span style="color: #009999">1</span> | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">1</span>,<span style="color: #009999">2</span>,<span style="color: #009999">3</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>   | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">2</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>
- <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">19</span> | <span style="color: #009999">3</span> |     <span style="color: #009999">1</span> | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">1</span>,<span style="color: #009999">2</span>,<span style="color: #009999">3</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>   | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">3</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>
- <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">20</span> | <span style="color: #009999">1</span> |     <span style="color: #009999">2</span> | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">1</span>,<span style="color: #009999">1</span>,<span style="color: #009999">3</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>   | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">1</span>,<span style="color: #009999">1</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>
- <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">20</span> | <span style="color: #009999">1</span> |     <span style="color: #009999">2</span> | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">1</span>,<span style="color: #009999">1</span>,<span style="color: #009999">3</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>   | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">1</span>,<span style="color: #009999">1</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>
- <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">20</span> | <span style="color: #009999">3</span> |     <span style="color: #009999">1</span> | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">1</span>,<span style="color: #009999">1</span>,<span style="color: #009999">3</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>   | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">3</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>
- <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">21</span> | <span style="color: #009999">1</span> |     <span style="color: #009999">2</span> | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">1</span>,<span style="color: #009999">1</span>,<span style="color: #009999">3</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>   | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">1</span>,<span style="color: #009999">1</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>
- <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">21</span> | <span style="color: #009999">1</span> |     <span style="color: #009999">2</span> | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">1</span>,<span style="color: #009999">1</span>,<span style="color: #009999">3</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>   | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">1</span>,<span style="color: #009999">1</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>
- <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">21</span> | <span style="color: #009999">3</span> |     <span style="color: #009999">1</span> | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">1</span>,<span style="color: #009999">1</span>,<span style="color: #009999">3</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>   | <span style="color: #FF0000; background-color: #FFAAAA">{</span><span style="color: #009999">3</span><span style="color: #FF0000; background-color: #FFAAAA">}</span>
+ <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">19</span> | <span style="color: #009999">1</span> |     <span style="color: #009999">1</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">2</span>,<span style="color: #009999">3</span>}   | {<span style="color: #009999">1</span>}
+ <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">19</span> | <span style="color: #009999">2</span> |     <span style="color: #009999">1</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">2</span>,<span style="color: #009999">3</span>}   | {<span style="color: #009999">2</span>}
+ <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">19</span> | <span style="color: #009999">3</span> |     <span style="color: #009999">1</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">2</span>,<span style="color: #009999">3</span>}   | {<span style="color: #009999">3</span>}
+ <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">20</span> | <span style="color: #009999">1</span> |     <span style="color: #009999">2</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">1</span>,<span style="color: #009999">3</span>}   | {<span style="color: #009999">1</span>,<span style="color: #009999">1</span>}
+ <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">20</span> | <span style="color: #009999">1</span> |     <span style="color: #009999">2</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">1</span>,<span style="color: #009999">3</span>}   | {<span style="color: #009999">1</span>,<span style="color: #009999">1</span>}
+ <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">20</span> | <span style="color: #009999">3</span> |     <span style="color: #009999">1</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">1</span>,<span style="color: #009999">3</span>}   | {<span style="color: #009999">3</span>}
+ <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">21</span> | <span style="color: #009999">1</span> |     <span style="color: #009999">2</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">1</span>,<span style="color: #009999">3</span>}   | {<span style="color: #009999">1</span>,<span style="color: #009999">1</span>}
+ <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">21</span> | <span style="color: #009999">1</span> |     <span style="color: #009999">2</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">1</span>,<span style="color: #009999">3</span>}   | {<span style="color: #009999">1</span>,<span style="color: #009999">1</span>}
+ <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">21</span> | <span style="color: #009999">3</span> |     <span style="color: #009999">1</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">1</span>,<span style="color: #009999">3</span>}   | {<span style="color: #009999">3</span>}
 (<span style="color: #009999">9</span> <span style="color: #0000aa">rows</span>)
 </pre></div>
 
 <h1 id="available-window-functions">Available window functions</h1>
 
-<p><center>
+<p>Any and all <em>aggregate</em> function you already know can be used against a
+<em>window frame</em> rather than a <em>grouping clause</em>, so you can already go use
+<code>sum</code>, <code>min</code>, <code>max</code>, <code>count</code>, <code>avg</code> and the other you&rsquo;re used to.</p>
 
+<p>You might already know that it&rsquo;s possible with PostgreSQL to use
+the
+<a href="http://www.postgresql.org/docs/current/static/sql-createaggregate.html">CREATE AGGREGATE</a> command
+to register your own <em>custom aggregate</em>. Any such custom aggregate can then
+be given a <em>window frame definition</em> to work against too.</p>
 
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/custom-flat-work-exposwed-aggregate-banding.640.jpg" data-fancybox-group="">
-  
-    <img class="fig-img" src="/img/old/custom-flat-work-exposwed-aggregate-banding.640.jpg" >
-  
-    </a>
-  
-  
+<div class="alert info no-icon ">
+  <p>As an exercize to the reader, implement a <em>weighted average</em> aggregate and
+use it against a table where you have at least three columns: a date, a
+weight and a measure, with several measures per day. Now compute your
+<em>weighted average</em> by applying your own aggregate to your data set, either
+in a <em>grouping clause</em> or a <em>window frame</em>.</p>
 </div>
 
-</center></p>
-
-<p><center><em>Do you like custom aggregates?</em></center></p>
-
-<p>Any and all
-<em>aggregate</em> function you already know can be used against a
-<em>window
-frame</em> rather than a
-<em>grouping clause</em>, so you can already go use
-<code>sum</code>,
-<code>min</code>,
-<code>max</code>,
-<code>count</code>,
-<code>avg</code> and the other you&rsquo;re used to.</p>
-
-<p>You might already know that it&rsquo;s possible with PostgreSQL to use the
-<a href="http://www.postgresql.org/docs/current/static/sql-createaggregate.html">CREATE AGGREGATE</a> command to register your own
-<em>custom aggregate</em>. Any such
-custom aggregate can then be given a
-<em>window frame definition</em> to work against
-too. As an exercize to my dear readers, I this time propose you implement a
-<em>weighted average</em> aggregate and use it against a table where you have at
-least three columns: a date, a weight and a measure, with several measures
-per day. Now compute your
-<em>weighted average</em> by applying your own aggregate to
-your data set, either in a
-<em>grouping clause</em> or a
-<em>window frame</em>.</p>
-
-<p>PostgreSQL of course is included with
-<a href="http://www.postgresql.org/docs/9.2/static/functions-aggregate.html">built-in aggregate functions</a> and a
-number of
+<p>PostgreSQL of course is included
+with
+<a href="http://www.postgresql.org/docs/9.2/static/functions-aggregate.html">built-in aggregate functions</a> and
+a number
+of
 <a href="http://www.postgresql.org/docs/9.2/static/functions-window.html">built-in window functions</a>.</p>
 <div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> x,
        row_number() over(),
@@ -729,8 +607,8 @@ number of
        lead(x, <span style="color: #009999">1</span>) over w
   <span style="color: #0000aa">from</span> generate_series(<span style="color: #009999">1</span>, <span style="color: #009999">15</span>, <span style="color: #009999">2</span>) <span style="color: #0000aa">as</span> t(x)
 window w <span style="color: #0000aa">as</span> (<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> x);
- 
- x  | row_number | ntile | lag | lead 
+</pre></div>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span> x  | row_number | ntile | lag | lead 
 <span style="color: #aaaaaa; font-style: italic">----+------------+-------+-----+------</span>
   <span style="color: #009999">1</span> |          <span style="color: #009999">1</span> |     <span style="color: #009999">1</span> |     |    <span style="color: #009999">3</span>
   <span style="color: #009999">3</span> |          <span style="color: #009999">2</span> |     <span style="color: #009999">1</span> |   <span style="color: #009999">1</span> |    <span style="color: #009999">5</span>
@@ -743,35 +621,26 @@ window w <span style="color: #0000aa">as</span> (<span style="color: #0000aa">or
 (<span style="color: #009999">8</span> <span style="color: #0000aa">rows</span>)
 </pre></div>
 
-<p>In this example you can see that we are reusing the same
-<em>window definition</em>
+<p>In this example you can see that we are reusing the same <em>window definition</em>
 each time, so we&rsquo;re giving it a name to make it simpler.</p>
 
 <h1 id="conclusion">Conclusion</h1>
 
-<p>The real magic of what&rsquo;s called
-<em>window functions</em> is actually the
-<strong><em>frame</em></strong> of
-data they can see when using the
-<code>OVER ()</code> clause and its
-<code>PARTITION BY</code> and
-<code>ORDER BY</code> and
-<em>frame</em> clauses.</p>
+<p>The real magic of what&rsquo;s called <em>window functions</em> is actually the
+<strong><em>frame</em></strong> of data they can see when using the <code>OVER ()</code> clause and its
+<code>PARTITION BY</code> and <code>ORDER BY</code> and <em>frame</em> clauses.</p>
 
 <p>You need to remember that the windowing clauses are always considered last
-in the query, meaning after the
-<code>WHERE</code> clause. You can only see in any
-<em>frame</em>
-rows that have been selected for output: e.g. it&rsquo;s not directly possible to
-compute a percentage over values that you don&rsquo;t want to display. You would
-need to use a subquery in that case.</p>
+in the query, meaning after the <code>WHERE</code> clause. You can only see in any
+<em>frame</em> rows that have been selected for output: e.g. it&rsquo;s not directly
+possible to compute a percentage over values that you don&rsquo;t want to display.
+You would need to use a subquery in that case.</p>
 
-<p>For more concrete examples about the
-<em>window functions</em> usage, you can see
-some other of my blog posts, such as
-<a href="/blog/2013/07/02-dubpug">Make the Most ouf of SQL</a> and
-<a href="/blog/2012/10/05-reset-counter">Reset Counter</a> that I just tagged as
-<a href="/tags/window-functions">Window Functions Articles</a>.</p>
+<p>For more concrete examples about the <em>window functions</em> usage, you can see
+some other of my blog posts, such
+as <a href="/blog/2013/07/02-dubpug">Make the Most ouf of SQL</a>
+and <a href="/blog/2012/10/05-reset-counter">Reset Counter</a> that I just tagged
+as <a href="/tags/window-functions">Window Functions Articles</a>.</p>
               
             </div>
           </div>

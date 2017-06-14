@@ -12,14 +12,14 @@ aliases = ["/blog/2013/08/20-Window-Functions",
            "/blog/2013/08/20-Window-Functions.html"]
 +++
 
-There was SQL before 
-[window functions](http://www.postgresql.org/docs/current/static/tutorial-window.html) and SQL after 
-*window functions*: that's
-how powerful this tool is. Being that of a deal breaker unfortunately means
-that it can be quite hard to grasp the feature. This article aims at making
-it crystal clear so that you can begin using it today and are able to reason
-about it and recognize cases where you want to be using 
-*window functions*.
+There was SQL
+before
+[window functions](http://www.postgresql.org/docs/current/static/tutorial-window.html) and
+SQL after *window functions*: that's how powerful this tool is. Being that
+of a deal breaker unfortunately means that it can be quite hard to grasp the
+feature. This article aims at making it crystal clear so that you can begin
+using it today and are able to reason about it and recognize cases where you
+want to be using *window functions*.
 
 <center>
 {{< image classes="fig50 fancybox dim-margin" src="/img/old/moving_window.gif" >}}
@@ -28,44 +28,30 @@ about it and recognize cases where you want to be using
 
 <!--more-->
 
-The whole idea behind 
-*window functions* is to allow you to process several
-values of the result set at a time: you see through the window some 
-*peer*
+The whole idea behind *window functions* is to allow you to process several
+values of the result set at a time: you see through the window some *peer*
 rows and are able to compute a single output value from them, much like when
-using an 
-*aggregate* function.
+using an *aggregate* function.
 
 <!--toc-->
 
 # It's all about frames
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/segmentation.640.png" >}}
-</center>
+[PostgreSQL](http://www.postgresql.org/) comes with plenty of features, one
+of them will be of great help here to get a better grasp at what's happening
+with *window functions*. The first step we are going through here is
+understanding which ***data*** the function has access to. For each input
+row you have access to a ***frame*** of the data, and the first thing to
+understand here is that *frame*.
 
-<center>*When looking through a window we only see a frame at a time*</center>
-
-[PostgreSQL](http://www.postgresql.org/) comes with plenty of features, one of them will be of great help
-here to get a better grasp at what's happening with 
-*window functions*. The
-first step we are going through here is understanding which 
-***data*** the
-function has access to. For each input row you have access to a 
-***frame*** of the
-data, and the first thing to understand here is that 
-*frame*.
-
-First, meet with 
-`array_agg`, an 
-*aggregate* function that will build an array
-for you. Let's use this tool to understand 
-*window frames*:
+First, meet with `array_agg`, an *aggregate* function that will build an
+array for you. Let's use this tool to understand *window frames*:
 
 ~~~ sql
  select x, array_agg(x) over (order by x)
    from generate_series(1, 3) as t(x);
- 
+~~~
+~~~ psql 
  x | array_agg 
 ---+-----------
  1 | {1}
@@ -75,14 +61,10 @@ for you. Let's use this tool to understand
 ~~~
 
 
-The 
-`array_agg` column in the previous query output allows us to see the full
-exact content of the 
-*windowing* we're going to process. The window definition
-here is 
-`over (order by x)` and actually means 
-`over (order by x rows between
-unbounded preceding and current row)`:
+The *array_agg* column in the previous query output allows us to see the
+full exact content of the *windowing* we're going to process. The window
+definition here is `over (order by x)` and actually means `over (order by x
+rows between unbounded preceding and current row)`:
 
 ~~~ sql
  select x,
@@ -90,7 +72,8 @@ unbounded preceding and current row)`:
                            rows between unbounded preceding
                                     and current row)
    from generate_series(1, 3) as t(x);
- 
+~~~
+~~~ psql
  x | array_agg 
 ---+-----------
  1 | {1}
@@ -100,16 +83,16 @@ unbounded preceding and current row)`:
 ~~~
 
 
-It's possible to work with other kind of 
-*frame specifications* too, as in the
-following examples:
+It's possible to work with other kind of *frame specifications* too, as in
+the following examples:
 
 ~~~ sql
 select x,
        array_agg(x) over (rows between current row
                                    and unbounded following)
   from generate_series(1, 3) as t(x);
- 
+~~~
+~~~ psql 
  x | array_agg 
 ---+-----------
  1 | {1,2,3}
@@ -129,7 +112,8 @@ select x,
        sum(x) over () as sum,
        x::float/sum(x) over () as part
   from generate_series(1, 3) as t(x);
-  
+~~~
+~~~ psql  
  x |  frame  | sum |       part        
 ---+---------+-----+-------------------
  1 | {1,2,3} |   6 | 0.166666666666667
@@ -141,34 +125,30 @@ select x,
 
 Did you know you could compute both the total sum of a column and the
 proportion of the current value against this total within a single SQL
-query? That's the breakthrough we're talking about now with 
-*window
+query? That's the breakthrough we're talking about now with *window
 functions*.
 
 
 # Partitioning into different frames
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/how-to-frame-a-partition-1.jpg" >}}
-</center>
 
-<center>*How to frame a partition?*</center>
-
-Other frames are possible to define when using the clause 
-`PARTITION BY`. To
+Other frames are possible to define when using the clause `PARTITION BY`. To
 see that in action though we need some more data to work with. The following
 query is setting up an example for us to work with and will produce three
-values per day for three different days, thanks to an implicit 
-`CROSS JOIN`
+values per day for three different days, thanks to an implicit `CROSS JOIN`
 construct here:
 
 ~~~ sql
 > create table p as
      select date::date as date,
             1 + floor(x * random()) as x
-       from generate_series(date 'yesterday', date 'tomorrow', '1 day') as a(date),
-            generate_series(1, 3) as b(x);
-SELECT 9
-
+       from generate_series(date 'yesterday',
+                            date 'tomorrow',
+                            '1 day')
+              as a(date),
+            generate_series(1, 3)
+              as b(x);
+~~~
+~~~ psql
 > table p;
     date    | x 
 ------------+---
@@ -186,8 +166,7 @@ SELECT 9
 
 
 Now let's have a better look at the data we have here, counting how many
-times each x has been returned by our 
-`random()` calls, per date:
+times each x has been returned by our `random()` calls, per date:
 
 ~~~ sql
 select date, x,
@@ -195,7 +174,8 @@ select date, x,
        array_agg(x) over(partition by date),
        array_agg(x) over(partition by date, x)
   from p;
-    
+~~~
+~~~ psql
     date    | x | count | array_agg | array_agg 
 ------------+---+-------+-----------+-----------
  2013-08-19 | 1 |     1 | {1,2,3}   | {1}
@@ -214,40 +194,31 @@ select date, x,
 
 # Available window functions
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/custom-flat-work-exposwed-aggregate-banding.640.jpg" >}}
-</center>
+Any and all *aggregate* function you already know can be used against a
+*window frame* rather than a *grouping clause*, so you can already go use
+`sum`, `min`, `max`, `count`, `avg` and the other you're used to.
 
-<center>*Do you like custom aggregates?*</center>
+You might already know that it's possible with PostgreSQL to use
+the
+[CREATE AGGREGATE](http://www.postgresql.org/docs/current/static/sql-createaggregate.html) command
+to register your own *custom aggregate*. Any such custom aggregate can then
+be given a *window frame definition* to work against too.
 
-Any and all 
-*aggregate* function you already know can be used against a 
-*window
-frame* rather than a 
-*grouping clause*, so you can already go use 
-`sum`, 
-`min`,
-`max`, 
-`count`, 
-`avg` and the other you're used to.
+{{< alert info no-icon >}}
 
-You might already know that it's possible with PostgreSQL to use the
-[CREATE AGGREGATE](http://www.postgresql.org/docs/current/static/sql-createaggregate.html) command to register your own 
-*custom aggregate*. Any such
-custom aggregate can then be given a 
-*window frame definition* to work against
-too. As an exercize to my dear readers, I this time propose you implement a
-*weighted average* aggregate and use it against a table where you have at
-least three columns: a date, a weight and a measure, with several measures
-per day. Now compute your 
-*weighted average* by applying your own aggregate to
-your data set, either in a 
-*grouping clause* or a 
-*window frame*.
+As an exercize to the reader, implement a *weighted average* aggregate and
+use it against a table where you have at least three columns: a date, a
+weight and a measure, with several measures per day. Now compute your
+*weighted average* by applying your own aggregate to your data set, either
+in a *grouping clause* or a *window frame*.
 
-PostgreSQL of course is included with 
-[built-in aggregate functions](http://www.postgresql.org/docs/9.2/static/functions-aggregate.html) and a
-number of 
+{{< /alert >}}
+
+PostgreSQL of course is included
+with
+[built-in aggregate functions](http://www.postgresql.org/docs/9.2/static/functions-aggregate.html) and
+a number
+of
 [built-in window functions](http://www.postgresql.org/docs/9.2/static/functions-window.html).
 
 ~~~ sql
@@ -258,7 +229,8 @@ select x,
        lead(x, 1) over w
   from generate_series(1, 15, 2) as t(x)
 window w as (order by x);
- 
+~~~
+~~~ psql 
  x  | row_number | ntile | lag | lead 
 ----+------------+-------+-----+------
   1 |          1 |     1 |     |    3
@@ -273,33 +245,24 @@ window w as (order by x);
 ~~~
 
 
-In this example you can see that we are reusing the same 
-*window definition*
+In this example you can see that we are reusing the same *window definition*
 each time, so we're giving it a name to make it simpler.
 
 
 # Conclusion
 
-The real magic of what's called 
-*window functions* is actually the 
-***frame*** of
-data they can see when using the 
-`OVER ()` clause and its 
-`PARTITION BY` and
-`ORDER BY` and 
-*frame* clauses.
+The real magic of what's called *window functions* is actually the
+***frame*** of data they can see when using the `OVER ()` clause and its
+`PARTITION BY` and `ORDER BY` and *frame* clauses.
 
 You need to remember that the windowing clauses are always considered last
-in the query, meaning after the 
-`WHERE` clause. You can only see in any 
-*frame*
-rows that have been selected for output: e.g. it's not directly possible to
-compute a percentage over values that you don't want to display. You would
-need to use a subquery in that case.
+in the query, meaning after the `WHERE` clause. You can only see in any
+*frame* rows that have been selected for output: e.g. it's not directly
+possible to compute a percentage over values that you don't want to display.
+You would need to use a subquery in that case.
 
-For more concrete examples about the 
-*window functions* usage, you can see
-some other of my blog posts, such as 
-[Make the Most ouf of SQL](/blog/2013/07/02-dubpug) and
-[Reset Counter](/blog/2012/10/05-reset-counter) that I just tagged as 
-[Window Functions Articles](/tags/window-functions).
+For more concrete examples about the *window functions* usage, you can see
+some other of my blog posts, such
+as [Make the Most ouf of SQL](/blog/2013/07/02-dubpug)
+and [Reset Counter](/blog/2012/10/05-reset-counter) that I just tagged
+as [Window Functions Articles](/tags/window-functions).
