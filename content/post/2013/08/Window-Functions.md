@@ -5,9 +5,9 @@ tags = ["PostgreSQL", "Tricks", "Window-Functions", "YeSQL"]
 categories = ["PostgreSQL","YeSQL"]
 thumbnailImage = "/img/old/moving_window.gif"
 thumbnailImagePosition = "left"
-coverImage = "/img/window-functions.jpg"
+coverImage = "/img/motor-racing.jpg"
 coverSize = "partial"
-coverMeta = "out"
+coverMeta = "in"
 aliases = ["/blog/2013/08/20-Window-Functions",
            "/blog/2013/08/20-Window-Functions.html"]
 +++
@@ -128,69 +128,114 @@ proportion of the current value against this total within a single SQL
 query? That's the breakthrough we're talking about now with *window
 functions*.
 
-
 # Partitioning into different frames
 
 Other frames are possible to define when using the clause `PARTITION BY`. To
-see that in action though we need some more data to work with. The following
-query is setting up an example for us to work with and will produce three
-values per day for three different days, thanks to an implicit `CROSS JOIN`
-construct here:
+understand the *partition by* window it is best to relate to a real world
+use case. Let's use
+the [historical record of motor racing data](http://ergast.com/mrd/)
+available publicly.
+
+{{< alert success >}}
+
+The database is available in a single download file for MySQL only. Once you
+have a ocal copy, use [pgloader](http://pgloader.io) to have the data set in
+PostgreSQL, it's a single command line (once you have created a *f1db*
+database with a *f1db* schema):
+
+~~~ bash
+$ createdb f1db
+$ psql -d f1db -c "create schema f1db;"
+$ pgloader mysql://root@localhost/f1db pgsql:///f1db
+~~~
+
+If you want to try the query at home and modify it, consider fetching and
+loading the same data set.
+
+{{< /alert >}}
+
+So in the *Ergast* database we have a *results* table with results from all
+the known races. We pick a race that happened just before this article was
+first published:
+
+~~~ psql
+-[ RECORD 1 ]-----------------------------------------------------
+raceid    | 890
+year      | 2013
+round     | 10
+circuitid | 11
+name      | Hungarian Grand Prix
+date      | 2013-07-28
+time      | 12:00:00
+url       | http://en.wikipedia.org/wiki/2013_Hungarian_Grand_Prix
+~~~
+
+And within that race we can now fetch the list of competing drivers in their
+position order (winner first), and also their ranking compared to other
+drivers from the same constructor in the race:
 
 ~~~ sql
-> create table p as
-     select date::date as date,
-            1 + floor(x * random()) as x
-       from generate_series(date 'yesterday',
-                            date 'tomorrow',
-                            '1 day')
-              as a(date),
-            generate_series(1, 3)
-              as b(x);
+select surname,
+         constructors.name,
+         position,
+         format('%s / %s',
+                row_number()
+                  over(partition by constructorid
+                           order by position nulls last),
+
+                count(*) over(partition by constructorid)
+               )
+            as "pos same constr"
+    from      results
+         join drivers using(driverid)
+         join constructors using(constructorid)
+   where raceid = 890
+order by position;
 ~~~
+
+The *partition by* frame allow us to see *peer rows*, here the rows from
+*results* where the *constructorid* is the same as the current row. We use
+that partition twice in the previous SQL query, in the `format()` call. The
+first time with the `row_number()` window function gives us the position in
+the race with respect to other drivers from the same constructor, and the
+second time with `count(*)` gives us how many drivers from the same
+constructor participated in the race:
+
 ~~~ psql
-> table p;
-    date    | x 
-------------+---
- 2013-08-19 | 1
- 2013-08-19 | 2
- 2013-08-19 | 3
- 2013-08-20 | 1
- 2013-08-20 | 1
- 2013-08-20 | 3
- 2013-08-21 | 1
- 2013-08-21 | 1
- 2013-08-21 | 3
-(9 rows)
+    surname    |    name     | position | pos same constr 
+---------------+-------------+----------+-----------------
+ Hamilton      | Mercedes    |        1 | 1 / 2
+ Räikkönen     | Lotus F1    |        2 | 1 / 2
+ Vettel        | Red Bull    |        3 | 1 / 2
+ Webber        | Red Bull    |        4 | 2 / 2
+ Alonso        | Ferrari     |        5 | 1 / 2
+ Grosjean      | Lotus F1    |        6 | 2 / 2
+ Button        | McLaren     |        7 | 1 / 2
+ Massa         | Ferrari     |        8 | 2 / 2
+ Pérez         | McLaren     |        9 | 2 / 2
+ Maldonado     | Williams    |       10 | 1 / 2
+ Hülkenberg    | Sauber      |       11 | 1 / 2
+ Vergne        | Toro Rosso  |       12 | 1 / 2
+ Ricciardo     | Toro Rosso  |       13 | 2 / 2
+ van der Garde | Caterham    |       14 | 1 / 2
+ Pic           | Caterham    |       15 | 2 / 2
+ Bianchi       | Marussia    |       16 | 1 / 2
+ Chilton       | Marussia    |       17 | 2 / 2
+ di Resta      | Force India |       18 | 1 / 2
+ Rosberg       | Mercedes    |       19 | 2 / 2
+ Bottas        | Williams    |        ⦱ | 2 / 2
+ Sutil         | Force India |        ⦱ | 2 / 2
+ Gutiérrez     | Sauber      |        ⦱ | 2 / 2
+(22 rows)
 ~~~
 
+Drivers who didn't finish the race get a *null* position entry, that our
+*psql* setup displays as the ⦱ character, for convenience.
 
-Now let's have a better look at the data we have here, counting how many
-times each x has been returned by our `random()` calls, per date:
-
-~~~ sql
-select date, x,
-       count(x) over (partition by date, x),
-       array_agg(x) over(partition by date),
-       array_agg(x) over(partition by date, x)
-  from p;
-~~~
-~~~ psql
-    date    | x | count | array_agg | array_agg 
-------------+---+-------+-----------+-----------
- 2013-08-19 | 1 |     1 | {1,2,3}   | {1}
- 2013-08-19 | 2 |     1 | {1,2,3}   | {2}
- 2013-08-19 | 3 |     1 | {1,2,3}   | {3}
- 2013-08-20 | 1 |     2 | {1,1,3}   | {1,1}
- 2013-08-20 | 1 |     2 | {1,1,3}   | {1,1}
- 2013-08-20 | 3 |     1 | {1,1,3}   | {3}
- 2013-08-21 | 1 |     2 | {1,1,3}   | {1,1}
- 2013-08-21 | 1 |     2 | {1,1,3}   | {1,1}
- 2013-08-21 | 3 |     1 | {1,1,3}   | {3}
-(9 rows)
-~~~
-
-
+In a single SQL query we can obtain information from each driver in the race
+and add to that other information from the race as a whole. Remember that
+the *window functions* only happens after the *where* clause, so you only
+get to see rows from the available result set of the query.
 
 # Available window functions
 
@@ -222,34 +267,67 @@ of
 [built-in window functions](http://www.postgresql.org/docs/9.2/static/functions-window.html).
 
 ~~~ sql
-select x,
-       row_number() over(),
-       ntile(4) over w,
-       lag(x, 1) over w,
-       lead(x, 1) over w
-  from generate_series(1, 15, 2) as t(x)
-window w as (order by x);
+  select surname,
+         position,
+         row_number()
+           over(order by fastestlapspeed::numeric)
+           as "fastest",
+         ntile(3) over w as "group",
+         lag(surname, 1) over w as "previous",
+         lead(surname, 1) over w as "next"
+    from      results
+         join drivers using(driverid)
+   where raceid = 890
+  window w as (order by position)
+order by position;
 ~~~
-~~~ psql 
- x  | row_number | ntile | lag | lead 
-----+------------+-------+-----+------
-  1 |          1 |     1 |     |    3
-  3 |          2 |     1 |   1 |    5
-  5 |          3 |     2 |   3 |    7
-  7 |          4 |     2 |   5 |    9
-  9 |          5 |     3 |   7 |   11
- 11 |          6 |     3 |   9 |   13
- 13 |          7 |     4 |  11 |   15
- 15 |          8 |     4 |  13 |     
-(8 rows)
-~~~
-
 
 In this example you can see that we are reusing the same *window definition*
-each time, so we're giving it a name to make it simpler.
+several times, so we're giving it a name to simplify the SQL. In this query
+we are fetching for each driver its position in the results, its position in
+terms of *fastest lap speed*, a *group* number if we divide the drivers into
+a set of 4 groups thanks to the *ntile* function, the name of the previous
+driver who made it, and the name of the driver immediately next to the
+current one, thanks to the *lag* an *lead* functions:
 
+~~~ psql
+    surname    | position | fastest | group |   previous    |     next      
+---------------+----------+---------+-------+---------------+---------------
+ Hamilton      |        1 |      20 |     1 | ⦱             | Räikkönen
+ Räikkönen     |        2 |      17 |     1 | Hamilton      | Vettel
+ Vettel        |        3 |      21 |     1 | Räikkönen     | Webber
+ Webber        |        4 |      22 |     1 | Vettel        | Alonso
+ Alonso        |        5 |      15 |     1 | Webber        | Grosjean
+ Grosjean      |        6 |      16 |     1 | Alonso        | Button
+ Button        |        7 |      12 |     1 | Grosjean      | Massa
+ Massa         |        8 |      18 |     1 | Button        | Pérez
+ Pérez         |        9 |      13 |     2 | Massa         | Maldonado
+ Maldonado     |       10 |      14 |     2 | Pérez         | Hülkenberg
+ Hülkenberg    |       11 |       9 |     2 | Maldonado     | Vergne
+ Vergne        |       12 |      11 |     2 | Hülkenberg    | Ricciardo
+ Ricciardo     |       13 |       8 |     2 | Vergne        | van der Garde
+ van der Garde |       14 |       6 |     2 | Ricciardo     | Pic
+ Pic           |       15 |       5 |     2 | van der Garde | Bianchi
+ Bianchi       |       16 |       3 |     3 | Pic           | Chilton
+ Chilton       |       17 |       4 |     3 | Bianchi       | di Resta
+ di Resta      |       18 |      10 |     3 | Chilton       | Rosberg
+ Rosberg       |       19 |      19 |     3 | di Resta      | Bottas
+ Sutil         |        ⦱ |       2 |     3 | Gutiérrez     | ⦱
+ Gutiérrez     |        ⦱ |       1 |     3 | Bottas        | Sutil
+ Bottas        |        ⦱ |       7 |     3 | Rosberg       | Gutiérrez
+(22 rows)
+~~~
+
+And we can see that the *fastest lap speed* is not as important as one could
+think, as both the two fastest drivers didn't even finish the race. In SQL
+terms we also see that we can have two different orderings returned from the
+same query, and again we can poke at other rows.
 
 # Conclusion
+
+{{< image classes="fig25 right dim-margin"
+              src="/img/old/sql-logo.png"
+           title="PostgreSQL is YeSQL" >}}
 
 The real magic of what's called *window functions* is actually the
 ***frame*** of data they can see when using the `OVER ()` clause and its

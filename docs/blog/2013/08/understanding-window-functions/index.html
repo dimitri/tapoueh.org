@@ -182,7 +182,7 @@ We see a part of the data as if through a little window
       <meta property="og:image" content="http://tapoueh.org/img/old/moving_window.gif">
     
     
-      <meta property="og:image" content="http://tapoueh.org/img/window-functions.jpg">
+      <meta property="og:image" content="http://tapoueh.org/img/motor-racing.jpg">
     
     
 
@@ -335,20 +335,10 @@ ga('send', 'pageview');
   <div class="post-header-cover
               text-left
               post-header-cover--partial"
-       style="background-image:url('/img/window-functions.jpg')"
+       style="background-image:url('/img/motor-racing.jpg')"
        data-behavior="2">
     
-  </div>
-
-
-      <div id="main" data-behavior="2"
-        class="hasCover
-               hasCoverMetaOut
-               ">
-        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
-          
-          
-            <div class="post-header main-content-wrap text-left">
+      <div class="post-header main-content-wrap text-left">
   
     <h1 class="post-title" itemprop="headline">
       Understanding Window Functions
@@ -382,6 +372,16 @@ ga('send', 'pageview');
 </div>
 
 </div>
+    
+  </div>
+
+
+      <div id="main" data-behavior="2"
+        class="hasCover
+               hasCoverMetaIn
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
           
           <div class="post-content markdown" itemprop="articleBody">
             <div class="main-content-wrap">
@@ -523,56 +523,101 @@ functions</em>.</p>
 <h1 id="partitioning-into-different-frames">Partitioning into different frames</h1>
 
 <p>Other frames are possible to define when using the clause <code>PARTITION BY</code>. To
-see that in action though we need some more data to work with. The following
-query is setting up an example for us to work with and will produce three
-values per day for three different days, thanks to an implicit <code>CROSS JOIN</code>
-construct here:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>&gt; <span style="color: #0000aa">create</span> <span style="color: #0000aa">table</span> p <span style="color: #0000aa">as</span>
-     <span style="color: #0000aa">select</span> <span style="color: #00aaaa">date</span>::<span style="color: #00aaaa">date</span> <span style="color: #0000aa">as</span> <span style="color: #00aaaa">date</span>,
-            <span style="color: #009999">1</span> + floor(x * random()) <span style="color: #0000aa">as</span> x
-       <span style="color: #0000aa">from</span> generate_series(<span style="color: #00aaaa">date</span> <span style="color: #aa5500">&#39;yesterday&#39;</span>,
-                            <span style="color: #00aaaa">date</span> <span style="color: #aa5500">&#39;tomorrow&#39;</span>,
-                            <span style="color: #aa5500">&#39;1 day&#39;</span>)
-              <span style="color: #0000aa">as</span> a(<span style="color: #00aaaa">date</span>),
-            generate_series(<span style="color: #009999">1</span>, <span style="color: #009999">3</span>)
-              <span style="color: #0000aa">as</span> b(x);
-</pre></div>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>&gt; <span style="color: #0000aa">table</span> p;
-<span style="color: #888888">    date    | x </span>
-<span style="color: #888888">------------+---</span>
-<span style="color: #888888"> 2013-08-19 | 1</span>
-<span style="color: #888888"> 2013-08-19 | 2</span>
-<span style="color: #888888"> 2013-08-19 | 3</span>
-<span style="color: #888888"> 2013-08-20 | 1</span>
-<span style="color: #888888"> 2013-08-20 | 1</span>
-<span style="color: #888888"> 2013-08-20 | 3</span>
-<span style="color: #888888"> 2013-08-21 | 1</span>
-<span style="color: #888888"> 2013-08-21 | 1</span>
-<span style="color: #888888"> 2013-08-21 | 3</span>
-<span style="color: #888888">(9 rows)</span>
+understand the <em>partition by</em> window it is best to relate to a real world
+use case. Let&rsquo;s use
+the <a href="http://ergast.com/mrd/">historical record of motor racing data</a>
+available publicly.</p>
+
+<div class="alert success ">
+  <p>The database is available in a single download file for MySQL only. Once you
+have a ocal copy, use <a href="http://pgloader.io">pgloader</a> to have the data set in
+PostgreSQL, it&rsquo;s a single command line (once you have created a <em>f1db</em>
+database with a <em>f1db</em> schema):</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>$ createdb f1db
+$ psql -d f1db -c <span style="color: #aa5500">&quot;create schema f1db;&quot;</span>
+$ pgloader mysql://root@localhost/f1db pgsql:///f1db
 </pre></div>
 
-<p>Now let&rsquo;s have a better look at the data we have here, counting how many
-times each x has been returned by our <code>random()</code> calls, per date:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> <span style="color: #00aaaa">date</span>, x,
-       <span style="color: #0000aa">count</span>(x) over (partition <span style="color: #0000aa">by</span> <span style="color: #00aaaa">date</span>, x),
-       array_agg(x) over(partition <span style="color: #0000aa">by</span> <span style="color: #00aaaa">date</span>),
-       array_agg(x) over(partition <span style="color: #0000aa">by</span> <span style="color: #00aaaa">date</span>, x)
-  <span style="color: #0000aa">from</span> p;
+<p>If you want to try the query at home and modify it, consider fetching and
+loading the same data set.</p>
+</div>
+
+<p>So in the <em>Ergast</em> database we have a <em>results</em> table with results from all
+the known races. We pick a race that happened just before this article was
+first published:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>-[ <span style="color: #00aaaa">RECORD</span> <span style="color: #009999">1</span> ]<span style="color: #aaaaaa; font-style: italic">-----------------------------------------------------</span>
+raceid    | <span style="color: #009999">890</span>
+<span style="color: #0000aa">year</span>      | <span style="color: #009999">2013</span>
+round     | <span style="color: #009999">10</span>
+circuitid | <span style="color: #009999">11</span>
+<span style="color: #0000aa">name</span>      | Hungarian Grand Prix
+<span style="color: #00aaaa">date</span>      | <span style="color: #009999">2013</span>-<span style="color: #009999">07</span>-<span style="color: #009999">28</span>
+<span style="color: #00aaaa">time</span>      | <span style="color: #009999">12</span>:<span style="color: #009999">00</span>:<span style="color: #009999">00</span>
+url       | http://en<span style="color: #009999">.</span>wikipedia<span style="color: #009999">.</span>org/wiki/<span style="color: #009999">2013</span>_Hungarian_Grand_Prix
 </pre></div>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>    <span style="color: #00aaaa">date</span>    | x | count | array_agg | array_agg 
-<span style="color: #aaaaaa; font-style: italic">------------+---+-------+-----------+-----------</span>
- <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">19</span> | <span style="color: #009999">1</span> |     <span style="color: #009999">1</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">2</span>,<span style="color: #009999">3</span>}   | {<span style="color: #009999">1</span>}
- <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">19</span> | <span style="color: #009999">2</span> |     <span style="color: #009999">1</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">2</span>,<span style="color: #009999">3</span>}   | {<span style="color: #009999">2</span>}
- <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">19</span> | <span style="color: #009999">3</span> |     <span style="color: #009999">1</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">2</span>,<span style="color: #009999">3</span>}   | {<span style="color: #009999">3</span>}
- <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">20</span> | <span style="color: #009999">1</span> |     <span style="color: #009999">2</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">1</span>,<span style="color: #009999">3</span>}   | {<span style="color: #009999">1</span>,<span style="color: #009999">1</span>}
- <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">20</span> | <span style="color: #009999">1</span> |     <span style="color: #009999">2</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">1</span>,<span style="color: #009999">3</span>}   | {<span style="color: #009999">1</span>,<span style="color: #009999">1</span>}
- <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">20</span> | <span style="color: #009999">3</span> |     <span style="color: #009999">1</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">1</span>,<span style="color: #009999">3</span>}   | {<span style="color: #009999">3</span>}
- <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">21</span> | <span style="color: #009999">1</span> |     <span style="color: #009999">2</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">1</span>,<span style="color: #009999">3</span>}   | {<span style="color: #009999">1</span>,<span style="color: #009999">1</span>}
- <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">21</span> | <span style="color: #009999">1</span> |     <span style="color: #009999">2</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">1</span>,<span style="color: #009999">3</span>}   | {<span style="color: #009999">1</span>,<span style="color: #009999">1</span>}
- <span style="color: #009999">2013</span>-<span style="color: #009999">08</span>-<span style="color: #009999">21</span> | <span style="color: #009999">3</span> |     <span style="color: #009999">1</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">1</span>,<span style="color: #009999">3</span>}   | {<span style="color: #009999">3</span>}
-(<span style="color: #009999">9</span> <span style="color: #0000aa">rows</span>)
+
+<p>And within that race we can now fetch the list of competing drivers in their
+position order (winner first), and also their ranking compared to other
+drivers from the same constructor in the race:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> surname,
+         constructors.name,
+         <span style="color: #0000aa">position</span>,
+         format(<span style="color: #aa5500">&#39;%s / %s&#39;</span>,
+                row_number()
+                  over(partition <span style="color: #0000aa">by</span> constructorid
+                           <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> <span style="color: #0000aa">position</span> nulls <span style="color: #0000aa">last</span>),
+
+                <span style="color: #0000aa">count</span>(*) over(partition <span style="color: #0000aa">by</span> constructorid)
+               )
+            <span style="color: #0000aa">as</span> <span style="color: #0000aa">&quot;pos same constr&quot;</span>
+    <span style="color: #0000aa">from</span>      results
+         <span style="color: #0000aa">join</span> drivers <span style="color: #0000aa">using</span>(driverid)
+         <span style="color: #0000aa">join</span> constructors <span style="color: #0000aa">using</span>(constructorid)
+   <span style="color: #0000aa">where</span> raceid = <span style="color: #009999">890</span>
+<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> <span style="color: #0000aa">position</span>;
 </pre></div>
+
+<p>The <em>partition by</em> frame allow us to see <em>peer rows</em>, here the rows from
+<em>results</em> where the <em>constructorid</em> is the same as the current row. We use
+that partition twice in the previous SQL query, in the <code>format()</code> call. The
+first time with the <code>row_number()</code> window function gives us the position in
+the race with respect to other drivers from the same constructor, and the
+second time with <code>count(*)</code> gives us how many drivers from the same
+constructor participated in the race:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>    surname    |    <span style="color: #0000aa">name</span>     | <span style="color: #0000aa">position</span> | pos same constr 
+<span style="color: #aaaaaa; font-style: italic">---------------+-------------+----------+-----------------</span>
+ Hamilton      | Mercedes    |        <span style="color: #009999">1</span> | <span style="color: #009999">1</span> / <span style="color: #009999">2</span>
+ Räikkönen     | Lotus F1    |        <span style="color: #009999">2</span> | <span style="color: #009999">1</span> / <span style="color: #009999">2</span>
+ Vettel        | Red Bull    |        <span style="color: #009999">3</span> | <span style="color: #009999">1</span> / <span style="color: #009999">2</span>
+ Webber        | Red Bull    |        <span style="color: #009999">4</span> | <span style="color: #009999">2</span> / <span style="color: #009999">2</span>
+ Alonso        | Ferrari     |        <span style="color: #009999">5</span> | <span style="color: #009999">1</span> / <span style="color: #009999">2</span>
+ Grosjean      | Lotus F1    |        <span style="color: #009999">6</span> | <span style="color: #009999">2</span> / <span style="color: #009999">2</span>
+ Button        | McLaren     |        <span style="color: #009999">7</span> | <span style="color: #009999">1</span> / <span style="color: #009999">2</span>
+ Massa         | Ferrari     |        <span style="color: #009999">8</span> | <span style="color: #009999">2</span> / <span style="color: #009999">2</span>
+ Pérez         | McLaren     |        <span style="color: #009999">9</span> | <span style="color: #009999">2</span> / <span style="color: #009999">2</span>
+ Maldonado     | Williams    |       <span style="color: #009999">10</span> | <span style="color: #009999">1</span> / <span style="color: #009999">2</span>
+ Hülkenberg    | Sauber      |       <span style="color: #009999">11</span> | <span style="color: #009999">1</span> / <span style="color: #009999">2</span>
+ Vergne        | Toro Rosso  |       <span style="color: #009999">12</span> | <span style="color: #009999">1</span> / <span style="color: #009999">2</span>
+ Ricciardo     | Toro Rosso  |       <span style="color: #009999">13</span> | <span style="color: #009999">2</span> / <span style="color: #009999">2</span>
+ van der Garde | Caterham    |       <span style="color: #009999">14</span> | <span style="color: #009999">1</span> / <span style="color: #009999">2</span>
+ Pic           | Caterham    |       <span style="color: #009999">15</span> | <span style="color: #009999">2</span> / <span style="color: #009999">2</span>
+ Bianchi       | Marussia    |       <span style="color: #009999">16</span> | <span style="color: #009999">1</span> / <span style="color: #009999">2</span>
+ Chilton       | Marussia    |       <span style="color: #009999">17</span> | <span style="color: #009999">2</span> / <span style="color: #009999">2</span>
+ di Resta      | <span style="color: #0000aa">Force</span> India |       <span style="color: #009999">18</span> | <span style="color: #009999">1</span> / <span style="color: #009999">2</span>
+ Rosberg       | Mercedes    |       <span style="color: #009999">19</span> | <span style="color: #009999">2</span> / <span style="color: #009999">2</span>
+ Bottas        | Williams    |        <span style="color: #FF0000; background-color: #FFAAAA">⦱</span> | <span style="color: #009999">2</span> / <span style="color: #009999">2</span>
+ Sutil         | <span style="color: #0000aa">Force</span> India |        <span style="color: #FF0000; background-color: #FFAAAA">⦱</span> | <span style="color: #009999">2</span> / <span style="color: #009999">2</span>
+ Gutiérrez     | Sauber      |        <span style="color: #FF0000; background-color: #FFAAAA">⦱</span> | <span style="color: #009999">2</span> / <span style="color: #009999">2</span>
+(<span style="color: #009999">22</span> <span style="color: #0000aa">rows</span>)
+</pre></div>
+
+<p>Drivers who didn&rsquo;t finish the race get a <em>null</em> position entry, that our
+<em>psql</em> setup displays as the ⦱ character, for convenience.</p>
+
+<p>In a single SQL query we can obtain information from each driver in the race
+and add to that other information from the race as a whole. Remember that
+the <em>window functions</em> only happens after the <em>where</em> clause, so you only
+get to see rows from the available result set of the query.</p>
 
 <h1 id="available-window-functions">Available window functions</h1>
 
@@ -600,31 +645,74 @@ with
 a number
 of
 <a href="http://www.postgresql.org/docs/9.2/static/functions-window.html">built-in window functions</a>.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> x,
-       row_number() over(),
-       ntile(<span style="color: #009999">4</span>) over w,
-       lag(x, <span style="color: #009999">1</span>) over w,
-       lead(x, <span style="color: #009999">1</span>) over w
-  <span style="color: #0000aa">from</span> generate_series(<span style="color: #009999">1</span>, <span style="color: #009999">15</span>, <span style="color: #009999">2</span>) <span style="color: #0000aa">as</span> t(x)
-window w <span style="color: #0000aa">as</span> (<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> x);
-</pre></div>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span> x  | row_number | ntile | lag | lead 
-<span style="color: #aaaaaa; font-style: italic">----+------------+-------+-----+------</span>
-  <span style="color: #009999">1</span> |          <span style="color: #009999">1</span> |     <span style="color: #009999">1</span> |     |    <span style="color: #009999">3</span>
-  <span style="color: #009999">3</span> |          <span style="color: #009999">2</span> |     <span style="color: #009999">1</span> |   <span style="color: #009999">1</span> |    <span style="color: #009999">5</span>
-  <span style="color: #009999">5</span> |          <span style="color: #009999">3</span> |     <span style="color: #009999">2</span> |   <span style="color: #009999">3</span> |    <span style="color: #009999">7</span>
-  <span style="color: #009999">7</span> |          <span style="color: #009999">4</span> |     <span style="color: #009999">2</span> |   <span style="color: #009999">5</span> |    <span style="color: #009999">9</span>
-  <span style="color: #009999">9</span> |          <span style="color: #009999">5</span> |     <span style="color: #009999">3</span> |   <span style="color: #009999">7</span> |   <span style="color: #009999">11</span>
- <span style="color: #009999">11</span> |          <span style="color: #009999">6</span> |     <span style="color: #009999">3</span> |   <span style="color: #009999">9</span> |   <span style="color: #009999">13</span>
- <span style="color: #009999">13</span> |          <span style="color: #009999">7</span> |     <span style="color: #009999">4</span> |  <span style="color: #009999">11</span> |   <span style="color: #009999">15</span>
- <span style="color: #009999">15</span> |          <span style="color: #009999">8</span> |     <span style="color: #009999">4</span> |  <span style="color: #009999">13</span> |     
-(<span style="color: #009999">8</span> <span style="color: #0000aa">rows</span>)
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>  <span style="color: #0000aa">select</span> surname,
+         <span style="color: #0000aa">position</span>,
+         row_number()
+           over(<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> fastestlapspeed::<span style="color: #00aaaa">numeric</span>)
+           <span style="color: #0000aa">as</span> <span style="color: #0000aa">&quot;fastest&quot;</span>,
+         ntile(<span style="color: #009999">3</span>) over w <span style="color: #0000aa">as</span> <span style="color: #0000aa">&quot;group&quot;</span>,
+         lag(surname, <span style="color: #009999">1</span>) over w <span style="color: #0000aa">as</span> <span style="color: #0000aa">&quot;previous&quot;</span>,
+         lead(surname, <span style="color: #009999">1</span>) over w <span style="color: #0000aa">as</span> <span style="color: #0000aa">&quot;next&quot;</span>
+    <span style="color: #0000aa">from</span>      results
+         <span style="color: #0000aa">join</span> drivers <span style="color: #0000aa">using</span>(driverid)
+   <span style="color: #0000aa">where</span> raceid = <span style="color: #009999">890</span>
+  window w <span style="color: #0000aa">as</span> (<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> <span style="color: #0000aa">position</span>)
+<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> <span style="color: #0000aa">position</span>;
 </pre></div>
 
 <p>In this example you can see that we are reusing the same <em>window definition</em>
-each time, so we&rsquo;re giving it a name to make it simpler.</p>
+several times, so we&rsquo;re giving it a name to simplify the SQL. In this query
+we are fetching for each driver its position in the results, its position in
+terms of <em>fastest lap speed</em>, a <em>group</em> number if we divide the drivers into
+a set of 4 groups thanks to the <em>ntile</em> function, the name of the previous
+driver who made it, and the name of the driver immediately next to the
+current one, thanks to the <em>lag</em> an <em>lead</em> functions:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>    surname    | <span style="color: #0000aa">position</span> | fastest | <span style="color: #0000aa">group</span> |   previous    |     <span style="color: #0000aa">next</span>      
+<span style="color: #aaaaaa; font-style: italic">---------------+----------+---------+-------+---------------+---------------</span>
+ Hamilton      |        <span style="color: #009999">1</span> |      <span style="color: #009999">20</span> |     <span style="color: #009999">1</span> | <span style="color: #FF0000; background-color: #FFAAAA">⦱</span>             | Räikkönen
+ Räikkönen     |        <span style="color: #009999">2</span> |      <span style="color: #009999">17</span> |     <span style="color: #009999">1</span> | Hamilton      | Vettel
+ Vettel        |        <span style="color: #009999">3</span> |      <span style="color: #009999">21</span> |     <span style="color: #009999">1</span> | Räikkönen     | Webber
+ Webber        |        <span style="color: #009999">4</span> |      <span style="color: #009999">22</span> |     <span style="color: #009999">1</span> | Vettel        | Alonso
+ Alonso        |        <span style="color: #009999">5</span> |      <span style="color: #009999">15</span> |     <span style="color: #009999">1</span> | Webber        | Grosjean
+ Grosjean      |        <span style="color: #009999">6</span> |      <span style="color: #009999">16</span> |     <span style="color: #009999">1</span> | Alonso        | Button
+ Button        |        <span style="color: #009999">7</span> |      <span style="color: #009999">12</span> |     <span style="color: #009999">1</span> | Grosjean      | Massa
+ Massa         |        <span style="color: #009999">8</span> |      <span style="color: #009999">18</span> |     <span style="color: #009999">1</span> | Button        | Pérez
+ Pérez         |        <span style="color: #009999">9</span> |      <span style="color: #009999">13</span> |     <span style="color: #009999">2</span> | Massa         | Maldonado
+ Maldonado     |       <span style="color: #009999">10</span> |      <span style="color: #009999">14</span> |     <span style="color: #009999">2</span> | Pérez         | Hülkenberg
+ Hülkenberg    |       <span style="color: #009999">11</span> |       <span style="color: #009999">9</span> |     <span style="color: #009999">2</span> | Maldonado     | Vergne
+ Vergne        |       <span style="color: #009999">12</span> |      <span style="color: #009999">11</span> |     <span style="color: #009999">2</span> | Hülkenberg    | Ricciardo
+ Ricciardo     |       <span style="color: #009999">13</span> |       <span style="color: #009999">8</span> |     <span style="color: #009999">2</span> | Vergne        | van der Garde
+ van der Garde |       <span style="color: #009999">14</span> |       <span style="color: #009999">6</span> |     <span style="color: #009999">2</span> | Ricciardo     | Pic
+ Pic           |       <span style="color: #009999">15</span> |       <span style="color: #009999">5</span> |     <span style="color: #009999">2</span> | van der Garde | Bianchi
+ Bianchi       |       <span style="color: #009999">16</span> |       <span style="color: #009999">3</span> |     <span style="color: #009999">3</span> | Pic           | Chilton
+ Chilton       |       <span style="color: #009999">17</span> |       <span style="color: #009999">4</span> |     <span style="color: #009999">3</span> | Bianchi       | di Resta
+ di Resta      |       <span style="color: #009999">18</span> |      <span style="color: #009999">10</span> |     <span style="color: #009999">3</span> | Chilton       | Rosberg
+ Rosberg       |       <span style="color: #009999">19</span> |      <span style="color: #009999">19</span> |     <span style="color: #009999">3</span> | di Resta      | Bottas
+ Sutil         |        <span style="color: #FF0000; background-color: #FFAAAA">⦱</span> |       <span style="color: #009999">2</span> |     <span style="color: #009999">3</span> | Gutiérrez     | <span style="color: #FF0000; background-color: #FFAAAA">⦱</span>
+ Gutiérrez     |        <span style="color: #FF0000; background-color: #FFAAAA">⦱</span> |       <span style="color: #009999">1</span> |     <span style="color: #009999">3</span> | Bottas        | Sutil
+ Bottas        |        <span style="color: #FF0000; background-color: #FFAAAA">⦱</span> |       <span style="color: #009999">7</span> |     <span style="color: #009999">3</span> | Rosberg       | Gutiérrez
+(<span style="color: #009999">22</span> <span style="color: #0000aa">rows</span>)
+</pre></div>
+
+<p>And we can see that the <em>fastest lap speed</em> is not as important as one could
+think, as both the two fastest drivers didn&rsquo;t even finish the race. In SQL
+terms we also see that we can have two different orderings returned from the
+same query, and again we can poke at other rows.</p>
 
 <h1 id="conclusion">Conclusion</h1>
+
+
+
+
+<div class="figure fig25 right dim-margin" >
+  
+    <img class="fig-img" src="/img/old/sql-logo.png"  alt="PostgreSQL is YeSQL">
+  
+   
+    <span class="caption">PostgreSQL is YeSQL</span>
+  
+</div>
+
 
 <p>The real magic of what&rsquo;s called <em>window functions</em> is actually the
 <strong><em>frame</em></strong> of data they can see when using the <code>OVER ()</code> clause and its
