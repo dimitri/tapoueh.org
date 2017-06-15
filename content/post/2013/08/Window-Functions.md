@@ -139,7 +139,7 @@ available publicly.
 {{< alert success >}}
 
 The database is available in a single download file for MySQL only. Once you
-have a ocal copy, use [pgloader](http://pgloader.io) to have the data set in
+have a local copy, use [pgloader](http://pgloader.io) to have the data set in
 PostgreSQL, it's a single command line (once you have created a *f1db*
 database with a *f1db* schema):
 
