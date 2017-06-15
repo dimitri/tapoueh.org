@@ -102,7 +102,7 @@ select x,
 ~~~
 
 
-If no frame clause is used at all, then the default is too see the whole set
+If no frame clause is used at all, then the default is to see the whole set
 of rows in each of them, which can be really useful if you want to compute
 sums and percentages for example:
 
