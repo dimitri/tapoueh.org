@@ -139,16 +139,22 @@ available publicly.
 {{< alert success >}}
 
 The database is available in a single download file for MySQL only. Once you
-have a local copy, use [pgloader](http://pgloader.io) to have the data set in
-PostgreSQL, it's a single command line (once you have created a *f1db*
-database with a *f1db* schema):
+have a local copy, use [pgloader](http://pgloader.io) to have the data set
+in PostgreSQL, it's a single command line (once you have created a *f1db*
+database):
 
 ~~~ bash
 $ createdb f1db
-$ psql -d f1db -c "create schema f1db;"
 $ pgloader mysql://root@localhost/f1db pgsql:///f1db
 ~~~
 
+Also you might want to have *f1db* in your *search_path*, which you can do
+with the following command:
+
+~~~ sql
+ALTER DATABASE f1db SET search_path TO f1db, public;
+~~~
+ 
 If you want to try the query at home and modify it, consider fetching and
 loading the same data set.
 
