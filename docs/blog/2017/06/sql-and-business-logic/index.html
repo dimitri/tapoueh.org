@@ -1,0 +1,1154 @@
+
+
+  
+    
+  
+
+
+  
+
+
+
+
+  
+
+
+  
+
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Hugo 0.20.7">
+    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
+    <title>SQL and Business Logic</title>
+    <meta name="author" content="Dimitri Fontaine">
+    <meta name="keywords" content="">
+
+    <link rel="icon" href="/favicon.ico">
+    
+
+    
+    <meta name="description" content="Business logic is supposed to be the part of the application where you
+deal with customer or user facing decisions and computations. It is often
+argued that this part should be well separated from the rest of the
+technical infrastructure of your code. Of course, SQL and relational
+database design is meant to support your business cases (or user stories),
+so then we can ask ourselves if SQL should be part of your business logic
+implementation. Or actually, how much of your business logic should be SQL?
+
+">
+    <meta property="og:description" content="Business logic is supposed to be the part of the application where you
+deal with customer or user facing decisions and computations. It is often
+argued that this part should be well separated from the rest of the
+technical infrastructure of your code. Of course, SQL and relational
+database design is meant to support your business cases (or user stories),
+so then we can ask ourselves if SQL should be part of your business logic
+implementation. Or actually, how much of your business logic should be SQL?
+
+">
+    <meta property="og:type" content="blog">
+    <meta property="og:title" content="SQL and Business Logic">
+    <meta property="og:url" content="/blog/2017/06/sql-and-business-logic/">
+    <meta property="og:site_name" content="Dimitri Fontaine, PostgreSQL Expert">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Dimitri Fontaine, PostgreSQL Expert">
+    <meta name="twitter:description" content="Business logic is supposed to be the part of the application where you
+deal with customer or user facing decisions and computations. It is often
+argued that this part should be well separated from the rest of the
+technical infrastructure of your code. Of course, SQL and relational
+database design is meant to support your business cases (or user stories),
+so then we can ask ourselves if SQL should be part of your business logic
+implementation. Or actually, how much of your business logic should be SQL?
+
+">
+    
+      <meta name="twitter:creator" content="@tapoueh">
+    
+    
+
+    
+    
+
+    
+      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
+    
+
+    
+      <meta property="og:image" content="http://tapoueh.org/img/maze-inside-a-database.jpg">
+    
+    
+      <meta property="og:image" content="http://tapoueh.org/img/maze-inside-a-database.jpg">
+    
+    
+
+    
+
+    
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
+    
+    
+    <link rel="stylesheet" href="/css/style-u6mk0ojoywresbx8iepslrmmhl4stuhrsxuwhkpwrkrx7mryjcaimasnk4pi.min.css" />
+    
+    
+      <link rel="stylesheet" href="http://tapoueh.org//css/dim.css">
+    
+
+    
+      
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-47059482-1', 'auto');
+ga('send', 'pageview');
+</script>
+
+    
+    
+  </head>
+
+  <body>
+    <div id="blog">
+      <header id="header" data-behavior="2">
+  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+  <div class="header-title">
+    <a class="header-title-link" href="/">Dimitri Fontaine, PostgreSQL Expert</a>
+  </div>
+  
+</header>
+
+      <nav id="sidebar" data-behavior="2">
+  <div class="sidebar-container">
+    
+      <div class="sidebar-profile">
+        <a href="/#about">
+          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+        </a>
+        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
+        
+          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
+        
+      </div>
+    
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
+      
+      <span class="sidebar-button-desc">Blog</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/about/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
+      
+      <span class="sidebar-button-desc">About</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories/yesql/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-database"></i>
+      
+      <span class="sidebar-button-desc">YeSQL</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="http://masteringpostgresql.com" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
+      
+      <span class="sidebar-button-desc">Mastering PostgreSQL</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+      
+      <span class="sidebar-button-desc">GitHub</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+      
+      <span class="sidebar-button-desc">Twitter</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+      
+      <span class="sidebar-button-desc">Categories</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/index.xml">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+      
+      <span class="sidebar-button-desc">RSS</span>
+    </a>
+  </li>
+
+    </ul>
+  </div>
+</nav>
+
+      
+  <div class="post-header-cover
+              text-left
+              post-header-cover--partial"
+       style="background-image:url('/img/maze-inside-a-database.jpg')"
+       data-behavior="2">
+    
+  </div>
+
+
+      <div id="main" data-behavior="2"
+        class="hasCover
+               hasCoverMetaOut
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
+          
+            <div class="post-header main-content-wrap text-left">
+  
+    <h1 class="post-title" itemprop="headline">
+      SQL and Business Logic
+    </h1>
+  
+  <div class="postShorten-meta post-meta">
+  
+    <time itemprop="datePublished" datetime="2017-06-19T13:30:19&#43;02:00">
+      
+  
+  
+  
+  
+    Monday 19 Jun 2017
+  
+
+    </time>
+  
+  
+  
+  
+    <span></span>
+    
+      <a class="category-link" href="/categories/postgresql">PostgreSQL</a>, 
+    
+      <a class="category-link" href="/categories/yesql">YeSQL</a>
+    
+  
+
+
+</div>
+
+</div>
+          
+          <div class="post-content markdown" itemprop="articleBody">
+            <div class="main-content-wrap">
+              <p>Business logic is <em>supposed to be</em> the part of the application where you
+deal with customer or user facing decisions and computations. It is often
+argued that this part should be well separated from the rest of the
+technical infrastructure of your code. Of course, SQL and relational
+database design is meant to support your business cases (or user stories),
+so then we can ask ourselves if SQL should be part of your business logic
+implementation. Or actually, how much of your business logic should be SQL?</p>
+
+<p></p>
+
+<p>As the database model is meant to support your business activity as a whole,
+it&rsquo;s quite easy to see that the SQL schema you are working with already
+implements an important layer of your business logic. Its goal is to
+implement as much as possible of it, so that when you use the accounting,
+the back office and the user facing applications on top of it, they all
+share the same understanding of the database and respect the same set of
+validity constraints and consistency rules.</p>
+
+<p>My argument then is that every SQL query you send to the server embeds some
+business logic. Even those you didn&rsquo;t write because you&rsquo;re using that
+awesome ORM tool… but what does your ORM knows exactly about your business
+case, or your user stories?</p>
+
+<h1 id="table-of-contents"></h1><nav id="TableOfContents">
+<ul>
+<li><a href="#a-very-simple-example">A very simple example</a></li>
+<li><a href="#business-logic-in-the-application-code">Business Logic in the Application Code</a></li>
+<li><a href="#correctness">Correctness</a></li>
+<li><a href="#efficiency">Efficiency</a></li>
+<li><a href="#maintenance">Maintenance</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+</nav>
+
+<h1 id="a-very-simple-example">A very simple example</h1>
+
+<p>In the following example, we are going to first define a business case we
+want to implement, and then have a look at the SQL statement that we would
+be using to solve it. We are using
+the <a href="https://github.com/lerocha/chinook-database/">Chinook database</a> again,
+it models a music collection of tracks, artists, albums, and genre.</p>
+
+<div class="alert info ">
+  <p>With the latest <a href="http://pgloader.io/">pgloader</a> code (yet to be released at
+the time of this writing), you can install the Chinook database in a single
+command:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>$ createdb chinook
+$ pgloader https://github.com/lerocha/chinook-database/raw/master/ChinookDatabase/DataSources/Chinook_Sqlite_AutoIncrementPKs.sqlite pgsql:///chinook
+</pre></div>
+
+<p>Well ok a single command line once you&rsquo;ve created the target database. I
+guess that makes it two commands.</p>
+</div>
+
+<p>Let&rsquo;s pick quite a simple user story: display the list of albums from a
+given artist, each with its total duration.</p>
+
+<p>In the Chinook model we have a per-track duration field, named
+<em>milliseconds</em>. Each track is associated with an album through its
+<em>albumid</em>, and each album is the work of one artist that we reach through
+<em>artistid</em>. Let&rsquo;s write a query for solving our business case:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>  <span style="color: #0000aa">select</span> album.title <span style="color: #0000aa">as</span> album,
+         <span style="color: #0000aa">sum</span>(milliseconds) * <span style="color: #00aaaa">interval</span> <span style="color: #aa5500">&#39;1 ms&#39;</span> <span style="color: #0000aa">as</span> duration
+    <span style="color: #0000aa">from</span> album
+         <span style="color: #0000aa">join</span> artist <span style="color: #0000aa">using</span>(artistid)
+         <span style="color: #0000aa">left</span> <span style="color: #0000aa">join</span> track <span style="color: #0000aa">using</span>(albumid)
+   <span style="color: #0000aa">where</span> artist.name = <span style="color: #aa5500">&#39;Red Hot Chili Peppers&#39;</span>
+<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> album
+<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> album;
+</pre></div>
+
+<p>The output is:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>         album         |           duration           
+<span style="color: #aaaaaa; font-style: italic">-----------------------+------------------------------</span>
+ Blood Sugar Sex Magik | @ <span style="color: #009999">1</span> <span style="color: #0000aa">hour</span> <span style="color: #009999">13</span> mins <span style="color: #009999">57.073</span> secs
+ <span style="color: #0000aa">By</span> The Way            | @ <span style="color: #009999">1</span> <span style="color: #0000aa">hour</span> <span style="color: #009999">8</span> mins <span style="color: #009999">49.951</span> secs
+ Californication       | @ <span style="color: #009999">56</span> mins <span style="color: #009999">25.461</span> secs
+(<span style="color: #009999">3</span> <span style="color: #0000aa">rows</span>)
+</pre></div>
+
+<p>What we see here is a direct translation from the business case (or user
+story if you prefer that term) into a SQL query. The SQL implementation uses
+joins and computations that are specific to both the data model and the use
+case we are solving.</p>
+
+<h1 id="business-logic-in-the-application-code">Business Logic in the Application Code</h1>
+
+<p>Now, we could decide that the application&rsquo;s code is where to implement our
+business case, because that&rsquo;s easier to maintain in the long run. I wrote a
+direct implementation of the Chinook model in Python and then wrote the same
+query against the Python model.</p>
+
+<p>The goal of this Python exercise is to obtain classic application&rsquo;s code and
+to mimic to some degree the usual layers of abstractions such as found in
+ORM librairies. Here goes:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #aaaaaa; font-style: italic">#! /usr/bin/env python3</span>
+<span style="color: #aaaaaa; font-style: italic"># -*- coding: utf-8 -*-</span>
+
+<span style="color: #0000aa">import</span> <span style="color: #00aaaa; text-decoration: underline">psycopg2</span>
+<span style="color: #0000aa">import</span> <span style="color: #00aaaa; text-decoration: underline">psycopg2.extras</span>
+<span style="color: #0000aa">import</span> <span style="color: #00aaaa; text-decoration: underline">sys</span>
+<span style="color: #0000aa">from</span> <span style="color: #00aaaa; text-decoration: underline">datetime</span> <span style="color: #0000aa">import</span> timedelta
+
+DEBUGSQL = <span style="color: #00aaaa">False</span>
+PGCONNSTRING = <span style="color: #aa5500">&quot;dbname=chinook application_name=cdstore&quot;</span>
+
+
+<span style="color: #0000aa">class</span> <span style="color: #00aa00; text-decoration: underline">Model</span>(<span style="color: #00aaaa">object</span>):
+    tablename = <span style="color: #00aaaa">None</span>
+    columns = <span style="color: #00aaaa">None</span>
+
+    <span style="color: #888888">@classmethod</span>
+    <span style="color: #0000aa">def</span> <span style="color: #00aa00">buildsql</span>(<span style="color: #00aaaa">cls</span>, pgconn, **kwargs): ...
+
+    <span style="color: #888888">@classmethod</span>
+    <span style="color: #0000aa">def</span> <span style="color: #00aa00">fetchone</span>(<span style="color: #00aaaa">cls</span>, pgconn, **kwargs): ...
+
+    <span style="color: #888888">@classmethod</span>
+    <span style="color: #0000aa">def</span> <span style="color: #00aa00">fetchall</span>(<span style="color: #00aaaa">cls</span>, pgconn, **kwargs): ...
+
+
+<span style="color: #0000aa">class</span> <span style="color: #00aa00; text-decoration: underline">Artist</span>(Model):
+    tablename = <span style="color: #aa5500">&quot;artist&quot;</span>
+    columns = [<span style="color: #aa5500">&quot;artistid&quot;</span>, <span style="color: #aa5500">&quot;name&quot;</span>]
+    ...
+
+
+<span style="color: #0000aa">class</span> <span style="color: #00aa00; text-decoration: underline">Album</span>(Model):
+    tablename = <span style="color: #aa5500">&quot;album&quot;</span>
+    columns = [<span style="color: #aa5500">&quot;albumid&quot;</span>, <span style="color: #aa5500">&quot;title&quot;</span>]
+    ...
+
+
+<span style="color: #0000aa">class</span> <span style="color: #00aa00; text-decoration: underline">Track</span>(Model):
+    tablename = <span style="color: #aa5500">&quot;track&quot;</span>
+    columns = [<span style="color: #aa5500">&quot;trackid&quot;</span>, <span style="color: #aa5500">&quot;name&quot;</span>, <span style="color: #aa5500">&quot;milliseconds&quot;</span>, <span style="color: #aa5500">&quot;bytes&quot;</span>, <span style="color: #aa5500">&quot;unitprice&quot;</span>]
+    ...
+
+
+<span style="color: #0000aa">if</span> <span style="color: #aa0000">__name__</span> == <span style="color: #aa5500">&#39;__main__&#39;</span>:
+    <span style="color: #0000aa">if</span> <span style="color: #00aaaa">len</span>(sys.argv) &gt; <span style="color: #009999">1</span>:
+        pgconn = psycopg2.connect(PGCONNSTRING)
+        artist = Artist.fetchone(pgconn, name=sys.argv[<span style="color: #009999">1</span>])
+
+        <span style="color: #0000aa">for</span> album <span style="color: #0000aa">in</span> Album.fetchall(pgconn, artistid=artist.id):
+            ms = <span style="color: #009999">0</span>
+            <span style="color: #0000aa">for</span> track <span style="color: #0000aa">in</span> Track.fetchall(pgconn, albumid=album.id):
+                ms += track.duration
+
+            duration = timedelta(milliseconds=ms)
+            <span style="color: #0000aa">print</span>(<span style="color: #aa5500">&quot;%25s: %s&quot;</span> % (album.title, duration))
+    <span style="color: #0000aa">else</span>:
+        <span style="color: #0000aa">print</span>(<span style="color: #aa5500">&#39;albums.py &lt;artist name&gt;&#39;</span>)
+</pre></div>
+
+<p>When we run the code we have the same result as before with the query:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>$ ./albums.py <span style="color: #aa5500">&quot;Red Hot Chili Peppers&quot;</span>
+    Blood Sugar Sex Magik: <span style="color: #009999">1</span>:13:57.073000
+               By The Way: <span style="color: #009999">1</span>:08:49.951000
+          Californication: <span style="color: #009999">0</span>:56:25.461000
+</pre></div>
+
+<p>What can we learn about those two implementations of the same business case?</p>
+
+<h1 id="correctness">Correctness</h1>
+
+<p>In the application&rsquo;s code implementation we are doing 5 queries instead of
+one. What happens if an album had been badly assigned to our artist and is
+reassigned while our program runs? Well we might fetch the album, but then
+fail to find any track associated with it in the next query thus report a
+zero duration.</p>
+
+<p>In this business case it might not be very costly, well except if you charge
+by album&rsquo;s duration in some kind of library access and you&rsquo;re stuck in the
+90s for some reason.</p>
+
+<p>What I mean is that it&rsquo;s easy to transpose this example to your own business
+and see if you are subject to correctness issues in your implementation.
+Doing several queries without setting a
+proper
+<a href="https://www.postgresql.org/docs/current/static/transaction-iso.html">Transaction Isolation Level</a> will
+undoubtly open the door of inconsistencies in the information your
+application retrieves. Maybe for billing purposes.</p>
+
+<h1 id="efficiency">Efficiency</h1>
+
+<p>Another problem with the application&rsquo;s code implementation as written is
+with its very bad efficiency. As this artists has 3 albums in our data set,
+we are doing 5 queries here. In my test environement the query runs in about
+2ms on the server… laptop really. The network ping in a real setup is
+usually around 1ms or 2ms, so when going from a single 2ms query to 5
+simpler queries you are actually adding 4 round-trips to your application.</p>
+
+<p>So for the same result, 5 queries, say 1ms each, with a very good 1ms
+round-trip, that&rsquo;s already 10ms instead of 3ms in the single-query case.</p>
+
+<p>Also the Python code now needs to retrieve way more information than needed
+and will store and scan that in the local memory. So we are consuming a
+disproportionate amount of memory, network latency and network bandwidth
+compared to the SQL only solution. Our PostgreSQL server still has to fetch
+the same amount of data in its backend&rsquo;s memory, and scan the tracks
+<em>milliseconds</em> to compute each album&rsquo;s duration. Good chances are that those
+data (if considered <em>hot</em> in your application) are already cached in memory
+tho.</p>
+
+<p>And this is not the only problem. In terms of scalability of your
+application, running 5 times as many queries might not turn cheap. Maybe you
+don&rsquo;t need this size of a caching layer in front of your API servers after
+all…</p>
+
+<h1 id="maintenance">Maintenance</h1>
+
+<p>In terms of code maitenance we have to compare the SQL with only those 9
+lines of Python code:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>artist = Artist.fetchone(pgconn, name=sys.argv[<span style="color: #009999">1</span>])
+
+<span style="color: #0000aa">for</span> album <span style="color: #0000aa">in</span> Album.fetchall(pgconn, artistid=artist.id):
+    ms = <span style="color: #009999">0</span>
+    <span style="color: #0000aa">for</span> track <span style="color: #0000aa">in</span> Track.fetchall(pgconn, albumid=album.id):
+        ms += track.duration
+
+    duration = timedelta(milliseconds=ms)
+    <span style="color: #0000aa">print</span>(<span style="color: #aa5500">&quot;%25s: %s&quot;</span> % (album.title, duration))
+</pre></div>
+
+<p>With the equivalent query written as:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>  <span style="color: #0000aa">select</span> album.title <span style="color: #0000aa">as</span> album,
+         <span style="color: #0000aa">sum</span>(milliseconds) * <span style="color: #00aaaa">interval</span> <span style="color: #aa5500">&#39;1 ms&#39;</span> <span style="color: #0000aa">as</span> duration
+    <span style="color: #0000aa">from</span> album
+         <span style="color: #0000aa">join</span> artist <span style="color: #0000aa">using</span>(artistid)
+         <span style="color: #0000aa">left</span> <span style="color: #0000aa">join</span> track <span style="color: #0000aa">using</span>(albumid)
+   <span style="color: #0000aa">where</span> artist.name = <span style="color: #aa5500">&#39;Red Hot Chili Peppers&#39;</span>
+<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> album
+<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> album;
+</pre></div>
+
+<p>It seems to me that the expected maintenance burden of both the solution are
+roughly equivalent. The main difference is that in the second case
+PostgreSQL is smart enough to pick the proper join algorithm depending on
+the size of the different data sets involved and the defined indexes, where
+in the Python code we manually express a <em>nested loop</em> and would have to
+manually code up a <em>hash join</em> or a <em>merge join</em> should the data set size
+come to require it.</p>
+
+<p>A somewhat interesting maintenance case to consider would be to change the
+result ordering. Say now we want to display the album list sorted by album&rsquo;s
+duration, shortest first.</p>
+
+<div class="alert warning ">
+  <p>Exercice to the reader: implement the new ordering specification in the
+application&rsquo;s code, where you deal with business logic.</p>
+
+<p>Note that the Chinook database model does not have a per-album duration so
+you can&rsquo;t rely on <code>.orderBy(duration)</code> or something like that at your ORM
+layer.</p>
+</div>
+
+<p>In the SQL solution, this translates to changing the <em>order by</em> clause of
+course, and the change is easy for your peers to review before your commit
+makes it to the release branch:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #aa0000">-order by album;</span>
+<span style="color: #00aa00">+order by duration;</span>
+</pre></div>
+
+<p>Unfortunately we don&rsquo;t have the album&rsquo;s date of release in the Chinook
+database model, that would be the proper ordering here I guess.</p>
+
+<h1 id="conclusion">Conclusion</h1>
+
+
+
+
+<div class="figure fig25 right dim-margin" >
+  
+    <img class="fig-img" src="/img/old/sql-logo.png"  alt="PostgreSQL is YeSQL">
+  
+   
+    <span class="caption">PostgreSQL is YeSQL</span>
+  
+</div>
+
+
+<p>Of course SQL is meant to implement <em>business logic</em>, and that doesn&rsquo;t mean
+you need to resort to Stored Procedure to do so. I find that in too many
+cases, modern developers tend to forget about basic application&rsquo;s
+architecture and like to pretend they can live with a single application&rsquo;s
+programming language in the backend.</p>
+
+<p>So it&rsquo;s time to properly <strong>learn SQL</strong> and use it to its full potential as
+part of your backend source code, as we saw
+in <a href="/blog/2017/06/anonsql.md">How to Write SQL</a> previously here. And
+remember, <strong><em>if you think education is expensive, try ignorance</em></strong>.</p>
+              
+            </div>
+          </div>
+          <div id="post-footer" class="post-footer main-content-wrap">
+            
+              
+                
+                
+                  <div class="post-footer-tags">
+                    <span class="text-color-light text-small"></span><br/>
+                    
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/postgresql/">PostgreSQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/yesql/">YeSQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/python/">Python</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/anosql/">AnoSQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/sql/">SQL</a>
+
+                  </div>
+                
+              
+            
+            <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    <script async id="_ck_218061" src="https://forms.convertkit.com/218061?v=6"></script>
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2017/06/exploring-a-data-set-in-sql/" data-tooltip="Exploring a Data Set in SQL">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f06%2fsql-and-business-logic%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f06%2fsql-and-business-logic%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=SQL%20and%20Business%20Logic with @tapoueh: http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f06%2fsql-and-business-logic%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+            
+              
+                <div id="disqus_thread">
+  <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+              
+            
+          </div>
+        </article>
+        <footer id="footer" class="main-content-wrap">
+  <span class="copyrights">
+    &copy; 2017 Dimitri Fontaine. 
+  </span>
+</footer>
+
+      </div>
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="2">
+        <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    <script async id="_ck_218061" src="https://forms.convertkit.com/218061?v=6"></script>
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2017/06/exploring-a-data-set-in-sql/" data-tooltip="Exploring a Data Set in SQL">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f06%2fsql-and-business-logic%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f06%2fsql-and-business-logic%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=SQL%20and%20Business%20Logic with @tapoueh: http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f06%2fsql-and-business-logic%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+      </div>
+      <div id="share-options-bar" class="share-options-bar" data-behavior="2">
+  <ul class="share-options">
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f06%2fsql-and-business-logic%2f">
+        <i class="fa fa-google-plus"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f06%2fsql-and-business-logic%2f">
+        <i class="fa fa-facebook-official"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=SQL%20and%20Business%20Logic with @tapoueh: http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f06%2fsql-and-business-logic%2f">
+        <i class="fa fa-twitter"></i><span></span>
+      </a>
+    </li>
+  </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
+    </div>
+    
+    <div id="about">
+  <div id="about-card">
+    <div id="about-btn-close">
+      <i class="fa fa-remove"></i>
+    </div>
+    
+      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+    
+    <h4 id="about-card-name">Dimitri Fontaine</h4>
+    
+      <div id="about-card-bio">PostgreSQL Major Contributor</div>
+    
+    
+      <div id="about-card-job">
+        <i class="fa fa-briefcase"></i>
+        <br/>
+        Open Source Software Engineer
+      </div>
+    
+    
+      <div id="about-card-location">
+        <i class="fa fa-map-marker"></i>
+        <br/>
+        France
+      </div>
+    
+  </div>
+</div>
+
+    <div id="algolia-search-modal" class="modal-container">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="close-button"><i class="fa fa-close"></i></span>
+      <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+        <span class="searchby-algolia-text text-color-light text-small">by</span>
+        <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+      </a>
+      <i class="search-icon fa fa-search"></i>
+      <form id="algolia-search-form">
+        <input type="text" id="algolia-search-input" name="search"
+          class="form-control input--large search-input" placeholder="" />
+      </form>
+    </div>
+    <div class="modal-body">
+      <div class="no-result text-color-light text-center"></div>
+      <div class="results">
+        
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/06/sql-and-business-logic/">
+                <h3 class="media-heading">SQL and Business Logic</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Business logic is <em>supposed to be</em> the part of the application where you
+deal with customer or user facing decisions and computations. It is often
+argued that this part should be well separated from the rest of the
+technical infrastructure of your code. Of course, SQL and relational
+database design is meant to support your business cases (or user stories),
+so then we can ask ourselves if SQL should be part of your business logic
+implementation. Or actually, how much of your business logic should be SQL?</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/06/exploring-a-data-set-in-sql/">
+                <h3 class="media-heading">Exploring a Data Set in SQL</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Sometimes you need to dive in an existing data set that you know very little
+about. Let&rsquo;s say we&rsquo;ve been lucky to have had a high level description of
+the business case covered by a database, and then access to it. Our next
+step is figuring out data organisation, content and quality. Our tool box:
+<em>the world&rsquo;s most advanced open source
+database</em>, <a href="https://www.postgresql.org">PostgreSQL</a>, and its <em>Structured
+Query Language</em>, SQL.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/06/how-to-write-sql/">
+                <h3 class="media-heading">How to Write SQL</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p><a href="https://twitter.com/krisajenkins">Kris Jenkins</a> cooked up a very nice way
+to embed SQL in your
+code: <a href="https://github.com/krisajenkins/yesql">YeSQL for Clojure</a>. The main
+idea is that you should be writing your SQL queries in <code>.sql</code> files in your
+code repository and maintain them there.</p>
+
+<p>The idea is very good and it is now possible to find alternative
+implementations of the <a href="https://clojure.org">Clojure</a> <em>yesql</em> library in
+other languages. Today, we are going to have a look at one of them for
+the <a href="https://www.python.org">python</a> programming
+language: <a href="https://github.com/honza/anosql">anosql</a>.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/05/find-the-missing-integer/">
+                <h3 class="media-heading">Find The Missing Integer</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>A recent interview question that I had to review was spelled like this:</p>
+
+<blockquote>
+<p>Find missing int element into array 1..100</p>
+</blockquote>
+
+<p>Of course at first read I got it wrong, you have only one integer to look
+for into the array. So while the obvious idea was to apply classic <em>sorting</em>
+techniques and minimize array traversal to handle complexity (time and
+space), it turns out there&rsquo;s a much simpler way to do it if you remember
+your math lessons from younger. But is it that much simpler?</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2016/04/pgconf-us-2016/">
+                <h3 class="media-heading">PGConf US 2016</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2016
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p><a href="https://www.pgconf.us/conferences/2016">PostgreSQL Conference US</a> took
+place in New York City and I had the pleasure to be a speaker there. I
+presented there a talk about why <em>You’d Better Have Tested Backups</em>. The
+important bit is that backups are not interesting, recoveries are. Also the
+only way to make sure a backup is successful is to be able to use it for
+recovery.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/11/all-your-base-conference-2015/">
+                <h3 class="media-heading">All Your Base Conference 2015</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Nov 11, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>I had the pleasure to be invited to speak at
+<a href="http://allyourbaseconf.com/2015/speakers#dimitri-fontaine">All Your Base Conference 2015</a>
+about
+<a href="http://www.postgresql.org">PostgreSQL</a> (of course). The conference gathers together lots of user
+experience around data management and database products, either in the now
+classic meaning of the word (I mean
+<em>relational database management systems
+here</em>) or the newer set of trade-offs represented by the NoSQL set of tools.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/05/postgresql-au-jug-de-montpellier/">
+                <h3 class="media-heading">PostgreSQL au JUG de Montpellier</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>J&rsquo;ai eu le plaisir de présenter PostgreSQL au
+<a href="http://www.jug-montpellier.org/">Java User Group de Montpellier</a>
+le 20 mai dernier dans le cadre d&rsquo;une soirée
+<a href="http://www.jug-montpellier.org/event/36">PostgreSQL is YeSQL</a>. L&rsquo;accueil
+réservé par le
+<em>JUG</em> a été parfait et je tiens à les remercier pour une très
+bonne soirée de partage et d&rsquo;échanges autour de PostgreSQL.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/05/quicklisp-and-debian/">
+                <h3 class="media-heading">Quicklisp and debian</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Common Lisp users are very happy to use
+<a href="https://www.quicklisp.org/beta/">Quicklisp</a> when it comes to
+downloading and maintaining dependencies between their own code and the
+<a href="http://quickdocs.org/">librairies</a> it is using.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/04/pgday-paris/">
+                <h3 class="media-heading">pgDay Paris</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Le 21 avril prochain se tient le premier
+<a href="http://pgday.paris/">pgDay Paris</a>: une conférence
+<a href="http://www.postgresql.org/">PostgreSQL</a> d&rsquo;une journée complète. Il s&rsquo;agit de 8 conférences sur votre base
+de données préférée par des conférencers internationaux, incluant des
+retours d&rsquo;expérience et une analyse de l&rsquo;utilisation des derniers
+développements en cours dans notre projet de base de données préféré.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/03/a-pgday-in-paris/">
+                <h3 class="media-heading">a pgDay in Paris!</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Mar 3, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>I was lucky to participate as a speaker to the
+<a href="http://2015.nordicpgday.org/">Nordic PostgreSQL Day 2015</a>
+and it&rsquo;s been another awesome edition of the conference. Really smooth,
+everything has been running as it should, with about one hundred people at
+the conference.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+      </div>
+    </div>
+    <div class="modal-footer">
+      <p class="results-count text-medium"
+         data-message-zero=""
+         data-message-one=""
+         data-message-other="">
+         234 posts found
+      </p>
+    </div>
+  </div>
+</div>
+    
+  
+    
+    <div id="cover" style="background-image:url('http://tapoueh.org/images/Tree_Of_Light_by_lowapproach.jpg');"></div>
+  
+
+
+    
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.8.0/highlight.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.js"></script>
+
+
+<script src="/js/script-wl33z0n6ocaypepiqrazthtivfrliqijej4rq8ek8gvrv1awftmgjuv8k4zc.min.js"></script>
+
+<script>
+$(document).ready(function() {
+  hljs.configure({ classPrefix: '', useBR: false });
+  $('pre.code-highlight').each(function(i, block) {
+    var code = "";
+    hljs.highlightAuto(block.innerText).value.split(/\r\n|\r|\n/).forEach(function(line) {
+      code += "<span class=\"line\">" + line + "</span><br>";
+    });
+    if (code.length > 0) {
+      block.innerHTML = code;  
+    }
+  });
+  $('pre > code').each(function(i, block) {
+    $(this).addClass('codeblock');
+    hljs.highlightBlock(block);
+  });
+});
+</script>
+
+  
+    
+      <script>
+        var disqus_config = function () {
+          this.page.url = 'http:\/\/tapoueh.org\/blog\/2017\/06\/sql-and-business-logic\/';
+          
+            this.page.identifier = '\/blog\/2017\/06\/sql-and-business-logic\/'
+          
+        };
+        (function() {
+          
+          
+          if (window.location.hostname == "localhost") {
+            return;
+          }
+          var d = document, s = d.createElement('script');
+          var disqus_shortname = 'tapoueh';
+          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+          s.setAttribute('data-timestamp', +new Date());
+          (d.head || d.body).appendChild(s);
+        })();
+      </script>
+    
+  
+
+
+
+
+
+    
+  </body>
+</html>
+
