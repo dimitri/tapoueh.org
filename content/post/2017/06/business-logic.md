@@ -303,5 +303,5 @@ programming language in the backend.
 
 So it's time to properly **learn SQL** and use it to its full potential as
 part of your backend source code, as we saw
-in [How to Write SQL](/blog/2017/06/anonsql.md) previously here. And
+in [How to Write SQL](/blog/2017/06/how-to-write-sql/) previously here. And
 remember, ***if you think education is expensive, try ignorance***.
