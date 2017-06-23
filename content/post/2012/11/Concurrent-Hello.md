@@ -5,21 +5,21 @@ tags = ["Common-Lisp"]
 categories = ["Software Programming","Common Lisp"]
 thumbnailImage = "/img/old/made-with-lisp.png"
 thumbnailImagePosition = "left"
-coverImage = "/img/old/made-with-lisp.png"
+coverImage = "/img/multithreaded-programming.jpg"
 coverSize = "partial"
 coverMeta = "out"
 aliases = ["/blog/2012/11/04-Concurrent-Hello",
            "/blog/2012/11/04-Concurrent-Hello.html"]
 +++
 
-Thanks to 
-[Mickael](https://twitter.com/mickael/status/265191809100181504) on 
-*twitter* I ran into that article about implementing a
-very basic 
-*Hello World!* program as a way to get into a new concurrent
-language or facility. The original article, titled
-[Concurrent Hello World in Go, Erlang and C++](http://himmele.blogspot.de/2012/11/concurrent-hello-world-in-go-erlang.html) is all about getting to know
-[The Go Programming Language](http://golang.org/) better.
+Thanks to [Mickael](https://twitter.com/mickael/status/265191809100181504)
+on *twitter* I ran into that article about implementing a very basic *Hello
+World!* program as a way to get into a new concurrent language or facility.
+The original article,
+titled
+[Concurrent Hello World in Go, Erlang and C++](http://himmele.blogspot.de/2012/11/concurrent-hello-world-in-go-erlang.html) is
+all about getting to know [The Go Programming Language](http://golang.org/)
+better.
 
 To quote the article:
 
@@ -31,14 +31,11 @@ To quote the article:
 > "Hello World!\n".
 
 
-Here's my try in 
-[Common Lisp](http://cliki.net/) using 
-[lparallel](http://lparallel.org/) and some 
-*local nicknames*, the
-whole 
-`23` lines of it:
+Here's my try in [Common Lisp](http://cliki.net/)
+using [lparallel](http://lparallel.org/) and some *local nicknames*, the
+whole `23` lines of it:
 
-~~~
+~~~ lisp
 (defun say-hello (helloq worldq n)
   (dotimes (i n)
     (format t "Hello ")
@@ -66,36 +63,26 @@ whole
 
 
 If you want to play locally with that code, I've been updating it to a
-*github* project named 
-[go-hello-world](https://github.com/dimitri/go-hello-world), even if it's coded in 
-*CL*. See the
-`package.lisp` in there for how I did enable the 
-*local nicknames* 
-`lp` and 
-`lq` for
-the 
-*lparallel* packages.
+*github* project
+named [go-hello-world](https://github.com/dimitri/go-hello-world), even if
+it's coded in *CL*. See the `package.lisp` in there for how I did enable the
+*local nicknames* `lp` and `lq` for the *lparallel* packages.
 
 
 ## Beware of the REPL
 
 In a previous version of this very article, I said that sometimes I get an
 extra line feed in the output and I didn't understand why. Some great Common
-Lisp folks did hint me about that: it's the 
-*REPL* output that get
-intermingled with the program output, and that's because the 
-`hello-world`
+Lisp folks did hint me about that: it's the *REPL* output that get
+intermingled with the program output, and that's because the `hello-world`
 main function was returning before the thing is over.
 
-I've added a 
-`receive-result` call in it per worker so that it waits until the
-end of the program before returning to the 
-*REPL*, and that indeed fixes it. A
-way to assert that is using the 
-`time` macro, which was always intermingled
-with the output before. It's fixed now:
+I've added a `receive-result` call in it per worker so that it waits until
+the end of the program before returning to the *REPL*, and that indeed fixes
+it. A way to assert that is using the `time` macro, which was always
+intermingled with the output before. It's fixed now:
 
-~~~
+~~~ lisp
 CL-USER> (time (go-hello-world:hello-world 1000))
 Hello World!
 ...
@@ -116,18 +103,14 @@ CL-USER>
 
 ## Conclusion
 
-While 
-*Go* language seems to bring very interesting things on the table, such
-as better compilation units and tools, I still think that the concurrency
-primitives at the core of it are easy to find in other places. Which is a
-good thing, as it means we know they work.
+While *Go* language seems to bring very interesting things on the table,
+such as better compilation units and tools, I still think that the
+concurrency primitives at the core of it are easy to find in other places.
+Which is a good thing, as it means we know they work.
 
-That also means that we don't need to accept 
-*Go* syntax as the only way to
-properly solve that 
-*concurrency* problem, I much prefer doing so with 
-*Common
-Lisp* (lack of?) syntax myself.
+That also means that we don't need to accept *Go* syntax as the only way to
+properly solve that *concurrency* problem, I much prefer doing so with
+*Common Lisp* (lack of?) syntax myself.
 
 
 ## Update
@@ -135,6 +118,5 @@ Lisp* (lack of?) syntax myself.
 A previous version of this article was finished and published too quickly,
 and the conclusion was made from a buggy version of the program. It's all
 fixed now. Thanks a lot to people who contributed comments so that I could
-fix it, and thanks again to 
-*James M. Lawrence* for 
-[lparallel](http://lparallel.org/)!
+fix it, and thanks again to *James M. Lawrence*
+for [lparallel](http://lparallel.org/)!

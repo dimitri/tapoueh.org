@@ -264,102 +264,93 @@ ga('send', 'pageview');
             <div class="main-content-wrap">
               
 
-<p>A while ago I stumbled upon
-<a href="http://tapoueh.org/blog/2010/08/30-happy-numbers.html">Happy Numbers</a> as explained in
-<a href="http://programmingpraxis.com/2010/07/23/happy-numbers/">programming praxis</a>, and offered an implementation of them in
-<code>SQL</code> and in
-<code>Emacs Lisp</code>. Yeah, I know. Why not, though?</p>
+<p>A while ago I stumbled
+upon <a href="http://tapoueh.org/blog/2010/08/30-happy-numbers.html">Happy Numbers</a>
+as explained
+in
+<a href="http://programmingpraxis.com/2010/07/23/happy-numbers/">programming praxis</a>,
+and offered an implementation of them in <code>SQL</code> and in <code>Emacs Lisp</code>. Yeah, I
+know. Why not, though?</p>
 
-<p>Today I&rsquo;m back on that topic and as I&rsquo;m toying with
-<em>Common Lisp</em> I though it
-would be a good excuse to learn me some new tricks. As you can see from the
-earlier blog entry, last time I did attack the
-<em>digits</em> problem quite lightly.
-Let&rsquo;s try a better approach now.</p>
+<p>Today I&rsquo;m back on that topic and as I&rsquo;m toying with <em>Common Lisp</em> I though
+it would be a good excuse to learn me some new tricks. As you can see from
+the earlier blog entry, last time I did attack the <em>digits</em> problem quite
+lightly. Let&rsquo;s try a better approach now.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>(<span style="color: #00aaaa">defun</span> <span style="color: #aa0000">digits</span> (<span style="color: #aa0000">n</span>)
+  <span style="color: #aa5500">&quot;return the list of the digits of N&quot;</span>
+  (<span style="color: #00aaaa">nreverse</span>
+   (<span style="color: #00aaaa">loop</span> <span style="color: #0000aa">:for</span> <span style="color: #aa0000">x</span> <span style="color: #0000aa">:=</span> <span style="color: #aa0000">n</span> <span style="color: #0000aa">:then</span> <span style="color: #aa0000">r</span>
+      <span style="color: #0000aa">:for</span> (<span style="color: #aa0000">r</span> <span style="color: #aa0000">d</span>) <span style="color: #0000aa">:=</span> (<span style="color: #00aaaa">multiple-value-list</span> (<span style="color: #00aaaa">truncate</span> <span style="color: #aa0000">x</span> <span style="color: #009999">10</span>))
+      <span style="color: #0000aa">:collect</span> <span style="color: #aa0000">d</span>
+      <span style="color: #0000aa">:until</span> (<span style="color: #00aaaa">zerop</span> <span style="color: #aa0000">r</span>))))
+</pre></div>
 
-<pre><code>(defun digits (n)
-  &quot;return the list of the digits of N&quot;
-  (nreverse
-   (loop for x = n then r
-      for (r d) = (multiple-value-list (truncate x 10))
-      collect d
-      until (zerop r))))
-</code></pre>
-
-<p>As you can see I wanted to use that facility I like very much, the
-<code>for
-x = n then r</code> way to handle first loop iteration differently from the
-next ones. But I&rsquo;ve been hinted on
-<code>#lisp</code> that there&rsquo;s a much better way to
-write same code:</p>
-
-<pre><code>(defun integer-digits (integer)
-  &quot;stassats version&quot;
-  (nreverse
-   (loop with remainder
-      do (setf (values integer remainder) (truncate integer 10))
-      collect remainder
-      until (zerop integer))))
-</code></pre>
+<p>As you can see I wanted to use that facility I like very much, the <code>for x =
+n then r</code> way to handle first loop iteration differently from the next ones.
+But I&rsquo;ve been hinted on <code>#lisp</code> that there&rsquo;s a much better way to write same
+code:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>(<span style="color: #00aaaa">defun</span> <span style="color: #aa0000">integer-digits</span> (<span style="color: #00aa00; text-decoration: underline">integer</span>)
+  <span style="color: #aa5500">&quot;stassats version&quot;</span>
+  (<span style="color: #00aaaa">nreverse</span>
+   (<span style="color: #00aaaa">loop</span> <span style="color: #0000aa">:with</span> <span style="color: #aa0000">remainder</span>
+      <span style="color: #0000aa">:do</span> (<span style="color: #00aaaa">setf</span> (<span style="color: #00aaaa">values</span> <span style="color: #00aa00; text-decoration: underline">integer</span> <span style="color: #aa0000">remainder</span>) (<span style="color: #00aaaa">truncate</span> <span style="color: #00aa00; text-decoration: underline">integer</span> <span style="color: #009999">10</span>))
+      <span style="color: #0000aa">:collect</span> <span style="color: #aa0000">remainder</span>
+      <span style="color: #0000aa">:until</span> (<span style="color: #00aaaa">zerop</span> <span style="color: #00aa00; text-decoration: underline">integer</span>))))
+</pre></div>
 
 <p>That code runs about twice as fast as the previous one and is easier to
-reason about. It&rsquo;s using
-<code>setf</code> and the form
-<a href="http://www.lispworks.com/documentation/lw51/CLHS/Body/f_values.htm">setf values</a>, something nice to
-discover as it seems to be quite powerful. Let&rsquo;s see how to use it, even if
-it&rsquo;s really simple:</p>
+reason about. It&rsquo;s using <code>setf</code> and the
+form
+<a href="http://www.lispworks.com/documentation/lw51/CLHS/Body/f_values.htm">setf values</a>,
+something nice to discover as it seems to be quite powerful. Let&rsquo;s see how
+to use it, even if it&rsquo;s really simple:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #aa0000">CL-USER&gt;</span> (<span style="color: #aa0000">integer-digits</span> <span style="color: #009999">12304501</span>)
+(<span style="color: #009999">1</span> <span style="color: #009999">2</span> <span style="color: #009999">3</span> <span style="color: #009999">0</span> <span style="color: #009999">4</span> <span style="color: #009999">5</span> <span style="color: #009999">0</span> <span style="color: #009999">1</span>)
+</pre></div>
 
-<pre><code>CL-USER&gt; (integer-digits 12304501)
-(1 2 3 0 4 5 0 1)
-</code></pre>
+<p>Let&rsquo;s move on to solving the <em>Happy Numbers</em> problem though:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>(<span style="color: #00aaaa">defun</span> <span style="color: #aa0000">sum-of-squares-of-digits</span> (<span style="color: #00aa00; text-decoration: underline">integer</span>)
+  (<span style="color: #00aaaa">loop</span> <span style="color: #0000aa">:with</span> <span style="color: #aa0000">remainder</span>
+     <span style="color: #0000aa">:do</span> (<span style="color: #00aaaa">setf</span> (<span style="color: #00aaaa">values</span> <span style="color: #00aa00; text-decoration: underline">integer</span> <span style="color: #aa0000">remainder</span>) (<span style="color: #00aaaa">truncate</span> <span style="color: #00aa00; text-decoration: underline">integer</span> <span style="color: #009999">10</span>))
+     <span style="color: #0000aa">:sum</span> (<span style="color: #00aaaa">*</span> <span style="color: #aa0000">remainder</span> <span style="color: #aa0000">remainder</span>)
+     <span style="color: #0000aa">:until</span> (<span style="color: #00aaaa">zerop</span> <span style="color: #00aa00; text-decoration: underline">integer</span>)))
 
-<p>Let&rsquo;s move on to solving the
-<em>Happy Numbers</em> problem though:</p>
+(<span style="color: #00aaaa">defun</span> <span style="color: #aa0000">happy?</span> (<span style="color: #aa0000">n</span> <span style="color: #0000aa">&amp;optional</span> <span style="color: #aa0000">seen</span>)
+  <span style="color: #aa5500">&quot;return true when n is a happy number&quot;</span>
+  (<span style="color: #0000aa">let*</span> ((<span style="color: #aa0000">happiness</span> (<span style="color: #aa0000">sum-of-squares-of-digits</span> <span style="color: #aa0000">n</span>)))
+    (<span style="color: #00aaaa">cond</span> ((<span style="color: #00aaaa">eq</span> <span style="color: #009999">1</span> <span style="color: #aa0000">happiness</span>)      <span style="color: #aa0000">t</span>)
+	  ((<span style="color: #aa0000">memq</span> <span style="color: #aa0000">happiness</span> <span style="color: #aa0000">seen</span>) <span style="color: #aa0000">nil</span>)
+	  (<span style="color: #aa0000">t</span>
+	   (<span style="color: #aa0000">happy?</span> <span style="color: #aa0000">happiness</span> (<span style="color: #00aaaa">push</span> <span style="color: #aa0000">happiness</span> <span style="color: #aa0000">seen</span>))))))
 
-<pre><code>(defun sum-of-squares-of-digits (integer)
-  (loop with remainder
-     do (setf (values integer remainder) (truncate integer 10))
-     sum (* remainder remainder)
-     until (zerop integer)))
-
-(defun happy? (n &amp;optional seen)
-  &quot;return true when n is a happy number&quot;
-  (let* ((happiness (sum-of-squares-of-digits n)))
-    (cond ((eq 1 happiness)      t)
-	  ((memq happiness seen) nil)
-	  (t
-	   (happy? happiness (push happiness seen))))))
-
-(defun find-happy-numbers (limit)
-  &quot;find all happy numbers from 1 to limit&quot;
-  (loop for n from 1 to limit when (happy? n) collect n))
-</code></pre>
+(<span style="color: #00aaaa">defun</span> <span style="color: #aa0000">find-happy-numbers</span> (<span style="color: #aa0000">limit</span>)
+  <span style="color: #aa5500">&quot;find all happy numbers from 1 to limit&quot;</span>
+  (<span style="color: #00aaaa">loop</span> <span style="color: #0000aa">:for</span> <span style="color: #aa0000">n</span> <span style="color: #0000aa">:from</span> <span style="color: #009999">1</span> <span style="color: #0000aa">:to</span> <span style="color: #aa0000">limit</span> <span style="color: #0000aa">:when</span> (<span style="color: #aa0000">happy?</span> <span style="color: #aa0000">n</span>) <span style="color: #0000aa">:collect</span> <span style="color: #aa0000">n</span>))
+</pre></div>
 
 <p>And here&rsquo;s how it goes:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #aa0000">CL-USER&gt;</span> (<span style="color: #aa0000">find-happy-numbers</span> <span style="color: #009999">100</span>)
+(<span style="color: #009999">1</span> <span style="color: #009999">7</span> <span style="color: #009999">10</span> <span style="color: #009999">13</span> <span style="color: #009999">19</span> <span style="color: #009999">23</span> <span style="color: #009999">28</span> <span style="color: #009999">31</span> <span style="color: #009999">32</span> <span style="color: #009999">44</span> <span style="color: #009999">49</span> <span style="color: #009999">68</span> <span style="color: #009999">70</span> <span style="color: #009999">79</span> <span style="color: #009999">82</span> <span style="color: #009999">86</span> <span style="color: #009999">91</span> <span style="color: #009999">94</span> <span style="color: #009999">97</span> <span style="color: #009999">100</span>)
 
-<pre><code>CL-USER&gt; (find-happy-numbers 100)
-(1 7 10 13 19 23 28 31 32 44 49 68 70 79 82 86 91 94 97 100)
+<span style="color: #aa0000">CL-USER&gt;</span> (<span style="color: #00aaaa">time</span> (<span style="color: #00aaaa">length</span> (<span style="color: #aa0000">find-happy-numbers</span> <span style="color: #009999">1000000</span>)))
+(<span style="color: #aa0000">LENGTH</span> (<span style="color: #aa0000">FIND-HAPPY-NUMBERS</span> <span style="color: #009999">1000000</span>))
+<span style="color: #aa0000">took</span> <span style="color: #009999">1</span>,<span style="color: #009999">621</span>,<span style="color: #009999">413</span> <span style="color: #aa0000">microseconds</span> (<span style="color: #009999">1.621413</span> <span style="color: #aa0000">seconds</span>) <span style="color: #aa0000">to</span> <span style="color: #aa0000">run.</span>
+       <span style="color: #009999">116</span>,<span style="color: #009999">474</span> <span style="color: #aa0000">microseconds</span> (<span style="color: #009999">0.116474</span> <span style="color: #aa0000">seconds,</span> <span style="color: #aa0000">7.18%</span>) <span style="color: #aa0000">of</span> <span style="color: #aa0000">which</span> <span style="color: #aa0000">was</span> <span style="color: #aa0000">spent</span> <span style="color: #aa0000">in</span> <span style="color: #aa0000">GC.</span>
+<span style="color: #aa0000">During</span> <span style="color: #aa0000">that</span> <span style="color: #aa0000">period,</span> <span style="color: #00aaaa">and</span> <span style="color: #aa0000">with</span> <span style="color: #009999">4</span> <span style="color: #aa0000">available</span> <span style="color: #aa0000">CPU</span> <span style="color: #aa0000">cores,</span>
+     <span style="color: #009999">1</span>,<span style="color: #009999">431</span>,<span style="color: #009999">332</span> <span style="color: #aa0000">microseconds</span> (<span style="color: #009999">1.431332</span> <span style="color: #aa0000">seconds</span>) <span style="color: #aa0000">were</span> <span style="color: #aa0000">spent</span> <span style="color: #aa0000">in</span> <span style="color: #aa0000">user</span> <span style="color: #aa0000">mode</span>
+       <span style="color: #009999">145</span>,<span style="color: #009999">941</span> <span style="color: #aa0000">microseconds</span> (<span style="color: #009999">0.145941</span> <span style="color: #aa0000">seconds</span>) <span style="color: #aa0000">were</span> <span style="color: #aa0000">spent</span> <span style="color: #aa0000">in</span> <span style="color: #aa0000">system</span> <span style="color: #aa0000">mode</span>
+ <span style="color: #009999">185</span>,<span style="color: #009999">438</span>,<span style="color: #009999">208</span> <span style="color: #aa0000">bytes</span> <span style="color: #aa0000">of</span> <span style="color: #aa0000">memory</span> <span style="color: #aa0000">allocated.</span>
+ <span style="color: #009999">1</span> <span style="color: #aa0000">minor</span> <span style="color: #aa0000">page</span> <span style="color: #aa0000">faults,</span> <span style="color: #009999">0</span> <span style="color: #aa0000">major</span> <span style="color: #aa0000">page</span> <span style="color: #aa0000">faults,</span> <span style="color: #009999">0</span> <span style="color: #aa0000">swaps.</span>
+<span style="color: #009999">143071</span>
+</pre></div>
 
-CL-USER&gt; (time (length (find-happy-numbers 1000000)))
-(LENGTH (FIND-HAPPY-NUMBERS 1000000))
-took 1,621,413 microseconds (1.621413 seconds) to run.
-       116,474 microseconds (0.116474 seconds, 7.18%) of which was spent in GC.
-During that period, and with 4 available CPU cores,
-     1,431,332 microseconds (1.431332 seconds) were spent in user mode
-       145,941 microseconds (0.145941 seconds) were spent in system mode
- 185,438,208 bytes of memory allocated.
- 1 minor page faults, 0 major page faults, 0 swaps.
-143071
-</code></pre>
-
-<p>Of course that code is much faster than the one I wrote before both in
-<code>SQL</code>
-and
-<em>Emacs Lisp</em>, the reason being that instead of writing the number into a
-<em>string</em> with
-<code>(format t &quot;~d&quot; number)</code> then
-<a href="http://www.lispworks.com/documentation/HyperSpec/Body/f_subseq.htm">subseq</a> to get them one after the
-other, we&rsquo;re now using
+<p>Of course that code is much faster than the one I wrote before both in <code>SQL</code>
+and <em>Emacs Lisp</em>, the reason being that instead of writing the number into a
+<em>string</em> with <code>(format t &quot;~d&quot; number)</code>
+then
+<a href="http://www.lispworks.com/documentation/HyperSpec/Body/f_subseq.htm">subseq</a>
+to get them one after the other, we&rsquo;re now
+using
 <a href="http://www.lispworks.com/documentation/HyperSpec/Body/f_floorc.htm">truncate</a>.</p>
 
 <p>Happy hacking!</p>
@@ -369,47 +360,45 @@ other, we&rsquo;re now using
 <p>It turns out that to solve math related problem, some maths hindsight is
 helping. Who would have believed that? So if you want to easily get some
 more performances out of the previous code, just try that solution:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>(<span style="color: #00aaaa">defvar</span> <span style="color: #aa0000">*depressed-squares*</span> &#39;(<span style="color: #009999">0</span> <span style="color: #009999">4</span> <span style="color: #009999">16</span> <span style="color: #009999">20</span> <span style="color: #009999">37</span> <span style="color: #009999">42</span> <span style="color: #009999">58</span> <span style="color: #009999">89</span> <span style="color: #009999">145</span>)
+  <span style="color: #aa5500">&quot;see http://oeis.org/A039943&quot;</span>)
 
-<pre><code>(defvar *depressed-squares* '(0 4 16 20 37 42 58 89 145)
-  &quot;see http://oeis.org/A039943&quot;)
+(<span style="color: #00aaaa">defun</span> <span style="color: #aa0000">undepressed?</span> (<span style="color: #aa0000">n</span>)
+  <span style="color: #aa5500">&quot;same as happy?, using a static list of unhappy sums&quot;</span>
+  (<span style="color: #00aaaa">cond</span> ((<span style="color: #00aaaa">eq</span> <span style="color: #009999">1</span> <span style="color: #aa0000">n</span>) <span style="color: #aa0000">t</span>)
+	((<span style="color: #00aaaa">member</span> <span style="color: #aa0000">n</span> <span style="color: #aa0000">*depressed-squares*</span>) <span style="color: #aa0000">nil</span>)
+	(<span style="color: #aa0000">t</span>
+	 (<span style="color: #0000aa">let</span> ((<span style="color: #aa0000">h</span> (<span style="color: #aa0000">sum-of-squares-of-digits</span> <span style="color: #aa0000">n</span>)))
+	   (<span style="color: #aa0000">undepressed?</span> <span style="color: #aa0000">h</span>)))))
 
-(defun undepressed? (n)
-  &quot;same as happy?, using a static list of unhappy sums&quot;
-  (cond ((eq 1 n) t)
-	((member n *depressed-squares*) nil)
-	(t
-	 (let ((h (sum-of-squares-of-digits n)))
-	   (undepressed? h)))))
-
-(defun find-undepressed-numbers (limit)
-  &quot;find all happy numbers from 1 to limit&quot;
-  (loop for n from 1 to limit when (undepressed? n) collect n))
-</code></pre>
+(<span style="color: #00aaaa">defun</span> <span style="color: #aa0000">find-undepressed-numbers</span> (<span style="color: #aa0000">limit</span>)
+  <span style="color: #aa5500">&quot;find all happy numbers from 1 to limit&quot;</span>
+  (<span style="color: #00aaaa">loop</span> <span style="color: #0000aa">:for</span> <span style="color: #aa0000">n</span> <span style="color: #0000aa">:from</span> <span style="color: #009999">1</span> <span style="color: #0000aa">:to</span> <span style="color: #aa0000">limit</span> <span style="color: #0000aa">:when</span> (<span style="color: #aa0000">undepressed?</span> <span style="color: #aa0000">n</span>) <span style="color: #0000aa">:collect</span> <span style="color: #aa0000">n</span>))
+</pre></div>
 
 <p>Time to compare:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #aa0000">CL-USER&gt;</span> (<span style="color: #00aaaa">time</span> (<span style="color: #00aaaa">length</span> (<span style="color: #aa0000">find-happy-numbers</span> <span style="color: #009999">1000000</span>)))
+(<span style="color: #aa0000">LENGTH</span> (<span style="color: #aa0000">FIND-HAPPY-NUMBERS</span> <span style="color: #009999">1000000</span>))
+<span style="color: #aa0000">took</span> <span style="color: #009999">1</span>,<span style="color: #009999">938</span>,<span style="color: #009999">048</span> <span style="color: #aa0000">microseconds</span> (<span style="color: #009999">1.938048</span> <span style="color: #aa0000">seconds</span>) <span style="color: #aa0000">to</span> <span style="color: #aa0000">run.</span>
+       <span style="color: #009999">290</span>,<span style="color: #009999">902</span> <span style="color: #aa0000">microseconds</span> (<span style="color: #009999">0.290902</span> <span style="color: #aa0000">seconds,</span> <span style="color: #aa0000">15.01%</span>) <span style="color: #aa0000">of</span> <span style="color: #aa0000">which</span> <span style="color: #aa0000">was</span> <span style="color: #aa0000">spent</span> <span style="color: #aa0000">in</span> <span style="color: #aa0000">GC.</span>
+<span style="color: #aa0000">During</span> <span style="color: #aa0000">that</span> <span style="color: #aa0000">period,</span> <span style="color: #00aaaa">and</span> <span style="color: #aa0000">with</span> <span style="color: #009999">4</span> <span style="color: #aa0000">available</span> <span style="color: #aa0000">CPU</span> <span style="color: #aa0000">cores,</span>
+     <span style="color: #009999">1</span>,<span style="color: #009999">778</span>,<span style="color: #009999">021</span> <span style="color: #aa0000">microseconds</span> (<span style="color: #009999">1.778021</span> <span style="color: #aa0000">seconds</span>) <span style="color: #aa0000">were</span> <span style="color: #aa0000">spent</span> <span style="color: #aa0000">in</span> <span style="color: #aa0000">user</span> <span style="color: #aa0000">mode</span>
+       <span style="color: #009999">140</span>,<span style="color: #009999">862</span> <span style="color: #aa0000">microseconds</span> (<span style="color: #009999">0.140862</span> <span style="color: #aa0000">seconds</span>) <span style="color: #aa0000">were</span> <span style="color: #aa0000">spent</span> <span style="color: #aa0000">in</span> <span style="color: #aa0000">system</span> <span style="color: #aa0000">mode</span>
+ <span style="color: #009999">185</span>,<span style="color: #009999">438</span>,<span style="color: #009999">208</span> <span style="color: #aa0000">bytes</span> <span style="color: #aa0000">of</span> <span style="color: #aa0000">memory</span> <span style="color: #aa0000">allocated.</span>
+ <span style="color: #009999">3</span>,<span style="color: #009999">320</span> <span style="color: #aa0000">minor</span> <span style="color: #aa0000">page</span> <span style="color: #aa0000">faults,</span> <span style="color: #009999">0</span> <span style="color: #aa0000">major</span> <span style="color: #aa0000">page</span> <span style="color: #aa0000">faults,</span> <span style="color: #009999">0</span> <span style="color: #aa0000">swaps.</span>
+<span style="color: #009999">143071</span>
 
-<pre><code>CL-USER&gt; (time (length (find-happy-numbers 1000000)))
-(LENGTH (FIND-HAPPY-NUMBERS 1000000))
-took 1,938,048 microseconds (1.938048 seconds) to run.
-       290,902 microseconds (0.290902 seconds, 15.01%) of which was spent in GC.
-During that period, and with 4 available CPU cores,
-     1,778,021 microseconds (1.778021 seconds) were spent in user mode
-       140,862 microseconds (0.140862 seconds) were spent in system mode
- 185,438,208 bytes of memory allocated.
- 3,320 minor page faults, 0 major page faults, 0 swaps.
-143071
-
-CL-USER&gt; (time (length (find-undepressed-numbers 1000000)))
-(LENGTH (FIND-UNDEPRESSED-NUMBERS 1000000))
-took 1,036,847 microseconds (1.036847 seconds) to run.
-         5,372 microseconds (0.005372 seconds, 0.52%) of which was spent in GC.
-During that period, and with 4 available CPU cores,
-     1,018,708 microseconds (1.018708 seconds) were spent in user mode
-        16,982 microseconds (0.016982 seconds) were spent in system mode
- 2,289,152 bytes of memory allocated.
-143071
-CL-USER&gt; 
-</code></pre>
+<span style="color: #aa0000">CL-USER&gt;</span> (<span style="color: #00aaaa">time</span> (<span style="color: #00aaaa">length</span> (<span style="color: #aa0000">find-undepressed-numbers</span> <span style="color: #009999">1000000</span>)))
+(<span style="color: #aa0000">LENGTH</span> (<span style="color: #aa0000">FIND-UNDEPRESSED-NUMBERS</span> <span style="color: #009999">1000000</span>))
+<span style="color: #aa0000">took</span> <span style="color: #009999">1</span>,<span style="color: #009999">036</span>,<span style="color: #009999">847</span> <span style="color: #aa0000">microseconds</span> (<span style="color: #009999">1.036847</span> <span style="color: #aa0000">seconds</span>) <span style="color: #aa0000">to</span> <span style="color: #aa0000">run.</span>
+         <span style="color: #009999">5</span>,<span style="color: #009999">372</span> <span style="color: #aa0000">microseconds</span> (<span style="color: #009999">0.005372</span> <span style="color: #aa0000">seconds,</span> <span style="color: #aa0000">0.52%</span>) <span style="color: #aa0000">of</span> <span style="color: #aa0000">which</span> <span style="color: #aa0000">was</span> <span style="color: #aa0000">spent</span> <span style="color: #aa0000">in</span> <span style="color: #aa0000">GC.</span>
+<span style="color: #aa0000">During</span> <span style="color: #aa0000">that</span> <span style="color: #aa0000">period,</span> <span style="color: #00aaaa">and</span> <span style="color: #aa0000">with</span> <span style="color: #009999">4</span> <span style="color: #aa0000">available</span> <span style="color: #aa0000">CPU</span> <span style="color: #aa0000">cores,</span>
+     <span style="color: #009999">1</span>,<span style="color: #009999">018</span>,<span style="color: #009999">708</span> <span style="color: #aa0000">microseconds</span> (<span style="color: #009999">1.018708</span> <span style="color: #aa0000">seconds</span>) <span style="color: #aa0000">were</span> <span style="color: #aa0000">spent</span> <span style="color: #aa0000">in</span> <span style="color: #aa0000">user</span> <span style="color: #aa0000">mode</span>
+        <span style="color: #009999">16</span>,<span style="color: #009999">982</span> <span style="color: #aa0000">microseconds</span> (<span style="color: #009999">0.016982</span> <span style="color: #aa0000">seconds</span>) <span style="color: #aa0000">were</span> <span style="color: #aa0000">spent</span> <span style="color: #aa0000">in</span> <span style="color: #aa0000">system</span> <span style="color: #aa0000">mode</span>
+ <span style="color: #009999">2</span>,<span style="color: #009999">289</span>,<span style="color: #009999">152</span> <span style="color: #aa0000">bytes</span> <span style="color: #aa0000">of</span> <span style="color: #aa0000">memory</span> <span style="color: #aa0000">allocated.</span>
+<span style="color: #009999">143071</span>
+<span style="color: #aa0000">CL-USER&gt;</span> 
+</pre></div>
 
               
             </div>

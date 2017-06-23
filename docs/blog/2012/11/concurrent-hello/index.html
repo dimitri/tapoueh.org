@@ -62,7 +62,7 @@ To quote the article:
       <meta property="og:image" content="http://tapoueh.org/img/old/made-with-lisp.png">
     
     
-      <meta property="og:image" content="http://tapoueh.org/img/old/made-with-lisp.png">
+      <meta property="og:image" content="http://tapoueh.org/img/multithreaded-programming.jpg">
     
     
 
@@ -215,7 +215,7 @@ ga('send', 'pageview');
   <div class="post-header-cover
               text-left
               post-header-cover--partial"
-       style="background-image:url('/img/old/made-with-lisp.png')"
+       style="background-image:url('/img/multithreaded-programming.jpg')"
        data-behavior="2">
     
   </div>
@@ -267,14 +267,14 @@ ga('send', 'pageview');
             <div class="main-content-wrap">
               
 
-<p>Thanks to
-<a href="https://twitter.com/mickael/status/265191809100181504">Mickael</a> on
-<em>twitter</em> I ran into that article about implementing a
-very basic
-<em>Hello World!</em> program as a way to get into a new concurrent
-language or facility. The original article, titled
-<a href="http://himmele.blogspot.de/2012/11/concurrent-hello-world-in-go-erlang.html">Concurrent Hello World in Go, Erlang and C++</a> is all about getting to know
-<a href="http://golang.org/">The Go Programming Language</a> better.</p>
+<p>Thanks to <a href="https://twitter.com/mickael/status/265191809100181504">Mickael</a>
+on <em>twitter</em> I ran into that article about implementing a very basic <em>Hello
+World!</em> program as a way to get into a new concurrent language or facility.
+The original article,
+titled
+<a href="http://himmele.blogspot.de/2012/11/concurrent-hello-world-in-go-erlang.html">Concurrent Hello World in Go, Erlang and C++</a> is
+all about getting to know <a href="http://golang.org/">The Go Programming Language</a>
+better.</p>
 
 <p>To quote the article:</p>
 
@@ -287,106 +287,86 @@ active entities synchronizing with each other so that the output always is
 &ldquo;Hello World!\n&rdquo;.</p>
 </blockquote>
 
-<p>Here&rsquo;s my try in
-<a href="http://cliki.net/">Common Lisp</a> using
-<a href="http://lparallel.org/">lparallel</a> and some
-<em>local nicknames</em>, the
-whole
-<code>23</code> lines of it:</p>
+<p>Here&rsquo;s my try in <a href="http://cliki.net/">Common Lisp</a>
+using <a href="http://lparallel.org/">lparallel</a> and some <em>local nicknames</em>, the
+whole <code>23</code> lines of it:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>(<span style="color: #00aaaa">defun</span> <span style="color: #aa0000">say-hello</span> (<span style="color: #aa0000">helloq</span> <span style="color: #aa0000">worldq</span> <span style="color: #aa0000">n</span>)
+  (<span style="color: #00aaaa">dotimes</span> (<span style="color: #aa0000">i</span> <span style="color: #aa0000">n</span>)
+    (<span style="color: #00aaaa">format</span> <span style="color: #aa0000">t</span> <span style="color: #aa5500">&quot;Hello &quot;</span>)
+    (<span style="color: #aa0000">lq:push-queue</span> <span style="color: #0000aa">:say-world</span> <span style="color: #aa0000">worldq</span>)
+    (<span style="color: #aa0000">lq:pop-queue</span> <span style="color: #aa0000">helloq</span>))
+  (<span style="color: #aa0000">lq:push-queue</span> <span style="color: #0000aa">:quit</span> <span style="color: #aa0000">worldq</span>))
 
-<pre><code>(defun say-hello (helloq worldq n)
-  (dotimes (i n)
-    (format t &quot;Hello &quot;)
-    (lq:push-queue :say-world worldq)
-    (lq:pop-queue helloq))
-  (lq:push-queue :quit worldq))
+(<span style="color: #00aaaa">defun</span> <span style="color: #aa0000">say-world</span> (<span style="color: #aa0000">helloq</span> <span style="color: #aa0000">worldq</span>)
+  (<span style="color: #00aaaa">when</span> (<span style="color: #00aaaa">eq</span> (<span style="color: #aa0000">lq:pop-queue</span> <span style="color: #aa0000">worldq</span>) <span style="color: #0000aa">:say-world</span>)
+    (<span style="color: #00aaaa">format</span> <span style="color: #aa0000">t</span> <span style="color: #aa5500">&quot;World!~%&quot;</span>)
+    (<span style="color: #aa0000">lq:push-queue</span> <span style="color: #0000aa">:say-hello</span> <span style="color: #aa0000">helloq</span>)
+    (<span style="color: #aa0000">say-world</span> <span style="color: #aa0000">helloq</span> <span style="color: #aa0000">worldq</span>)))
 
-(defun say-world (helloq worldq)
-  (when (eq (lq:pop-queue worldq) :say-world)
-    (format t &quot;World!~%&quot;)
-    (lq:push-queue :say-hello helloq)
-    (say-world helloq worldq)))
-
-(defun hello-world (n)
-  (let* ((lp:*kernel*  (lp:make-kernel 2)) ; a new one each time, as we end it
-	 (channel      (lp:make-channel))
-	 (helloq       (lq:make-queue))
-	 (worldq       (lq:make-queue)))
-    (lp:submit-task channel #'say-world helloq worldq)
-    (lp:submit-task channel #'say-hello helloq worldq n)
-    (lp:receive-result channel)
-    (lp:receive-result channel)
-    (lp:end-kernel)))
-</code></pre>
+(<span style="color: #00aaaa">defun</span> <span style="color: #aa0000">hello-world</span> (<span style="color: #aa0000">n</span>)
+  (<span style="color: #0000aa">let*</span> ((<span style="color: #aa0000">lp:*kernel*</span>  (<span style="color: #aa0000">lp:make-kernel</span> <span style="color: #009999">2</span>)) <span style="color: #aaaaaa; font-style: italic">; a new one each time, as we end it</span>
+	 (<span style="color: #aa0000">channel</span>      (<span style="color: #aa0000">lp:make-channel</span>))
+	 (<span style="color: #aa0000">helloq</span>       (<span style="color: #aa0000">lq:make-queue</span>))
+	 (<span style="color: #aa0000">worldq</span>       (<span style="color: #aa0000">lq:make-queue</span>)))
+    (<span style="color: #aa0000">lp:submit-task</span> <span style="color: #aa0000">channel</span> <span style="color: #00aa00">#&#39;</span><span style="color: #aa0000">say-world</span> <span style="color: #aa0000">helloq</span> <span style="color: #aa0000">worldq</span>)
+    (<span style="color: #aa0000">lp:submit-task</span> <span style="color: #aa0000">channel</span> <span style="color: #00aa00">#&#39;</span><span style="color: #aa0000">say-hello</span> <span style="color: #aa0000">helloq</span> <span style="color: #aa0000">worldq</span> <span style="color: #aa0000">n</span>)
+    (<span style="color: #aa0000">lp:receive-result</span> <span style="color: #aa0000">channel</span>)
+    (<span style="color: #aa0000">lp:receive-result</span> <span style="color: #aa0000">channel</span>)
+    (<span style="color: #aa0000">lp:end-kernel</span>)))
+</pre></div>
 
 <p>If you want to play locally with that code, I&rsquo;ve been updating it to a
-<em>github</em> project named
-<a href="https://github.com/dimitri/go-hello-world">go-hello-world</a>, even if it&rsquo;s coded in
-<em>CL</em>. See the
-<code>package.lisp</code> in there for how I did enable the
-<em>local nicknames</em>
-<code>lp</code> and
-<code>lq</code> for
-the
-<em>lparallel</em> packages.</p>
+<em>github</em> project
+named <a href="https://github.com/dimitri/go-hello-world">go-hello-world</a>, even if
+it&rsquo;s coded in <em>CL</em>. See the <code>package.lisp</code> in there for how I did enable the
+<em>local nicknames</em> <code>lp</code> and <code>lq</code> for the <em>lparallel</em> packages.</p>
 
 <h2 id="beware-of-the-repl">Beware of the REPL</h2>
 
 <p>In a previous version of this very article, I said that sometimes I get an
 extra line feed in the output and I didn&rsquo;t understand why. Some great Common
-Lisp folks did hint me about that: it&rsquo;s the
-<em>REPL</em> output that get
-intermingled with the program output, and that&rsquo;s because the
-<code>hello-world</code>
+Lisp folks did hint me about that: it&rsquo;s the <em>REPL</em> output that get
+intermingled with the program output, and that&rsquo;s because the <code>hello-world</code>
 main function was returning before the thing is over.</p>
 
-<p>I&rsquo;ve added a
-<code>receive-result</code> call in it per worker so that it waits until the
-end of the program before returning to the
-<em>REPL</em>, and that indeed fixes it. A
-way to assert that is using the
-<code>time</code> macro, which was always intermingled
-with the output before. It&rsquo;s fixed now:</p>
-
-<pre><code>CL-USER&gt; (time (go-hello-world:hello-world 1000))
-Hello World!
+<p>I&rsquo;ve added a <code>receive-result</code> call in it per worker so that it waits until
+the end of the program before returning to the <em>REPL</em>, and that indeed fixes
+it. A way to assert that is using the <code>time</code> macro, which was always
+intermingled with the output before. It&rsquo;s fixed now:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #aa0000">CL-USER&gt;</span> (<span style="color: #00aaaa">time</span> (<span style="color: #aa0000">go-hello-world:hello-world</span> <span style="color: #009999">1000</span>))
+<span style="color: #aa0000">Hello</span> <span style="color: #aa0000">World!</span>
 ...
-Hello World!
-(GO-HELLO-WORLD:HELLO-WORLD 1000)
-took 27,886 microseconds (0.027886 seconds) to run.
-      1,593 microseconds (0.001593 seconds, 5.71%) of which was spent in GC.
-During that period, and with 4 available CPU cores,
-     23,246 microseconds (0.023246 seconds) were spent in user mode
-     14,427 microseconds (0.014427 seconds) were spent in system mode
- 4,272 bytes of memory allocated.
- 10 minor page faults, 0 major page faults, 0 swaps.
-(#&lt;PROCESS lparallel kernel shutdown manager(62) [Reset] #x30200109F65D&gt; ...)
-CL-USER&gt; 
-</code></pre>
+<span style="color: #aa0000">Hello</span> <span style="color: #aa0000">World!</span>
+(<span style="color: #aa0000">GO-HELLO-WORLD:HELLO-WORLD</span> <span style="color: #009999">1000</span>)
+<span style="color: #aa0000">took</span> <span style="color: #009999">27</span>,<span style="color: #009999">886</span> <span style="color: #aa0000">microseconds</span> (<span style="color: #009999">0.027886</span> <span style="color: #aa0000">seconds</span>) <span style="color: #aa0000">to</span> <span style="color: #aa0000">run.</span>
+      <span style="color: #009999">1</span>,<span style="color: #009999">593</span> <span style="color: #aa0000">microseconds</span> (<span style="color: #009999">0.001593</span> <span style="color: #aa0000">seconds,</span> <span style="color: #aa0000">5.71%</span>) <span style="color: #aa0000">of</span> <span style="color: #aa0000">which</span> <span style="color: #aa0000">was</span> <span style="color: #aa0000">spent</span> <span style="color: #aa0000">in</span> <span style="color: #aa0000">GC.</span>
+<span style="color: #aa0000">During</span> <span style="color: #aa0000">that</span> <span style="color: #aa0000">period,</span> <span style="color: #00aaaa">and</span> <span style="color: #aa0000">with</span> <span style="color: #009999">4</span> <span style="color: #aa0000">available</span> <span style="color: #aa0000">CPU</span> <span style="color: #aa0000">cores,</span>
+     <span style="color: #009999">23</span>,<span style="color: #009999">246</span> <span style="color: #aa0000">microseconds</span> (<span style="color: #009999">0.023246</span> <span style="color: #aa0000">seconds</span>) <span style="color: #aa0000">were</span> <span style="color: #aa0000">spent</span> <span style="color: #aa0000">in</span> <span style="color: #aa0000">user</span> <span style="color: #aa0000">mode</span>
+     <span style="color: #009999">14</span>,<span style="color: #009999">427</span> <span style="color: #aa0000">microseconds</span> (<span style="color: #009999">0.014427</span> <span style="color: #aa0000">seconds</span>) <span style="color: #aa0000">were</span> <span style="color: #aa0000">spent</span> <span style="color: #aa0000">in</span> <span style="color: #aa0000">system</span> <span style="color: #aa0000">mode</span>
+ <span style="color: #009999">4</span>,<span style="color: #009999">272</span> <span style="color: #aa0000">bytes</span> <span style="color: #aa0000">of</span> <span style="color: #aa0000">memory</span> <span style="color: #aa0000">allocated.</span>
+ <span style="color: #009999">10</span> <span style="color: #aa0000">minor</span> <span style="color: #aa0000">page</span> <span style="color: #aa0000">faults,</span> <span style="color: #009999">0</span> <span style="color: #aa0000">major</span> <span style="color: #aa0000">page</span> <span style="color: #aa0000">faults,</span> <span style="color: #009999">0</span> <span style="color: #aa0000">swaps.</span>
+(<span style="color: #FF0000; background-color: #FFAAAA">#</span><span style="color: #aa0000">&lt;PROCESS</span> <span style="color: #aa0000">lparallel</span> <span style="color: #aa0000">kernel</span> <span style="color: #aa0000">shutdown</span> <span style="color: #aa0000">manager</span>(<span style="color: #009999">62</span>) <span style="color: #aa0000">[Reset]</span> <span style="color: #009999">#x30200109F65D</span><span style="color: #00aaaa">&gt;</span> ...)
+<span style="color: #aa0000">CL-USER&gt;</span> 
+</pre></div>
 
 <h2 id="conclusion">Conclusion</h2>
 
-<p>While
-<em>Go</em> language seems to bring very interesting things on the table, such
-as better compilation units and tools, I still think that the concurrency
-primitives at the core of it are easy to find in other places. Which is a
-good thing, as it means we know they work.</p>
+<p>While <em>Go</em> language seems to bring very interesting things on the table,
+such as better compilation units and tools, I still think that the
+concurrency primitives at the core of it are easy to find in other places.
+Which is a good thing, as it means we know they work.</p>
 
-<p>That also means that we don&rsquo;t need to accept
-<em>Go</em> syntax as the only way to
-properly solve that
-<em>concurrency</em> problem, I much prefer doing so with
-<em>Common
-Lisp</em> (lack of?) syntax myself.</p>
+<p>That also means that we don&rsquo;t need to accept <em>Go</em> syntax as the only way to
+properly solve that <em>concurrency</em> problem, I much prefer doing so with
+<em>Common Lisp</em> (lack of?) syntax myself.</p>
 
 <h2 id="update">Update</h2>
 
 <p>A previous version of this article was finished and published too quickly,
 and the conclusion was made from a buggy version of the program. It&rsquo;s all
 fixed now. Thanks a lot to people who contributed comments so that I could
-fix it, and thanks again to
-<em>James M. Lawrence</em> for
-<a href="http://lparallel.org/">lparallel</a>!</p>
+fix it, and thanks again to <em>James M. Lawrence</em>
+for <a href="http://lparallel.org/">lparallel</a>!</p>
 
               
             </div>

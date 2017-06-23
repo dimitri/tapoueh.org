@@ -13,34 +13,26 @@ aliases = ["/blog/2013/05/13-from-parser-to-compiler",
 +++
 
 Last week came with two bank holidays in a row, and I took the opportunity
-to design a 
-*command language* for 
-[pgloader](../../../pgsql/pgloader.html). While doing that, I unexpectedly
-stumbled accross a very nice 
-*AHAH!* moment, and I now want to share it with
-you, dear reader.
+to design a *command language* for [pgloader](../../../pgsql/pgloader.html).
+While doing that, I unexpectedly stumbled accross a very nice *AHAH!*
+moment, and I now want to share it with you, dear reader.
 
-<center>*AHAH, you'll see!*</center>
-
-The general approach I'm following code wise with that 
-*command language* is
+The general approach I'm following code wise with that *command language* is
 to first get a code API to expose the capabilities of the system, then
-somehow plug the 
-*command language* into that API thanks to a 
-*parser*. It turns
-out that doing so in 
-*Common Lisp* is really easy, and that you can get a
-*compiler* for free too, while at it. Let's see about that.
+somehow plug the *command language* into that API thanks to a *parser*. It
+turns out that doing so in *Common Lisp* is really easy, and that you can
+get a *compiler* for free too, while at it. Let's see about that.
 
 
 ## A very simple toy example
 
-In this newsgroup article 
-[What is symbolic compoutation?](https://groups.google.com/forum/?fromgroups=#!topic/comp.lang.lisp/JJxTBqf7scU), 
-[Pascal Bourguignon](http://informatimago.com/)
-did propose a very simple piece of code:
+In this newsgroup
+article
+[What is symbolic computation?](https://groups.google.com/forum/?fromgroups=#!topic/comp.lang.lisp/JJxTBqf7scU),
+[Pascal Bourguignon](http://informatimago.com/) did propose a very simple
+piece of code:
 
-~~~
+~~~ lisp
 (defparameter *additive-color-graph*
   '((red   (red white)   (green yellow) (blue magenta))
     (green (red yellow)  (green white)  (blue cyan))
@@ -51,13 +43,10 @@ did propose a very simple piece of code:
 ~~~
 
 
-This is an example of 
-*symbolic computation*, and we're going to build a
-little 
-*language* to express the data and the code. Not that we would need to
-build one, mind you, more in order to have a really simple example leading
-us to the 
-*ahah* moment you're now waiting for.
+This is an example of *symbolic computation*, and we're going to build a
+little *language* to express the data and the code. Not that we would need
+to build one, mind you, more in order to have a really simple example
+leading us to the *ahah* moment you're now waiting for.
 
 Before we dive into the main topic, you have to realize that the previous
 code example actually works: it's defining some data, using an implicit data
@@ -65,7 +54,7 @@ structure composed by nesting lists together, and defines a function that
 knows how to sort out the data in that anonymous data structure so as to
 compound 2 colors together.
 
-~~~
+~~~ lisp
 TOY-PARSER> (symbolic-color-add 'red 'green)
 YELLOW
 ~~~
@@ -74,8 +63,7 @@ YELLOW
 
 ## A command language and parser
 
-I decided to go with the following 
-*language*:
+I decided to go with the following *language*:
 
 ~~~
 color red   +red white    +green yellow  +blue magenta
@@ -86,11 +74,10 @@ mix red and green
 ~~~
 
 
-And here's how some of the parser looks like, using the 
-[esrap](http://nikodemus.github.io/esrap/) 
-*packrat* lib:
+And here's how some of the parser looks like, using
+the [esrap](http://nikodemus.github.io/esrap/) *packrat* lib:
 
-~~~
+~~~ lisp
 (defrule color-name (and whitespaces (+ (alpha-char-p character)))
   (:destructure (ws name)
     (declare (ignore ws))		; ignore whitespaces
@@ -110,25 +97,20 @@ And here's how some of the parser looks like, using the
     (list c1 c2)))
 ~~~
 
+{{< image classes="fig50 right dim-margin"
+              src="/img/old/the-one-ring.320.jpg"
+            title="The one grammar rule to bind them all">}}
 
-Those 
-*rules* are not the whole parser, go have a look at the project on
-github if you want to see the whole code, it's called 
-[toy-parser](https://github.com/dimitri/toy-parser) over there.
-The main idea here is to show that when we parse a line from our little
+Those *rules* are not the whole parser, go have a look at the project on
+github if you want to see the whole code, it's
+called [toy-parser](https://github.com/dimitri/toy-parser) over there. The
+main idea here is to show that when we parse a line from our little
 language, we produce the simplest possible structured data: in lisp that's
-*symbols* and 
-*lists*.
+*symbols* and *lists*.
 
 The reason why it makes sense doing that is the next rule:
 
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/the-one-ring.jpg" >}}
-</center>
-
-<center>*The one grammar rule to bind them all*</center>
-
-~~~
+~~~ lisp
 (defrule program (and colors mix-two-colors)
   (:destructure (graph (c1 c2))
     `(lambda ()
@@ -137,13 +119,12 @@ The reason why it makes sense doing that is the next rule:
 ~~~
 
 
-This rule is the complex one to bind them all. It's using a 
-*quasiquote*, a
+This rule is the complex one to bind them all. It's using a *quasiquote*, a
 basic lisp syntax element allowing the programmer to very easily produce
 data that looks exactly like code. Let's see how it goes with a very simple
 example:
 
-~~~
+~~~ lisp
 TOY-PARSER> (pprint (parse 'program
                            "color red +green yellow mix green and red"))
 
@@ -159,15 +140,10 @@ code, right? So maybe we can just run that code...
 
 
 ## What about a compiler now?
-<center>
-{{< image classes="fig50 fancybox dim-margin" src="/img/old/aha.jpg" >}}
-</center>
-
-<center>*Here is my AHAH moment!*</center>
 
 Let's see about actually running the code:
 
-~~~
+~~~ lisp
 TOY-PARSER> (let* ((code "color red +green yellow mix green and red")
 		   (program (parse 'program code)))
 	      (compile nil program))
@@ -189,7 +165,7 @@ with the same compiler that we used to produce our parser, and we can then
 
 Oh and the function is actually compiled down to native code, of course:
 
-~~~
+~~~ lisp
 TOY-PARSER> (let* ((code "color red +green yellow mix red and green")
 		   (program (parse 'program code))
 		   (func    (compile nil program)))

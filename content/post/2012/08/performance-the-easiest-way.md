@@ -5,21 +5,21 @@ tags = ["Common-Lisp"]
 categories = ["Software Programming","Common Lisp"]
 thumbnailImage = "/img/old/made-with-lisp.png"
 thumbnailImagePosition = "left"
-coverImage = "/img/old/made-with-lisp.png"
+coverImage = "/img/fast-stupid.jpg"
 coverSize = "partial"
-coverMeta = "out"
+coverMeta = "in"
 aliases = ["/blog/2012/08/20-performance-the-easiest-way",
            "/blog/2012/08/20-performance-the-easiest-way.html"]
 +++
 
 I stumbled onto an interesting article about performance when using python,
-called 
-[Python performance the easy(ish) way](http://jiaaro.com/python-performance-the-easyish-way), where the author tries to get
-the bet available performances out of the dumbiest possible python code,
-trying to solve a very simple and stupid problem.
+called
+[Python performance the easy(ish) way](http://jiaaro.com/python-performance-the-easyish-way),
+where the author tries to get the bet available performances out of the
+dumbiest possible python code, trying to solve a very simple and stupid
+problem.
 
-With so many 
-*smart* qualifiers you can only guess that I did love the
+With so many *smart* qualifiers you can only guess that I did love the
 challenge. The idea is to write the simplest code possible and see how
 smarter you need to be when you need perfs. Let's have a try!
 
@@ -28,7 +28,7 @@ smarter you need to be when you need perfs. Let's have a try!
 
 Here's the code I did use to benchmark the python solution:
 
-~~~
+~~~ python
 def sumrange(arg):
     return sum(xrange(arg))
 
@@ -61,7 +61,7 @@ if __name__ == "__main__":
 
 Oh. And the C code too, sorry about that.
 
-~~~
+~~~ c
 #include <stdio.h>
 
 int sumrange(int arg)
@@ -80,15 +80,15 @@ int sumrange(int arg)
 And here's how I did compile it. The author of the inspiring article
 insisted on stupid optimisation targets, I did follow him:
 
-~~~
+~~~ bash
 gcc -shared -Wl,-install_name,sumrange.so -o sumrange.so -fPIC sumrange.c -O0
 ~~~
 
 
 And here's the result I did get out of it:
 
-~~~
-python jiaroo.py
+~~~ bash
+$ python jiaroo.py
 timing python sumrange(10**10)
 xrange: 927.039917s
 while:  2377.291237s
@@ -96,10 +96,9 @@ ctypes: 5.297124s
 ~~~
 
 
-Let's be fair, with 
-`-O2` we get much better results:
+Let's be fair, with `-O2` we get much better results:
 
-~~~
+~~~ bash
 timing python sumrange(10**10)
 ctypes: 1.065684s
 ~~~
@@ -112,7 +111,7 @@ So let's have a try in Common Lisp, will you ask me, right?
 
 Here's the code I did use, you can see three different tries:
 
-~~~
+~~~ lisp
 ;;;; jiaroo.lisp
 ;;;
 ;;; See http://jiaaro.com/python-performance-the-easyish-way
@@ -173,7 +172,7 @@ Here's the code I did use, you can see three different tries:
 
 And here's the results:
 
-~~~
+~~~ lisp
 CL-USER> (bench-sumrange 10)
 timing common lisp sumrange 10**10
 loop:       11.213s 
@@ -188,44 +187,35 @@ NIL
 
 So python is very slow. C is pretty fast. And Common Lisp just in the
 middle. Honnestly I expected better performances from my beloved Common Lisp
-here, but I didn't try very hard, by using 
-[Clozure Common Lisp](http://ccl.clozure.com/) which is not
-the quicker Common Lisp implementation around. For this very benchmark, if
-you're seeking speed use either 
-[Steel Bank Common Lisp](http://sbcl.org/) or 
-[CLISP](http://www.clisp.org/) which is
-known to have a pretty fast bignums implementation (which you don't need in
-64 bits in that game).
+here, but I didn't try very hard, by
+using [Clozure Common Lisp](http://ccl.clozure.com/) which is not the
+quicker Common Lisp implementation around. For this very benchmark, if
+you're seeking speed use either [Steel Bank Common Lisp](http://sbcl.org/)
+or [CLISP](http://www.clisp.org/) which is known to have a pretty fast
+bignums implementation (which you don't need in 64 bits in that game).
 
 On the other hand, I think that having to go write a C plugin and deal with
 how to compile and deploy it in the middle of a python script is something
 to avoid. When using Common Lisp you don't need to resort to that for the
-*runtime* to get down from python 
-*xrange* implementation at 
-`927.039917s` down to
-the 
-*dotimes* implementation taking 
-`7.642s`. That's about 
-`121` times faster.
+*runtime* to get down from python *xrange* implementation at `927.039917s`
+down to the *dotimes* implementation taking `7.642s`. That's about `121`
+times faster.
 
-So while 
-`C` is even better, and while I would like a Common Lisp guru to show
-me how to get a better speed here, I still very much appreciate the solution
-here.
+So while `C` is even better, and while I would like a Common Lisp guru to
+show me how to get a better speed here, I still very much appreciate the
+solution here.
 
-Let's see the winning source code in 
-*python* and 
-*common lisp* to compare the
-programmer side of things: how hard was it really to get 
-`121` times faster?
+Let's see the winning source code in *python* and *common lisp* to compare
+the programmer side of things: how hard was it really to get `121` times
+faster?
 
-~~~
+~~~ python
 def sumrange(arg):
     return sum(xrange(arg))
 ~~~
 
 
-~~~
+~~~ lisp
 (defun sumrange-dotimes (max)
   "return the sum of numbers from 1 to MAX"
   (let ((sum 0))
@@ -236,20 +226,16 @@ def sumrange(arg):
 ~~~
 
 
-That's about it. Yes we can see some 
-*manual* optimisation directives here,
-which are optimisation 
-*extra complexity*. Not to the same level as bringing a
-compiled artifact that you need to build and deploy, though. Remember that
-you will need to know the full path where to find the 
-`sumrange.so` file on
-the production system, in the optimised 
-*python* case, so that's what we are
+That's about it. Yes we can see some *manual* optimisation directives here,
+which are optimisation *extra complexity*. Not to the same level as bringing
+a compiled artifact that you need to build and deploy, though. Remember that
+you will need to know the full path where to find the `sumrange.so` file on
+the production system, in the optimised *python* case, so that's what we are
 comparing against.
 
 Here's what happens without the optimisation, and with a smaller target:
 
-~~~
+~~~ lisp
 CL-USER> (time (jiaroo:sumrange-dotimes (expt 10 9)))
 (JIAROO:SUMRANGE-DOTIMES (EXPT 10 9))
 took 722,592 microseconds (0.722592 seconds) to run.
@@ -268,22 +254,17 @@ During that period, and with 2 available CPU cores,
 ~~~
 
 
-We get a 
-`3` times speed-up from those 2 lines of lisp optimisation
+We get a `3` times speed-up from those 2 lines of lisp optimisation
 directives, which is pretty good. And it's exponential as I didn't have the
-patience to actually wait until the non optimised 
-`10^10` run finished, I
+patience to actually wait until the non optimised `10^10` run finished, I
 killed it.
 
 
 ## Conclusion
 
-That's a case here where I don't know how to reach 
-`C` level of performances
+That's a case here where I don't know how to reach `C` level of performances
 with Common Lisp, which could just be because I don't know yet how to do.
 
-Still, getting a 
-`121` times speedup when compared to the pure 
-*python* version
-of the code is pretty good and encourages me to continue diving into Common
-Lisp.
+Still, getting a `121` times speedup when compared to the pure *python*
+version of the code is pretty good and encourages me to continue diving into
+Common Lisp.
