@@ -96,8 +96,8 @@ compute several calendar based values:
 (11 rows)
 ~~~
 
-So by the ISO standard the first of January 2010 is part of week 52, 1999.
-That's right. Also that year is a leap year. Well, 2010 I mean, not 1999.
+So by the ISO standard the first of January 2000 is part of week 52, 1999.
+That's right. Also that year is a leap year. Well, 2000 I mean, not 1999.
 
 To conclude with our calendar fun, here's a very practical advice when you
 use dates in PostgreSQL: make good use of the *interval* data type when
