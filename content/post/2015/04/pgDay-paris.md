@@ -5,9 +5,9 @@ tags = ["PostgreSQLFr", "Conferences"]
 categories = ["Conferences","PostgreSQLFr Confs"]
 thumbnailImage = "/img/old/pgdayparis.png"
 thumbnailImagePosition = "left"
-coverImage = "/img/old/pgdayparis.png"
+coverImage = "/img/pgDayParisCover2017.png"
 coverSize = "partial"
-coverMeta = "out"
+coverMeta = "in"
 aliases = ["/blog/2015/04/02-pgDay-paris",
            "/blog/2015/04/02-pgDay-paris.html"]
 +++
@@ -20,16 +20,6 @@ retours d'expérience et une analyse de l'utilisation des derniers
 développements en cours dans notre projet de base de données préféré.
 
 <!--more-->
-
-<center>
-<div class="figure dim-margin">
-  <a href="http://pgday.paris/">
-    <img src="/img/old/pgdayparis.png">
-  </a>
-</div>
-</center>
-
-<center>*pgDay Paris, ***21 avril 2015*** : 8 conférences PostgreSQL*</center>
 
 Pour 65 € l'accès à la conférence inclut les pauses cafés (avec thé, eau,
 biscuits, etc) et le déjeuner sur place (repas complet servi à table).
@@ -95,6 +85,8 @@ Les
 [Vincent Picavet](http://www.oslandia.com/pages/presentation.html), contributeur à 
 [PostGIS](http://postgis.net/), qui viendra nous expliquer ce que
 l'on peut faire de PostgreSQL avec les extension GIS.
+
+{{< image classes="fig25 center dim-margin" src="/img/old/pgdayparis.png" >}}
 
 Nous terminerons cette journée riche en conférences avec une présentation
 des progrès de PostgreSQL dans le passé et à l'avenir, ainsi qu'une analyse

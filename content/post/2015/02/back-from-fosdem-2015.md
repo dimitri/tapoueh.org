@@ -5,9 +5,9 @@ tags = ["PostgreSQL", "Conferences", "FOSDEM", "pgloader"]
 categories = ["Conferences","PostgreSQL Confs"]
 thumbnailImage = "/img/old/Fosdem-2015-Tizen-Developer2.jpg"
 thumbnailImagePosition = "left"
-coverImage = "/img/old/Fosdem-2015-Tizen-Developer2.jpg"
+coverImage = "/img/FOSDEM-Confrerence-Belgium-room-view-rev-o.jpg"
 coverSize = "partial"
-coverMeta = "out"
+coverMeta = "in"
 aliases = ["/blog/2015/02/09-back-from-fosdem-2015",
            "/blog/2015/02/09-back-from-fosdem-2015.html"]
 +++
@@ -19,15 +19,6 @@ activity in all Open Source domains, and having Belgium beers in the
 evenings.
 
 <!--more-->
-
-<center>
-<div class="figure dim-margin">
-  <a href="https://fosdem.org/2015/">
-    <img src="/img/old/Fosdem-2015-Tizen-Developer2.jpg">
-  </a>
-</div>
-</center>
-
 
 ## FOSDEM PGDAY
 

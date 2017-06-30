@@ -7,7 +7,7 @@ thumbnailImage = "/confs/php-tour-public.jpg"
 thumbnailImagePosition = "left"
 coverImage = "/confs/php-tour-public.jpg"
 coverSize = "partial"
-coverMeta = "out"
+coverMeta = "in"
 aliases = ["/blog/2014/06/27-phptour-2014",
            "/blog/2014/06/27-phptour-2014.html"]
 +++

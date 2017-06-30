@@ -5,9 +5,9 @@ tags = ["PostgreSQL", "MongoDB", "YeSQL", "histograms", "statistics"]
 categories = ["PostgreSQL","YeSQL"]
 thumbnailImage = "/img/old/histogram.jpg"
 thumbnailImagePosition = "left"
-coverImage = "/img/old/histogram.jpg"
+coverImage = "/img/histogramme-surexposition.jpg"
 coverSize = "partial"
-coverMeta = "out"
+coverMeta = "in"
 aliases = ["/blog/2014/02/21-PostgreSQL-histogram",
            "/blog/2014/02/21-PostgreSQL-histogram.html"]
 +++

@@ -3,11 +3,11 @@ date = "2014-05-14T14:59:00+02:00"
 title = "Why is pgloader so much faster?"
 tags = ["PostgreSQL", "pgloader", "Common-Lisp"]
 categories = ["Projects","pgloader"]
-thumbnailImage = "/img/old/toy-loader.320.jpg"
+thumbnailImage = "/img/faster-icon.png"
 thumbnailImagePosition = "left"
-coverImage = "/img/old/toy-loader.320.jpg"
+coverImage = "/img/Chevvy.jpg"
 coverSize = "partial"
-coverMeta = "out"
+coverMeta = "in"
 aliases = ["/blog/2014/05/14-pgloader-got-faster",
            "/blog/2014/05/14-pgloader-got-faster.html"]
 +++

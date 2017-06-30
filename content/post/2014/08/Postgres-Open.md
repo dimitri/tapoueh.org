@@ -7,7 +7,7 @@ thumbnailImage = "/confs/pgopen.jpg"
 thumbnailImagePosition = "left"
 coverImage = "/confs/pgopen.jpg"
 coverSize = "partial"
-coverMeta = "out"
+coverMeta = "in"
 aliases = ["/blog/2014/08/29-Postgres-Open",
            "/blog/2014/08/29-Postgres-Open.html"]
 +++

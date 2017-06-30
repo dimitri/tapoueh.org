@@ -4,7 +4,7 @@ date = "2017-06-13T13:47:08+02:00"
 tags = ["PostgreSQL","YeSQL","SQL","exploration","window functions",
         "data","statistics","percentile","median","histogram"]
 categories = ["PostgreSQL","YeSQL"]
-coverImage = "/img/explorer.jpg"
+coverImage = "/img/Plitvice-Cave-1.jpg"
 coverMeta = "in"
 coverSize = "partial"
 thumbnailImage = "/img/explore-data.png"

@@ -5,9 +5,9 @@ tags = ["PostgreSQL", "FOSDEM", "Extensions", "Conferences", "YeSQL"]
 categories = ["Conferences","PostgreSQL Confs"]
 thumbnailImage = "/img/old/Fosdem_2014_Extensions.png"
 thumbnailImagePosition = "left"
-coverImage = "/img/old/Fosdem_2014_Extensions.png"
+coverImage = "/img/FOSDEM-Confrerence-Belgium-room-view-rev-o.jpg"
 coverSize = "partial"
-coverMeta = "out"
+coverMeta = "in"
 aliases = ["/blog/2014/02/FOSDEM-Extensions",
            "/blog/2014/02/FOSDEM-Extensions.html"]
 +++

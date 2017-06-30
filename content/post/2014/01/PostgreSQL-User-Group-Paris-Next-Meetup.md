@@ -7,7 +7,7 @@ thumbnailImage = "/img/old/the-eiffel-tower-and-the-elephant-by-fremiet-jules-er
 thumbnailImagePosition = "left"
 coverImage = "/img/old/the-eiffel-tower-and-the-elephant-by-fremiet-jules-ernest-renoux.jpg"
 coverSize = "partial"
-coverMeta = "out"
+coverMeta = "in"
 aliases = ["/blog/2014/01/15-PostgreSQL-User-Group-Paris-Next-Meetup",
            "/blog/2014/01/15-PostgreSQL-User-Group-Paris-Next-Meetup.html"]
 +++

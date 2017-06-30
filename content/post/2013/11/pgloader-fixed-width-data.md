@@ -5,9 +5,9 @@ tags = ["PostgreSQL", "pgloader", "Common-Lisp"]
 categories = ["Projects","pgloader"]
 thumbnailImage = "/img/old/fixed_text_read.png"
 thumbnailImagePosition = "left"
-coverImage = "/img/old/fixed_text_read.png"
+coverImage = "/img/bigstock-large-container-ships-freighte.jpg"
 coverSize = "partial"
-coverMeta = "out"
+coverMeta = "in"
 aliases = ["/blog/2013/11/18-pgloader-fixed-width-data",
            "/blog/2013/11/18-pgloader-fixed-width-data.html"]
 +++

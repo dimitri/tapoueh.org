@@ -5,9 +5,9 @@ tags = ["PostgreSQL", "Conferences", "FOSDEM"]
 categories = ["Conferences","PostgreSQL Confs"]
 thumbnailImage = "/img/old/fosdem_2014.jpg"
 thumbnailImagePosition = "left"
-coverImage = "/img/old/fosdem_2014.jpg"
+coverImage = "/img/FOSDEM-Confrerence-Belgium-room-view-rev-o.jpg"
 coverSize = "partial"
-coverMeta = "out"
+coverMeta = "in"
 aliases = ["/blog/2014/01/29-fodsem-2014",
            "/blog/2014/01/29-fodsem-2014.html"]
 +++

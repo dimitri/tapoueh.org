@@ -5,13 +5,16 @@ tags = ["PostgreSQLFr", "Conferences"]
 categories = ["Conferences","PostgreSQLFr Confs"]
 thumbnailImage = "/img/old/jug-montpellier-logo.png"
 thumbnailImagePosition = "left"
-coverImage = "/img/old/jug-montpellier-logo.png"
+coverImage = "/img/Montpellier.jpg"
 coverSize = "partial"
-coverMeta = "out"
+coverMeta = "in"
 aliases = ["/blog/2015/05/25-JUG-Montpellier",
            "/blog/2015/05/25-JUG-Montpellier.html"]
 +++
 
+{{< image classes="fig25 left dim-margin"
+              src="/img/old/jug-montpellier-logo.png" >}}
+           
 J'ai eu le plaisir de présenter PostgreSQL au 
 [Java User Group de Montpellier](http://www.jug-montpellier.org/)
 le 20 mai dernier dans le cadre d'une soirée 

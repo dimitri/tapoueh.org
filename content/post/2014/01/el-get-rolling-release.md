@@ -5,9 +5,9 @@ tags = ["El-Get", "Emacs"]
 categories = ["Emacs","el-get"]
 thumbnailImage = "/img/old/el-get.big.png"
 thumbnailImagePosition = "left"
-coverImage = "/img/old/el-get.big.png"
+coverImage = "/img/pangolin.jpg"
 coverSize = "partial"
-coverMeta = "out"
+coverMeta = "in"
 aliases = ["/blog/2014/01/11-el-get-rolling-release",
            "/blog/2014/01/11-el-get-rolling-release.html"]
 +++
