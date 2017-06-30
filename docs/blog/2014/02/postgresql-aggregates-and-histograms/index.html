@@ -318,103 +318,83 @@ back to counting
 that we have stats ranging from 10 to 54 rebounds per team in a single game,
 a good information we can use in the following query:</p>
 
-<pre><code>select width_bucket(drb, 10, 54, 9), count(*)
+<pre><code>  select width_bucket(drb, 10, 54, 9) as buckets,
+         count(*)
     from team_stats
-group by 1
-order by 1;
- width_bucket | count 
---------------+-------
-            1 |    52
-            2 |  1363
-            3 |  8832
-            4 | 20917
-            5 | 20681
-            6 |  9166
-            7 |  2093
-            8 |   247
-            9 |    20
-           10 |     1
-(10 rows)
+group by buckets
+order by buckets;
 </code></pre>
 
-<p><center>
-
-
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/calibrate.gif" data-fancybox-group="">
-  
-    <img class="fig-img" src="/img/old/calibrate.gif" >
-  
-    </a>
-  
-  
-</div>
-
-</center></p>
-
-<p><center><em>We&rsquo;ve just calibrated our games in terms of rebounds here</em></center></p>
+<p>We asked for 9 separations so we have 10 groups as a result:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span> width_bucket | count 
+<span style="color: #aaaaaa; font-style: italic">--------------+-------</span>
+            <span style="color: #009999">1</span> |    <span style="color: #009999">52</span>
+            <span style="color: #009999">2</span> |  <span style="color: #009999">1363</span>
+            <span style="color: #009999">3</span> |  <span style="color: #009999">8832</span>
+            <span style="color: #009999">4</span> | <span style="color: #009999">20917</span>
+            <span style="color: #009999">5</span> | <span style="color: #009999">20681</span>
+            <span style="color: #009999">6</span> |  <span style="color: #009999">9166</span>
+            <span style="color: #009999">7</span> |  <span style="color: #009999">2093</span>
+            <span style="color: #009999">8</span> |   <span style="color: #009999">247</span>
+            <span style="color: #009999">9</span> |    <span style="color: #009999">20</span>
+           <span style="color: #009999">10</span> |     <span style="color: #009999">1</span>
+(<span style="color: #009999">10</span> <span style="color: #0000aa">rows</span>)
+</pre></div>
 
 <h1 id="console-histograms">Console Histograms</h1>
 
 <p>Now, what would it take to actually be able to display the full story right
-into our
-<code>psql</code> console, for preview before actually integrating a new diagram
-in our reporting solution? Turns out it&rsquo;s not very complex.</p>
+into our <code>psql</code> console, for preview before actually integrating a new
+diagram in our reporting solution? Turns out it&rsquo;s not very complex.</p>
 
-<p>First, we want to avoid hard coding the range of
-<em>rebounds</em> we&rsquo;re processing,
-so we are going to compute that in a first step. Then we want the
-<em>histogram</em>
-data, which is a ordered list of ranges with a min and a max value and a
-<em>frequency</em>, which is how many games were recorded with a number or
-<em>rebounds</em>
-within any given
-<em>bucket</em> range. And last, we want to display something a
-little more visual than just a list of numbers:</p>
-
-<pre><code>with drb_stats as (
-    select min(drb) as min,
-           max(drb) as max
-      from team_stats
+<p>First, we want to avoid hard coding the range of <em>rebounds</em> we&rsquo;re
+processing, so we are going to compute that in a first step. Then we want
+the <em>histogram</em> data, which is a ordered list of ranges with a min and a max
+value and a <em>frequency</em>, which is how many games were recorded with a number
+or <em>rebounds</em> within any given <em>bucket</em> range. And last, we want to display
+something a little more visual than just a list of numbers:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">with</span> drb_stats <span style="color: #0000aa">as</span> (
+    <span style="color: #0000aa">select</span> <span style="color: #0000aa">min</span>(drb) <span style="color: #0000aa">as</span> <span style="color: #0000aa">min</span>,
+           <span style="color: #0000aa">max</span>(drb) <span style="color: #0000aa">as</span> <span style="color: #0000aa">max</span>
+      <span style="color: #0000aa">from</span> team_stats
 ),
-     histogram as (
-   select width_bucket(drb, min, max, 9) as bucket,
-          int4range(min(drb), max(drb), '[]') as range,
-          count(*) as freq
-     from team_stats, drb_stats
- group by bucket
- order by bucket
+     histogram <span style="color: #0000aa">as</span> (
+   <span style="color: #0000aa">select</span> width_bucket(drb, <span style="color: #0000aa">min</span>, <span style="color: #0000aa">max</span>, <span style="color: #009999">9</span>) <span style="color: #0000aa">as</span> bucket,
+          int4range(<span style="color: #0000aa">min</span>(drb), <span style="color: #0000aa">max</span>(drb), <span style="color: #aa5500">&#39;[]&#39;</span>) <span style="color: #0000aa">as</span> range,
+          <span style="color: #0000aa">count</span>(*) <span style="color: #0000aa">as</span> freq
+     <span style="color: #0000aa">from</span> team_stats, drb_stats
+ <span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> bucket
+ <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> bucket
 )
- select bucket, range, freq,
-        repeat('*', (freq::float / max(freq) over() * 30)::int) as bar
-   from histogram;
+ <span style="color: #0000aa">select</span> bucket, range, freq,
+        repeat(<span style="color: #aa5500">&#39;■&#39;</span>,
+               (   freq::<span style="color: #00aaaa">float</span>
+                 / <span style="color: #0000aa">max</span>(freq) over()
+                 * <span style="color: #009999">30</span>
+               )::<span style="color: #00aaaa">int</span>
+        ) <span style="color: #0000aa">as</span> bar
+   <span style="color: #0000aa">from</span> histogram;
+</pre></div>
 
- bucket |  range  | freq  |              bar               
+<p>The first part of the query is the <em>drb_stats</em> common table expression, and
+its role is to fetch the min and max values of <em>drb</em> in our whole dataset.
+It&rsquo;s better than doing the query separately and then injecting the result in
+the next query, because there&rsquo;s no <em>roundtrip</em>, but it&rsquo;s basically the idea.</p>
+
+<p>Then the <em>histogram</em> common table expression is the meat of the query, where
+we compute the bucket distribution of our data set. Finally, we use a cheap
+trick with the <em>repeat</em> function where we scale down the frequency into a
+display of 30 characters:</p>
+
+<pre><code> bucket |  range  | freq  |              bar               
 --------+---------+-------+--------------------------------
       1 | [10,15) |    52 | 
-      2 | [15,20) |  1363 | **
-      3 | [20,25) |  8832 | *************
-      4 | [25,30) | 20917 | ******************************
-      5 | [30,35) | 20681 | ******************************
-      6 | [35,40) |  9166 | *************
-      7 | [40,45) |  2093 | ***
+      2 | [15,20) |  1363 | ■■
+      3 | [20,25) |  8832 | ■■■■■■■■■■■■■
+      4 | [25,30) | 20917 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+      5 | [30,35) | 20681 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+      6 | [35,40) |  9166 | ■■■■■■■■■■■■■
+      7 | [40,45) |  2093 | ■■■
       8 | [45,50) |   247 | 
       9 | [50,54) |    20 | 
      10 | [54,55) |     1 | 
@@ -423,18 +403,14 @@ little more visual than just a list of numbers:</p>
 Time: 53.570 ms
 </code></pre>
 
-<p>The query is using the
-<a href="http://www.postgresql.org/docs/9.3/interactive/queries-with.html">Common Table Expressions</a>
-<code>WITH</code> syntax so that it&rsquo;s
-easier to read and understand, then the data-related magic happens in the
-<code>histogram</code> CTE. We use the
-<code>width_bucket</code> function to get a
-<em>calibration</em> number
-for each of our games, and we
-<code>GROUP BY bucket</code> to be able to
-<strong><em>aggregate</em></strong> the
-<em>min</em> and
-<em>max</em> values.</p>
+<p>Also, as we&rsquo;re using PostgreSQL, just having two columns with the min and
+max as separate values is not enough, what we actually need is
+a
+<a href="http://www.postgresql.org/docs/9.3/static/rangetypes.html">discrete range</a>
+of <em>rebounds</em> for each <em>bucket</em>, hence using the <code>int4range</code> range
+constructor function.</p>
+
+<h1 id="conclusion">Conclusion</h1>
 
 
 
@@ -449,36 +425,20 @@ for each of our games, and we
 </div>
 
 
-<p>As we&rsquo;re using PostgreSQL though, just having two columns with the min and
-max as separate values is not enough, what we actually need is a
-<a href="http://www.postgresql.org/docs/9.3/static/rangetypes.html">discrete range</a> of
-<em>rebounds</em> for each
-<em>bucket</em>, hence using the
-<code>int4range</code> range
-constructor function.</p>
-
-<p>Of course, within the same
-<code>GROUP BY</code> aggregation here it&rsquo;s still possible to
-<em>count</em> the number of games having a
-<em>rebounds</em> stat within the bucket, defining
-the histogram&rsquo;s frequency.</p>
-
-<h1 id="conclusion">Conclusion</h1>
-
 <p>The only remaining step then consists into hacking our way into actually
-displaying something
-<em>visual enough</em> for a quick less-than-1-minute effort of
-data crunching, using the
-<code>repeat</code> function which is part of
-<a href="http://www.postgresql.org/docs/9.3/static/functions-string.html">PostgreSQL String Functions and Operators</a>. Note that we&rsquo;re using the
-<a href="/blog/2013/08/20-Window-Functions">Window Function</a> expression
-<code>max(freq) over()</code> to have access the highest
-frequency value from each and every result row.</p>
+displaying something <em>visual enough</em> for a quick less-than-1-minute effort
+of data crunching, using the <code>repeat</code> function which is part
+of
+<a href="http://www.postgresql.org/docs/9.3/static/functions-string.html">PostgreSQL String Functions and Operators</a>.
+Note that we&rsquo;re using
+the <a href="/blog/2013/08/20-Window-Functions">Window Function</a> expression
+<code>max(freq) over()</code> to have access the highest frequency value from each and
+every result row.</p>
 
-<p>By the way, the whole scripting and data and SQL is available at
-<a href="https://github.com/dimitri/nba">github/dimitri/nba</a>, and there&rsquo;s an
-<a href="https://news.ycombinator.com/item?id=7257555">Hacker News</a> entry to comment on the
-article if you&rsquo;re interested.</p>
+<p>By the way, the whole scripting and data and SQL is available
+at <a href="https://github.com/dimitri/nba">github/dimitri/nba</a>, and there&rsquo;s
+an <a href="https://news.ycombinator.com/item?id=7257555">Hacker News</a> entry to
+comment on the article if you&rsquo;re interested.</p>
               
             </div>
           </div>
