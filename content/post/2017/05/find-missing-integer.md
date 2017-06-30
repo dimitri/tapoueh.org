@@ -5,11 +5,11 @@ categories = ["PostgreSQL","YeSQL"]
 tags = ["PostgreSQL","YeSQL",
         "right join","generate_series",
         "anti join","except","not exists"]
-coverImage = "/img/sum-to-100.jpg"
-coverMeta = "out"
-coverSize = "partial"
-thumbnailImage = "/img/karl-friedrich-gauss.jpg"
+thumbnailImage = "/img/sum-to-100.jpg"
 thumbnailImagePosition = "left"
+coverImage = "/img/math-physics-formulas-on-chalkboard-tilting-loop_ejfj8p3zg__S0000.jpg"
+coverMeta = "in"
+coverSize = "partial"
 
 +++
 
