@@ -1,0 +1,1187 @@
+
+
+  
+    
+  
+
+
+  
+
+
+
+
+  
+
+
+  
+
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Hugo 0.20.7">
+    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
+    <title>Playing with Unicode</title>
+    <meta name="author" content="Dimitri Fontaine">
+    <meta name="keywords" content="">
+
+    <link rel="icon" href="/favicon.ico">
+    
+
+    
+    <meta name="description" content="The reason why I like Unicode a lot is because it allows me to code in text
+based environments and still have nice output. Today, we&rsquo;re going to play
+with
+Regional Indicator Symbol,
+which is implemented as a Unicode combinaison of letters from 🇦 to 🇿. For
+instance, if you display 🇫 then 🇷 concatenated together, you get 🇫🇷. Let&rsquo;s
+try that from our PostgreSQL prompt!">
+    <meta property="og:description" content="The reason why I like Unicode a lot is because it allows me to code in text
+based environments and still have nice output. Today, we&rsquo;re going to play
+with
+Regional Indicator Symbol,
+which is implemented as a Unicode combinaison of letters from 🇦 to 🇿. For
+instance, if you display 🇫 then 🇷 concatenated together, you get 🇫🇷. Let&rsquo;s
+try that from our PostgreSQL prompt!">
+    <meta property="og:type" content="blog">
+    <meta property="og:title" content="Playing with Unicode">
+    <meta property="og:url" content="/blog/2017/07/playing-with-unicode/">
+    <meta property="og:site_name" content="Dimitri Fontaine, PostgreSQL Expert">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Dimitri Fontaine, PostgreSQL Expert">
+    <meta name="twitter:description" content="The reason why I like Unicode a lot is because it allows me to code in text
+based environments and still have nice output. Today, we&rsquo;re going to play
+with
+Regional Indicator Symbol,
+which is implemented as a Unicode combinaison of letters from 🇦 to 🇿. For
+instance, if you display 🇫 then 🇷 concatenated together, you get 🇫🇷. Let&rsquo;s
+try that from our PostgreSQL prompt!">
+    
+      <meta name="twitter:creator" content="@tapoueh">
+    
+    
+
+    
+    
+
+    
+      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
+    
+
+    
+      <meta property="og:image" content="http://tapoueh.org/img/Unicode_logo.gif">
+    
+    
+      <meta property="og:image" content="http://tapoueh.org/img/Taamey-Ashkenaz-CLM.png">
+    
+    
+
+    
+
+    
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
+    
+    
+    <link rel="stylesheet" href="/css/style-u6mk0ojoywresbx8iepslrmmhl4stuhrsxuwhkpwrkrx7mryjcaimasnk4pi.min.css" />
+    
+    
+      <link rel="stylesheet" href="http://tapoueh.org//css/dim.css">
+    
+
+    
+      
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-47059482-1', 'auto');
+ga('send', 'pageview');
+</script>
+
+    
+    
+  </head>
+
+  <body>
+    <div id="blog">
+      <header id="header" data-behavior="2">
+  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+  <div class="header-title">
+    <a class="header-title-link" href="/">Dimitri Fontaine, PostgreSQL Expert</a>
+  </div>
+  
+</header>
+
+      <nav id="sidebar" data-behavior="2">
+  <div class="sidebar-container">
+    
+      <div class="sidebar-profile">
+        <a href="/#about">
+          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+        </a>
+        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
+        
+          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
+        
+      </div>
+    
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
+      
+      <span class="sidebar-button-desc">Blog</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/about/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
+      
+      <span class="sidebar-button-desc">About</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories/yesql/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-database"></i>
+      
+      <span class="sidebar-button-desc">YeSQL</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="http://masteringpostgresql.com" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
+      
+      <span class="sidebar-button-desc">Mastering PostgreSQL</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+      
+      <span class="sidebar-button-desc">GitHub</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+      
+      <span class="sidebar-button-desc">Twitter</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+      
+      <span class="sidebar-button-desc">Categories</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/index.xml">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+      
+      <span class="sidebar-button-desc">RSS</span>
+    </a>
+  </li>
+
+    </ul>
+  </div>
+</nav>
+
+      
+  <div class="post-header-cover
+              text-left
+              post-header-cover--partial"
+       style="background-image:url('/img/Taamey-Ashkenaz-CLM.png')"
+       data-behavior="2">
+    
+  </div>
+
+
+      <div id="main" data-behavior="2"
+        class="hasCover
+               hasCoverMetaOut
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
+          
+            <div class="post-header main-content-wrap text-left">
+  
+    <h1 class="post-title" itemprop="headline">
+      Playing with Unicode
+    </h1>
+  
+  <div class="postShorten-meta post-meta">
+  
+    <time itemprop="datePublished" datetime="2017-07-03T14:32:29&#43;02:00">
+      
+  
+  
+  
+  
+    Monday 03 Jul 2017
+  
+
+    </time>
+  
+  
+  
+  
+    <span></span>
+    
+      <a class="category-link" href="/categories/postgresql">PostgreSQL</a>, 
+    
+      <a class="category-link" href="/categories/yesql">YeSQL</a>
+    
+  
+
+
+</div>
+
+</div>
+          
+          <div class="post-content markdown" itemprop="articleBody">
+            <div class="main-content-wrap">
+              <p>The reason why I like Unicode a lot is because it allows me to code in text
+based environments and still have nice output. Today, we&rsquo;re going to play
+with
+<a href="https://en.wikipedia.org/wiki/Regional_Indicator_Symbol">Regional Indicator Symbol</a>,
+which is implemented as a Unicode combinaison of letters from 🇦 to 🇿. For
+instance, if you display 🇫 then 🇷 concatenated together, you get 🇫🇷. Let&rsquo;s
+try that from our <a href="https://www.postgresql.org/">PostgreSQL</a> prompt!</p>
+
+<p>
+<h1 id="table-of-contents"></h1><nav id="TableOfContents">
+<ul>
+<li><a href="#context-and-necessary-data">Context and Necessary data</a></li>
+<li><a href="#the-unicode-trick">The unicode trick</a></li>
+<li><a href="#country-codes">Country Codes</a></li>
+<li><a href="#nationality-and-country-code-mapping">Nationality and Country Code Mapping</a></li>
+<li><a href="#formula-one-drivers-and-country-flags">Formula One drivers and country flags</a></li>
+</ul>
+</nav></p>
+
+<h1 id="context-and-necessary-data">Context and Necessary data</h1>
+
+<p>In the <a href="http://ergast.com/mrd/">historical record of motor racing data</a>
+database we have all the data to reproduce the table from
+the
+<a href="https://en.wikipedia.org/wiki/List_of_Formula_One_seasons">List of Formula One seasons</a> with
+driver&rsquo;s champions and constructors champion.</p>
+
+<div class="alert success ">
+  <p>Grab the MySQL version of it, the only one available now, and import its
+schema and data in a single command line
+with <a href="http://pgloader.io">pgloader</a>:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>$ createdb f1db
+$ pgloader mysql://root@localhost/f1db pgsql:///f1db
+$ psql -d f1db -c <span style="color: #aa5500">&#39;ALTER DATABASE f1db SET search_path TO f1db, public;&#39;</span>
+</pre></div>
+</p>
+</div>
+
+<p>In
+the
+<a href="https://en.wikipedia.org/wiki/List_of_Formula_One_seasons">List of Formula One seasons</a> page
+is included a flag from the country of each driver. The f1db database model
+only includes a nationality column for each driver, that we can see here:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>  <span style="color: #0000aa">select</span> <span style="color: #0000aa">count</span>(*) <span style="color: #0000aa">as</span> victories,
+         forename, surname, nationality
+    <span style="color: #0000aa">from</span> drivers
+         <span style="color: #0000aa">left</span> <span style="color: #0000aa">join</span> results
+                <span style="color: #0000aa">on</span> drivers.driverid = results.driverid
+               <span style="color: #0000aa">and</span> results.<span style="color: #0000aa">position</span> = <span style="color: #009999">1</span>
+<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> drivers.driverid
+<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> victories <span style="color: #0000aa">desc</span>
+   <span style="color: #0000aa">limit</span> <span style="color: #009999">10</span>;
+</pre></div>
+
+<p>Which gives the following result:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span> victories | forename  |  surname   | nationality 
+<span style="color: #aaaaaa; font-style: italic">-----------+-----------+------------+-------------</span>
+        <span style="color: #009999">91</span> | Michael   | Schumacher | German
+        <span style="color: #009999">56</span> | Lewis     | Hamilton   | British
+        <span style="color: #009999">51</span> | Alain     | Prost      | French
+        <span style="color: #009999">45</span> | Sebastian | Vettel     | German
+        <span style="color: #009999">41</span> | Ayrton    | Senna      | Brazilian
+        <span style="color: #009999">32</span> | Fernando  | Alonso     | Spanish
+        <span style="color: #009999">31</span> | Nigel     | Mansell    | British
+        <span style="color: #009999">27</span> | Jackie    | Stewart    | British
+        <span style="color: #009999">25</span> | Jim       | Clark      | British
+        <span style="color: #009999">25</span> | Niki      | Lauda      | Austrian
+(<span style="color: #009999">10</span> <span style="color: #0000aa">rows</span>)
+</pre></div>
+
+<p>Can we display directly the champion&rsquo;s country flag in the result set?</p>
+
+<h1 id="the-unicode-trick">The unicode trick</h1>
+
+<p>If we apply what we read before in
+the
+<a href="https://en.wikipedia.org/wiki/Regional_Indicator_Symbol">Regional Indicator Symbol</a> page,
+displaying a Unicode country flag is as easy as concatenating the country
+codes together in the right Unicode range. Of course PostgreSQL knows how to
+that, thanks to its advanced set
+of
+<a href="https://www.postgresql.org/docs/current/static/functions-string.html">String Functions and Operators</a>:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> chr(<span style="color: #009999">127462</span>+ascii(<span style="color: #aa5500">&#39;F&#39;</span>)-ascii(<span style="color: #aa5500">&#39;A&#39;</span>)) <span style="color: #0000aa">as</span> a,
+       chr(<span style="color: #009999">127462</span>+ascii(<span style="color: #aa5500">&#39;R&#39;</span>)-ascii(<span style="color: #aa5500">&#39;A&#39;</span>)) <span style="color: #0000aa">as</span> b,
+          chr(<span style="color: #009999">127462</span>+ascii(<span style="color: #aa5500">&#39;F&#39;</span>)-ascii(<span style="color: #aa5500">&#39;A&#39;</span>))
+       || chr(<span style="color: #009999">127462</span>+ascii(<span style="color: #aa5500">&#39;R&#39;</span>)-ascii(<span style="color: #aa5500">&#39;A&#39;</span>)) <span style="color: #0000aa">as</span> flag;
+</pre></div>
+
+<p>And yes that&rsquo;s a good reading of the Unicode specifications for <em>Regional
+Indicator Symbol</em>, it seems:</p>
+
+<pre><code> a | b | flag 
+---+---+------
+ 🇫 | 🇷 | 🇫🇷
+(1 row)
+</code></pre>
+
+<p>As it is quite cumbersome to write this expression each time, we can code a
+PostgreSQL function that would do that for us:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">create</span> <span style="color: #0000aa">or</span> <span style="color: #0000aa">replace</span> <span style="color: #0000aa">function</span> flag
+ (
+   code <span style="color: #00aaaa">text</span>
+ )
+ <span style="color: #0000aa">returns</span> <span style="color: #00aaaa">text</span>
+<span style="color: #0000aa">language</span> <span style="color: #0000aa">sql</span>
+<span style="color: #0000aa">as</span> <span style="color: #FF0000; background-color: #FFAAAA">$$</span>
+ <span style="color: #0000aa">select</span>    chr(  <span style="color: #009999">127462</span>
+               + ascii(<span style="color: #0000aa">substring</span>(code <span style="color: #0000aa">from</span> <span style="color: #009999">1</span> <span style="color: #0000aa">for</span> <span style="color: #009999">1</span>))
+               - ascii(<span style="color: #aa5500">&#39;A&#39;</span>))
+
+        || chr(  <span style="color: #009999">127462</span>
+               + ascii(<span style="color: #0000aa">substring</span>(code <span style="color: #0000aa">from</span> <span style="color: #009999">2</span> <span style="color: #0000aa">for</span> <span style="color: #009999">1</span>))
+               - ascii(<span style="color: #aa5500">&#39;A&#39;</span>))
+<span style="color: #FF0000; background-color: #FFAAAA">$$</span>;
+</pre></div>
+
+<p>With that it&rsquo;s easier:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> name, code, flag(code)
+  <span style="color: #0000aa">from</span> country
+ <span style="color: #0000aa">where</span> code <span style="color: #0000aa">is</span> <span style="color: #0000aa">not</span> <span style="color: #0000aa">null</span>
+ <span style="color: #0000aa">limit</span> <span style="color: #009999">10</span>;
+</pre></div>
+
+<p>And here&rsquo;s a nice list of flags now:</p>
+
+<pre><code>       name        | code | flag 
+-------------------+------+------
+ Afghanistan       | AF   | 🇦🇫
+ Albania           | AL   | 🇦🇱
+ Algeria           | DZ   | 🇩🇿
+ American Samoa    | AS   | 🇦🇸
+ Andorra           | AD   | 🇦🇩
+ Angola            | AO   | 🇦🇴
+ Anguilla          | AI   | 🇦🇮
+ Antarctica        | AQ   | 🇦🇶
+ Antigua &amp; Barbuda | AG   | 🇦🇬
+ Argentina         | AR   | 🇦🇷
+(10 rows)
+</code></pre>
+
+<h1 id="country-codes">Country Codes</h1>
+
+<p>This <em>country</em> table comes
+from <a href="http://data.okfn.org/data/core/country-codes">http://data.okfn.org/data/core/country-codes</a>. They have a GitHub
+repository at <a href="https://github.com/datasets/country-codes">https://github.com/datasets/country-codes</a> from which you can
+easily grab the CSV data file then integrate it into PostgreSQL:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">begin</span>;
+
+<span style="color: #0000aa">create</span> <span style="color: #0000aa">table</span> <span style="color: #0000aa">public</span>.country
+ (
+   name                             <span style="color: #00aaaa">text</span>,
+   official_name_en                 <span style="color: #00aaaa">text</span>,
+   official_name_fr                 <span style="color: #00aaaa">text</span>,
+   code                             <span style="color: #00aaaa">text</span>,
+   trigram                          <span style="color: #00aaaa">text</span>,
+   M49                              <span style="color: #00aaaa">text</span>,
+   ITU                              <span style="color: #00aaaa">text</span>,
+   MARC                             <span style="color: #00aaaa">text</span>,
+   WMO                              <span style="color: #00aaaa">text</span>,
+   DS                               <span style="color: #00aaaa">text</span>,
+   Dial                             <span style="color: #00aaaa">text</span>,
+   FIFA                             <span style="color: #00aaaa">text</span>,
+   FIPS                             <span style="color: #00aaaa">text</span>,
+   GAUL                             <span style="color: #00aaaa">text</span>,
+   IOC                              <span style="color: #00aaaa">text</span>,
+   currency_alphabetic_code         <span style="color: #00aaaa">text</span>,
+   currency_country_name            <span style="color: #00aaaa">text</span>,
+   currency_minor_unit              <span style="color: #00aaaa">text</span>,
+   currency_name                    <span style="color: #00aaaa">text</span>,
+   currency_numeric_code            <span style="color: #00aaaa">text</span>,
+   is_independent                   <span style="color: #00aaaa">text</span>,
+   Capital                          <span style="color: #00aaaa">text</span>,
+   Continent                        <span style="color: #00aaaa">text</span>,
+   TLD                              <span style="color: #00aaaa">text</span>,
+   Languages                        <span style="color: #00aaaa">text</span>,
+   Geoname                          <span style="color: #00aaaa">text</span>,
+   EDGAR                            <span style="color: #00aaaa">text</span>
+ );
+
+<span style="color: #FF0000; background-color: #FFAAAA">\</span><span style="color: #0000aa">copy</span> <span style="color: #0000aa">public</span>.country <span style="color: #0000aa">from</span> <span style="color: #aa5500">&#39;country-codes.csv&#39;</span> <span style="color: #0000aa">with</span> <span style="color: #0000aa">delimiter</span> <span style="color: #aa5500">&#39;,&#39;</span> csv header quote <span style="color: #aa5500">&#39;&quot;&#39;</span>
+
+<span style="color: #0000aa">commit</span>;
+</pre></div>
+
+<h1 id="nationality-and-country-code-mapping">Nationality and Country Code Mapping</h1>
+
+<p>We said before that our Formula One database only has a <em>nationality</em> column
+for our drivers. How can we map that into country codes, so that we can
+diplay our nice little Unicode flag?</p>
+
+<p>Well this time I failed to find a ready to use dataset, but I found an easy
+to scrap web page with the needed information
+at <a href="http://www.ef.com/english-resources/english-grammar/nationalities/">http://www.ef.com/english-resources/english-grammar/nationalities/</a>.</p>
+
+<p>Some lines of python later:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #aaaaaa; font-style: italic">#! /usr/bin/env python3</span>
+
+<span style="color: #0000aa">import</span> <span style="color: #00aaaa; text-decoration: underline">re</span>
+
+<span style="color: #0000aa">def</span> <span style="color: #00aa00">parse_nationalities</span>(filename):
+    regexp = <span style="color: #aa5500">&#39;\t\t\t\t(.*)&lt;/td&gt;$&#39;</span>
+
+    <span style="color: #aaaaaa; font-style: italic"># Given that regexp we want to keep the first match as the country name</span>
+    <span style="color: #aaaaaa; font-style: italic"># then the second match as the nationality, then skip the third line</span>
+    current = <span style="color: #00aaaa">None</span>
+    skip = <span style="color: #00aaaa">False</span>
+
+    <span style="color: #0000aa">with</span> <span style="color: #00aaaa">open</span>(filename, <span style="color: #aa5500">&#39;r&#39;</span>) <span style="color: #0000aa">as</span> f:
+        <span style="color: #0000aa">for</span> line <span style="color: #0000aa">in</span> f:
+            match = re.search(regexp, line)
+            <span style="color: #0000aa">if</span> match:
+                <span style="color: #0000aa">if</span> skip:
+                    skip = <span style="color: #00aaaa">False</span>
+                <span style="color: #0000aa">elif</span> current <span style="color: #0000aa">is</span> <span style="color: #00aaaa">None</span>:
+                    current = match.group(<span style="color: #009999">1</span>)
+                <span style="color: #0000aa">else</span>:
+                    <span style="color: #0000aa">print</span>(<span style="color: #aa5500">&quot;%s;%s&quot;</span> % (current, match.group(<span style="color: #009999">1</span>)))
+                    current = <span style="color: #00aaaa">None</span>
+                    skip = <span style="color: #00aaaa">True</span>
+
+<span style="color: #0000aa">if</span> <span style="color: #aa0000">__name__</span> == <span style="color: #aa5500">&quot;__main__&quot;</span>:
+    parse_nationalities(<span style="color: #aa5500">&#39;nationalities.html&#39;</span>)
+</pre></div>
+
+<p>It is now possible to load the data set thanks to the following SQL:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">begin</span>;
+
+<span style="color: #0000aa">create</span> <span style="color: #0000aa">table</span> <span style="color: #0000aa">public</span>.nationalities
+ (
+   country     <span style="color: #00aaaa">text</span>,
+   nationality <span style="color: #00aaaa">text</span>
+ );
+
+
+<span style="color: #FF0000; background-color: #FFAAAA">\</span><span style="color: #0000aa">copy</span> <span style="color: #0000aa">public</span>.nationalities <span style="color: #0000aa">from</span> <span style="color: #aa5500">&#39;nationalities.csv&#39;</span> <span style="color: #0000aa">with</span> <span style="color: #0000aa">delimiter</span> <span style="color: #aa5500">&#39;;&#39;</span> csv
+
+<span style="color: #0000aa">insert</span> <span style="color: #0000aa">into</span> <span style="color: #0000aa">public</span>.nationalities(nationality, country)
+     <span style="color: #0000aa">values</span> (<span style="color: #aa5500">&#39;American&#39;</span>, <span style="color: #aa5500">&#39;US&#39;</span>),
+            (<span style="color: #aa5500">&#39;American-Italian&#39;</span>, <span style="color: #aa5500">&#39;US&#39;</span>),
+            (<span style="color: #aa5500">&#39;Argentine-Italian&#39;</span>, <span style="color: #aa5500">&#39;US&#39;</span>),
+            (<span style="color: #aa5500">&#39;Chilean&#39;</span>, <span style="color: #aa5500">&#39;Chile&#39;</span>),
+            (<span style="color: #aa5500">&#39;East German&#39;</span>, <span style="color: #aa5500">&#39;Germany&#39;</span>),
+            (<span style="color: #aa5500">&#39;Liechtensteiner&#39;</span>, <span style="color: #aa5500">&#39;Liechtenstein&#39;</span>),
+            (<span style="color: #aa5500">&#39;Monegasque&#39;</span>, <span style="color: #aa5500">&#39;Monaco&#39;</span>),
+            (<span style="color: #aa5500">&#39;New Zealander&#39;</span>, <span style="color: #aa5500">&#39;New Zealand&#39;</span>),
+            (<span style="color: #aa5500">&#39;Rhodesian&#39;</span>, <span style="color: #aa5500">&#39;Zimbabwe&#39;</span>),
+            (<span style="color: #aa5500">&#39;Venezuelan&#39;</span>, <span style="color: #aa5500">&#39;Venezuela&#39;</span>);
+
+<span style="color: #0000aa">update</span> <span style="color: #0000aa">public</span>.nationalities
+   <span style="color: #0000aa">set</span> country = <span style="color: #aa5500">&#39;Netherlands&#39;</span>
+ <span style="color: #0000aa">where</span> country = <span style="color: #aa5500">&#39;Holland&#39;</span>;
+
+<span style="color: #0000aa">update</span> <span style="color: #0000aa">public</span>.nationalities
+   <span style="color: #0000aa">set</span> country = <span style="color: #aa5500">&#39;US&#39;</span>
+ <span style="color: #0000aa">where</span> country = <span style="color: #aa5500">&#39;The United States&#39;</span>;
+
+<span style="color: #0000aa">update</span> <span style="color: #0000aa">public</span>.nationalities
+   <span style="color: #0000aa">set</span> country = <span style="color: #aa5500">&#39;UK&#39;</span>
+ <span style="color: #0000aa">where</span> country = <span style="color: #aa5500">&#39;Britain&#39;</span>;
+
+<span style="color: #0000aa">update</span> <span style="color: #0000aa">public</span>.nationalities
+   <span style="color: #0000aa">set</span> country = <span style="color: #aa5500">&#39;Czech Republic&#39;</span>
+ <span style="color: #0000aa">where</span> country = <span style="color: #aa5500">&#39;the Czech Republic&#39;</span>;
+
+<span style="color: #0000aa">commit</span>;
+</pre></div>
+
+<p>Note that to have matches for all our drivers, we did need to edit the list
+provided so that it would match with the set of nationalities found in the
+f1db database. You can list those with the following query:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> <span style="color: #0000aa">distinct</span>(nationality) <span style="color: #0000aa">from</span> drivers;
+</pre></div>
+
+<p>And more to the point, you can find any missing nationality in your new
+table set with the following <em>anti-join</em> query:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> nationality, country.code
+  <span style="color: #0000aa">from</span> drivers
+       <span style="color: #0000aa">left</span> <span style="color: #0000aa">join</span> nationalities <span style="color: #0000aa">using</span>(nationality)
+       <span style="color: #0000aa">left</span> <span style="color: #0000aa">join</span> country
+              <span style="color: #0000aa">on</span> country.name = nationalities.country
+ <span style="color: #0000aa">where</span> country.code <span style="color: #0000aa">is</span> <span style="color: #0000aa">null</span>;
+</pre></div>
+
+<p>Thanks to the modification we did previously after importing the dataset,
+this query should return an empty result set.</p>
+
+<h1 id="formula-one-drivers-and-country-flags">Formula One drivers and country flags</h1>
+
+<p>We now have enough data to finally play our unicode trick and display
+driver&rsquo;s country flags directly in our query result set on the console:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>  <span style="color: #0000aa">select</span> <span style="color: #0000aa">count</span>(*) <span style="color: #0000aa">as</span> victories,
+         forename, surname,
+         flag(country.code)
+    <span style="color: #0000aa">from</span> drivers
+         <span style="color: #0000aa">left</span> <span style="color: #0000aa">join</span> results
+                <span style="color: #0000aa">on</span> drivers.driverid = results.driverid
+               <span style="color: #0000aa">and</span> results.<span style="color: #0000aa">position</span> = <span style="color: #009999">1</span>
+         <span style="color: #0000aa">join</span> nationalities <span style="color: #0000aa">using</span>(nationality)
+         <span style="color: #0000aa">join</span> country
+           <span style="color: #0000aa">on</span> country.name = nationalities.country
+<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> drivers.driverid, country.code
+<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> victories <span style="color: #0000aa">desc</span>
+   <span style="color: #0000aa">limit</span> <span style="color: #009999">10</span>;
+</pre></div>
+
+<p>And here&rsquo;s our result with inline colored flags in the terminal:</p>
+
+<pre><code> victories | forename  |  surname   | flag 
+-----------+-----------+------------+------
+        91 | Michael   | Schumacher | 🇩🇪
+        56 | Lewis     | Hamilton   | 🇬🇧
+        51 | Alain     | Prost      | 🇫🇷
+        45 | Sebastian | Vettel     | 🇩🇪
+        41 | Ayrton    | Senna      | 🇧🇷
+        32 | Fernando  | Alonso     | 🇪🇸
+        31 | Nigel     | Mansell    | 🇬🇧
+        27 | Jackie    | Stewart    | 🇬🇧
+        25 | Jim       | Clark      | 🇬🇧
+        25 | Niki      | Lauda      | 🇦🇹
+(10 rows)
+</code></pre>
+
+<p>Fun, right?</p>
+              
+            </div>
+          </div>
+          <div id="post-footer" class="post-footer main-content-wrap">
+            
+              
+                
+                
+                  <div class="post-footer-tags">
+                    <span class="text-color-light text-small"></span><br/>
+                    
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/postgresql/">PostgreSQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/yesql/">YeSQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/sql/">SQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/unicode/">unicode</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/flags/">flags</a>
+
+                  </div>
+                
+              
+            
+            <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    <script async id="_ck_218061" src="https://forms.convertkit.com/218061?v=6"></script>
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2017/06/postgresql-and-the-calendar/" data-tooltip="PostgreSQL and the calendar">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f07%2fplaying-with-unicode%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f07%2fplaying-with-unicode%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=Playing%20with%20Unicode with @tapoueh: http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f07%2fplaying-with-unicode%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+            
+              
+                <div id="disqus_thread">
+  <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+              
+            
+          </div>
+        </article>
+        <footer id="footer" class="main-content-wrap">
+  <span class="copyrights">
+    &copy; 2017 Dimitri Fontaine. 
+  </span>
+</footer>
+
+      </div>
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="2">
+        <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    <script async id="_ck_218061" src="https://forms.convertkit.com/218061?v=6"></script>
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2017/06/postgresql-and-the-calendar/" data-tooltip="PostgreSQL and the calendar">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f07%2fplaying-with-unicode%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f07%2fplaying-with-unicode%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=Playing%20with%20Unicode with @tapoueh: http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f07%2fplaying-with-unicode%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+      </div>
+      <div id="share-options-bar" class="share-options-bar" data-behavior="2">
+  <ul class="share-options">
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f07%2fplaying-with-unicode%2f">
+        <i class="fa fa-google-plus"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f07%2fplaying-with-unicode%2f">
+        <i class="fa fa-facebook-official"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=Playing%20with%20Unicode with @tapoueh: http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f07%2fplaying-with-unicode%2f">
+        <i class="fa fa-twitter"></i><span></span>
+      </a>
+    </li>
+  </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
+    </div>
+    
+    <div id="about">
+  <div id="about-card">
+    <div id="about-btn-close">
+      <i class="fa fa-remove"></i>
+    </div>
+    
+      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+    
+    <h4 id="about-card-name">Dimitri Fontaine</h4>
+    
+      <div id="about-card-bio">PostgreSQL Major Contributor</div>
+    
+    
+      <div id="about-card-job">
+        <i class="fa fa-briefcase"></i>
+        <br/>
+        Open Source Software Engineer
+      </div>
+    
+    
+      <div id="about-card-location">
+        <i class="fa fa-map-marker"></i>
+        <br/>
+        France
+      </div>
+    
+  </div>
+</div>
+
+    <div id="algolia-search-modal" class="modal-container">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="close-button"><i class="fa fa-close"></i></span>
+      <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+        <span class="searchby-algolia-text text-color-light text-small">by</span>
+        <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+      </a>
+      <i class="search-icon fa fa-search"></i>
+      <form id="algolia-search-form">
+        <input type="text" id="algolia-search-input" name="search"
+          class="form-control input--large search-input" placeholder="" />
+      </form>
+    </div>
+    <div class="modal-body">
+      <div class="no-result text-color-light text-center"></div>
+      <div class="results">
+        
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/07/playing-with-unicode/">
+                <h3 class="media-heading">Playing with Unicode</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jul 7, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>The reason why I like Unicode a lot is because it allows me to code in text
+based environments and still have nice output. Today, we&rsquo;re going to play
+with
+<a href="https://en.wikipedia.org/wiki/Regional_Indicator_Symbol">Regional Indicator Symbol</a>,
+which is implemented as a Unicode combinaison of letters from 🇦 to 🇿. For
+instance, if you display 🇫 then 🇷 concatenated together, you get 🇫🇷. Let&rsquo;s
+try that from our <a href="https://www.postgresql.org/">PostgreSQL</a> prompt!</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/06/postgresql-and-the-calendar/">
+                <h3 class="media-heading">PostgreSQL and the calendar</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>The modern calendar is a trap for the young engineer&rsquo;s mind. We deal with
+the calendar on a daily basis and until exposed to its insanity it&rsquo;s rather
+common to think that calendar based computations are easy. That&rsquo;s until
+you&rsquo;ve tried to do it once. A very good read about how the current calendar
+came to be the way it is now is Erik&rsquo;s
+Naggum <a href="http://naggum.no/lugm-time.html">The Long, Painful History of Time</a>.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/06/sql-and-business-logic/">
+                <h3 class="media-heading">SQL and Business Logic</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Business logic is <em>supposed to be</em> the part of the application where you
+deal with customer or user facing decisions and computations. It is often
+argued that this part should be well separated from the rest of the
+technical infrastructure of your code. Of course, SQL and relational
+database design is meant to support your business cases (or user stories),
+so then we can ask ourselves if SQL should be part of your business logic
+implementation. Or actually, how much of your business logic should be SQL?</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/06/exploring-a-data-set-in-sql/">
+                <h3 class="media-heading">Exploring a Data Set in SQL</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Sometimes you need to dive in an existing data set that you know very little
+about. Let&rsquo;s say we&rsquo;ve been lucky to have had a high level description of
+the business case covered by a database, and then access to it. Our next
+step is figuring out data organisation, content and quality. Our tool box:
+<em>the world&rsquo;s most advanced open source
+database</em>, <a href="https://www.postgresql.org">PostgreSQL</a>, and its <em>Structured
+Query Language</em>, SQL.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/06/how-to-write-sql/">
+                <h3 class="media-heading">How to Write SQL</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p><a href="https://twitter.com/krisajenkins">Kris Jenkins</a> cooked up a very nice way
+to embed SQL in your
+code: <a href="https://github.com/krisajenkins/yesql">YeSQL for Clojure</a>. The main
+idea is that you should be writing your SQL queries in <code>.sql</code> files in your
+code repository and maintain them there.</p>
+
+<p>The idea is very good and it is now possible to find alternative
+implementations of the <a href="https://clojure.org">Clojure</a> <em>yesql</em> library in
+other languages. Today, we are going to have a look at one of them for
+the <a href="https://www.python.org">python</a> programming
+language: <a href="https://github.com/honza/anosql">anosql</a>.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/05/find-the-missing-integer/">
+                <h3 class="media-heading">Find The Missing Integer</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>A recent interview question that I had to review was spelled like this:</p>
+
+<blockquote>
+<p>Find missing int element into array 1..100</p>
+</blockquote>
+
+<p>Of course at first read I got it wrong, you have only one integer to look
+for into the array. So while the obvious idea was to apply classic <em>sorting</em>
+techniques and minimize array traversal to handle complexity (time and
+space), it turns out there&rsquo;s a much simpler way to do it if you remember
+your math lessons from younger. But is it that much simpler?</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2016/04/pgconf-us-2016/">
+                <h3 class="media-heading">PGConf US 2016</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2016
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p><a href="https://www.pgconf.us/conferences/2016">PostgreSQL Conference US</a> took
+place in New York City and I had the pleasure to be a speaker there. I
+presented there a talk about why <em>You’d Better Have Tested Backups</em>. The
+important bit is that backups are not interesting, recoveries are. Also the
+only way to make sure a backup is successful is to be able to use it for
+recovery.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/11/all-your-base-conference-2015/">
+                <h3 class="media-heading">All Your Base Conference 2015</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Nov 11, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>I had the pleasure to be invited to speak at
+<a href="http://allyourbaseconf.com/2015/speakers#dimitri-fontaine">All Your Base Conference 2015</a>
+about
+<a href="http://www.postgresql.org">PostgreSQL</a> (of course). The conference gathers together lots of user
+experience around data management and database products, either in the now
+classic meaning of the word (I mean
+<em>relational database management systems
+here</em>) or the newer set of trade-offs represented by the NoSQL set of tools.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/05/postgresql-au-jug-de-montpellier/">
+                <h3 class="media-heading">PostgreSQL au JUG de Montpellier</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><div class="figure fig25 left dim-margin" >
+  
+    <img class="fig-img" src="/img/old/jug-montpellier-logo.png" >
+  
+  
+</div>
+
+
+<p>J&rsquo;ai eu le plaisir de présenter PostgreSQL au
+<a href="http://www.jug-montpellier.org/">Java User Group de Montpellier</a>
+le 20 mai dernier dans le cadre d&rsquo;une soirée
+<a href="http://www.jug-montpellier.org/event/36">PostgreSQL is YeSQL</a>. L&rsquo;accueil
+réservé par le
+<em>JUG</em> a été parfait et je tiens à les remercier pour une très
+bonne soirée de partage et d&rsquo;échanges autour de PostgreSQL.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/05/quicklisp-and-debian/">
+                <h3 class="media-heading">Quicklisp and debian</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Common Lisp users are very happy to use
+<a href="https://www.quicklisp.org/beta/">Quicklisp</a> when it comes to
+downloading and maintaining dependencies between their own code and the
+<a href="http://quickdocs.org/">librairies</a> it is using.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+      </div>
+    </div>
+    <div class="modal-footer">
+      <p class="results-count text-medium"
+         data-message-zero=""
+         data-message-one=""
+         data-message-other="">
+         236 posts found
+      </p>
+    </div>
+  </div>
+</div>
+    
+  
+    
+    <div id="cover" style="background-image:url('http://tapoueh.org/images/mayan-calendar.jpg');"></div>
+  
+
+
+    
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.8.0/highlight.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.js"></script>
+
+
+<script src="/js/script-wl33z0n6ocaypepiqrazthtivfrliqijej4rq8ek8gvrv1awftmgjuv8k4zc.min.js"></script>
+
+<script>
+$(document).ready(function() {
+  hljs.configure({ classPrefix: '', useBR: false });
+  $('pre.code-highlight').each(function(i, block) {
+    var code = "";
+    hljs.highlightAuto(block.innerText).value.split(/\r\n|\r|\n/).forEach(function(line) {
+      code += "<span class=\"line\">" + line + "</span><br>";
+    });
+    if (code.length > 0) {
+      block.innerHTML = code;  
+    }
+  });
+  $('pre > code').each(function(i, block) {
+    $(this).addClass('codeblock');
+    hljs.highlightBlock(block);
+  });
+});
+</script>
+
+  
+    
+      <script>
+        var disqus_config = function () {
+          this.page.url = 'http:\/\/tapoueh.org\/blog\/2017\/07\/playing-with-unicode\/';
+          
+            this.page.identifier = '\/blog\/2017\/07\/playing-with-unicode\/'
+          
+        };
+        (function() {
+          
+          
+          if (window.location.hostname == "localhost") {
+            return;
+          }
+          var d = document, s = d.createElement('script');
+          var disqus_shortname = 'tapoueh';
+          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+          s.setAttribute('data-timestamp', +new Date());
+          (d.head || d.body).appendChild(s);
+        })();
+      </script>
+    
+  
+
+
+
+
+
+    
+  </body>
+</html>
+
