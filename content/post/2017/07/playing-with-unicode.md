@@ -263,7 +263,7 @@ create table public.nationalities
 insert into public.nationalities(nationality, country)
      values ('American', 'US'),
             ('American-Italian', 'US'),
-            ('Argentine-Italian', 'US'),
+            ('Argentine-Italian', 'Argentina'),
             ('Chilean', 'Chile'),
             ('East German', 'Germany'),
             ('Liechtensteiner', 'Liechtenstein'),
