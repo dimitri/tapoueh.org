@@ -89,7 +89,7 @@ the
 [Regional Indicator Symbol](https://en.wikipedia.org/wiki/Regional_Indicator_Symbol) page,
 displaying a Unicode country flag is as easy as concatenating the country
 codes together in the right Unicode range. Of course PostgreSQL knows how to
-that, thanks to its advanced set
+do that, thanks to its advanced set
 of
 [String Functions and Operators](https://www.postgresql.org/docs/current/static/functions-string.html):
 
