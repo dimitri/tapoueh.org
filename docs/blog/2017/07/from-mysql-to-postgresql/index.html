@@ -1,0 +1,1277 @@
+
+
+  
+    
+  
+
+
+  
+
+
+
+
+  
+
+
+  
+
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Hugo 0.20.7">
+    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
+    <title>from MySQL to PostgreSQL</title>
+    <meta name="author" content="Dimitri Fontaine">
+    <meta name="keywords" content="">
+
+    <link rel="icon" href="/favicon.ico">
+    
+
+    
+    <meta name="description" content="Today
+pgloader v3.4.1
+is released and available! This new release comes with 110 commits as show
+in
+github compare view.
+
+This release of pgloader is following the tradition of
+simplifying things for users, or if you allow me to
+quote Alan Key, I believe that if
+simple things should be simple, complex things should be possible.
+
+">
+    <meta property="og:description" content="Today
+pgloader v3.4.1
+is released and available! This new release comes with 110 commits as show
+in
+github compare view.
+
+This release of pgloader is following the tradition of
+simplifying things for users, or if you allow me to
+quote Alan Key, I believe that if
+simple things should be simple, complex things should be possible.
+
+">
+    <meta property="og:type" content="blog">
+    <meta property="og:title" content="from MySQL to PostgreSQL">
+    <meta property="og:url" content="/blog/2017/07/from-mysql-to-postgresql/">
+    <meta property="og:site_name" content="Dimitri Fontaine, PostgreSQL Expert">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Dimitri Fontaine, PostgreSQL Expert">
+    <meta name="twitter:description" content="Today
+pgloader v3.4.1
+is released and available! This new release comes with 110 commits as show
+in
+github compare view.
+
+This release of pgloader is following the tradition of
+simplifying things for users, or if you allow me to
+quote Alan Key, I believe that if
+simple things should be simple, complex things should be possible.
+
+">
+    
+      <meta name="twitter:creator" content="@tapoueh">
+    
+    
+
+    
+    
+
+    
+      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
+    
+
+    
+      <meta property="og:image" content="http://tapoueh.org/img/postgresql-elephant.png">
+    
+    
+      <meta property="og:image" content="http://tapoueh.org/img/old/type-casting-machine.640.jpg">
+    
+    
+
+    
+
+    
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
+    
+    
+    <link rel="stylesheet" href="/css/style-u6mk0ojoywresbx8iepslrmmhl4stuhrsxuwhkpwrkrx7mryjcaimasnk4pi.min.css" />
+    
+    
+      <link rel="stylesheet" href="http://tapoueh.org//css/dim.css">
+    
+
+    
+      
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-47059482-1', 'auto');
+ga('send', 'pageview');
+</script>
+
+    
+    
+  </head>
+
+  <body>
+    <div id="blog">
+      <header id="header" data-behavior="2">
+  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+  <div class="header-title">
+    <a class="header-title-link" href="/">Dimitri Fontaine, PostgreSQL Expert</a>
+  </div>
+  
+</header>
+
+      <nav id="sidebar" data-behavior="2">
+  <div class="sidebar-container">
+    
+      <div class="sidebar-profile">
+        <a href="/#about">
+          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+        </a>
+        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
+        
+          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
+        
+      </div>
+    
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
+      
+      <span class="sidebar-button-desc">Blog</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/about/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
+      
+      <span class="sidebar-button-desc">About</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories/yesql/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-database"></i>
+      
+      <span class="sidebar-button-desc">YeSQL</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="http://masteringpostgresql.com" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
+      
+      <span class="sidebar-button-desc">Mastering PostgreSQL</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+      
+      <span class="sidebar-button-desc">GitHub</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+      
+      <span class="sidebar-button-desc">Twitter</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+      
+      <span class="sidebar-button-desc">Categories</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/index.xml">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+      
+      <span class="sidebar-button-desc">RSS</span>
+    </a>
+  </li>
+
+    </ul>
+  </div>
+</nav>
+
+      
+  <div class="post-header-cover
+              text-left
+              post-header-cover--partial"
+       style="background-image:url('/img/old/type-casting-machine.640.jpg')"
+       data-behavior="2">
+    
+  </div>
+
+
+      <div id="main" data-behavior="2"
+        class="hasCover
+               hasCoverMetaOut
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
+          
+            <div class="post-header main-content-wrap text-left">
+  
+    <h1 class="post-title" itemprop="headline">
+      from MySQL to PostgreSQL
+    </h1>
+  
+  <div class="postShorten-meta post-meta">
+  
+    <time itemprop="datePublished" datetime="2017-07-06T17:30:11&#43;02:00">
+      
+  
+  
+  
+  
+    Thursday 06 Jul 2017
+  
+
+    </time>
+  
+  
+  
+  
+    <span></span>
+    
+      <a class="category-link" href="/categories/projects">Projects</a>, 
+    
+      <a class="category-link" href="/categories/pgloader">pgloader</a>
+    
+  
+
+
+</div>
+
+</div>
+          
+          <div class="post-content markdown" itemprop="articleBody">
+            <div class="main-content-wrap">
+              <p>Today
+<a href="https://github.com/dimitri/pgloader/releases/tag/v3.4.1">pgloader v3.4.1</a>
+is released and available! This new release comes with 110 commits as show
+in
+<a href="https://github.com/dimitri/pgloader/compare/v3.3.2...v3.4.1">github compare view</a>.</p>
+
+<p>This release of <a href="http://pgloader.io">pgloader</a> is following the tradition of
+simplifying things for users, or if you allow me to
+quote <a href="https://en.wikiquote.org/wiki/Alan_Kay">Alan Key</a>, I believe that if
+<em>simple things should be simple, complex things should be possible.</em></p>
+
+<p></p>
+
+<div class="alert info ">
+  <p>This article mentions pgloader features that are new as of version 3.4.1,
+check which version you&rsquo;re running with <code>pgloader --version</code>. It is easy
+enough to build pgloader from sources, and pgloader is packaged in debian
+and derivatives, and in RPM based distributions too.</p>
+
+<p>Have a look at <a href="http://apt.postgresql.org">http://apt.postgresql.org</a> and <a href="https://yum.postgresql.org/">https://yum.postgresql.org/</a>
+for up to date packaged options in your distribution of choice and your
+PostgreSQL version of choice.</p>
+</div>
+
+<h1 id="table-of-contents"></h1><nav id="TableOfContents">
+<ul>
+<li><a href="#migrate-from-mysql-to-postgresql">Migrate from MySQL to PostgreSQL</a>
+<ul>
+<li><a href="#mysql-spatial-indexes-over-geometry">MySQL spatial indexes over geometry</a></li>
+</ul></li>
+<li><a href="#migrate-from-sqlite-to-postgresql">Migrate from SQLite to PostgreSQL</a></li>
+<li><a href="#migrate-from-ms-sql-to-postgresql">Migrate from MS SQL to PostgreSQL</a></li>
+<li><a href="#load-csv-files">Load CSV files</a></li>
+<li><a href="#the-load-command-and-new-options">The load command and new options</a>
+<ul>
+<li><a href="#the-orm-case-migrating-to-an-existing-schema">The ORM case: migrating to an existing schema</a></li>
+<li><a href="#schema-mapping-options">Schema mapping options</a></li>
+<li><a href="#user-defined-casting">User defined casting</a></li>
+<li><a href="#mysql-multiple-readers-support">MySQL multiple readers support</a></li>
+</ul></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+</nav>
+
+<h1 id="migrate-from-mysql-to-postgresql">Migrate from MySQL to PostgreSQL</h1>
+
+<p>An example of pgloader simplicity is that you can migrate a whole MySQL
+database, including its schema definition of tables and indexes, primary key
+and foreign key constraints, comments and default values, even when they
+require installing a trigger in PostgreSQL, all of that in a single command
+line:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>$ pgloader mysql://root@localhost/f1db pgsql:///f1db
+<span style="color: #009999">2017</span>-07-06T17:57:04.679000+02:00 LOG report summary reset
+               table name       <span style="color: #00aaaa">read</span>   imported     errors      total <span style="color: #00aaaa">time</span>
+-------------------------  ---------  ---------  ---------  --------------
+          fetch meta data         <span style="color: #009999">33</span>         <span style="color: #009999">33</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.206s 
+           Create Schemas          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.026s 
+         Create SQL Types          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.007s 
+            Create tables         <span style="color: #009999">26</span>         <span style="color: #009999">26</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.057s 
+           Set Table OIDs         <span style="color: #009999">13</span>         <span style="color: #009999">13</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.005s 
+-------------------------  ---------  ---------  ---------  --------------
+            f1db.circuits         <span style="color: #009999">73</span>         <span style="color: #009999">73</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.093s 
+  f1db.constructorresults      <span style="color: #009999">11011</span>      <span style="color: #009999">11011</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.139s 
+        f1db.constructors        <span style="color: #009999">208</span>        <span style="color: #009999">208</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.047s 
+             f1db.drivers        <span style="color: #009999">841</span>        <span style="color: #009999">841</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.073s 
+f1db.constructorstandings      <span style="color: #009999">11766</span>      <span style="color: #009999">11766</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.237s 
+            f1db.laptimes     <span style="color: #009999">413578</span>     <span style="color: #009999">413578</span>          <span style="color: #009999">0</span>          <span style="color: #009999">2</span>.643s 
+     f1db.driverstandings      <span style="color: #009999">31420</span>      <span style="color: #009999">31420</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.392s 
+            f1db.pitstops       <span style="color: #009999">5796</span>       <span style="color: #009999">5796</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.132s 
+               f1db.races        <span style="color: #009999">976</span>        <span style="color: #009999">976</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.076s 
+             f1db.seasons         <span style="color: #009999">68</span>         <span style="color: #009999">68</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.053s 
+          f1db.qualifying       <span style="color: #009999">7257</span>       <span style="color: #009999">7257</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.091s 
+             f1db.results      <span style="color: #009999">23514</span>      <span style="color: #009999">23514</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.431s 
+              f1db.status        <span style="color: #009999">133</span>        <span style="color: #009999">133</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.137s 
+-------------------------  ---------  ---------  ---------  --------------
+  COPY Threads Completion          <span style="color: #009999">4</span>          <span style="color: #009999">4</span>          <span style="color: #009999">0</span>          <span style="color: #009999">3</span>.265s 
+           Create Indexes         <span style="color: #009999">20</span>         <span style="color: #009999">20</span>          <span style="color: #009999">0</span>          <span style="color: #009999">1</span>.760s 
+   Index Build Completion         <span style="color: #009999">20</span>         <span style="color: #009999">20</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.715s 
+          Reset Sequences         <span style="color: #009999">10</span>         <span style="color: #009999">10</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.029s 
+             Primary Keys         <span style="color: #009999">13</span>         <span style="color: #009999">13</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.010s 
+      Create Foreign Keys          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.000s 
+          Create Triggers          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.000s 
+         Install Comments          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.000s 
+-------------------------  ---------  ---------  ---------  --------------
+        Total import <span style="color: #00aaaa">time</span>     <span style="color: #009999">506641</span>     <span style="color: #009999">506641</span>          <span style="color: #009999">0</span>          <span style="color: #009999">4</span>.888s 
+</pre></div>
+
+<p>You can easily reproduce that at home with
+the <a href="http://ergast.com/mrd/db/">Ergast database</a>, a historical record of
+motor racing data for non-commercial purposes. Download the <em>f1db.sql.gz</em>
+MySQL 5.1 database dump from there, install it in some MySQL instance and
+then run the command above.</p>
+
+<p>To be complete, let&rsquo;s mention that pgloader will not create the target
+database, so you have to do that yourself. Also, currently pgloader doesn&rsquo;t
+change the <em>search_path</em> of the target database, so you might want to do
+that yourself. Which means you need the following 3 commands if we wanted to
+be exhaustive (the migration itself only happens at the pgloader step):</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>$ createdb f1db
+$ pgloader mysql://root@localhost/f1db pgsql:///f1db
+$ psql -d f1db -c <span style="color: #aa5500">&#39;ALTER DATABASE f1db SET search_path TO f1db, public;&#39;</span>
+</pre></div>
+
+<p><a href="http://pgloader.io">pgloader</a> needs a live MySQL database to operate its
+magic. It is less error prone to query system&rsquo;s catalogs than to learn how
+to parse all those SQL dialects.</p>
+
+<p>You might have seen that the automated migration targets a PostgreSQL schema
+with the same name as the MySQL database. That&rsquo;s because in MySQL there&rsquo;s
+not really a notion of SQL standard catalogs, which are called <em>databases</em>
+by most of the industry. What MySQL names a <em>database</em> actually is what the
+standard (and PostgreSQL) refers to as a <em>schema</em>.</p>
+
+<h2 id="mysql-spatial-indexes-over-geometry">MySQL spatial indexes over geometry</h2>
+
+<p>Starting in this new release of pgloader, MySQL spatial keys are
+automatically converted to PostgreSQL GiST indexes. In previous versions of
+pgloader, when playing with
+the <a href="https://dev.mysql.com/doc/sakila/en/">Sakila Sample Database</a> you would
+have the following error:</p>
+
+<pre><code>ERROR PostgreSQL Database error 42704: data type point has no default operator class for access method &quot;btree&quot;
+HINT: You must specify an operator class for the index or define a default operator class for the data type.
+QUERY: CREATE INDEX idx_188012_idx_location ON pagila.address (location);
+</code></pre>
+
+<p>In that case what we should do is issue to PostgreSQL the following <em>CREATE
+INDEX</em> command instead:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">CREATE</span> <span style="color: #0000aa">INDEX</span> idx_188012_idx_location <span style="color: #0000aa">ON</span> pagila.address <span style="color: #0000aa">USING</span> gist(<span style="color: #0000aa">location</span>);
+</pre></div>
+
+<p>And guess what? yes of course this is a paste from a run of current
+pgloader&rsquo;s version, where this is implemented in a transparent way for the
+users. Also, rather than hardcoding which PostgreSQL types need a special
+treatment here, pgloader runs the following SQL query against the PostgreSQL
+catalogs, as found in the source tree
+at
+<a href="https://github.com/dimitri/pgloader/blob/master/src/pgsql/sql/list-typenames-without-btree-support.sql">src/pgsql/sql/list-typenames-without-btree-support.sql</a>:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> typname,
+       array_agg(amname <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> amname &lt;&gt; <span style="color: #aa5500">&#39;gist&#39;</span>, amname &lt;&gt; <span style="color: #aa5500">&#39;gin&#39;</span>)
+  <span style="color: #0000aa">from</span> pg_type
+       <span style="color: #0000aa">join</span> pg_opclass <span style="color: #0000aa">on</span> pg_opclass.opcintype = pg_type.oid
+       <span style="color: #0000aa">join</span> pg_am <span style="color: #0000aa">on</span> pg_am.oid = pg_opclass.opcmethod
+ <span style="color: #0000aa">where</span> <span style="color: #0000aa">substring</span>(typname <span style="color: #0000aa">from</span> <span style="color: #009999">1</span> <span style="color: #0000aa">for</span> <span style="color: #009999">1</span>) &lt;&gt; <span style="color: #aa5500">&#39;_&#39;</span>
+       <span style="color: #0000aa">and</span> <span style="color: #0000aa">not</span> <span style="color: #0000aa">exists</span>
+       (
+         <span style="color: #0000aa">select</span> amname
+           <span style="color: #0000aa">from</span> pg_am am
+                <span style="color: #0000aa">join</span> pg_opclass <span style="color: #0000aa">c</span> <span style="color: #0000aa">on</span> am.oid = <span style="color: #0000aa">c</span>.opcmethod
+                <span style="color: #0000aa">join</span> pg_type t <span style="color: #0000aa">on</span> <span style="color: #0000aa">c</span>.opcintype = t.oid
+          <span style="color: #0000aa">where</span> amname = <span style="color: #aa5500">&#39;btree&#39;</span> <span style="color: #0000aa">and</span> t.oid = pg_type.oid
+       )
+<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> typname;
+</pre></div>
+
+<p>The typical result of the query is following. The important part of
+discovering data types without btree support at run time is that pgloader
+then will support locally installed extensions it knows nothing about, and
+that you can target in the user-defined casting rules (see below).</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>  typname   |      array_agg       
+<span style="color: #aaaaaa; font-style: italic">------------+----------------------</span>
+ aclitem    | {hash}
+ <span style="color: #00aaaa">box</span>        | {gist,brin,spgist}
+ cid        | {hash}
+ <span style="color: #00aaaa">circle</span>     | {gist}
+ int2vector | {hash}
+ <span style="color: #00aaaa">point</span>      | {gist,spgist,spgist}
+ <span style="color: #00aaaa">polygon</span>    | {gist}
+ xid        | {hash}
+(<span style="color: #009999">8</span> <span style="color: #0000aa">rows</span>)
+</pre></div>
+
+<p>In version 3.4.1 of pgloader this feature is limited to single column
+indexes. If you need to support multiple-columns indexes, let me know by
+<a href="https://github.com/dimitri/pgloader/issues">opening an issue</a>.</p>
+
+<h1 id="migrate-from-sqlite-to-postgresql">Migrate from SQLite to PostgreSQL</h1>
+
+<p>In much the same vein it is possible to migrate a full SQLite database into
+PostgreSQL in a single command line. This time, as SQLite databases can be
+distributed in a single file, we can even have pgloader download a file over
+HTTP for us. Here&rsquo;s a full example using
+the <a href="https://github.com/lerocha/chinook-database">chinook database</a>, where
+again pgloader takes care of the schema definition, indexes, primary keys,
+foreign keys, default values, comments&hellip; the whole thing:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>$ pgloader https://github.com/lerocha/chinook-database/raw/master/ChinookDatabase/DataSources/Chinook_Sqlite_AutoIncrementPKs.sqlite pgsql:///chinook
+<span style="color: #009999">2017</span>-07-06T18:16:52.256000+02:00 LOG Fetching <span style="color: #aa5500">&#39;https://github.com/lerocha/chinook-database/raw/master/ChinookDatabase/DataSources/Chinook_Sqlite_AutoIncrementPKs.sqlite&#39;</span>
+<span style="color: #009999">2017</span>-07-06T18:16:54.118000+02:00 ERROR PostgreSQL Database error 42P16: multiple primary keys <span style="color: #0000aa">for</span> table <span style="color: #aa5500">&quot;playlisttrack&quot;</span> are not allowed
+QUERY: ALTER TABLE playlisttrack ADD PRIMARY KEY USING INDEX idx_189226_sqlite_autoindex_playlisttrack_1;
+<span style="color: #009999">2017</span>-07-06T18:16:54.119000+02:00 LOG report summary reset
+             table name       <span style="color: #00aaaa">read</span>   imported     errors      total <span style="color: #00aaaa">time</span>
+-----------------------  ---------  ---------  ---------  --------------
+                  fetch          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>          <span style="color: #009999">1</span>.305s 
+        fetch meta data         <span style="color: #009999">33</span>         <span style="color: #009999">33</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.034s 
+         Create Schemas          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.001s 
+       Create SQL Types          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.006s 
+          Create tables         <span style="color: #009999">22</span>         <span style="color: #009999">22</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.096s 
+         Set Table OIDs         <span style="color: #009999">11</span>         <span style="color: #009999">11</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.007s 
+-----------------------  ---------  ---------  ---------  --------------
+                  album        <span style="color: #009999">347</span>        <span style="color: #009999">347</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.020s 
+                 artist        <span style="color: #009999">275</span>        <span style="color: #009999">275</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.017s 
+               customer         <span style="color: #009999">59</span>         <span style="color: #009999">59</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.024s 
+                  genre         <span style="color: #009999">25</span>         <span style="color: #009999">25</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.024s 
+            invoiceline       <span style="color: #009999">2240</span>       <span style="color: #009999">2240</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.049s 
+               employee          <span style="color: #009999">8</span>          <span style="color: #009999">8</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.018s 
+                invoice        <span style="color: #009999">412</span>        <span style="color: #009999">412</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.032s 
+               playlist         <span style="color: #009999">18</span>         <span style="color: #009999">18</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.026s 
+              mediatype          <span style="color: #009999">5</span>          <span style="color: #009999">5</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.030s 
+          playlisttrack       <span style="color: #009999">8715</span>       <span style="color: #009999">8715</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.064s 
+                  track       <span style="color: #009999">3503</span>       <span style="color: #009999">3503</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.131s 
+-----------------------  ---------  ---------  ---------  --------------
+COPY Threads Completion          <span style="color: #009999">4</span>          <span style="color: #009999">4</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.188s 
+         Create Indexes         <span style="color: #009999">22</span>         <span style="color: #009999">22</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.168s 
+ Index Build Completion         <span style="color: #009999">22</span>         <span style="color: #009999">22</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.066s 
+        Reset Sequences          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.029s 
+           Primary Keys         <span style="color: #009999">12</span>         <span style="color: #009999">11</span>          <span style="color: #009999">1</span>          <span style="color: #009999">0</span>.013s 
+    Create Foreign Keys         <span style="color: #009999">11</span>         <span style="color: #009999">11</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.042s 
+        Create Triggers          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.001s 
+       Install Comments          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>          <span style="color: #009999">0</span>.000s 
+-----------------------  ---------  ---------  ---------  --------------
+      Total import <span style="color: #00aaaa">time</span>      <span style="color: #009999">15607</span>      <span style="color: #009999">15607</span>          <span style="color: #009999">0</span>          <span style="color: #009999">2</span>.123s 
+</pre></div>
+
+<p>The SQLite catalog inspection isn&rsquo;t as straightforward as one would want to,
+and it&rsquo;s been difficult to understand when exactly is an index a primary key
+index. The documentation
+of
+<a href="http://www.sqlite.org/lang_createtable.html#rowid">ROWIDs and the INTEGER PRIMARY KEY</a> did
+sched some light on the issues and we&rsquo;re good now, it seems. Well I&rsquo;m not
+too sure about the error you see above, complaining that <em>multiple primary
+keys for table &ldquo;playlisttrack&rdquo; are not allowed</em>. We might still have some
+SQLite catalogs introspection hacking to do to be all good.</p>
+
+<h1 id="migrate-from-ms-sql-to-postgresql">Migrate from MS SQL to PostgreSQL</h1>
+
+<p>The new release of pgloader also comes with lots of small improvements to
+the MS SQL support, where it now mostly just works. That&rsquo;s thanks to users
+who did provide me with a test case to reproduce then fix the bugs. That
+really is a life changer, in particular with proprietay software, where I
+can&rsquo;t have a local copy running for my tests.</p>
+
+<h1 id="load-csv-files">Load CSV files</h1>
+
+<p>At the beginning, <a href="http://pgloader.io/howto/quickstart.html">pgloader</a> was
+meant to load data from CSV files into PostgreSQL. For a large and flexible
+definition of CSV. Now we include support for the COPY file format, fixed
+width files, dBase files and IXF files.</p>
+
+<h1 id="the-load-command-and-new-options">The load command and new options</h1>
+
+<p>As mentioned earlier simple things are simple, and sometimes you need to do
+more complex things, and the advanced use cases are handled by the pgloader
+command language. This is
+a <a href="https://en.wikipedia.org/wiki/Domain-specific_language">DSL</a> compiled to
+binary at pgloader&rsquo;s run time.</p>
+
+<h2 id="the-orm-case-migrating-to-an-existing-schema">The ORM case: migrating to an existing schema</h2>
+
+<p>A classic complex case is when you&rsquo;re using an ORM that handles your
+database schema for your application. It usually makes migrating easier, and
+every thing else more difficult, so I don&rsquo;t recommend using ORMs. See
+my <a href="/blog/2017/06/anonsql/">How to write SQL</a> article in this blog for more
+details. And maybe the old and
+good
+<a href="http://blogs.tedneward.com/post/the-vietnam-of-computer-science/">The Vietnam of Computer Science</a> too,
+if you haven&rsquo;t already.</p>
+
+<p>Anyway, disliking ORMs is not reason enough to leave users out in the cold.
+Of course pgloader supports your use case, and with the <em>data</em> only option
+you can have it run a migration by discovering both the source and target
+schemas and then working on a <em>merge</em> with the data from the source.</p>
+
+<p>New in this release is the ability to target a pre-existing schema and still
+benefit from the pgloader indexes processing, which is a very nice boost.
+When loading lots of data into PostgreSQL it&rsquo;s best to:</p>
+
+<ol>
+<li>remove existing indexes, thus foreign keys that depend on them,</li>
+<li>load data,</li>
+<li>create indexes again, all at once in parallel,</li>
+<li>upgrade unique indexes into primary keys with <em>ALTER TABLE</em>,</li>
+<li>reinstall foreign key constraints with indexes in place.</li>
+</ol>
+
+<p>And of couse, as it&rsquo;s the best way to do things, that&rsquo;s exactly what
+pgloader is doing. Now, even when the indexes are pre-defined in the target
+schema, provided that you use the <em>drop indexes</em> option to the <em>WITH</em> clause.</p>
+
+<p>Note that you can still use it on the command line, without a command file,
+as in this example:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>$ pgloader --with <span style="color: #aa5500">&quot;data only&quot;</span>          <span style="color: #aa5500">\</span>
+           --with truncate             <span style="color: #aa5500">\</span>
+           --with <span style="color: #aa5500">&quot;drop indexes&quot;</span>       <span style="color: #aa5500">\</span>
+           --verbose                   <span style="color: #aa5500">\</span>
+           mysql://root@localhost/f1db <span style="color: #aa5500">\</span>
+           pgsql:///f1db
+</pre></div>
+
+<p>For this command to work, the f1db PostgreSQL target database must have been
+defined before, with the right set of SQL objects of course. Which is
+exactly what ORMs are doing for you, I&rsquo;ve been told.</p>
+
+<h2 id="schema-mapping-options">Schema mapping options</h2>
+
+<p>In the command language it is possible to map schema names and table names
+from your source to your target database, and to add options to the load
+scenario, as in the following example:</p>
+
+<pre><code>load database
+     from      mysql://root@localhost/sakila
+     into postgresql:///sakila
+
+ ALTER TABLE NAMES MATCHING 'sales_by_store' RENAME TO 'sales_by_store_list'
+ ALTER TABLE NAMES MATCHING 'film' RENAME TO 'films'
+ ALTER TABLE NAMES MATCHING ~/./ SET (fillfactor='40')
+
+ ALTER SCHEMA 'sakila' RENAME TO 'pagila'
+</code></pre>
+
+<p>Here the <em>ALTER</em> commands are not executed in any database, neither the
+source not the target. They are used as a mapping specifications from the
+source to the target, so that we create tables found in the <em>sakila</em> schema
+in the source into the <em>pagila</em> schema in the target.</p>
+
+<p>Also you can see that we change
+the
+<a href="https://www.postgresql.org/docs/current/static/sql-createtable.html#SQL-CREATETABLE-STORAGE-PARAMETERS">fillfactor</a> for
+all tables in the target. The <em>ALTER</em> clauses in the pgloader command are
+realized over the internal pgloader catalogs, so that the actual
+implementation is done at <em>CREATE TABLE</em> time in PostgreSQL.</p>
+
+<h2 id="user-defined-casting">User defined casting</h2>
+
+<p>The new version is not adding things to the capability of pgloader to allow
+for user defined type casting from the source to the target database. Some
+default cast rules have been improved, and you can
+read
+<a href="http://pgloader.io/howto/pgloader.1.html">pgloader reference documentation</a>
+for details.</p>
+
+<h2 id="mysql-multiple-readers-support">MySQL multiple readers support</h2>
+
+<p>An experimental feature made it to this release of pgloader, and it&rsquo;s
+currently only available for MySQL source type. It is now possible for
+pgloader to have several concurrent readers working on the same source
+table.</p>
+
+<p>The idea is that they split the reading by using <em>WHERE</em> clauses, each over
+a range of the data. That allows for MySQL Index Range Scan as documented at
+their
+<a href="https://dev.mysql.com/doc/refman/5.7/en/range-optimization.html">Range Optimization</a> documentation page.</p>
+
+<p>In my testing I didn&rsquo;t have access to a machine with enough CPUs to make
+this optimisation worthwile, but it might still be useful. Have a try if you
+need it, and tell me if it helped!</p>
+
+<p>Here&rsquo;s an example of a setup that uses the <em>multiple readers per thread</em>
+feature, new in pgloader v3.4.1:</p>
+
+<pre><code>load database
+     from      mysql://root@localhost/sakila
+     into postgresql:///sakila
+
+ WITH concurrency = 2, workers = 6,
+      prefetch rows = 25000,
+      multiple readers per thread, rows per range = 50000;
+</code></pre>
+
+<h1 id="conclusion">Conclusion</h1>
+
+
+
+
+<div class="figure fig25 right dim-margin" >
+  
+    <img class="fig-img" src="/img/old/sql-logo.png"  alt="PostgreSQL is YeSQL">
+  
+   
+    <span class="caption">PostgreSQL is YeSQL</span>
+  
+</div>
+
+
+<p>Now that you&rsquo;re using PostgreSQL, enjoy a powerful SQL dialect with plenty
+of advanced functions to process your data exactly the way you need it!</p>
+
+<p>You might be interested
+into <a href="/blog/2017/06/exploring-a-data-set/">Exploring a Data Set in SQL</a> if
+you&rsquo;re new to PostgreSQL or the database you&rsquo;ve just migrated.</p>
+
+<p>Also if it makes sense for your business to contribute financially to
+pgloader&rsquo;s development, consider buying
+a <a href="http://pgloader.io/pgloader-moral-license.html">pgloader Moral License</a>.
+Cases when it makes sense include successful migrations on a low budget and
+within the time constraints thanks to using pgloader! You may then (at your
+choice) join the <a href="http://pgloader.io/sponsors.html">pgloader sponsors page</a>!</p>
+              
+            </div>
+          </div>
+          <div id="post-footer" class="post-footer main-content-wrap">
+            
+              
+                
+                
+                  <div class="post-footer-tags">
+                    <span class="text-color-light text-small"></span><br/>
+                    
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/postgresql/">PostgreSQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/mysql/">MySQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/pgloader/">pgloader</a>
+
+                  </div>
+                
+              
+            
+            <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    <script async id="_ck_218061" src="https://forms.convertkit.com/218061?v=6"></script>
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2017/07/playing-with-unicode/" data-tooltip="Playing with Unicode">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f07%2ffrom-mysql-to-postgresql%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f07%2ffrom-mysql-to-postgresql%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=from%20MySQL%20to%20PostgreSQL with @tapoueh: http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f07%2ffrom-mysql-to-postgresql%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+            
+              
+                <div id="disqus_thread">
+  <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+              
+            
+          </div>
+        </article>
+        <footer id="footer" class="main-content-wrap">
+  <span class="copyrights">
+    &copy; 2017 Dimitri Fontaine. 
+  </span>
+</footer>
+
+      </div>
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="2">
+        <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    <script async id="_ck_218061" src="https://forms.convertkit.com/218061?v=6"></script>
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2017/07/playing-with-unicode/" data-tooltip="Playing with Unicode">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f07%2ffrom-mysql-to-postgresql%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f07%2ffrom-mysql-to-postgresql%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=from%20MySQL%20to%20PostgreSQL with @tapoueh: http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f07%2ffrom-mysql-to-postgresql%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+      </div>
+      <div id="share-options-bar" class="share-options-bar" data-behavior="2">
+  <ul class="share-options">
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f07%2ffrom-mysql-to-postgresql%2f">
+        <i class="fa fa-google-plus"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f07%2ffrom-mysql-to-postgresql%2f">
+        <i class="fa fa-facebook-official"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=from%20MySQL%20to%20PostgreSQL with @tapoueh: http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f07%2ffrom-mysql-to-postgresql%2f">
+        <i class="fa fa-twitter"></i><span></span>
+      </a>
+    </li>
+  </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
+    </div>
+    
+    <div id="about">
+  <div id="about-card">
+    <div id="about-btn-close">
+      <i class="fa fa-remove"></i>
+    </div>
+    
+      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+    
+    <h4 id="about-card-name">Dimitri Fontaine</h4>
+    
+      <div id="about-card-bio">PostgreSQL Major Contributor</div>
+    
+    
+      <div id="about-card-job">
+        <i class="fa fa-briefcase"></i>
+        <br/>
+        Open Source Software Engineer
+      </div>
+    
+    
+      <div id="about-card-location">
+        <i class="fa fa-map-marker"></i>
+        <br/>
+        France
+      </div>
+    
+  </div>
+</div>
+
+    <div id="algolia-search-modal" class="modal-container">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="close-button"><i class="fa fa-close"></i></span>
+      <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+        <span class="searchby-algolia-text text-color-light text-small">by</span>
+        <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+      </a>
+      <i class="search-icon fa fa-search"></i>
+      <form id="algolia-search-form">
+        <input type="text" id="algolia-search-input" name="search"
+          class="form-control input--large search-input" placeholder="" />
+      </form>
+    </div>
+    <div class="modal-body">
+      <div class="no-result text-color-light text-center"></div>
+      <div class="results">
+        
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/07/from-mysql-to-postgresql/">
+                <h3 class="media-heading">from MySQL to PostgreSQL</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jul 7, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Today
+<a href="https://github.com/dimitri/pgloader/releases/tag/v3.4.1">pgloader v3.4.1</a>
+is released and available! This new release comes with 110 commits as show
+in
+<a href="https://github.com/dimitri/pgloader/compare/v3.3.2...v3.4.1">github compare view</a>.</p>
+
+<p>This release of <a href="http://pgloader.io">pgloader</a> is following the tradition of
+simplifying things for users, or if you allow me to
+quote <a href="https://en.wikiquote.org/wiki/Alan_Kay">Alan Key</a>, I believe that if
+<em>simple things should be simple, complex things should be possible.</em></p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/07/playing-with-unicode/">
+                <h3 class="media-heading">Playing with Unicode</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jul 7, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>The reason why I like Unicode a lot is because it allows me to code in text
+based environments and still have nice output. Today, we&rsquo;re going to play
+with
+<a href="https://en.wikipedia.org/wiki/Regional_Indicator_Symbol">Regional Indicator Symbol</a>,
+which is implemented as a Unicode combinaison of letters from 🇦 to 🇿. For
+instance, if you display 🇫 then 🇷 concatenated together, you get 🇫🇷. Let&rsquo;s
+try that from our <a href="https://www.postgresql.org/">PostgreSQL</a> prompt!</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/06/postgresql-and-the-calendar/">
+                <h3 class="media-heading">PostgreSQL and the calendar</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>The modern calendar is a trap for the young engineer&rsquo;s mind. We deal with
+the calendar on a daily basis and until exposed to its insanity it&rsquo;s rather
+common to think that calendar based computations are easy. That&rsquo;s until
+you&rsquo;ve tried to do it once. A very good read about how the current calendar
+came to be the way it is now is Erik&rsquo;s
+Naggum <a href="http://naggum.no/lugm-time.html">The Long, Painful History of Time</a>.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/06/sql-and-business-logic/">
+                <h3 class="media-heading">SQL and Business Logic</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Business logic is <em>supposed to be</em> the part of the application where you
+deal with customer or user facing decisions and computations. It is often
+argued that this part should be well separated from the rest of the
+technical infrastructure of your code. Of course, SQL and relational
+database design is meant to support your business cases (or user stories),
+so then we can ask ourselves if SQL should be part of your business logic
+implementation. Or actually, how much of your business logic should be SQL?</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/06/exploring-a-data-set-in-sql/">
+                <h3 class="media-heading">Exploring a Data Set in SQL</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Sometimes you need to dive in an existing data set that you know very little
+about. Let&rsquo;s say we&rsquo;ve been lucky to have had a high level description of
+the business case covered by a database, and then access to it. Our next
+step is figuring out data organisation, content and quality. Our tool box:
+<em>the world&rsquo;s most advanced open source
+database</em>, <a href="https://www.postgresql.org">PostgreSQL</a>, and its <em>Structured
+Query Language</em>, SQL.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/06/how-to-write-sql/">
+                <h3 class="media-heading">How to Write SQL</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p><a href="https://twitter.com/krisajenkins">Kris Jenkins</a> cooked up a very nice way
+to embed SQL in your
+code: <a href="https://github.com/krisajenkins/yesql">YeSQL for Clojure</a>. The main
+idea is that you should be writing your SQL queries in <code>.sql</code> files in your
+code repository and maintain them there.</p>
+
+<p>The idea is very good and it is now possible to find alternative
+implementations of the <a href="https://clojure.org">Clojure</a> <em>yesql</em> library in
+other languages. Today, we are going to have a look at one of them for
+the <a href="https://www.python.org">python</a> programming
+language: <a href="https://github.com/honza/anosql">anosql</a>.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/05/find-the-missing-integer/">
+                <h3 class="media-heading">Find The Missing Integer</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>A recent interview question that I had to review was spelled like this:</p>
+
+<blockquote>
+<p>Find missing int element into array 1..100</p>
+</blockquote>
+
+<p>Of course at first read I got it wrong, you have only one integer to look
+for into the array. So while the obvious idea was to apply classic <em>sorting</em>
+techniques and minimize array traversal to handle complexity (time and
+space), it turns out there&rsquo;s a much simpler way to do it if you remember
+your math lessons from younger. But is it that much simpler?</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2016/04/pgconf-us-2016/">
+                <h3 class="media-heading">PGConf US 2016</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2016
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p><a href="https://www.pgconf.us/conferences/2016">PostgreSQL Conference US</a> took
+place in New York City and I had the pleasure to be a speaker there. I
+presented there a talk about why <em>You’d Better Have Tested Backups</em>. The
+important bit is that backups are not interesting, recoveries are. Also the
+only way to make sure a backup is successful is to be able to use it for
+recovery.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/11/all-your-base-conference-2015/">
+                <h3 class="media-heading">All Your Base Conference 2015</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Nov 11, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>I had the pleasure to be invited to speak at
+<a href="http://allyourbaseconf.com/2015/speakers#dimitri-fontaine">All Your Base Conference 2015</a>
+about
+<a href="http://www.postgresql.org">PostgreSQL</a> (of course). The conference gathers together lots of user
+experience around data management and database products, either in the now
+classic meaning of the word (I mean
+<em>relational database management systems
+here</em>) or the newer set of trade-offs represented by the NoSQL set of tools.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/05/postgresql-au-jug-de-montpellier/">
+                <h3 class="media-heading">PostgreSQL au JUG de Montpellier</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><div class="figure fig25 left dim-margin" >
+  
+    <img class="fig-img" src="/img/old/jug-montpellier-logo.png" >
+  
+  
+</div>
+
+
+<p>J&rsquo;ai eu le plaisir de présenter PostgreSQL au
+<a href="http://www.jug-montpellier.org/">Java User Group de Montpellier</a>
+le 20 mai dernier dans le cadre d&rsquo;une soirée
+<a href="http://www.jug-montpellier.org/event/36">PostgreSQL is YeSQL</a>. L&rsquo;accueil
+réservé par le
+<em>JUG</em> a été parfait et je tiens à les remercier pour une très
+bonne soirée de partage et d&rsquo;échanges autour de PostgreSQL.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+      </div>
+    </div>
+    <div class="modal-footer">
+      <p class="results-count text-medium"
+         data-message-zero=""
+         data-message-one=""
+         data-message-other="">
+         237 posts found
+      </p>
+    </div>
+  </div>
+</div>
+    
+  
+    
+    <div id="cover" style="background-image:url('http://tapoueh.org/images/mayan-calendar.jpg');"></div>
+  
+
+
+    
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.8.0/highlight.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.js"></script>
+
+
+<script src="/js/script-wl33z0n6ocaypepiqrazthtivfrliqijej4rq8ek8gvrv1awftmgjuv8k4zc.min.js"></script>
+
+<script>
+$(document).ready(function() {
+  hljs.configure({ classPrefix: '', useBR: false });
+  $('pre.code-highlight').each(function(i, block) {
+    var code = "";
+    hljs.highlightAuto(block.innerText).value.split(/\r\n|\r|\n/).forEach(function(line) {
+      code += "<span class=\"line\">" + line + "</span><br>";
+    });
+    if (code.length > 0) {
+      block.innerHTML = code;  
+    }
+  });
+  $('pre > code').each(function(i, block) {
+    $(this).addClass('codeblock');
+    hljs.highlightBlock(block);
+  });
+});
+</script>
+
+  
+    
+      <script>
+        var disqus_config = function () {
+          this.page.url = 'http:\/\/tapoueh.org\/blog\/2017\/07\/from-mysql-to-postgresql\/';
+          
+            this.page.identifier = '\/blog\/2017\/07\/from-mysql-to-postgresql\/'
+          
+        };
+        (function() {
+          
+          
+          if (window.location.hostname == "localhost") {
+            return;
+          }
+          var d = document, s = d.createElement('script');
+          var disqus_shortname = 'tapoueh';
+          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+          s.setAttribute('data-timestamp', +new Date());
+          (d.head || d.body).appendChild(s);
+        })();
+      </script>
+    
+  
+
+
+
+
+
+    
+  </body>
+</html>
+
