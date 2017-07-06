@@ -2,7 +2,7 @@
 title = "from MySQL to PostgreSQL"
 date = "2017-07-06T17:30:11+02:00"
 tags = ["PostgreSQL","MySQL","pgloader"]
-categories = ["Projects","pgloader"]
+categories = ["PostgreSQL","pgloader"]
 coverImage = "/img/old/type-casting-machine.640.jpg"
 coverMeta = "out"
 coverSize = "partial"
