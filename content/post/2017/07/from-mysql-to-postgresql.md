@@ -19,7 +19,7 @@ in
 
 This release of [pgloader](http://pgloader.io) is following the tradition of
 simplifying things for users, or if you allow me to
-quote [Alan Key](https://en.wikiquote.org/wiki/Alan_Kay), I believe that if
+quote [Alan Kay](https://en.wikiquote.org/wiki/Alan_Kay), I believe that if
 *simple things should be simple, complex things should be possible.*
 
 <!--more-->
