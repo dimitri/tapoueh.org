@@ -42,25 +42,25 @@ albums and genre. Each track has a *genreid* which is a *foreign key* to the
 the album table. Then album has a *foreign key* to artist. To discover that
 we use the `\d` facility of *psql*, here's an example for the track table:
 
-~~~ psql
+~~~
 chinook# \d track
-                               Table "public.track"
-    Column    |  Type   |                        Modifiers                        
---------------+---------+---------------------------------------------------------
- trackid      | bigint  | not null default nextval('track_trackid_seq'::regclass)
- name         | text    | 
- albumid      | bigint  | 
- mediatypeid  | bigint  | 
- genreid      | bigint  | 
- composer     | text    | 
- milliseconds | bigint  | 
- bytes        | bigint  | 
- unitprice    | numeric | 
+        Table "public.track"
+    Column    │  Type   │ Modifiers 
+══════════════╪═════════╪═══════════
+ trackid      │ bigint  │ not null
+ name         │ text    │ 
+ albumid      │ bigint  │ 
+ mediatypeid  │ bigint  │ 
+ genreid      │ bigint  │ 
+ composer     │ text    │ 
+ milliseconds │ bigint  │ 
+ bytes        │ bigint  │ 
+ unitprice    │ numeric │ 
 Indexes:
-    "idx_51519_ipk_track" PRIMARY KEY, btree (trackid)
-    "idx_51519_ifk_trackalbumid" btree (albumid)
-    "idx_51519_ifk_trackgenreid" btree (genreid)
-    "idx_51519_ifk_trackmediatypeid" btree (mediatypeid)
+    "idx_189229_ipk_track" PRIMARY KEY, btree (trackid)
+    "idx_189229_ifk_trackalbumid" btree (albumid)
+    "idx_189229_ifk_trackgenreid" btree (genreid)
+    "idx_189229_ifk_trackmediatypeid" btree (mediatypeid)
 Foreign-key constraints:
     "track_albumid_fkey" FOREIGN KEY (albumid) REFERENCES album(albumid)
     "track_genreid_fkey" FOREIGN KEY (genreid) REFERENCES genre(genreid)
@@ -98,26 +98,26 @@ names, which makes them unique in the whole schema, allowing us to use the
 `JOIN ... USING(...)` syntax. This syntax has a nice side effect: in the
 query output we find the joining column only once.
 
-~~~ psql
-        artist         |         album         |            track             
------------------------+-----------------------+------------------------------
- Red Hot Chili Peppers | Blood Sugar Sex Magik | The Power Of Equality
- Red Hot Chili Peppers | Blood Sugar Sex Magik | If You Have To Ask
- Red Hot Chili Peppers | Blood Sugar Sex Magik | Breaking The Girl
- Red Hot Chili Peppers | Blood Sugar Sex Magik | Funky Monks
- Red Hot Chili Peppers | Blood Sugar Sex Magik | Suck My Kiss
- Red Hot Chili Peppers | Blood Sugar Sex Magik | I Could Have Lied
- Red Hot Chili Peppers | Blood Sugar Sex Magik | Mellowship Slinky In B Major
- Red Hot Chili Peppers | Blood Sugar Sex Magik | The Righteous & The Wicked
- Red Hot Chili Peppers | Blood Sugar Sex Magik | Give It Away
- Red Hot Chili Peppers | Blood Sugar Sex Magik | Blood Sugar Sex Magik
- Red Hot Chili Peppers | Blood Sugar Sex Magik | Under The Bridge
- Red Hot Chili Peppers | Blood Sugar Sex Magik | Naked In The Rain
- Red Hot Chili Peppers | Blood Sugar Sex Magik | Apache Rose Peacock
- Red Hot Chili Peppers | Blood Sugar Sex Magik | The Greeting Song
- Red Hot Chili Peppers | Blood Sugar Sex Magik | My Lovely Man
- Red Hot Chili Peppers | Blood Sugar Sex Magik | Sir Psycho Sexy
- Red Hot Chili Peppers | Blood Sugar Sex Magik | They're Red Hot
+~~~
+        artist         │         album         │            track             
+═══════════════════════╪═══════════════════════╪══════════════════════════════
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ The Power Of Equality
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ If You Have To Ask
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ Breaking The Girl
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ Funky Monks
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ Suck My Kiss
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ I Could Have Lied
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ Mellowship Slinky In B Major
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ The Righteous & The Wicked
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ Give It Away
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ Blood Sugar Sex Magik
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ Under The Bridge
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ Naked In The Rain
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ Apache Rose Peacock
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ The Greeting Song
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ My Lovely Man
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ Sir Psycho Sexy
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ They're Red Hot
 (17 rows)
 ~~~
 
@@ -134,26 +134,26 @@ select name,
 
 Which gives the following view of the album of choice here:
 
-~~~ psql
-             name             |       duration       |  bytes  
-------------------------------+----------------------+---------
- The Power Of Equality        | @ 4 mins 3.591 secs  | 7957 kB
- If You Have To Ask           | @ 3 mins 36.79 secs  | 7030 kB
- Breaking The Girl            | @ 4 mins 55.497 secs | 9576 kB
- Funky Monks                  | @ 5 mins 23.395 secs | 10 MB
- Suck My Kiss                 | @ 3 mins 37.234 secs | 6962 kB
- I Could Have Lied            | @ 4 mins 4.506 secs  | 7899 kB
- Mellowship Slinky In B Major | @ 4 mins 0.091 secs  | 7785 kB
- The Righteous & The Wicked   | @ 4 mins 8.084 secs  | 7943 kB
- Give It Away                 | @ 4 mins 43.01 secs  | 9091 kB
- Blood Sugar Sex Magik        | @ 4 mins 31.229 secs | 8731 kB
- Under The Bridge             | @ 4 mins 24.359 secs | 8479 kB
- Naked In The Rain            | @ 4 mins 25.717 secs | 8520 kB
- Apache Rose Peacock          | @ 4 mins 42.226 secs | 9094 kB
- The Greeting Song            | @ 3 mins 13.593 secs | 6198 kB
- My Lovely Man                | @ 4 mins 39.118 secs | 9004 kB
- Sir Psycho Sexy              | @ 8 mins 16.692 secs | 16 MB
- They're Red Hot              | @ 1 min 11.941 secs  | 2326 kB
+~~~
+             name             │   duration   │  bytes  
+══════════════════════════════╪══════════════╪═════════
+ The Power Of Equality        │ 00:04:03.591 │ 7957 kB
+ If You Have To Ask           │ 00:03:36.79  │ 7030 kB
+ Breaking The Girl            │ 00:04:55.497 │ 9576 kB
+ Funky Monks                  │ 00:05:23.395 │ 10 MB
+ Suck My Kiss                 │ 00:03:37.234 │ 6962 kB
+ I Could Have Lied            │ 00:04:04.506 │ 7899 kB
+ Mellowship Slinky In B Major │ 00:04:00.091 │ 7785 kB
+ The Righteous & The Wicked   │ 00:04:08.084 │ 7943 kB
+ Give It Away                 │ 00:04:43.01  │ 9091 kB
+ Blood Sugar Sex Magik        │ 00:04:31.229 │ 8731 kB
+ Under The Bridge             │ 00:04:24.359 │ 8479 kB
+ Naked In The Rain            │ 00:04:25.717 │ 8520 kB
+ Apache Rose Peacock          │ 00:04:42.226 │ 9094 kB
+ The Greeting Song            │ 00:03:13.593 │ 6198 kB
+ My Lovely Man                │ 00:04:39.118 │ 9004 kB
+ Sir Psycho Sexy              │ 00:08:16.692 │ 16 MB
+ They're Red Hot              │ 00:01:11.941 │ 2326 kB
 (17 rows)
 ~~~
 
@@ -184,26 +184,26 @@ And here's our *rolling aggregate* result where we can see the *bps* column
 for *bytes per second*, computed after the accumulated sum of milliseconds
 and bytes throughout the album's track data:
 
-~~~ psql
-             name             |  bps  | album_bytes |           progres            
-------------------------------+-------+-------------+------------------------------
- The Power Of Equality        | 33.45 | 7957 kB     | @ 4 mins 3.591 secs
- If You Have To Ask           | 33.34 | 15 MB       | @ 7 mins 40.381 secs
- Breaking The Girl            | 33.28 | 24 MB       | @ 12 mins 35.878 secs
- Funky Monks                  | 33.23 | 34 MB       | @ 17 mins 59.273 secs
- Suck My Kiss                 | 33.16 | 41 MB       | @ 21 mins 36.507 secs
- I Could Have Lied            | 33.15 | 49 MB       | @ 25 mins 41.013 secs
- Mellowship Slinky In B Major | 33.15 | 56 MB       | @ 29 mins 41.104 secs
- The Righteous & The Wicked   | 33.11 | 64 MB       | @ 33 mins 49.188 secs
- Give It Away                 | 33.08 | 73 MB       | @ 38 mins 32.198 secs
- Blood Sugar Sex Magik        | 33.07 | 81 MB       | @ 43 mins 3.427 secs
- Under The Bridge             | 33.05 | 90 MB       | @ 47 mins 27.786 secs
- Naked In The Rain            | 33.03 | 98 MB       | @ 51 mins 53.503 secs
- Apache Rose Peacock          | 33.03 | 107 MB      | @ 56 mins 35.729 secs
- The Greeting Song            | 33.01 | 113 MB      | @ 59 mins 49.322 secs
- My Lovely Man                | 33.02 | 122 MB      | @ 1 hour 4 mins 28.44 secs
- Sir Psycho Sexy              | 33.01 | 137 MB      | @ 1 hour 12 mins 45.132 secs
- They're Red Hot              | 33.01 | 140 MB      | @ 1 hour 13 mins 57.073 secs
+~~~
+             name             │  bps  │ album_bytes │   progres    
+══════════════════════════════╪═══════╪═════════════╪══════════════
+ The Power Of Equality        │ 33.45 │ 7957 kB     │ 00:04:03.591
+ If You Have To Ask           │ 33.34 │ 15 MB       │ 00:07:40.381
+ Breaking The Girl            │ 33.28 │ 24 MB       │ 00:12:35.878
+ Funky Monks                  │ 33.23 │ 34 MB       │ 00:17:59.273
+ Suck My Kiss                 │ 33.16 │ 41 MB       │ 00:21:36.507
+ I Could Have Lied            │ 33.15 │ 49 MB       │ 00:25:41.013
+ Mellowship Slinky In B Major │ 33.15 │ 56 MB       │ 00:29:41.104
+ The Righteous & The Wicked   │ 33.11 │ 64 MB       │ 00:33:49.188
+ Give It Away                 │ 33.08 │ 73 MB       │ 00:38:32.198
+ Blood Sugar Sex Magik        │ 33.07 │ 81 MB       │ 00:43:03.427
+ Under The Bridge             │ 33.05 │ 90 MB       │ 00:47:27.786
+ Naked In The Rain            │ 33.03 │ 98 MB       │ 00:51:53.503
+ Apache Rose Peacock          │ 33.03 │ 107 MB      │ 00:56:35.729
+ The Greeting Song            │ 33.01 │ 113 MB      │ 00:59:49.322
+ My Lovely Man                │ 33.02 │ 122 MB      │ 01:04:28.44
+ Sir Psycho Sexy              │ 33.01 │ 137 MB      │ 01:12:45.132
+ They're Red Hot              │ 33.01 │ 140 MB      │ 01:13:57.073
 (17 rows)
 ~~~
 
@@ -233,34 +233,34 @@ We have here the repartition of tracks per genre and the percentage (in the
 *pct* column) of them with respect to the whole set of our 25 different
 music genres here:
 
-~~~ psql
-        name        | count | tracks |  pct  
---------------------+-------+--------+-------
- Alternative        |    40 |   3503 |  1.14
- Alternative & Punk |   332 |   3503 |  9.48
- Blues              |    81 |   3503 |  2.31
- Bossa Nova         |    15 |   3503 |  0.43
- Classical          |    74 |   3503 |  2.11
- Comedy             |    17 |   3503 |  0.49
- Drama              |    64 |   3503 |  1.83
- Easy Listening     |    24 |   3503 |  0.69
- Electronica/Dance  |    30 |   3503 |  0.86
- Heavy Metal        |    28 |   3503 |  0.80
- Hip Hop/Rap        |    35 |   3503 |  1.00
- Jazz               |   130 |   3503 |  3.71
- Latin              |   579 |   3503 | 16.53
- Metal              |   374 |   3503 | 10.68
- Opera              |     1 |   3503 |  0.03
- Pop                |    48 |   3503 |  1.37
- R&B/Soul           |    61 |   3503 |  1.74
- Reggae             |    58 |   3503 |  1.66
- Rock               |  1297 |   3503 | 37.03
- Rock And Roll      |    12 |   3503 |  0.34
- Sci Fi & Fantasy   |    26 |   3503 |  0.74
- Science Fiction    |    13 |   3503 |  0.37
- Soundtrack         |    43 |   3503 |  1.23
- TV Shows           |    93 |   3503 |  2.65
- World              |    28 |   3503 |  0.80
+~~~
+        name        │ count │ tracks │  pct  
+════════════════════╪═══════╪════════╪═══════
+ Alternative        │    40 │   3503 │  1.14
+ Alternative & Punk │   332 │   3503 │  9.48
+ Blues              │    81 │   3503 │  2.31
+ Bossa Nova         │    15 │   3503 │  0.43
+ Classical          │    74 │   3503 │  2.11
+ Comedy             │    17 │   3503 │  0.49
+ Drama              │    64 │   3503 │  1.83
+ Easy Listening     │    24 │   3503 │  0.69
+ Electronica/Dance  │    30 │   3503 │  0.86
+ Heavy Metal        │    28 │   3503 │  0.80
+ Hip Hop/Rap        │    35 │   3503 │  1.00
+ Jazz               │   130 │   3503 │  3.71
+ Latin              │   579 │   3503 │ 16.53
+ Metal              │   374 │   3503 │ 10.68
+ Opera              │     1 │   3503 │  0.03
+ Pop                │    48 │   3503 │  1.37
+ R&B/Soul           │    61 │   3503 │  1.74
+ Reggae             │    58 │   3503 │  1.66
+ Rock               │  1297 │   3503 │ 37.03
+ Rock And Roll      │    12 │   3503 │  0.34
+ Sci Fi & Fantasy   │    26 │   3503 │  0.74
+ Science Fiction    │    13 │   3503 │  0.37
+ Soundtrack         │    43 │   3503 │  1.23
+ TV Shows           │    93 │   3503 │  2.65
+ World              │    28 │   3503 │  0.80
 (25 rows)
 ~~~
 
@@ -282,34 +282,34 @@ order by genre.name;
 
 Which gives this time:
 
-~~~ psql
-        name        | count |                  pct                  
---------------------+-------+---------------------------------------
- Alternative        |    40 | ■
- Alternative & Punk |   332 | ■■■■■■■■■
- Blues              |    81 | ■■
- Bossa Nova         |    15 | 
- Classical          |    74 | ■■
- Comedy             |    17 | 
- Drama              |    64 | ■■
- Easy Listening     |    24 | ■
- Electronica/Dance  |    30 | ■
- Heavy Metal        |    28 | ■
- Hip Hop/Rap        |    35 | ■
- Jazz               |   130 | ■■■■
- Latin              |   579 | ■■■■■■■■■■■■■■■■■
- Metal              |   374 | ■■■■■■■■■■■
- Opera              |     1 | 
- Pop                |    48 | ■
- R&B/Soul           |    61 | ■■
- Reggae             |    58 | ■■
- Rock               |  1297 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
- Rock And Roll      |    12 | 
- Sci Fi & Fantasy   |    26 | ■
- Science Fiction    |    13 | 
- Soundtrack         |    43 | ■
- TV Shows           |    93 | ■■■
- World              |    28 | ■
+~~~
+                    │ count │                  pct                  
+════════════════════╪═══════╪═══════════════════════════════════════
+ Alternative        │    40 │ ■
+ Alternative & Punk │   332 │ ■■■■■■■■■
+ Blues              │    81 │ ■■
+ Bossa Nova         │    15 │ 
+ Classical          │    74 │ ■■
+ Comedy             │    17 │ 
+ Drama              │    64 │ ■■
+ Easy Listening     │    24 │ ■
+ Electronica/Dance  │    30 │ ■
+ Heavy Metal        │    28 │ ■
+ Hip Hop/Rap        │    35 │ ■
+ Jazz               │   130 │ ■■■■
+ Latin              │   579 │ ■■■■■■■■■■■■■■■■■
+ Metal              │   374 │ ■■■■■■■■■■■
+ Opera              │     1 │ 
+ Pop                │    48 │ ■
+ R&B/Soul           │    61 │ ■■
+ Reggae             │    58 │ ■■
+ Rock               │  1297 │ ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+ Rock And Roll      │    12 │ 
+ Sci Fi & Fantasy   │    26 │ ■
+ Science Fiction    │    13 │ 
+ Soundtrack         │    43 │ ■
+ TV Shows           │    93 │ ■■■
+ World              │    28 │ ■
 (25 rows)
 ~~~
 
@@ -341,20 +341,20 @@ ordering.
 
 So apparently we have 11 albums with tracks from different genres:
 
-~~~ psql
-             album              |                      genres                       
---------------------------------+---------------------------------------------------
- Battlestar Galactica, Season 3 | {"Sci Fi & Fantasy","Science Fiction","TV Shows"}
- Greatest Hits                  | {Metal,Reggae,Rock}
- Heroes, Season 1               | {Drama,"TV Shows"}
- LOST, Season 4                 | {Drama,"TV Shows"}
- Live After Death               | {"Heavy Metal",Metal}
- Lost, Season 2                 | {Drama,"TV Shows"}
- Lost, Season 3                 | {Drama,"TV Shows"}
- Rock In Rio [CD2]              | {Metal,Rock}
- The Number of The Beast        | {Metal,Rock}
- The Office, Season 3           | {Comedy,"TV Shows"}
- Unplugged                      | {Blues,Latin}
+~~~
+             album              │                      genres                       
+════════════════════════════════╪═══════════════════════════════════════════════════
+ Battlestar Galactica, Season 3 │ {"Sci Fi & Fantasy","Science Fiction","TV Shows"}
+ Greatest Hits                  │ {Metal,Reggae,Rock}
+ Heroes, Season 1               │ {Drama,"TV Shows"}
+ LOST, Season 4                 │ {Drama,"TV Shows"}
+ Live After Death               │ {"Heavy Metal",Metal}
+ Lost, Season 2                 │ {Drama,"TV Shows"}
+ Lost, Season 3                 │ {Drama,"TV Shows"}
+ Rock In Rio [CD2]              │ {Metal,Rock}
+ The Number of The Beast        │ {Metal,Rock}
+ The Office, Season 3           │ {Comedy,"TV Shows"}
+ Unplugged                      │ {Blues,Latin}
 (11 rows)
 ~~~
 
@@ -377,13 +377,13 @@ If we have a look at the *Unplugged* album, we can see that we have a data quali
 group by genre.name;
 ~~~
 
-~~~ psql
--[ RECORD 1 ]---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-name   | Blues
-tracks | {Signe,"Before You Accuse Me","Hey Hey","Tears In Heaven","Lonely Stranger","Nobody Knows You When You're Down & Out",Layla,"Running On Faith","Walkin' Blues",Alberta,"San Francisco Bay Blues","Malted Milk","Old Love","Rollin' And Tumblin'"}
--[ RECORD 2 ]---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-name   | Latin
-tracks | {"A Novidade","Tenho Sede",Refazenda,Realce,Esotérico,Drão,"A Paz","Beira Mar",Sampa,Parabolicamará,"Tempo Rei","Expresso 2222","Aquele Abraço",Palco,"Toda Menina Baiana","Sítio Do Pica-Pau Amarelo"}
+~~~
+─[ RECORD 1 ]─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+name   │ Blues
+tracks │ {Signe,"Before You Accuse Me","Hey Hey","Tears In Heaven","Lonely Stranger","Nobody Knows You When You're Down & Out",Layla,"Running On Faith","Walkin' Blues",Alberta,"San Francisco Bay Blues","Malted Milk","Old Love","Rollin' And Tumblin'"}
+═[ RECORD 2 ]═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+name   │ Latin
+tracks │ {"A Novidade","Tenho Sede",Refazenda,Realce,Esotérico,Drão,"A Paz","Beira Mar",Sampa,Parabolicamará,"Tempo Rei","Expresso 2222","Aquele Abraço",Palco,"Toda Menina Baiana","Sítio Do Pica-Pau Amarelo"}
 ~~~
 
 My guess is that the *Latin* tracks associated with the album are actually
@@ -502,20 +502,20 @@ remove this restriction by *albumid*, the query applies as-is to the whole
 data set we have, so it could be made a view for later use. So let's have a
 look at our problematic cases:
 
-~~~ psql
-        artist        |             title              |      genre      
-----------------------+--------------------------------+-----------------
- Eric Clapton         | Unplugged                      | Latin
- Iron Maiden          | Live After Death               | Metal
- Iron Maiden          | Rock In Rio [CD2]              | Rock
- Iron Maiden          | The Number of The Beast        | Metal
- Lenny Kravitz        | Greatest Hits                  | Rock
- Battlestar Galactica | Battlestar Galactica, Season 3 | Science Fiction
- Heroes               | Heroes, Season 1               | Drama
- Lost                 | Lost, Season 3                 | Drama
- Lost                 | Lost, Season 2                 | TV Shows
- The Office           | The Office, Season 3           | Comedy
- Lost                 | LOST, Season 4                 | Drama
+~~~
+        artist        │             title              │      genre      
+══════════════════════╪════════════════════════════════╪═════════════════
+ Eric Clapton         │ Unplugged                      │ Latin
+ Iron Maiden          │ Live After Death               │ Metal
+ Iron Maiden          │ Rock In Rio [CD2]              │ Rock
+ Iron Maiden          │ The Number of The Beast        │ Metal
+ Lenny Kravitz        │ Greatest Hits                  │ Rock
+ Battlestar Galactica │ Battlestar Galactica, Season 3 │ Science Fiction
+ Heroes               │ Heroes, Season 1               │ Drama
+ Lost                 │ Lost, Season 3                 │ Drama
+ Lost                 │ Lost, Season 2                 │ TV Shows
+ The Office           │ The Office, Season 3           │ Comedy
+ Lost                 │ LOST, Season 4                 │ Drama
 (11 rows)
 ~~~
 
@@ -578,29 +578,29 @@ order by genre.name;
 
 And now we can see our genre stats applied to only the music selection:
 
-~~~ psql
-        name        |       distribution        |      hist      
---------------------+---------------------------+----------------
- Alternative        | {3.5,5,6,11}              | ■■■■■■■■■■■
- Alternative & Punk | {3,5,6,8}                 | ■■■■■■■■
- Blues              | {4,6,7,9}                 | ■■■■■■■■■
- Bossa Nova         | {3,6,6,6}                 | ■■■■■■
- Classical          | {4,8,9,9}                 | ■■■■■■■■■
- Easy Listening     | {3,4,4,4}                 | ■■■■
- Electronica/Dance  | {5,6,7,8}                 | ■■■■■■■■
- Heavy Metal        | {4.5,7,8,8}               | ■■■■■■■■
- Hip Hop/Rap        | {3,3,5,6}                 | ■■■■■■
- Jazz               | {4,6.10000000000036,9,14} | ■■■■■■■■■■■■■■
- Latin              | {3,5,5,7}                 | ■■■■■■■
- Metal              | {4,7,8,10}                | ■■■■■■■■■■
- Opera              | {2,2,2,2}                 | ■■
- Pop                | {3,4,5,11}                | ■■■■■■■■■■■
- R&B/Soul           | {3,5,5,6}                 | ■■■■■■
- Reggae             | {3,5,5,6}                 | ■■■■■■
- Rock               | {4,6,8,13}                | ■■■■■■■■■■■■■
- Rock And Roll      | {2,2,2,2}                 | ■■
- Soundtrack         | {4,4,5,6}                 | ■■■■■■
- World              | {3,4,4,5}                 | ■■■■■
+~~~
+        name        │       distribution        │      hist      
+════════════════════╪═══════════════════════════╪════════════════
+ Alternative        │ {3.5,5,6,11}              │ ■■■■■■■■■■■
+ Alternative & Punk │ {3,5,6,8}                 │ ■■■■■■■■
+ Blues              │ {4,6,7,9}                 │ ■■■■■■■■■
+ Bossa Nova         │ {3,6,6,6}                 │ ■■■■■■
+ Classical          │ {4,8,9,9}                 │ ■■■■■■■■■
+ Easy Listening     │ {3,4,4,4}                 │ ■■■■
+ Electronica/Dance  │ {5,6,7,8}                 │ ■■■■■■■■
+ Heavy Metal        │ {4.5,7,8,8}               │ ■■■■■■■■
+ Hip Hop/Rap        │ {3,3,5,6}                 │ ■■■■■■
+ Jazz               │ {4,6.10000000000036,9,14} │ ■■■■■■■■■■■■■■
+ Latin              │ {3,5,5,7}                 │ ■■■■■■■
+ Metal              │ {4,7,8,10}                │ ■■■■■■■■■■
+ Opera              │ {2,2,2,2}                 │ ■■
+ Pop                │ {3,4,5,11}                │ ■■■■■■■■■■■
+ R&B/Soul           │ {3,5,5,6}                 │ ■■■■■■
+ Reggae             │ {3,5,5,6}                 │ ■■■■■■
+ Rock               │ {4,6,8,13}                │ ■■■■■■■■■■■■■
+ Rock And Roll      │ {2,2,2,2}                 │ ■■
+ Soundtrack         │ {4,4,5,6}                 │ ■■■■■■
+ World              │ {3,4,4,5}                 │ ■■■■■
 (20 rows)
 ~~~
 

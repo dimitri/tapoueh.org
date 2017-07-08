@@ -321,32 +321,33 @@ albums and genre. Each track has a <em>genreid</em> which is a <em>foreign key</
 <em>genre</em> reference table, and also an <em>albumid</em> which is a <em>foreing key</em> to
 the album table. Then album has a <em>foreign key</em> to artist. To discover that
 we use the <code>\d</code> facility of <em>psql</em>, here&rsquo;s an example for the track table:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>chinook# <span style="color: #0000aa">\d</span> <span style="color: #0000aa">track</span>
-                               <span style="color: #0000aa">Table</span> <span style="color: #aa5500">&quot;public.track&quot;</span>
-    <span style="color: #0000aa">Column</span>    |  <span style="color: #0000aa">Type</span>   |                        Modifiers                        
-<span style="color: #aaaaaa; font-style: italic">--------------+---------+---------------------------------------------------------</span>
- trackid      | <span style="color: #00aaaa">bigint</span>  | <span style="color: #0000aa">not</span> <span style="color: #0000aa">null</span> <span style="color: #0000aa">default</span> nextval(<span style="color: #aa5500">&#39;track_trackid_seq&#39;</span>::regclass)
- <span style="color: #0000aa">name</span>         | <span style="color: #00aaaa">text</span>    | 
- albumid      | <span style="color: #00aaaa">bigint</span>  | 
- mediatypeid  | <span style="color: #00aaaa">bigint</span>  | 
- genreid      | <span style="color: #00aaaa">bigint</span>  | 
- composer     | <span style="color: #00aaaa">text</span>    | 
- milliseconds | <span style="color: #00aaaa">bigint</span>  | 
- bytes        | <span style="color: #00aaaa">bigint</span>  | 
- unitprice    | <span style="color: #00aaaa">numeric</span> | 
-<span style="color: #0000aa">Indexes</span>:
-    <span style="color: #aa5500">&quot;idx_51519_ipk_track&quot;</span> <span style="color: #0000aa">PRIMARY</span> <span style="color: #0000aa">KEY</span>, btree (trackid)
-    <span style="color: #aa5500">&quot;idx_51519_ifk_trackalbumid&quot;</span> btree (albumid)
-    <span style="color: #aa5500">&quot;idx_51519_ifk_trackgenreid&quot;</span> btree (genreid)
-    <span style="color: #aa5500">&quot;idx_51519_ifk_trackmediatypeid&quot;</span> btree (mediatypeid)
-<span style="color: #0000aa">Foreign</span>-<span style="color: #0000aa">key</span> <span style="color: #0000aa">constraints</span>:
-    <span style="color: #aa5500">&quot;track_albumid_fkey&quot;</span> <span style="color: #0000aa">FOREIGN</span> <span style="color: #0000aa">KEY</span> (albumid) <span style="color: #0000aa">REFERENCES</span> album(albumid)
-    <span style="color: #aa5500">&quot;track_genreid_fkey&quot;</span> <span style="color: #0000aa">FOREIGN</span> <span style="color: #0000aa">KEY</span> (genreid) <span style="color: #0000aa">REFERENCES</span> genre(genreid)
-    <span style="color: #aa5500">&quot;track_mediatypeid_fkey&quot;</span> <span style="color: #0000aa">FOREIGN</span> <span style="color: #0000aa">KEY</span> (mediatypeid) <span style="color: #0000aa">REFERENCES</span> mediatype(mediatypeid)
-Referenced <span style="color: #0000aa">by</span>:
-    <span style="color: #0000aa">TABLE</span> <span style="color: #aa5500">&quot;invoiceline&quot;</span> <span style="color: #0000aa">CONSTRAINT</span> <span style="color: #aa5500">&quot;invoiceline_trackid_fkey&quot;</span> <span style="color: #0000aa">FOREIGN</span> <span style="color: #0000aa">KEY</span> (trackid) <span style="color: #0000aa">REFERENCES</span> track(trackid)
-    <span style="color: #0000aa">TABLE</span> <span style="color: #aa5500">&quot;playlisttrack&quot;</span> <span style="color: #0000aa">CONSTRAINT</span> <span style="color: #aa5500">&quot;playlisttrack_trackid_fkey&quot;</span> <span style="color: #0000aa">FOREIGN</span> <span style="color: #0000aa">KEY</span> (trackid) <span style="color: #0000aa">REFERENCES</span> track(trackid)
-</pre></div>
+
+<pre><code>chinook# \d track
+        Table &quot;public.track&quot;
+    Column    │  Type   │ Modifiers 
+══════════════╪═════════╪═══════════
+ trackid      │ bigint  │ not null
+ name         │ text    │ 
+ albumid      │ bigint  │ 
+ mediatypeid  │ bigint  │ 
+ genreid      │ bigint  │ 
+ composer     │ text    │ 
+ milliseconds │ bigint  │ 
+ bytes        │ bigint  │ 
+ unitprice    │ numeric │ 
+Indexes:
+    &quot;idx_189229_ipk_track&quot; PRIMARY KEY, btree (trackid)
+    &quot;idx_189229_ifk_trackalbumid&quot; btree (albumid)
+    &quot;idx_189229_ifk_trackgenreid&quot; btree (genreid)
+    &quot;idx_189229_ifk_trackmediatypeid&quot; btree (mediatypeid)
+Foreign-key constraints:
+    &quot;track_albumid_fkey&quot; FOREIGN KEY (albumid) REFERENCES album(albumid)
+    &quot;track_genreid_fkey&quot; FOREIGN KEY (genreid) REFERENCES genre(genreid)
+    &quot;track_mediatypeid_fkey&quot; FOREIGN KEY (mediatypeid) REFERENCES mediatype(mediatypeid)
+Referenced by:
+    TABLE &quot;invoiceline&quot; CONSTRAINT &quot;invoiceline_trackid_fkey&quot; FOREIGN KEY (trackid) REFERENCES track(trackid)
+    TABLE &quot;playlisttrack&quot; CONSTRAINT &quot;playlisttrack_trackid_fkey&quot; FOREIGN KEY (trackid) REFERENCES track(trackid)
+</code></pre>
 
 <p>I could offer a diagram of the relations in between those tables but instead
 let&rsquo;s write our first query against this model, showing some details about a
@@ -371,27 +372,28 @@ are all derived from a sequence. Also, those key names embed the table
 names, which makes them unique in the whole schema, allowing us to use the
 <code>JOIN ... USING(...)</code> syntax. This syntax has a nice side effect: in the
 query output we find the joining column only once.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>        artist         |         album         |            track             
-<span style="color: #aaaaaa; font-style: italic">-----------------------+-----------------------+------------------------------</span>
- Red Hot Chili Peppers | Blood Sugar Sex Magik | The Power <span style="color: #0000aa">Of</span> Equality
- Red Hot Chili Peppers | Blood Sugar Sex Magik | <span style="color: #0000aa">If</span> You Have <span style="color: #0000aa">To</span> Ask
- Red Hot Chili Peppers | Blood Sugar Sex Magik | Breaking The Girl
- Red Hot Chili Peppers | Blood Sugar Sex Magik | Funky Monks
- Red Hot Chili Peppers | Blood Sugar Sex Magik | Suck My Kiss
- Red Hot Chili Peppers | Blood Sugar Sex Magik | I Could Have Lied
- Red Hot Chili Peppers | Blood Sugar Sex Magik | Mellowship Slinky <span style="color: #0000aa">In</span> B Major
- Red Hot Chili Peppers | Blood Sugar Sex Magik | The Righteous &amp; The Wicked
- Red Hot Chili Peppers | Blood Sugar Sex Magik | Give It Away
- Red Hot Chili Peppers | Blood Sugar Sex Magik | Blood Sugar Sex Magik
- Red Hot Chili Peppers | Blood Sugar Sex Magik | Under The Bridge
- Red Hot Chili Peppers | Blood Sugar Sex Magik | Naked <span style="color: #0000aa">In</span> The Rain
- Red Hot Chili Peppers | Blood Sugar Sex Magik | Apache Rose Peacock
- Red Hot Chili Peppers | Blood Sugar Sex Magik | The Greeting Song
- Red Hot Chili Peppers | Blood Sugar Sex Magik | My Lovely Man
- Red Hot Chili Peppers | Blood Sugar Sex Magik | Sir Psycho Sexy
- Red Hot Chili Peppers | Blood Sugar Sex Magik | They<span style="color: #aa5500">&#39;re Red Hot</span>
-<span style="color: #aa5500">(17 rows)</span>
-</pre></div>
+
+<pre><code>        artist         │         album         │            track             
+═══════════════════════╪═══════════════════════╪══════════════════════════════
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ The Power Of Equality
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ If You Have To Ask
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ Breaking The Girl
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ Funky Monks
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ Suck My Kiss
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ I Could Have Lied
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ Mellowship Slinky In B Major
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ The Righteous &amp; The Wicked
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ Give It Away
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ Blood Sugar Sex Magik
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ Under The Bridge
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ Naked In The Rain
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ Apache Rose Peacock
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ The Greeting Song
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ My Lovely Man
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ Sir Psycho Sexy
+ Red Hot Chili Peppers │ Blood Sugar Sex Magik │ They're Red Hot
+(17 rows)
+</code></pre>
 
 <p>In the <em>track</em> table we saw some more interesting columns, such as
 <em>milliseconds</em> and <em>bytes</em>:</p>
@@ -403,27 +405,28 @@ query output we find the joining column only once.</p>
 </pre></div>
 
 <p>Which gives the following view of the album of choice here:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>             <span style="color: #0000aa">name</span>             |       duration       |  bytes  
-<span style="color: #aaaaaa; font-style: italic">------------------------------+----------------------+---------</span>
- The Power <span style="color: #0000aa">Of</span> Equality        | @ <span style="color: #009999">4</span> mins <span style="color: #009999">3.591</span> secs  | <span style="color: #009999">7957</span> kB
- <span style="color: #0000aa">If</span> You Have <span style="color: #0000aa">To</span> Ask           | @ <span style="color: #009999">3</span> mins <span style="color: #009999">36.79</span> secs  | <span style="color: #009999">7030</span> kB
- Breaking The Girl            | @ <span style="color: #009999">4</span> mins <span style="color: #009999">55.497</span> secs | <span style="color: #009999">9576</span> kB
- Funky Monks                  | @ <span style="color: #009999">5</span> mins <span style="color: #009999">23.395</span> secs | <span style="color: #009999">10</span> MB
- Suck My Kiss                 | @ <span style="color: #009999">3</span> mins <span style="color: #009999">37.234</span> secs | <span style="color: #009999">6962</span> kB
- I Could Have Lied            | @ <span style="color: #009999">4</span> mins <span style="color: #009999">4.506</span> secs  | <span style="color: #009999">7899</span> kB
- Mellowship Slinky <span style="color: #0000aa">In</span> B Major | @ <span style="color: #009999">4</span> mins <span style="color: #009999">0.091</span> secs  | <span style="color: #009999">7785</span> kB
- The Righteous &amp; The Wicked   | @ <span style="color: #009999">4</span> mins <span style="color: #009999">8.084</span> secs  | <span style="color: #009999">7943</span> kB
- Give It Away                 | @ <span style="color: #009999">4</span> mins <span style="color: #009999">43.01</span> secs  | <span style="color: #009999">9091</span> kB
- Blood Sugar Sex Magik        | @ <span style="color: #009999">4</span> mins <span style="color: #009999">31.229</span> secs | <span style="color: #009999">8731</span> kB
- Under The Bridge             | @ <span style="color: #009999">4</span> mins <span style="color: #009999">24.359</span> secs | <span style="color: #009999">8479</span> kB
- Naked <span style="color: #0000aa">In</span> The Rain            | @ <span style="color: #009999">4</span> mins <span style="color: #009999">25.717</span> secs | <span style="color: #009999">8520</span> kB
- Apache Rose Peacock          | @ <span style="color: #009999">4</span> mins <span style="color: #009999">42.226</span> secs | <span style="color: #009999">9094</span> kB
- The Greeting Song            | @ <span style="color: #009999">3</span> mins <span style="color: #009999">13.593</span> secs | <span style="color: #009999">6198</span> kB
- My Lovely Man                | @ <span style="color: #009999">4</span> mins <span style="color: #009999">39.118</span> secs | <span style="color: #009999">9004</span> kB
- Sir Psycho Sexy              | @ <span style="color: #009999">8</span> mins <span style="color: #009999">16.692</span> secs | <span style="color: #009999">16</span> MB
- They<span style="color: #aa5500">&#39;re Red Hot              | @ 1 min 11.941 secs  | 2326 kB</span>
-<span style="color: #aa5500">(17 rows)</span>
-</pre></div>
+
+<pre><code>             name             │   duration   │  bytes  
+══════════════════════════════╪══════════════╪═════════
+ The Power Of Equality        │ 00:04:03.591 │ 7957 kB
+ If You Have To Ask           │ 00:03:36.79  │ 7030 kB
+ Breaking The Girl            │ 00:04:55.497 │ 9576 kB
+ Funky Monks                  │ 00:05:23.395 │ 10 MB
+ Suck My Kiss                 │ 00:03:37.234 │ 6962 kB
+ I Could Have Lied            │ 00:04:04.506 │ 7899 kB
+ Mellowship Slinky In B Major │ 00:04:00.091 │ 7785 kB
+ The Righteous &amp; The Wicked   │ 00:04:08.084 │ 7943 kB
+ Give It Away                 │ 00:04:43.01  │ 9091 kB
+ Blood Sugar Sex Magik        │ 00:04:31.229 │ 8731 kB
+ Under The Bridge             │ 00:04:24.359 │ 8479 kB
+ Naked In The Rain            │ 00:04:25.717 │ 8520 kB
+ Apache Rose Peacock          │ 00:04:42.226 │ 9094 kB
+ The Greeting Song            │ 00:03:13.593 │ 6198 kB
+ My Lovely Man                │ 00:04:39.118 │ 9004 kB
+ Sir Psycho Sexy              │ 00:08:16.692 │ 16 MB
+ They're Red Hot              │ 00:01:11.941 │ 2326 kB
+(17 rows)
+</code></pre>
 
 <p>If you&rsquo;re interested into compression at the album level, you might want to
 compare <em>rolling sum</em> of both the album duration and its size in bytes,
@@ -449,27 +452,28 @@ that:</p>
 <p>And here&rsquo;s our <em>rolling aggregate</em> result where we can see the <em>bps</em> column
 for <em>bytes per second</em>, computed after the accumulated sum of milliseconds
 and bytes throughout the album&rsquo;s track data:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>             <span style="color: #0000aa">name</span>             |  bps  | album_bytes |           progres            
-<span style="color: #aaaaaa; font-style: italic">------------------------------+-------+-------------+------------------------------</span>
- The Power <span style="color: #0000aa">Of</span> Equality        | <span style="color: #009999">33.45</span> | <span style="color: #009999">7957</span> kB     | @ <span style="color: #009999">4</span> mins <span style="color: #009999">3.591</span> secs
- <span style="color: #0000aa">If</span> You Have <span style="color: #0000aa">To</span> Ask           | <span style="color: #009999">33.34</span> | <span style="color: #009999">15</span> MB       | @ <span style="color: #009999">7</span> mins <span style="color: #009999">40.381</span> secs
- Breaking The Girl            | <span style="color: #009999">33.28</span> | <span style="color: #009999">24</span> MB       | @ <span style="color: #009999">12</span> mins <span style="color: #009999">35.878</span> secs
- Funky Monks                  | <span style="color: #009999">33.23</span> | <span style="color: #009999">34</span> MB       | @ <span style="color: #009999">17</span> mins <span style="color: #009999">59.273</span> secs
- Suck My Kiss                 | <span style="color: #009999">33.16</span> | <span style="color: #009999">41</span> MB       | @ <span style="color: #009999">21</span> mins <span style="color: #009999">36.507</span> secs
- I Could Have Lied            | <span style="color: #009999">33.15</span> | <span style="color: #009999">49</span> MB       | @ <span style="color: #009999">25</span> mins <span style="color: #009999">41.013</span> secs
- Mellowship Slinky <span style="color: #0000aa">In</span> B Major | <span style="color: #009999">33.15</span> | <span style="color: #009999">56</span> MB       | @ <span style="color: #009999">29</span> mins <span style="color: #009999">41.104</span> secs
- The Righteous &amp; The Wicked   | <span style="color: #009999">33.11</span> | <span style="color: #009999">64</span> MB       | @ <span style="color: #009999">33</span> mins <span style="color: #009999">49.188</span> secs
- Give It Away                 | <span style="color: #009999">33.08</span> | <span style="color: #009999">73</span> MB       | @ <span style="color: #009999">38</span> mins <span style="color: #009999">32.198</span> secs
- Blood Sugar Sex Magik        | <span style="color: #009999">33.07</span> | <span style="color: #009999">81</span> MB       | @ <span style="color: #009999">43</span> mins <span style="color: #009999">3.427</span> secs
- Under The Bridge             | <span style="color: #009999">33.05</span> | <span style="color: #009999">90</span> MB       | @ <span style="color: #009999">47</span> mins <span style="color: #009999">27.786</span> secs
- Naked <span style="color: #0000aa">In</span> The Rain            | <span style="color: #009999">33.03</span> | <span style="color: #009999">98</span> MB       | @ <span style="color: #009999">51</span> mins <span style="color: #009999">53.503</span> secs
- Apache Rose Peacock          | <span style="color: #009999">33.03</span> | <span style="color: #009999">107</span> MB      | @ <span style="color: #009999">56</span> mins <span style="color: #009999">35.729</span> secs
- The Greeting Song            | <span style="color: #009999">33.01</span> | <span style="color: #009999">113</span> MB      | @ <span style="color: #009999">59</span> mins <span style="color: #009999">49.322</span> secs
- My Lovely Man                | <span style="color: #009999">33.02</span> | <span style="color: #009999">122</span> MB      | @ <span style="color: #009999">1</span> <span style="color: #0000aa">hour</span> <span style="color: #009999">4</span> mins <span style="color: #009999">28.44</span> secs
- Sir Psycho Sexy              | <span style="color: #009999">33.01</span> | <span style="color: #009999">137</span> MB      | @ <span style="color: #009999">1</span> <span style="color: #0000aa">hour</span> <span style="color: #009999">12</span> mins <span style="color: #009999">45.132</span> secs
- They<span style="color: #aa5500">&#39;re Red Hot              | 33.01 | 140 MB      | @ 1 hour 13 mins 57.073 secs</span>
-<span style="color: #aa5500">(17 rows)</span>
-</pre></div>
+
+<pre><code>             name             │  bps  │ album_bytes │   progres    
+══════════════════════════════╪═══════╪═════════════╪══════════════
+ The Power Of Equality        │ 33.45 │ 7957 kB     │ 00:04:03.591
+ If You Have To Ask           │ 33.34 │ 15 MB       │ 00:07:40.381
+ Breaking The Girl            │ 33.28 │ 24 MB       │ 00:12:35.878
+ Funky Monks                  │ 33.23 │ 34 MB       │ 00:17:59.273
+ Suck My Kiss                 │ 33.16 │ 41 MB       │ 00:21:36.507
+ I Could Have Lied            │ 33.15 │ 49 MB       │ 00:25:41.013
+ Mellowship Slinky In B Major │ 33.15 │ 56 MB       │ 00:29:41.104
+ The Righteous &amp; The Wicked   │ 33.11 │ 64 MB       │ 00:33:49.188
+ Give It Away                 │ 33.08 │ 73 MB       │ 00:38:32.198
+ Blood Sugar Sex Magik        │ 33.07 │ 81 MB       │ 00:43:03.427
+ Under The Bridge             │ 33.05 │ 90 MB       │ 00:47:27.786
+ Naked In The Rain            │ 33.03 │ 98 MB       │ 00:51:53.503
+ Apache Rose Peacock          │ 33.03 │ 107 MB      │ 00:56:35.729
+ The Greeting Song            │ 33.01 │ 113 MB      │ 00:59:49.322
+ My Lovely Man                │ 33.02 │ 122 MB      │ 01:04:28.44
+ Sir Psycho Sexy              │ 33.01 │ 137 MB      │ 01:12:45.132
+ They're Red Hot              │ 33.01 │ 140 MB      │ 01:13:57.073
+(17 rows)
+</code></pre>
 
 <div class="alert success ">
   <p>If that&rsquo;s your first encounter with a window function you might want to
@@ -492,35 +496,36 @@ an all time favorite article of this website.</p>
 <p>We have here the repartition of tracks per genre and the percentage (in the
 <em>pct</em> column) of them with respect to the whole set of our 25 different
 music genres here:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>        <span style="color: #0000aa">name</span>        | count | tracks |  pct  
-<span style="color: #aaaaaa; font-style: italic">--------------------+-------+--------+-------</span>
- Alternative        |    <span style="color: #009999">40</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">1.14</span>
- Alternative &amp; Punk |   <span style="color: #009999">332</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">9.48</span>
- Blues              |    <span style="color: #009999">81</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">2.31</span>
- Bossa Nova         |    <span style="color: #009999">15</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">0.43</span>
- Classical          |    <span style="color: #009999">74</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">2.11</span>
- Comedy             |    <span style="color: #009999">17</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">0.49</span>
- Drama              |    <span style="color: #009999">64</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">1.83</span>
- Easy Listening     |    <span style="color: #009999">24</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">0.69</span>
- Electronica/Dance  |    <span style="color: #009999">30</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">0.86</span>
- Heavy Metal        |    <span style="color: #009999">28</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">0.80</span>
- Hip Hop/Rap        |    <span style="color: #009999">35</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">1.00</span>
- Jazz               |   <span style="color: #009999">130</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">3.71</span>
- Latin              |   <span style="color: #009999">579</span> |   <span style="color: #009999">3503</span> | <span style="color: #009999">16.53</span>
- Metal              |   <span style="color: #009999">374</span> |   <span style="color: #009999">3503</span> | <span style="color: #009999">10.68</span>
- Opera              |     <span style="color: #009999">1</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">0.03</span>
- Pop                |    <span style="color: #009999">48</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">1.37</span>
- R&amp;B/Soul           |    <span style="color: #009999">61</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">1.74</span>
- Reggae             |    <span style="color: #009999">58</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">1.66</span>
- Rock               |  <span style="color: #009999">1297</span> |   <span style="color: #009999">3503</span> | <span style="color: #009999">37.03</span>
- Rock <span style="color: #0000aa">And</span> Roll      |    <span style="color: #009999">12</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">0.34</span>
- Sci Fi &amp; Fantasy   |    <span style="color: #009999">26</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">0.74</span>
- Science Fiction    |    <span style="color: #009999">13</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">0.37</span>
- Soundtrack         |    <span style="color: #009999">43</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">1.23</span>
- TV Shows           |    <span style="color: #009999">93</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">2.65</span>
- World              |    <span style="color: #009999">28</span> |   <span style="color: #009999">3503</span> |  <span style="color: #009999">0.80</span>
-(<span style="color: #009999">25</span> <span style="color: #0000aa">rows</span>)
-</pre></div>
+
+<pre><code>        name        │ count │ tracks │  pct  
+════════════════════╪═══════╪════════╪═══════
+ Alternative        │    40 │   3503 │  1.14
+ Alternative &amp; Punk │   332 │   3503 │  9.48
+ Blues              │    81 │   3503 │  2.31
+ Bossa Nova         │    15 │   3503 │  0.43
+ Classical          │    74 │   3503 │  2.11
+ Comedy             │    17 │   3503 │  0.49
+ Drama              │    64 │   3503 │  1.83
+ Easy Listening     │    24 │   3503 │  0.69
+ Electronica/Dance  │    30 │   3503 │  0.86
+ Heavy Metal        │    28 │   3503 │  0.80
+ Hip Hop/Rap        │    35 │   3503 │  1.00
+ Jazz               │   130 │   3503 │  3.71
+ Latin              │   579 │   3503 │ 16.53
+ Metal              │   374 │   3503 │ 10.68
+ Opera              │     1 │   3503 │  0.03
+ Pop                │    48 │   3503 │  1.37
+ R&amp;B/Soul           │    61 │   3503 │  1.74
+ Reggae             │    58 │   3503 │  1.66
+ Rock               │  1297 │   3503 │ 37.03
+ Rock And Roll      │    12 │   3503 │  0.34
+ Sci Fi &amp; Fantasy   │    26 │   3503 │  0.74
+ Science Fiction    │    13 │   3503 │  0.37
+ Soundtrack         │    43 │   3503 │  1.23
+ TV Shows           │    93 │   3503 │  2.65
+ World              │    28 │   3503 │  0.80
+(25 rows)
+</code></pre>
 
 <p>A more visual way to have a look at this data right from the console is with
 the following query:</p>
@@ -537,35 +542,36 @@ the following query:</p>
 </pre></div>
 
 <p>Which gives this time:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>        <span style="color: #0000aa">name</span>        | count |                  pct                  
-<span style="color: #aaaaaa; font-style: italic">--------------------+-------+---------------------------------------</span>
- Alternative        |    <span style="color: #009999">40</span> | <span style="color: #FF0000; background-color: #FFAAAA">■</span>
- Alternative &amp; Punk |   <span style="color: #009999">332</span> | <span style="color: #FF0000; background-color: #FFAAAA">■■■■■■■■■</span>
- Blues              |    <span style="color: #009999">81</span> | <span style="color: #FF0000; background-color: #FFAAAA">■■</span>
- Bossa Nova         |    <span style="color: #009999">15</span> | 
- Classical          |    <span style="color: #009999">74</span> | <span style="color: #FF0000; background-color: #FFAAAA">■■</span>
- Comedy             |    <span style="color: #009999">17</span> | 
- Drama              |    <span style="color: #009999">64</span> | <span style="color: #FF0000; background-color: #FFAAAA">■■</span>
- Easy Listening     |    <span style="color: #009999">24</span> | <span style="color: #FF0000; background-color: #FFAAAA">■</span>
- Electronica/Dance  |    <span style="color: #009999">30</span> | <span style="color: #FF0000; background-color: #FFAAAA">■</span>
- Heavy Metal        |    <span style="color: #009999">28</span> | <span style="color: #FF0000; background-color: #FFAAAA">■</span>
- Hip Hop/Rap        |    <span style="color: #009999">35</span> | <span style="color: #FF0000; background-color: #FFAAAA">■</span>
- Jazz               |   <span style="color: #009999">130</span> | <span style="color: #FF0000; background-color: #FFAAAA">■■■■</span>
- Latin              |   <span style="color: #009999">579</span> | <span style="color: #FF0000; background-color: #FFAAAA">■■■■■■■■■■■■■■■■■</span>
- Metal              |   <span style="color: #009999">374</span> | <span style="color: #FF0000; background-color: #FFAAAA">■■■■■■■■■■■</span>
- Opera              |     <span style="color: #009999">1</span> | 
- Pop                |    <span style="color: #009999">48</span> | <span style="color: #FF0000; background-color: #FFAAAA">■</span>
- R&amp;B/Soul           |    <span style="color: #009999">61</span> | <span style="color: #FF0000; background-color: #FFAAAA">■■</span>
- Reggae             |    <span style="color: #009999">58</span> | <span style="color: #FF0000; background-color: #FFAAAA">■■</span>
- Rock               |  <span style="color: #009999">1297</span> | <span style="color: #FF0000; background-color: #FFAAAA">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■</span>
- Rock <span style="color: #0000aa">And</span> Roll      |    <span style="color: #009999">12</span> | 
- Sci Fi &amp; Fantasy   |    <span style="color: #009999">26</span> | <span style="color: #FF0000; background-color: #FFAAAA">■</span>
- Science Fiction    |    <span style="color: #009999">13</span> | 
- Soundtrack         |    <span style="color: #009999">43</span> | <span style="color: #FF0000; background-color: #FFAAAA">■</span>
- TV Shows           |    <span style="color: #009999">93</span> | <span style="color: #FF0000; background-color: #FFAAAA">■■■</span>
- World              |    <span style="color: #009999">28</span> | <span style="color: #FF0000; background-color: #FFAAAA">■</span>
-(<span style="color: #009999">25</span> <span style="color: #0000aa">rows</span>)
-</pre></div>
+
+<pre><code>                    │ count │                  pct                  
+════════════════════╪═══════╪═══════════════════════════════════════
+ Alternative        │    40 │ ■
+ Alternative &amp; Punk │   332 │ ■■■■■■■■■
+ Blues              │    81 │ ■■
+ Bossa Nova         │    15 │ 
+ Classical          │    74 │ ■■
+ Comedy             │    17 │ 
+ Drama              │    64 │ ■■
+ Easy Listening     │    24 │ ■
+ Electronica/Dance  │    30 │ ■
+ Heavy Metal        │    28 │ ■
+ Hip Hop/Rap        │    35 │ ■
+ Jazz               │   130 │ ■■■■
+ Latin              │   579 │ ■■■■■■■■■■■■■■■■■
+ Metal              │   374 │ ■■■■■■■■■■■
+ Opera              │     1 │ 
+ Pop                │    48 │ ■
+ R&amp;B/Soul           │    61 │ ■■
+ Reggae             │    58 │ ■■
+ Rock               │  1297 │ ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+ Rock And Roll      │    12 │ 
+ Sci Fi &amp; Fantasy   │    26 │ ■
+ Science Fiction    │    13 │ 
+ Soundtrack         │    43 │ ■
+ TV Shows           │    93 │ ■■■
+ World              │    28 │ ■
+(25 rows)
+</code></pre>
 
 <p>Now we easily spot that the music collection distribution by genre is skewed
 over Rock, Latin, Metal and Punk music. Also there&rsquo;s a non trivial amount of
@@ -592,21 +598,22 @@ it sees, in this case the data is <em>distinct</em> <code>genre.names</code> in 
 ordering.</p>
 
 <p>So apparently we have 11 albums with tracks from different genres:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>             album              |                      genres                       
-<span style="color: #aaaaaa; font-style: italic">--------------------------------+---------------------------------------------------</span>
- Battlestar Galactica, Season <span style="color: #009999">3</span> | {<span style="color: #aa5500">&quot;Sci Fi &amp; Fantasy&quot;</span>,<span style="color: #aa5500">&quot;Science Fiction&quot;</span>,<span style="color: #aa5500">&quot;TV Shows&quot;</span>}
- <span style="color: #0000aa">Greatest</span> Hits                  | {Metal,Reggae,Rock}
- Heroes, Season <span style="color: #009999">1</span>               | {Drama,<span style="color: #aa5500">&quot;TV Shows&quot;</span>}
- LOST, Season <span style="color: #009999">4</span>                 | {Drama,<span style="color: #aa5500">&quot;TV Shows&quot;</span>}
- Live <span style="color: #0000aa">After</span> Death               | {<span style="color: #aa5500">&quot;Heavy Metal&quot;</span>,Metal}
- Lost, Season <span style="color: #009999">2</span>                 | {Drama,<span style="color: #aa5500">&quot;TV Shows&quot;</span>}
- Lost, Season <span style="color: #009999">3</span>                 | {Drama,<span style="color: #aa5500">&quot;TV Shows&quot;</span>}
- Rock <span style="color: #0000aa">In</span> Rio [CD2]              | {Metal,Rock}
- The Number <span style="color: #0000aa">of</span> The Beast        | {Metal,Rock}
- The Office, Season <span style="color: #009999">3</span>           | {Comedy,<span style="color: #aa5500">&quot;TV Shows&quot;</span>}
- Unplugged                      | {Blues,Latin}
-(<span style="color: #009999">11</span> <span style="color: #0000aa">rows</span>)
-</pre></div>
+
+<pre><code>             album              │                      genres                       
+════════════════════════════════╪═══════════════════════════════════════════════════
+ Battlestar Galactica, Season 3 │ {&quot;Sci Fi &amp; Fantasy&quot;,&quot;Science Fiction&quot;,&quot;TV Shows&quot;}
+ Greatest Hits                  │ {Metal,Reggae,Rock}
+ Heroes, Season 1               │ {Drama,&quot;TV Shows&quot;}
+ LOST, Season 4                 │ {Drama,&quot;TV Shows&quot;}
+ Live After Death               │ {&quot;Heavy Metal&quot;,Metal}
+ Lost, Season 2                 │ {Drama,&quot;TV Shows&quot;}
+ Lost, Season 3                 │ {Drama,&quot;TV Shows&quot;}
+ Rock In Rio [CD2]              │ {Metal,Rock}
+ The Number of The Beast        │ {Metal,Rock}
+ The Office, Season 3           │ {Comedy,&quot;TV Shows&quot;}
+ Unplugged                      │ {Blues,Latin}
+(11 rows)
+</code></pre>
 
 <p>Many of those seem to not actually be music but rather video based content
 such as TV Shows and Drama, maybe we can filter them out? What I would like
@@ -624,13 +631,14 @@ collection).</p>
    <span style="color: #0000aa">where</span> album.title = <span style="color: #aa5500">&#39;Unplugged&#39;</span>
 <span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> genre.name;
 </pre></div>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>-[ <span style="color: #00aaaa">RECORD</span> <span style="color: #009999">1</span> ]<span style="color: #aaaaaa; font-style: italic">---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------</span>
-<span style="color: #0000aa">name</span>   | Blues
-tracks | {Signe,<span style="color: #aa5500">&quot;Before You Accuse Me&quot;</span>,<span style="color: #aa5500">&quot;Hey Hey&quot;</span>,<span style="color: #aa5500">&quot;Tears In Heaven&quot;</span>,<span style="color: #aa5500">&quot;Lonely Stranger&quot;</span>,<span style="color: #aa5500">&quot;Nobody Knows You When You&#39;re Down &amp; Out&quot;</span>,Layla,<span style="color: #aa5500">&quot;Running On Faith&quot;</span>,<span style="color: #aa5500">&quot;Walkin&#39; Blues&quot;</span>,Alberta,<span style="color: #aa5500">&quot;San Francisco Bay Blues&quot;</span>,<span style="color: #aa5500">&quot;Malted Milk&quot;</span>,<span style="color: #aa5500">&quot;Old Love&quot;</span>,<span style="color: #aa5500">&quot;Rollin&#39; And Tumblin&#39;&quot;</span>}
--[ <span style="color: #00aaaa">RECORD</span> <span style="color: #009999">2</span> ]<span style="color: #aaaaaa; font-style: italic">---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------</span>
-<span style="color: #0000aa">name</span>   | Latin
-tracks | {<span style="color: #aa5500">&quot;A Novidade&quot;</span>,<span style="color: #aa5500">&quot;Tenho Sede&quot;</span>,Refazenda,Realce,Esotérico,Drão,<span style="color: #aa5500">&quot;A Paz&quot;</span>,<span style="color: #aa5500">&quot;Beira Mar&quot;</span>,Sampa,Parabolicamará,<span style="color: #aa5500">&quot;Tempo Rei&quot;</span>,<span style="color: #aa5500">&quot;Expresso 2222&quot;</span>,<span style="color: #aa5500">&quot;Aquele Abraço&quot;</span>,Palco,<span style="color: #aa5500">&quot;Toda Menina Baiana&quot;</span>,<span style="color: #aa5500">&quot;Sítio Do Pica-Pau Amarelo&quot;</span>}
-</pre></div>
+
+<pre><code>─[ RECORD 1 ]─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+name   │ Blues
+tracks │ {Signe,&quot;Before You Accuse Me&quot;,&quot;Hey Hey&quot;,&quot;Tears In Heaven&quot;,&quot;Lonely Stranger&quot;,&quot;Nobody Knows You When You're Down &amp; Out&quot;,Layla,&quot;Running On Faith&quot;,&quot;Walkin' Blues&quot;,Alberta,&quot;San Francisco Bay Blues&quot;,&quot;Malted Milk&quot;,&quot;Old Love&quot;,&quot;Rollin' And Tumblin'&quot;}
+═[ RECORD 2 ]═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+name   │ Latin
+tracks │ {&quot;A Novidade&quot;,&quot;Tenho Sede&quot;,Refazenda,Realce,Esotérico,Drão,&quot;A Paz&quot;,&quot;Beira Mar&quot;,Sampa,Parabolicamará,&quot;Tempo Rei&quot;,&quot;Expresso 2222&quot;,&quot;Aquele Abraço&quot;,Palco,&quot;Toda Menina Baiana&quot;,&quot;Sítio Do Pica-Pau Amarelo&quot;}
+</code></pre>
 
 <p>My guess is that the <em>Latin</em> tracks associated with the album are actually
 from another album and got there erroneously. That situation with a real
@@ -741,21 +749,22 @@ attached to their tracks so that we can manually check our query. If you
 remove this restriction by <em>albumid</em>, the query applies as-is to the whole
 data set we have, so it could be made a view for later use. So let&rsquo;s have a
 look at our problematic cases:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>        artist        |             title              |      genre      
-<span style="color: #aaaaaa; font-style: italic">----------------------+--------------------------------+-----------------</span>
- Eric Clapton         | Unplugged                      | Latin
- Iron Maiden          | Live <span style="color: #0000aa">After</span> Death               | Metal
- Iron Maiden          | Rock <span style="color: #0000aa">In</span> Rio [CD2]              | Rock
- Iron Maiden          | The Number <span style="color: #0000aa">of</span> The Beast        | Metal
- Lenny Kravitz        | <span style="color: #0000aa">Greatest</span> Hits                  | Rock
- Battlestar Galactica | Battlestar Galactica, Season <span style="color: #009999">3</span> | Science Fiction
- Heroes               | Heroes, Season <span style="color: #009999">1</span>               | Drama
- Lost                 | Lost, Season <span style="color: #009999">3</span>                 | Drama
- Lost                 | Lost, Season <span style="color: #009999">2</span>                 | TV Shows
- The Office           | The Office, Season <span style="color: #009999">3</span>           | Comedy
- Lost                 | LOST, Season <span style="color: #009999">4</span>                 | Drama
-(<span style="color: #009999">11</span> <span style="color: #0000aa">rows</span>)
-</pre></div>
+
+<pre><code>        artist        │             title              │      genre      
+══════════════════════╪════════════════════════════════╪═════════════════
+ Eric Clapton         │ Unplugged                      │ Latin
+ Iron Maiden          │ Live After Death               │ Metal
+ Iron Maiden          │ Rock In Rio [CD2]              │ Rock
+ Iron Maiden          │ The Number of The Beast        │ Metal
+ Lenny Kravitz        │ Greatest Hits                  │ Rock
+ Battlestar Galactica │ Battlestar Galactica, Season 3 │ Science Fiction
+ Heroes               │ Heroes, Season 1               │ Drama
+ Lost                 │ Lost, Season 3                 │ Drama
+ Lost                 │ Lost, Season 2                 │ TV Shows
+ The Office           │ The Office, Season 3           │ Comedy
+ Lost                 │ LOST, Season 4                 │ Drama
+(11 rows)
+</code></pre>
 
 <p>All those albums are successfully assigned a single genre now. The genre we
 chose is the most common value found in the album&rsquo;s track, and for our
@@ -813,30 +822,31 @@ and 99 percentiles instead:</p>
 </pre></div>
 
 <p>And now we can see our genre stats applied to only the music selection:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>        <span style="color: #0000aa">name</span>        |       distribution        |      hist      
-<span style="color: #aaaaaa; font-style: italic">--------------------+---------------------------+----------------</span>
- Alternative        | {<span style="color: #009999">3.5</span>,<span style="color: #009999">5</span>,<span style="color: #009999">6</span>,<span style="color: #009999">11</span>}              | <span style="color: #FF0000; background-color: #FFAAAA">■■■■■■■■■■■</span>
- Alternative &amp; Punk | {<span style="color: #009999">3</span>,<span style="color: #009999">5</span>,<span style="color: #009999">6</span>,<span style="color: #009999">8</span>}                 | <span style="color: #FF0000; background-color: #FFAAAA">■■■■■■■■</span>
- Blues              | {<span style="color: #009999">4</span>,<span style="color: #009999">6</span>,<span style="color: #009999">7</span>,<span style="color: #009999">9</span>}                 | <span style="color: #FF0000; background-color: #FFAAAA">■■■■■■■■■</span>
- Bossa Nova         | {<span style="color: #009999">3</span>,<span style="color: #009999">6</span>,<span style="color: #009999">6</span>,<span style="color: #009999">6</span>}                 | <span style="color: #FF0000; background-color: #FFAAAA">■■■■■■</span>
- Classical          | {<span style="color: #009999">4</span>,<span style="color: #009999">8</span>,<span style="color: #009999">9</span>,<span style="color: #009999">9</span>}                 | <span style="color: #FF0000; background-color: #FFAAAA">■■■■■■■■■</span>
- Easy Listening     | {<span style="color: #009999">3</span>,<span style="color: #009999">4</span>,<span style="color: #009999">4</span>,<span style="color: #009999">4</span>}                 | <span style="color: #FF0000; background-color: #FFAAAA">■■■■</span>
- Electronica/Dance  | {<span style="color: #009999">5</span>,<span style="color: #009999">6</span>,<span style="color: #009999">7</span>,<span style="color: #009999">8</span>}                 | <span style="color: #FF0000; background-color: #FFAAAA">■■■■■■■■</span>
- Heavy Metal        | {<span style="color: #009999">4.5</span>,<span style="color: #009999">7</span>,<span style="color: #009999">8</span>,<span style="color: #009999">8</span>}               | <span style="color: #FF0000; background-color: #FFAAAA">■■■■■■■■</span>
- Hip Hop/Rap        | {<span style="color: #009999">3</span>,<span style="color: #009999">3</span>,<span style="color: #009999">5</span>,<span style="color: #009999">6</span>}                 | <span style="color: #FF0000; background-color: #FFAAAA">■■■■■■</span>
- Jazz               | {<span style="color: #009999">4</span>,<span style="color: #009999">6.10000000000036</span>,<span style="color: #009999">9</span>,<span style="color: #009999">14</span>} | <span style="color: #FF0000; background-color: #FFAAAA">■■■■■■■■■■■■■■</span>
- Latin              | {<span style="color: #009999">3</span>,<span style="color: #009999">5</span>,<span style="color: #009999">5</span>,<span style="color: #009999">7</span>}                 | <span style="color: #FF0000; background-color: #FFAAAA">■■■■■■■</span>
- Metal              | {<span style="color: #009999">4</span>,<span style="color: #009999">7</span>,<span style="color: #009999">8</span>,<span style="color: #009999">10</span>}                | <span style="color: #FF0000; background-color: #FFAAAA">■■■■■■■■■■</span>
- Opera              | {<span style="color: #009999">2</span>,<span style="color: #009999">2</span>,<span style="color: #009999">2</span>,<span style="color: #009999">2</span>}                 | <span style="color: #FF0000; background-color: #FFAAAA">■■</span>
- Pop                | {<span style="color: #009999">3</span>,<span style="color: #009999">4</span>,<span style="color: #009999">5</span>,<span style="color: #009999">11</span>}                | <span style="color: #FF0000; background-color: #FFAAAA">■■■■■■■■■■■</span>
- R&amp;B/Soul           | {<span style="color: #009999">3</span>,<span style="color: #009999">5</span>,<span style="color: #009999">5</span>,<span style="color: #009999">6</span>}                 | <span style="color: #FF0000; background-color: #FFAAAA">■■■■■■</span>
- Reggae             | {<span style="color: #009999">3</span>,<span style="color: #009999">5</span>,<span style="color: #009999">5</span>,<span style="color: #009999">6</span>}                 | <span style="color: #FF0000; background-color: #FFAAAA">■■■■■■</span>
- Rock               | {<span style="color: #009999">4</span>,<span style="color: #009999">6</span>,<span style="color: #009999">8</span>,<span style="color: #009999">13</span>}                | <span style="color: #FF0000; background-color: #FFAAAA">■■■■■■■■■■■■■</span>
- Rock <span style="color: #0000aa">And</span> Roll      | {<span style="color: #009999">2</span>,<span style="color: #009999">2</span>,<span style="color: #009999">2</span>,<span style="color: #009999">2</span>}                 | <span style="color: #FF0000; background-color: #FFAAAA">■■</span>
- Soundtrack         | {<span style="color: #009999">4</span>,<span style="color: #009999">4</span>,<span style="color: #009999">5</span>,<span style="color: #009999">6</span>}                 | <span style="color: #FF0000; background-color: #FFAAAA">■■■■■■</span>
- World              | {<span style="color: #009999">3</span>,<span style="color: #009999">4</span>,<span style="color: #009999">4</span>,<span style="color: #009999">5</span>}                 | <span style="color: #FF0000; background-color: #FFAAAA">■■■■■</span>
-(<span style="color: #009999">20</span> <span style="color: #0000aa">rows</span>)
-</pre></div>
+
+<pre><code>        name        │       distribution        │      hist      
+════════════════════╪═══════════════════════════╪════════════════
+ Alternative        │ {3.5,5,6,11}              │ ■■■■■■■■■■■
+ Alternative &amp; Punk │ {3,5,6,8}                 │ ■■■■■■■■
+ Blues              │ {4,6,7,9}                 │ ■■■■■■■■■
+ Bossa Nova         │ {3,6,6,6}                 │ ■■■■■■
+ Classical          │ {4,8,9,9}                 │ ■■■■■■■■■
+ Easy Listening     │ {3,4,4,4}                 │ ■■■■
+ Electronica/Dance  │ {5,6,7,8}                 │ ■■■■■■■■
+ Heavy Metal        │ {4.5,7,8,8}               │ ■■■■■■■■
+ Hip Hop/Rap        │ {3,3,5,6}                 │ ■■■■■■
+ Jazz               │ {4,6.10000000000036,9,14} │ ■■■■■■■■■■■■■■
+ Latin              │ {3,5,5,7}                 │ ■■■■■■■
+ Metal              │ {4,7,8,10}                │ ■■■■■■■■■■
+ Opera              │ {2,2,2,2}                 │ ■■
+ Pop                │ {3,4,5,11}                │ ■■■■■■■■■■■
+ R&amp;B/Soul           │ {3,5,5,6}                 │ ■■■■■■
+ Reggae             │ {3,5,5,6}                 │ ■■■■■■
+ Rock               │ {4,6,8,13}                │ ■■■■■■■■■■■■■
+ Rock And Roll      │ {2,2,2,2}                 │ ■■
+ Soundtrack         │ {4,4,5,6}                 │ ■■■■■■
+ World              │ {3,4,4,5}                 │ ■■■■■
+(20 rows)
+</code></pre>
 
 <p>The array of numbers are the <em>median</em> and then the 0.90, 0.95 and 0.99
 percentiles of the duration of tracks per genre, to the next minute. It
