@@ -269,7 +269,7 @@ the following query:
 
 ~~~ sql
   select genre.name, count(*),
-         repeat('*', (  100.0
+         repeat('■', (  100.0
                       * count(*)
                       / sum(count(*)) over()
                      )::integer
@@ -285,31 +285,31 @@ Which gives this time:
 ~~~ psql
         name        | count |                  pct                  
 --------------------+-------+---------------------------------------
- Alternative        |    40 | *
- Alternative & Punk |   332 | *********
- Blues              |    81 | **
+ Alternative        |    40 | ■
+ Alternative & Punk |   332 | ■■■■■■■■■
+ Blues              |    81 | ■■
  Bossa Nova         |    15 | 
- Classical          |    74 | **
+ Classical          |    74 | ■■
  Comedy             |    17 | 
- Drama              |    64 | **
- Easy Listening     |    24 | *
- Electronica/Dance  |    30 | *
- Heavy Metal        |    28 | *
- Hip Hop/Rap        |    35 | *
- Jazz               |   130 | ****
- Latin              |   579 | *****************
- Metal              |   374 | ***********
+ Drama              |    64 | ■■
+ Easy Listening     |    24 | ■
+ Electronica/Dance  |    30 | ■
+ Heavy Metal        |    28 | ■
+ Hip Hop/Rap        |    35 | ■
+ Jazz               |   130 | ■■■■
+ Latin              |   579 | ■■■■■■■■■■■■■■■■■
+ Metal              |   374 | ■■■■■■■■■■■
  Opera              |     1 | 
- Pop                |    48 | *
- R&B/Soul           |    61 | **
- Reggae             |    58 | **
- Rock               |  1297 | *************************************
+ Pop                |    48 | ■
+ R&B/Soul           |    61 | ■■
+ Reggae             |    58 | ■■
+ Rock               |  1297 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
  Rock And Roll      |    12 | 
- Sci Fi & Fantasy   |    26 | *
+ Sci Fi & Fantasy   |    26 | ■
  Science Fiction    |    13 | 
- Soundtrack         |    43 | *
- TV Shows           |    93 | ***
- World              |    28 | *
+ Soundtrack         |    43 | ■
+ TV Shows           |    93 | ■■■
+ World              |    28 | ■
 (25 rows)
 ~~~
 
@@ -548,7 +548,7 @@ with album_genre_count(albumid, genreid, count, max)
            within group (order by ceil(milliseconds/60000))
          as distribution,
 
-         repeat('*',
+         repeat('■',
             ceil(
               percentile_cont(0.99)
                 within group (order by ceil(milliseconds/60000))
@@ -581,26 +581,26 @@ And now we can see our genre stats applied to only the music selection:
 ~~~ psql
         name        |       distribution        |      hist      
 --------------------+---------------------------+----------------
- Alternative        | {3.5,5,6,11}              | ***********
- Alternative & Punk | {3,5,6,8}                 | ********
- Blues              | {4,6,7,9}                 | *********
- Bossa Nova         | {3,6,6,6}                 | ******
- Classical          | {4,8,9,9}                 | *********
- Easy Listening     | {3,4,4,4}                 | ****
- Electronica/Dance  | {5,6,7,8}                 | ********
- Heavy Metal        | {4.5,7,8,8}               | ********
- Hip Hop/Rap        | {3,3,5,6}                 | ******
- Jazz               | {4,6.10000000000036,9,14} | **************
- Latin              | {3,5,5,7}                 | *******
- Metal              | {4,7,8,10}                | **********
- Opera              | {2,2,2,2}                 | **
- Pop                | {3,4,5,11}                | ***********
- R&B/Soul           | {3,5,5,6}                 | ******
- Reggae             | {3,5,5,6}                 | ******
- Rock               | {4,6,8,13}                | *************
- Rock And Roll      | {2,2,2,2}                 | **
- Soundtrack         | {4,4,5,6}                 | ******
- World              | {3,4,4,5}                 | *****
+ Alternative        | {3.5,5,6,11}              | ■■■■■■■■■■■
+ Alternative & Punk | {3,5,6,8}                 | ■■■■■■■■
+ Blues              | {4,6,7,9}                 | ■■■■■■■■■
+ Bossa Nova         | {3,6,6,6}                 | ■■■■■■
+ Classical          | {4,8,9,9}                 | ■■■■■■■■■
+ Easy Listening     | {3,4,4,4}                 | ■■■■
+ Electronica/Dance  | {5,6,7,8}                 | ■■■■■■■■
+ Heavy Metal        | {4.5,7,8,8}               | ■■■■■■■■
+ Hip Hop/Rap        | {3,3,5,6}                 | ■■■■■■
+ Jazz               | {4,6.10000000000036,9,14} | ■■■■■■■■■■■■■■
+ Latin              | {3,5,5,7}                 | ■■■■■■■
+ Metal              | {4,7,8,10}                | ■■■■■■■■■■
+ Opera              | {2,2,2,2}                 | ■■
+ Pop                | {3,4,5,11}                | ■■■■■■■■■■■
+ R&B/Soul           | {3,5,5,6}                 | ■■■■■■
+ Reggae             | {3,5,5,6}                 | ■■■■■■
+ Rock               | {4,6,8,13}                | ■■■■■■■■■■■■■
+ Rock And Roll      | {2,2,2,2}                 | ■■
+ Soundtrack         | {4,4,5,6}                 | ■■■■■■
+ World              | {3,4,4,5}                 | ■■■■■
 (20 rows)
 ~~~
 
