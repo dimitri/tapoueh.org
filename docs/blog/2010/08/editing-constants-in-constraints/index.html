@@ -31,18 +31,36 @@
     
 
     
-    <meta name="description" content="We&rsquo;re using constants in some constraints here, for example in cases where several servers are replicating to the same federating one: each origin server has his own schema, and all is replicated nicely on the central host, thanks to Londiste, as you might have guessed already.
-For bare-metal recovery scripts, I&rsquo;m working on how to change those constants in the constraints, so that pg_dump -s plus some schema tweaking would kick-start a server.">
-    <meta property="og:description" content="We&rsquo;re using constants in some constraints here, for example in cases where several servers are replicating to the same federating one: each origin server has his own schema, and all is replicated nicely on the central host, thanks to Londiste, as you might have guessed already.
-For bare-metal recovery scripts, I&rsquo;m working on how to change those constants in the constraints, so that pg_dump -s plus some schema tweaking would kick-start a server.">
+    <meta name="description" content="We&rsquo;re using constants in some constraints here, for example in cases where
+several servers are replicating to the same
+federating one: each origin
+server has his own schema, and all is replicated nicely on the central host,
+thanks to
+Londiste, as you might have guessed already.
+
+">
+    <meta property="og:description" content="We&rsquo;re using constants in some constraints here, for example in cases where
+several servers are replicating to the same
+federating one: each origin
+server has his own schema, and all is replicated nicely on the central host,
+thanks to
+Londiste, as you might have guessed already.
+
+">
     <meta property="og:type" content="blog">
     <meta property="og:title" content="Editing constants in constraints">
     <meta property="og:url" content="/blog/2010/08/editing-constants-in-constraints/">
     <meta property="og:site_name" content="Dimitri Fontaine, PostgreSQL Expert">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Dimitri Fontaine, PostgreSQL Expert">
-    <meta name="twitter:description" content="We&rsquo;re using constants in some constraints here, for example in cases where several servers are replicating to the same federating one: each origin server has his own schema, and all is replicated nicely on the central host, thanks to Londiste, as you might have guessed already.
-For bare-metal recovery scripts, I&rsquo;m working on how to change those constants in the constraints, so that pg_dump -s plus some schema tweaking would kick-start a server.">
+    <meta name="twitter:description" content="We&rsquo;re using constants in some constraints here, for example in cases where
+several servers are replicating to the same
+federating one: each origin
+server has his own schema, and all is replicated nicely on the central host,
+thanks to
+Londiste, as you might have guessed already.
+
+">
     
       <meta name="twitter:creator" content="@tapoueh">
     
@@ -215,17 +233,7 @@ ga('send', 'pageview');
        style="background-image:url('/img/old/library-card-catalogs.small.jpg')"
        data-behavior="2">
     
-  </div>
-
-
-      <div id="main" data-behavior="2"
-        class="hasCover
-               hasCoverMetaOut
-               ">
-        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
-          
-          
-            <div class="post-header main-content-wrap text-left">
+      <div class="post-header main-content-wrap text-left">
   
     <h1 class="post-title" itemprop="headline">
       Editing constants in constraints
@@ -259,6 +267,16 @@ ga('send', 'pageview');
 </div>
 
 </div>
+    
+  </div>
+
+
+      <div id="main" data-behavior="2"
+        class="hasCover
+               hasCoverMetaIn
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
           
           <div class="post-content markdown" itemprop="articleBody">
             <div class="main-content-wrap">
@@ -269,47 +287,48 @@ server has his own schema, and all is replicated nicely on the central host,
 thanks to
 <a href="http://wiki.postgresql.org/wiki/Londiste_Tutorial#Federated_database">Londiste</a>, as you might have guessed already.</p>
 
+<p></p>
+
 <p>For bare-metal recovery scripts, I&rsquo;m working on how to change those
 constants in the constraints, so that
 <code>pg_dump -s</code> plus some schema tweaking
 would kick-start a server. Here&rsquo;s a
 <code>PLpgSQL</code> snippet to do just that:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">FOR</span> rec <span style="color: #0000aa">IN</span> <span style="color: #0000aa">EXECUTE</span>
+<span style="color: #aa5500">$s$</span>
+<span style="color: #aa5500">SELECT schemaname, tablename, conname, attnames, def</span>
+<span style="color: #aa5500">  FROM (</span>
+<span style="color: #aa5500">   SELECT n.nspname, c.relname, r.conname, </span>
+<span style="color: #aa5500">          (select array_accum(attname)</span>
+<span style="color: #aa5500">             from pg_attribute </span>
+<span style="color: #aa5500">            where attrelid = c.oid and r.conkey @&gt; array[attnum]) as attnames, </span>
+<span style="color: #aa5500">          pg_catalog.pg_get_constraintdef(r.oid, true)</span>
+<span style="color: #aa5500">   FROM pg_catalog.pg_constraint r </span>
+<span style="color: #aa5500">        JOIN pg_class c on c.oid = r.conrelid </span>
+<span style="color: #aa5500">        JOIN pg_namespace n ON n.oid = c.relnamespace</span>
+<span style="color: #aa5500">   WHERE r.contype = &#39;c&#39;</span>
+<span style="color: #aa5500">ORDER BY 1, 2, 3</span>
+<span style="color: #aa5500">       ) as cons(schemaname, tablename, conname, attnames, def)</span>
+<span style="color: #aa5500">WHERE attnames @&gt; array[&#39;server&#39;]::name[]</span>
+<span style="color: #aa5500">$s$</span>
+  <span style="color: #0000aa">LOOP</span>
+    rec<span style="color: #009999">.</span>def := <span style="color: #0000aa">replace</span>(rec<span style="color: #009999">.</span>def, <span style="color: #aa5500">&#39;server = &#39;</span> || old_id,
+                                <span style="color: #aa5500">&#39;server = &#39;</span> || new_id);
 
-<pre><code>FOR rec IN EXECUTE
-$s$
-SELECT schemaname, tablename, conname, attnames, def
-  FROM (
-   SELECT n.nspname, c.relname, r.conname, 
-          (select array_accum(attname)
-             from pg_attribute 
-            where attrelid = c.oid and r.conkey @&gt; array[attnum]) as attnames, 
-          pg_catalog.pg_get_constraintdef(r.oid, true)
-   FROM pg_catalog.pg_constraint r 
-        JOIN pg_class c on c.oid = r.conrelid 
-        JOIN pg_namespace n ON n.oid = c.relnamespace
-   WHERE r.contype = 'c'
-ORDER BY 1, 2, 3
-       ) as cons(schemaname, tablename, conname, attnames, def)
-WHERE attnames @&gt; array['server']::name[]
-$s$
-  LOOP
-    rec.def := replace(rec.def, 'server = ' || old_id,
-                                'server = ' || new_id);
+    sql := <span style="color: #aa5500">&#39;ALTER TABLE &#39;</span> || rec<span style="color: #009999">.</span>schemaname || <span style="color: #aa5500">&#39;.&#39;</span> || rec<span style="color: #009999">.</span>tablename
+        || <span style="color: #aa5500">&#39; DROP CONSTRAINT &#39;</span> || rec<span style="color: #009999">.</span>conname;
+    <span style="color: #0000aa">RAISE</span> <span style="color: #0000aa">NOTICE</span> <span style="color: #aa5500">&#39;%&#39;</span>, sql;
+    <span style="color: #0000aa">RETURN</span> <span style="color: #0000aa">NEXT</span>;
+    <span style="color: #0000aa">EXECUTE</span> sql;
 
-    sql := 'ALTER TABLE ' || rec.schemaname || '.' || rec.tablename
-        || ' DROP CONSTRAINT ' || rec.conname;
-    RAISE NOTICE '%', sql;
-    RETURN NEXT;
-    EXECUTE sql;
+    sql := <span style="color: #aa5500">&#39;ALTER TABLE &#39;</span> || rec<span style="color: #009999">.</span>schemaname || <span style="color: #aa5500">&#39;.&#39;</span> || rec<span style="color: #009999">.</span>tablename
+        || <span style="color: #aa5500">&#39; ADD &#39;</span> || rec<span style="color: #009999">.</span>def;
+    <span style="color: #0000aa">RAISE</span> <span style="color: #0000aa">NOTICE</span> <span style="color: #aa5500">&#39;%&#39;</span>, sql;
+    <span style="color: #0000aa">RETURN</span> <span style="color: #0000aa">NEXT</span>;
+    <span style="color: #0000aa">EXECUTE</span> sql;
 
-    sql := 'ALTER TABLE ' || rec.schemaname || '.' || rec.tablename
-        || ' ADD ' || rec.def;
-    RAISE NOTICE '%', sql;
-    RETURN NEXT;
-    EXECUTE sql;
-
-  END LOOP;
-</code></pre>
+  <span style="color: #0000aa">END</span> <span style="color: #0000aa">LOOP</span>;
+</pre></div>
 
 <p>This relies on the fact that our constraints are on the column
 <code>server</code>. Why
@@ -320,22 +339,18 @@ command will change data I didn&rsquo;t want to edit. I want context aware tools
 pretty please, to
 <em>feel</em> safe.</p>
 
-<p>Otherwise I&rsquo;d might have gone with
-<code>pg_dump -s| sed -e 's:\(server =\)
-17:\1 18:'</code> but this one-liner already contains too much useless magic
-for my taste (the space before
-<code>17</code> ain&rsquo;t in the group match to allow for
-having
-<code>\1 18</code> in the right hand side. And this isn&rsquo;t yet parametrized, and
-there I&rsquo;ll need to talk to the database, as that&rsquo;s were I store the servers
-name and their id (a
-<code>bigserial</code> — yes, the constraints are all generated from
-scripts). I don&rsquo;t want to write an
-<em>SQL parser</em> and I don&rsquo;t want to play
-loose, so the
-<code>PLpgSQL</code> approach is what I&rsquo;m thinking as the best tool
-here. Opinionated answers get to my mailbox!</p>
+<p>Otherwise I&rsquo;d might have gone with</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>pg_dump -s| sed -e <span style="color: #aa5500">&#39;s:\(server =\) 17:\1 18:&#39;</span>
+</pre></div>
 
+<p>but this one-liner already contains too much useless magic for my taste (the
+space before <em>17</em> ain&rsquo;t in the group match to allow for having <em>\1 18</em> in
+the right hand side. And this isn&rsquo;t yet parametrized, and there I&rsquo;ll need to
+talk to the database, as that&rsquo;s were I store the servers name and their id
+(a <em>bigserial</em> — yes, the constraints are all generated from scripts). I
+don&rsquo;t want to write an <em>SQL parser</em> and I don&rsquo;t want to play loose, so the
+<em>PLpgSQL</em> approach is what I&rsquo;m thinking as the best tool here. Opinionated
+answers get to my mailbox!</p>
               
             </div>
           </div>

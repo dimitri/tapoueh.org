@@ -31,15 +31,15 @@
     
 
     
-    <meta name="description" content="Let&rsquo;s say you need to ALTER TABLE foo ALTER COLUMN bar TYPE bigint;, and PostgreSQL is helpfully telling you that no you can&rsquo;t because such and such views depend on the column. The basic way to deal with that is to copy paste from the error message the names of the views involved, then prepare a script wherein you first DROP VIEW ...; then ALTER TABLE and finally CREATE VIEW again, all in the same transaction.">
-    <meta property="og:description" content="Let&rsquo;s say you need to ALTER TABLE foo ALTER COLUMN bar TYPE bigint;, and PostgreSQL is helpfully telling you that no you can&rsquo;t because such and such views depend on the column. The basic way to deal with that is to copy paste from the error message the names of the views involved, then prepare a script wherein you first DROP VIEW ...; then ALTER TABLE and finally CREATE VIEW again, all in the same transaction.">
+    <meta name="description" content="Let&rsquo;s say you need to ALTER TABLE foo ALTER COLUMN bar TYPE bigint;, and PostgreSQL is helpfully telling you that no you can&rsquo;t because such and such views depend on the column. The basic way to deal with that is to copy paste from the error message the names of the views involved, then prepare a script wherein you first DROP VIEW then ALTER TABLE and finally CREATE VIEW again, all in the same transaction.">
+    <meta property="og:description" content="Let&rsquo;s say you need to ALTER TABLE foo ALTER COLUMN bar TYPE bigint;, and PostgreSQL is helpfully telling you that no you can&rsquo;t because such and such views depend on the column. The basic way to deal with that is to copy paste from the error message the names of the views involved, then prepare a script wherein you first DROP VIEW then ALTER TABLE and finally CREATE VIEW again, all in the same transaction.">
     <meta property="og:type" content="blog">
     <meta property="og:title" content="Tables and Views dependencies">
     <meta property="og:url" content="/blog/2011/05/tables-and-views-dependencies/">
     <meta property="og:site_name" content="Dimitri Fontaine, PostgreSQL Expert">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Dimitri Fontaine, PostgreSQL Expert">
-    <meta name="twitter:description" content="Let&rsquo;s say you need to ALTER TABLE foo ALTER COLUMN bar TYPE bigint;, and PostgreSQL is helpfully telling you that no you can&rsquo;t because such and such views depend on the column. The basic way to deal with that is to copy paste from the error message the names of the views involved, then prepare a script wherein you first DROP VIEW ...; then ALTER TABLE and finally CREATE VIEW again, all in the same transaction.">
+    <meta name="twitter:description" content="Let&rsquo;s say you need to ALTER TABLE foo ALTER COLUMN bar TYPE bigint;, and PostgreSQL is helpfully telling you that no you can&rsquo;t because such and such views depend on the column. The basic way to deal with that is to copy paste from the error message the names of the views involved, then prepare a script wherein you first DROP VIEW then ALTER TABLE and finally CREATE VIEW again, all in the same transaction.">
     
       <meta name="twitter:creator" content="@tapoueh">
     
@@ -212,17 +212,7 @@ ga('send', 'pageview');
        style="background-image:url('/img/old/stunning-view-table-mansion.jpg')"
        data-behavior="2">
     
-  </div>
-
-
-      <div id="main" data-behavior="2"
-        class="hasCover
-               hasCoverMetaOut
-               ">
-        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
-          
-          
-            <div class="post-header main-content-wrap text-left">
+      <div class="post-header main-content-wrap text-left">
   
     <h1 class="post-title" itemprop="headline">
       Tables and Views dependencies
@@ -256,21 +246,25 @@ ga('send', 'pageview');
 </div>
 
 </div>
+    
+  </div>
+
+
+      <div id="main" data-behavior="2"
+        class="hasCover
+               hasCoverMetaIn
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
           
           <div class="post-content markdown" itemprop="articleBody">
             <div class="main-content-wrap">
-              <p>Let&rsquo;s say you need to
-<code>ALTER TABLE foo ALTER COLUMN bar TYPE bigint;</code>, and
-<a href="http://postgresql.org">PostgreSQL</a> is helpfully telling you that no you can&rsquo;t because such and such
-<em>views</em> depend on the column.  The basic way to deal with that is to copy
-paste from the error message the names of the views involved, then prepare a
-script wherein you first
-<code>DROP VIEW ...;</code> then
-<code>ALTER TABLE</code> and finally
-<code>CREATE
-VIEW</code> again, all in the same transaction.</p>
-
-<p><center><em>A nice view from this table&hellip;</em></center></p>
+              <p>Let&rsquo;s say you need to <code>ALTER TABLE foo ALTER COLUMN bar TYPE bigint;</code>,
+and <a href="http://postgresql.org">PostgreSQL</a> is helpfully telling you that no you
+can&rsquo;t because such and such <em>views</em> depend on the column. The basic way to
+deal with that is to copy paste from the error message the names of the
+views involved, then prepare a script wherein you first <em>DROP VIEW</em> then
+<em>ALTER TABLE</em> and finally <em>CREATE VIEW</em> again, all in the same transaction.</p>
 
 <p>So you have to copy paste also the view definitions.  With large view
 definitions, it quickly gets cumbersome to do so.  Well when you&rsquo;re working
@@ -285,40 +279,37 @@ lock acquisition will queue behind current activity on the table, which
 means waiting for a fairly long time and damaging the service quality on a
 moderately loaded server.</p>
 
-<p>It&rsquo;s possible to abuse the
-<a href="http://www.postgresql.org/docs/current/static/catalogs.html">system catalogs</a> in order to find all
-<em>views</em> that
-depend on a given table, too.  For that, you have to play with
-<code>pg_depend</code> and
-you have to know that internally, a
-<em>view</em> is in fact a
-<em>rewrite rule</em>.  Then
-here&rsquo;s how to produce the two scripts that we need:</p>
+<p>It&rsquo;s possible to abuse
+the
+<a href="http://www.postgresql.org/docs/current/static/catalogs.html">system catalogs</a> in
+order to find all <em>views</em> that depend on a given table, too. For that, you
+have to play with <code>pg_depend</code> and you have to know that internally, a <em>view</em>
+is in fact a <em>rewrite rule</em>. Then here&rsquo;s how to produce the two scripts that
+we need:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>=# <span style="color: #FF0000; background-color: #FFAAAA">\</span>t
+Showing <span style="color: #0000aa">only</span> tuples.
 
-<pre><code>=# \t
-Showing only tuples.
+=# <span style="color: #FF0000; background-color: #FFAAAA">\</span>o /tmp/<span style="color: #0000aa">drop</span>.<span style="color: #0000aa">sql</span>
+=# <span style="color: #0000aa">select</span> <span style="color: #aa5500">&#39;DROP VIEW &#39;</span> || views || <span style="color: #aa5500">&#39;;&#39;</span>
+     <span style="color: #0000aa">from</span> (<span style="color: #0000aa">select</span> <span style="color: #0000aa">distinct</span>(r.ev_class::regclass) <span style="color: #0000aa">as</span> views
+            <span style="color: #0000aa">from</span> pg_depend d <span style="color: #0000aa">join</span> pg_rewrite r <span style="color: #0000aa">on</span> r.oid = d.objid 
+           <span style="color: #0000aa">where</span> refclassid = <span style="color: #aa5500">&#39;pg_class&#39;</span>::regclass
+             <span style="color: #0000aa">and</span> refobjid = <span style="color: #aa5500">&#39;SCHEMA.TABLENAME&#39;</span>::regclass
+             <span style="color: #0000aa">and</span> classid = <span style="color: #aa5500">&#39;pg_rewrite&#39;</span>::regclass 
+             <span style="color: #0000aa">and</span> pg_get_viewdef(r.ev_class, <span style="color: #0000aa">true</span>) ~ <span style="color: #aa5500">&#39;COLUMN_NAME&#39;</span>) <span style="color: #0000aa">as</span> x;
 
-=# \o /tmp/drop.sql
-=# select 'DROP VIEW ' || views || ';'
-     from (select distinct(r.ev_class::regclass) as views
-            from pg_depend d join pg_rewrite r on r.oid = d.objid 
-           where refclassid = 'pg_class'::regclass
-             and refobjid = 'SCHEMA.TABLENAME'::regclass
-             and classid = 'pg_rewrite'::regclass 
-             and pg_get_viewdef(r.ev_class, true) ~ 'COLUMN_NAME') as x;
+=# <span style="color: #FF0000; background-color: #FFAAAA">\</span>o /tmp/<span style="color: #0000aa">create</span>.<span style="color: #0000aa">sql</span>
+=# <span style="color: #0000aa">select</span> <span style="color: #aa5500">&#39;CREATE VIEW &#39;</span> || views || E<span style="color: #aa5500">&#39; AS \n&#39;</span>
+       || pg_get_viewdef(views, <span style="color: #0000aa">true</span>) || <span style="color: #aa5500">&#39;;&#39;</span> 
+     <span style="color: #0000aa">from</span> (<span style="color: #0000aa">select</span> <span style="color: #0000aa">distinct</span>(r.ev_class::regclass) <span style="color: #0000aa">as</span> views 
+          <span style="color: #0000aa">from</span> pg_depend d <span style="color: #0000aa">join</span> pg_rewrite r <span style="color: #0000aa">on</span> r.oid = d.objid
+         <span style="color: #0000aa">where</span> refclassid = <span style="color: #aa5500">&#39;pg_class&#39;</span>::regclass
+           <span style="color: #0000aa">and</span> refobjid = <span style="color: #aa5500">&#39;SCHEMA.TABLENAME&#39;</span>::regclass
+           <span style="color: #0000aa">and</span> classid = <span style="color: #aa5500">&#39;pg_rewrite&#39;</span>::regclass
+           <span style="color: #0000aa">and</span> pg_get_viewdef(r.ev_class, <span style="color: #0000aa">true</span>) ~ <span style="color: #aa5500">&#39;COLUMN_NAME&#39;</span>) <span style="color: #0000aa">as</span> x;
 
-=# \o /tmp/create.sql
-=# select 'CREATE VIEW ' || views || E' AS \n'
-       || pg_get_viewdef(views, true) || ';' 
-     from (select distinct(r.ev_class::regclass) as views 
-          from pg_depend d join pg_rewrite r on r.oid = d.objid
-         where refclassid = 'pg_class'::regclass
-           and refobjid = 'SCHEMA.TABLENAME'::regclass
-           and classid = 'pg_rewrite'::regclass
-           and pg_get_viewdef(r.ev_class, true) ~ 'COLUMN_NAME') as x;
-
-=# \o
-</code></pre>
+=# <span style="color: #FF0000; background-color: #FFAAAA">\</span>o
+</pre></div>
 
 <p>Replace
 <code>SCHEMA.TABLENAME</code> and
@@ -340,10 +331,9 @@ just accept that you might
 <code>CREATE</code> again more
 <em>views</em> than need be.</p>
 
-<p>If you need some more details about the
-<code>\t \o</code> sequence you might be
-interested in this older article about
-<a href="http://tapoueh.org/articles/blog/_Resetting_sequences._All_of_them,_please!.html">resetting sequences</a>.</p>
+<p>If you need some more details about the <code>\t \o</code> sequence you might be
+interested in this older article
+about <a href="/blog/2010/02/resetting-sequences.-all-of-them-please/">resetting sequences</a>.</p>
 
               
             </div>

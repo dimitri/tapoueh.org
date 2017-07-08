@@ -215,17 +215,7 @@ ga('send', 'pageview');
        style="background-image:url('/img/old/library-card-catalogs.small.jpg')"
        data-behavior="2">
     
-  </div>
-
-
-      <div id="main" data-behavior="2"
-        class="hasCover
-               hasCoverMetaOut
-               ">
-        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
-          
-          
-            <div class="post-header main-content-wrap text-left">
+      <div class="post-header main-content-wrap text-left">
   
     <h1 class="post-title" itemprop="headline">
       Resetting sequences. All of them, please!
@@ -259,6 +249,16 @@ ga('send', 'pageview');
 </div>
 
 </div>
+    
+  </div>
+
+
+      <div id="main" data-behavior="2"
+        class="hasCover
+               hasCoverMetaIn
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
           
           <div class="post-content markdown" itemprop="articleBody">
             <div class="main-content-wrap">
@@ -285,15 +285,14 @@ scripting capabilities. Of course in
 <em>inline anonymous</em>
 <code>DO</code>
 blocks.</p>
-
-<pre><code>#&gt; \o /tmp/sequences.sql
-#&gt; \t
-Showing only tuples.
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>#&gt; <span style="color: #0000aa">\o</span> <span style="color: #0000aa">/tmp/sequences.sql</span>
+#&gt; <span style="color: #0000aa">\t</span>
+Showing <span style="color: #0000aa">only</span> tuples<span style="color: #009999">.</span>
 #&gt; YOUR QUERY HERE
-#&gt; \o
-#&gt; \t
-Tuples only is off.
-</code></pre>
+#&gt; <span style="color: #0000aa">\o</span>
+#&gt; <span style="color: #0000aa">\t</span>
+Tuples <span style="color: #0000aa">only</span> <span style="color: #0000aa">is</span> <span style="color: #0000aa">off</span><span style="color: #009999">.</span>
+</pre></div>
 
 <p>Once you have the
 <code>/tmp/sequences.sql</code> file, you can ask
@@ -306,31 +305,28 @@ is in fact the query itself. A nice way to start is to
 <code>\set ECHO_HIDDEN</code> then
 describe some table, you now have a catalog example query to work with. Then
 you tweak it somehow and get this:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">SELECT</span> <span style="color: #aa5500">&#39;select &#39;</span> 
+        || <span style="color: #0000aa">trim</span>(<span style="color: #0000aa">trailing</span> <span style="color: #aa5500">&#39;)&#39;</span> 
+           <span style="color: #0000aa">from</span> <span style="color: #0000aa">replace</span>(pg_get_expr(d.adbin, d.adrelid),
+                        <span style="color: #aa5500">&#39;nextval&#39;</span>, <span style="color: #aa5500">&#39;setval&#39;</span>))
+        || <span style="color: #aa5500">&#39;, (select max( &#39;</span> || a.attname || <span style="color: #aa5500">&#39;) from only &#39;</span>
+        || nspname || <span style="color: #aa5500">&#39;.&#39;</span> || relname || <span style="color: #aa5500">&#39;));&#39;</span> 
+  <span style="color: #0000aa">FROM</span> pg_class <span style="color: #0000aa">c</span> 
+       <span style="color: #0000aa">JOIN</span> pg_namespace n <span style="color: #0000aa">on</span> n.oid = <span style="color: #0000aa">c</span>.relnamespace 
+       <span style="color: #0000aa">JOIN</span> pg_attribute a <span style="color: #0000aa">on</span> a.attrelid = <span style="color: #0000aa">c</span>.oid
+       <span style="color: #0000aa">JOIN</span> pg_attrdef d <span style="color: #0000aa">on</span> d.adrelid = a.attrelid 
+                          <span style="color: #0000aa">and</span> d.adnum = a.attnum
+                          <span style="color: #0000aa">and</span> a.atthasdef 
+ <span style="color: #0000aa">WHERE</span> relkind = <span style="color: #aa5500">&#39;r&#39;</span> <span style="color: #0000aa">and</span> a.attnum &gt; <span style="color: #009999">0</span> 
+       <span style="color: #0000aa">and</span> pg_get_expr(d.adbin, d.adrelid) ~ <span style="color: #aa5500">&#39;^nextval&#39;</span>;
+</pre></div>
 
-<pre><code>SELECT 'select ' 
-        || trim(trailing ')' 
-           from replace(pg_get_expr(d.adbin, d.adrelid),
-                        'nextval', 'setval'))
-        || ', (select max( ' || a.attname || ') from only '
-        || nspname || '.' || relname || '));' 
-  FROM pg_class c 
-       JOIN pg_namespace n on n.oid = c.relnamespace 
-       JOIN pg_attribute a on a.attrelid = c.oid
-       JOIN pg_attrdef d on d.adrelid = a.attrelid 
-                          and d.adnum = a.attnum
-                          and a.atthasdef 
- WHERE relkind = 'r' and a.attnum &gt; 0 
-       and pg_get_expr(d.adbin, d.adrelid) ~ '^nextval';
-</code></pre>
-
-<p>Coming next, a
-<code>recode</code> based script in order to get from
-<code>SQL_ASCII</code> to
-<code>UTF-8</code>,
+<p>Coming next, a <em>recode</em> script in order to
+get
+<a href="/blog/2010/02/getting-out-of-sql_ascii-part-1/">from SQL_ASCII to UTF-8</a>,
 and some strange looking queries too.</p>
-
-<pre><code>recode.sh [-npdf0TI] [-U user ] -s schema [-m mintable] pattern
-</code></pre>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>recode.sh [-npdf0TI] [-U user ] -s schema [-m mintable] pattern
+</pre></div>
 
 <p>Stay tuned!</p>
 

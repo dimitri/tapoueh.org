@@ -7,9 +7,10 @@ thumbnailImage = "/img/old/library-card-catalogs.small.jpg"
 thumbnailImagePosition = "left"
 coverImage = "/img/old/library-card-catalogs.small.jpg"
 coverSize = "partial"
-coverMeta = "out"
+coverMeta = "in"
 aliases = ["/blog/2010/02/16-resetting-sequences-all-of-them-please",
-           "/blog/2010/02/16-resetting-sequences-all-of-them-please.html"]
+           "/blog/2010/02/16-resetting-sequences-all-of-them-please.html",
+           "/articles/blog/_Resetting_sequences._All_of_them,_please!.html"]
 +++
 
 So, after restoring a production dump with intermediate filtering, none of
@@ -36,7 +37,7 @@ scripting capabilities. Of course in
 `DO`
 blocks.
 
-~~~
+~~~ psql
 #> \o /tmp/sequences.sql
 #> \t
 Showing only tuples.
@@ -59,7 +60,7 @@ is in fact the query itself. A nice way to start is to
 describe some table, you now have a catalog example query to work with. Then
 you tweak it somehow and get this:
 
-~~~
+~~~ sql
 SELECT 'select ' 
         || trim(trailing ')' 
            from replace(pg_get_expr(d.adbin, d.adrelid),
@@ -77,13 +78,12 @@ SELECT 'select '
 ~~~
 
 
-Coming next, a 
-`recode` based script in order to get from 
-`SQL_ASCII` to 
-`UTF-8`,
+Coming next, a *recode* script in order to
+get
+[from SQL_ASCII to UTF-8](/blog/2010/02/getting-out-of-sql_ascii-part-1/),
 and some strange looking queries too.
 
-~~~
+~~~ bash
 recode.sh [-npdf0TI] [-U user ] -s schema [-m mintable] pattern
 ~~~
 

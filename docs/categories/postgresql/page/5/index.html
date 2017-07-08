@@ -586,9 +586,13 @@ When you want to benchmark your own application, to know how many more clients i
     </div>
     <div class="postShorten-excerpt" itemprop="articleBody">
       <p>
-        When you do partition your tables monthly, then comes the question of when to create next partitions. I tend to create them just the week before next month and I have some nice nagios scripts to alert me in case I&rsquo;ve forgotten to do so. How to check that by hand in the end of a month?
-Here&rsquo;s a catalog query to help you there:
-=&gt; select * -&gt; from -&gt; ( (&gt; select &lsquo;previous parts&rsquo; as schemaname, count(*)::text as tablename (&gt; from pg_tables (&gt; where schemaname not in (&lsquo;pg_catalog&rsquo;,&lsquo;information_schema&rsquo;) (&gt; and tablename like to_char(now(), &lsquo;%YYYYMM&rsquo;) (&gt; (&gt; union (&gt; (&gt; select schemaname, substring(tablename,1,length(tablename)-6) || &lsquo;201108&rsquo; (&gt; from pg_tables (&gt; where schemaname not in (&lsquo;pg_catalog&rsquo;,&lsquo;information_schema&rsquo;) (&gt; and tablename like to_char(now(), &lsquo;%YYYYMM&rsquo;) (&gt; (&gt; except (&gt; (&gt; select schemaname, tablename (&gt; from pg_tables (&gt; where schemaname not in (&lsquo;pg_catalog&rsquo;,&lsquo;information_schema&rsquo;) (&gt; and tablename like to_char(now() + interval &lsquo;1 month&rsquo;, &lsquo;%YYYYMM&rsquo;) (&gt; ) as t -&gt; order by schemaname &lt;&gt; &lsquo;previous parts&rsquo;, schemaname; schemaname | tablename &mdash;&mdash;&mdash;&mdash;&mdash;-+&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash; previous parts | 1 central | stats_entrantes_201108 (2 rows)  As you see, our partitions are named _YYYYMM so that&rsquo;s it&rsquo;s easy to match them in our queries, but I guess about everyone does about the same here.
+        When you do partition your tables monthly, then comes the question of when
+to create next partitions.  I tend to create them just the week before next
+month and I have some nice
+<a href="http://www.nagios.org/">nagios</a> scripts to alert me in case I&rsquo;ve forgotten
+to do so.  How to check that by hand in the end of a month?</p>
+
+<p>
         <br>
         <a href="http://tapoueh.org/blog/2011/07/next-month-partitions/" class="postShorten-excerpt_link link"></a>
         
@@ -717,7 +721,7 @@ This is a very good time to review both what you did in the project those last 1
     </div>
     <div class="postShorten-excerpt" itemprop="articleBody">
       <p>
-        Let&rsquo;s say you need to ALTER TABLE foo ALTER COLUMN bar TYPE bigint;, and PostgreSQL is helpfully telling you that no you can&rsquo;t because such and such views depend on the column. The basic way to deal with that is to copy paste from the error message the names of the views involved, then prepare a script wherein you first DROP VIEW &hellip;; then ALTER TABLE and finally CREATE VIEW again, all in the same transaction.
+        Let&rsquo;s say you need to ALTER TABLE foo ALTER COLUMN bar TYPE bigint;, and PostgreSQL is helpfully telling you that no you can&rsquo;t because such and such views depend on the column. The basic way to deal with that is to copy paste from the error message the names of the views involved, then prepare a script wherein you first DROP VIEW then ALTER TABLE and finally CREATE VIEW again, all in the same transaction.
         <br>
         <a href="http://tapoueh.org/blog/2011/05/tables-and-views-dependencies/" class="postShorten-excerpt_link link"></a>
         

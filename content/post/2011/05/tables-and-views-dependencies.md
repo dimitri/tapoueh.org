@@ -7,23 +7,17 @@ thumbnailImage = "/img/old/stunning-view-table-mansion.jpg"
 thumbnailImagePosition = "left"
 coverImage = "/img/old/stunning-view-table-mansion.jpg"
 coverSize = "partial"
-coverMeta = "out"
+coverMeta = "in"
 aliases = ["/blog/2011/05/04-tables-and-views-dependencies",
            "/blog/2011/05/04-tables-and-views-dependencies.html"]
 +++
 
-Let's say you need to 
-`ALTER TABLE foo ALTER COLUMN bar TYPE bigint;`, and
-[PostgreSQL](http://postgresql.org) is helpfully telling you that no you can't because such and such
-*views* depend on the column.  The basic way to deal with that is to copy
-paste from the error message the names of the views involved, then prepare a
-script wherein you first 
-`DROP VIEW ...;` then 
-`ALTER TABLE` and finally 
-`CREATE
-VIEW` again, all in the same transaction.
-
-<center>*A nice view from this table...*</center>
+Let's say you need to `ALTER TABLE foo ALTER COLUMN bar TYPE bigint;`,
+and [PostgreSQL](http://postgresql.org) is helpfully telling you that no you
+can't because such and such *views* depend on the column. The basic way to
+deal with that is to copy paste from the error message the names of the
+views involved, then prepare a script wherein you first *DROP VIEW* then
+*ALTER TABLE* and finally *CREATE VIEW* again, all in the same transaction.
 
 So you have to copy paste also the view definitions.  With large view
 definitions, it quickly gets cumbersome to do so.  Well when you're working
@@ -38,17 +32,15 @@ lock acquisition will queue behind current activity on the table, which
 means waiting for a fairly long time and damaging the service quality on a
 moderately loaded server.
 
-It's possible to abuse the 
-[system catalogs](http://www.postgresql.org/docs/current/static/catalogs.html) in order to find all 
-*views* that
-depend on a given table, too.  For that, you have to play with 
-`pg_depend` and
-you have to know that internally, a 
-*view* is in fact a 
-*rewrite rule*.  Then
-here's how to produce the two scripts that we need:
+It's possible to abuse
+the
+[system catalogs](http://www.postgresql.org/docs/current/static/catalogs.html) in
+order to find all *views* that depend on a given table, too. For that, you
+have to play with `pg_depend` and you have to know that internally, a *view*
+is in fact a *rewrite rule*. Then here's how to produce the two scripts that
+we need:
 
-~~~
+~~~ sql
 =# \t
 Showing only tuples.
 
@@ -95,7 +87,6 @@ just accept that you might
 `CREATE` again more 
 *views* than need be.
 
-If you need some more details about the 
-`\t \o` sequence you might be
-interested in this older article about 
-[resetting sequences](http://tapoueh.org/articles/blog/_Resetting_sequences._All_of_them,_please!.html).
+If you need some more details about the `\t \o` sequence you might be
+interested in this older article
+about [resetting sequences](/blog/2010/02/resetting-sequences.-all-of-them-please/).
