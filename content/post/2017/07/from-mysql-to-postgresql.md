@@ -47,7 +47,7 @@ and foreign key constraints, comments and default values, even when they
 require installing a trigger in PostgreSQL, all of that in a single command
 line:
 
-~~~ bash
+~~~
 $ pgloader mysql://root@localhost/f1db pgsql:///f1db
 2017-07-06T17:57:04.679000+02:00 LOG report summary reset
                table name       read   imported     errors      total time
@@ -164,17 +164,17 @@ discovering data types without btree support at run time is that pgloader
 then will support locally installed extensions it knows nothing about, and
 that you can target in the user-defined casting rules (see below).
 
-~~~ psql
-  typname   |      array_agg       
-------------+----------------------
- aclitem    | {hash}
- box        | {gist,brin,spgist}
- cid        | {hash}
- circle     | {gist}
- int2vector | {hash}
- point      | {gist,spgist,spgist}
- polygon    | {gist}
- xid        | {hash}
+~~~
+  typname   │      array_agg       
+════════════╪══════════════════════
+ aclitem    │ {hash}
+ box        │ {gist,brin,spgist}
+ cid        │ {hash}
+ circle     │ {gist}
+ int2vector │ {hash}
+ point      │ {gist,spgist,spgist}
+ polygon    │ {gist}
+ xid        │ {hash}
 (8 rows)
 ~~~
 
@@ -192,7 +192,7 @@ the [chinook database](https://github.com/lerocha/chinook-database), where
 again pgloader takes care of the schema definition, indexes, primary keys,
 foreign keys, default values, comments... the whole thing:
 
-~~~ bash
+~~~
 $ pgloader https://github.com/lerocha/chinook-database/raw/master/ChinookDatabase/DataSources/Chinook_Sqlite_AutoIncrementPKs.sqlite pgsql:///chinook
 2017-07-06T18:16:52.256000+02:00 LOG Fetching 'https://github.com/lerocha/chinook-database/raw/master/ChinookDatabase/DataSources/Chinook_Sqlite_AutoIncrementPKs.sqlite'
 2017-07-06T18:16:54.118000+02:00 ERROR PostgreSQL Database error 42P16: multiple primary keys for table "playlisttrack" are not allowed

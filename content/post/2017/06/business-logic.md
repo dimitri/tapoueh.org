@@ -81,12 +81,12 @@ order by album;
 
 The output is:
 
-~~~ psql
-         album         |           duration           
------------------------+------------------------------
- Blood Sugar Sex Magik | @ 1 hour 13 mins 57.073 secs
- By The Way            | @ 1 hour 8 mins 49.951 secs
- Californication       | @ 56 mins 25.461 secs
+~~~
+         album         │           duration           
+═══════════════════════╪══════════════════════════════
+ Blood Sugar Sex Magik │ @ 1 hour 13 mins 57.073 secs
+ By The Way            │ @ 1 hour 8 mins 49.951 secs
+ Californication       │ @ 56 mins 25.461 secs
 (3 rows)
 ~~~
 

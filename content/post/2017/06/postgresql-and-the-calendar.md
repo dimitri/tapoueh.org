@@ -79,20 +79,20 @@ The *generate_series* function returns a set of items, here all the dates of
 the first day of the years from the 2000's decade. For each of them we then
 compute several calendar based values:
 
-~~~ psql
-    date    | dow | day | iso year | week | feb | year | leap 
-------------+-----+-----+----------+------+-----+------+------
- 2000-01-01 |   6 | sat |     1999 |   52 |  29 | 2000 | t
- 2001-01-01 |   1 | mon |     2001 |    1 |  28 | 2001 | f
- 2002-01-01 |   2 | tue |     2002 |    1 |  28 | 2002 | f
- 2003-01-01 |   3 | wed |     2003 |    1 |  28 | 2003 | f
- 2004-01-01 |   4 | thu |     2004 |    1 |  29 | 2004 | t
- 2005-01-01 |   6 | sat |     2004 |   53 |  28 | 2005 | f
- 2006-01-01 |   7 | sun |     2005 |   52 |  28 | 2006 | f
- 2007-01-01 |   1 | mon |     2007 |    1 |  28 | 2007 | f
- 2008-01-01 |   2 | tue |     2008 |    1 |  29 | 2008 | t
- 2009-01-01 |   4 | thu |     2009 |    1 |  28 | 2009 | f
- 2010-01-01 |   5 | fri |     2009 |   53 |  28 | 2010 | f
+~~~
+    date    │ dow │ day │ iso year │ week │ feb │ year │ leap 
+════════════╪═════╪═════╪══════════╪══════╪═════╪══════╪══════
+ 2000-01-01 │   6 │ sat │     1999 │   52 │  29 │ 2000 │ t
+ 2001-01-01 │   1 │ mon │     2001 │    1 │  28 │ 2001 │ f
+ 2002-01-01 │   2 │ tue │     2002 │    1 │  28 │ 2002 │ f
+ 2003-01-01 │   3 │ wed │     2003 │    1 │  28 │ 2003 │ f
+ 2004-01-01 │   4 │ thu │     2004 │    1 │  29 │ 2004 │ t
+ 2005-01-01 │   6 │ sat │     2004 │   53 │  28 │ 2005 │ f
+ 2006-01-01 │   7 │ sun │     2005 │   52 │  28 │ 2006 │ f
+ 2007-01-01 │   1 │ mon │     2007 │    1 │  28 │ 2007 │ f
+ 2008-01-01 │   2 │ tue │     2008 │    1 │  29 │ 2008 │ t
+ 2009-01-01 │   4 │ thu │     2009 │    1 │  28 │ 2009 │ f
+ 2010-01-01 │   5 │ fri │     2009 │   53 │  28 │ 2010 │ f
 (11 rows)
 ~~~
 
@@ -139,16 +139,16 @@ would include both dates in the range.
 
 And if you're curious here's the result:
 
-~~~ psql
-    date    |         name          |  winner  
-------------+-----------------------+----------
- 2017-04-09 | Chinese Grand Prix    | Hamilton
- 2017-04-16 | Bahrain Grand Prix    | Vettel
- 2017-04-30 | Russian Grand Prix    | Bottas
- 2017-05-14 | Spanish Grand Prix    | Hamilton
- 2017-05-28 | Monaco Grand Prix     | Vettel
- 2017-06-11 | Canadian Grand Prix   | Hamilton
- 2017-06-25 | Azerbaijan Grand Prix | ¤
+~~~
+    date    │         name          │  winner  
+════════════╪═══════════════════════╪══════════
+ 2017-04-09 │ Chinese Grand Prix    │ Hamilton
+ 2017-04-16 │ Bahrain Grand Prix    │ Vettel
+ 2017-04-30 │ Russian Grand Prix    │ Bottas
+ 2017-05-14 │ Spanish Grand Prix    │ Hamilton
+ 2017-05-28 │ Monaco Grand Prix     │ Vettel
+ 2017-06-11 │ Canadian Grand Prix   │ Hamilton
+ 2017-06-25 │ Azerbaijan Grand Prix │ ¤
 (7 rows)
 ~~~
 

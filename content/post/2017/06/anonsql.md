@@ -78,18 +78,18 @@ order by trackid;
 And here's the output for `:id = 1`:
 
 ~~~ console
-                  title                  |       duration       |  pct  
------------------------------------------+----------------------+-------
- For Those About To Rock (We Salute You) | @ 5 mins 43.719 secs | 14.32
- Put The Finger On You                   | @ 3 mins 25.662 secs |  8.57
- Let's Get It Up                         | @ 3 mins 53.926 secs |  9.75
- Inject The Venom                        | @ 3 mins 30.834 secs |  8.78
- Snowballed                              | @ 3 mins 23.102 secs |  8.46
- Evil Walks                              | @ 4 mins 23.497 secs | 10.98
- C.O.D.                                  | @ 3 mins 19.836 secs |  8.33
- Breaking The Rules                      | @ 4 mins 23.288 secs | 10.97
- Night Of The Long Knives                | @ 3 mins 25.688 secs |  8.57
- Spellbound                              | @ 4 mins 30.863 secs | 11.28
+                  title                  │       duration       │  pct  
+═════════════════════════════════════════╪══════════════════════╪═══════
+ For Those About To Rock (We Salute You) │ @ 5 mins 43.719 secs │ 14.32
+ Put The Finger On You                   │ @ 3 mins 25.662 secs │  8.57
+ Let's Get It Up                         │ @ 3 mins 53.926 secs │  9.75
+ Inject The Venom                        │ @ 3 mins 30.834 secs │  8.78
+ Snowballed                              │ @ 3 mins 23.102 secs │  8.46
+ Evil Walks                              │ @ 4 mins 23.497 secs │ 10.98
+ C.O.D.                                  │ @ 3 mins 19.836 secs │  8.33
+ Breaking The Rules                      │ @ 4 mins 23.288 secs │ 10.97
+ Night Of The Long Knives                │ @ 3 mins 25.688 secs │  8.57
+ Spellbound                              │ @ 4 mins 30.863 secs │ 11.28
 (10 rows)
 ~~~
 
@@ -143,9 +143,9 @@ In particular, it is possible to use the `CASE` clause within your `WHERE`
 conditions if you need to, and the PostgreSQL documentation shows the
 following example that also shows the evaluation rules of the clause:
 
-``` sql
+~~~ sql
 SELECT ... WHERE CASE WHEN x <> 0 THEN y/x > 1.5 ELSE false END;
-```
+~~~
 
 So my advice is
 to [Keep It Simple](https://en.wikipedia.org/wiki/KISS_principle) and have a

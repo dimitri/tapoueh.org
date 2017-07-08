@@ -291,33 +291,35 @@ items here. This operator is implemented by a different function for each
 data type. Let's have a look at some of the comparison operators for
 integers:
 
-~~~ psql
-> select format('%s(%s,%s)', o.oprname,
-                             lt.typname,
-                             rt.typname)
-         as operator,
-         oprcode::regprocedure as function
-    from pg_operator o
-         join pg_type rt on o.oprright = rt.oid
-         join pg_type lt on o.oprleft = lt.oid
-   where     o.oprkind = 'b'
-         and o.oprname = '='
-         and lt.typname ~ 'int';
+~~~ sql
+select format('%s(%s,%s)', o.oprname,
+                           lt.typname,
+                           rt.typname)
+       as operator,
+       oprcode::regprocedure as function
+  from pg_operator o
+       join pg_type rt on o.oprright = rt.oid
+       join pg_type lt on o.oprleft = lt.oid
+ where     o.oprkind = 'b'
+       and o.oprname = '='
+       and lt.typname ~ 'int';
+~~~
 
-         operator         |              function               
---------------------------+-------------------------------------
- =(int4,int8)             | int48eq(integer,bigint)
- =(int2,int2)             | int2eq(smallint,smallint)
- =(int4,int4)             | int4eq(integer,integer)
- =(int2vector,int2vector) | int2vectoreq(int2vector,int2vector)
- =(int8,int8)             | int8eq(bigint,bigint)
- =(int8,int4)             | int84eq(bigint,integer)
- =(int2,int4)             | int24eq(smallint,integer)
- =(int4,int2)             | int42eq(integer,smallint)
- =(tinterval,tinterval)   | tintervaleq(tinterval,tinterval)
- =(interval,interval)     | interval_eq(interval,interval)
- =(int2,int8)             | int28eq(smallint,bigint)
- =(int8,int2)             | int82eq(bigint,smallint)
+~~~
+         operator         │              function               
+══════════════════════════╪═════════════════════════════════════
+ =(int4,int8)             │ int48eq(integer,bigint)
+ =(int2,int2)             │ int2eq(smallint,smallint)
+ =(int4,int4)             │ int4eq(integer,integer)
+ =(int2vector,int2vector) │ int2vectoreq(int2vector,int2vector)
+ =(int8,int8)             │ int8eq(bigint,bigint)
+ =(int8,int4)             │ int84eq(bigint,integer)
+ =(int2,int4)             │ int24eq(smallint,integer)
+ =(int4,int2)             │ int42eq(integer,smallint)
+ =(tinterval,tinterval)   │ tintervaleq(tinterval,tinterval)
+ =(interval,interval)     │ interval_eq(interval,interval)
+ =(int2,int8)             │ int28eq(smallint,bigint)
+ =(int8,int2)             │ int82eq(bigint,smallint)
 (12 rows)
 ~~~
 

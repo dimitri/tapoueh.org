@@ -64,19 +64,19 @@ order by victories desc
 
 Which gives the following result:
 
-~~~ psql
- victories | forename  |  surname   | nationality 
------------+-----------+------------+-------------
-        91 | Michael   | Schumacher | German
-        56 | Lewis     | Hamilton   | British
-        51 | Alain     | Prost      | French
-        45 | Sebastian | Vettel     | German
-        41 | Ayrton    | Senna      | Brazilian
-        32 | Fernando  | Alonso     | Spanish
-        31 | Nigel     | Mansell    | British
-        27 | Jackie    | Stewart    | British
-        25 | Jim       | Clark      | British
-        25 | Niki      | Lauda      | Austrian
+~~~
+ victories │ forename  │  surname   │ nationality 
+═══════════╪═══════════╪════════════╪═════════════
+        91 │ Michael   │ Schumacher │ German
+        56 │ Lewis     │ Hamilton   │ British
+        51 │ Alain     │ Prost      │ French
+        45 │ Sebastian │ Vettel     │ German
+        41 │ Ayrton    │ Senna      │ Brazilian
+        32 │ Fernando  │ Alonso     │ Spanish
+        31 │ Nigel     │ Mansell    │ British
+        27 │ Jackie    │ Stewart    │ British
+        25 │ Jim       │ Clark      │ British
+        25 │ Niki      │ Lauda      │ Austrian
 (10 rows)
 ~~~
 
