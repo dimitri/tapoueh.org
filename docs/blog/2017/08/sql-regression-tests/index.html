@@ -1,0 +1,1075 @@
+
+
+  
+    
+  
+
+
+  
+
+
+
+
+  
+
+
+  
+
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Hugo 0.20.7">
+    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
+    <title>SQL Regression Tests</title>
+    <meta name="author" content="Dimitri Fontaine">
+    <meta name="keywords" content="">
+
+    <link rel="icon" href="/favicon.ico">
+    
+
+    
+    <meta name="description" content="In a previous article here we
+saw How to Write SQL in your application
+code. The main idea in that article is to maintain your queries in separate
+SQL files, where it&rsquo;s easier to maintain them. In particular if you want to
+be able to test them again in production, and when you have to work and
+rewrite queries.
+
+">
+    <meta property="og:description" content="In a previous article here we
+saw How to Write SQL in your application
+code. The main idea in that article is to maintain your queries in separate
+SQL files, where it&rsquo;s easier to maintain them. In particular if you want to
+be able to test them again in production, and when you have to work and
+rewrite queries.
+
+">
+    <meta property="og:type" content="blog">
+    <meta property="og:title" content="SQL Regression Tests">
+    <meta property="og:url" content="/blog/2017/08/sql-regression-tests/">
+    <meta property="og:site_name" content="Dimitri Fontaine, PostgreSQL Expert">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Dimitri Fontaine, PostgreSQL Expert">
+    <meta name="twitter:description" content="In a previous article here we
+saw How to Write SQL in your application
+code. The main idea in that article is to maintain your queries in separate
+SQL files, where it&rsquo;s easier to maintain them. In particular if you want to
+be able to test them again in production, and when you have to work and
+rewrite queries.
+
+">
+    
+      <meta name="twitter:creator" content="@tapoueh">
+    
+    
+
+    
+    
+
+    
+      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
+    
+
+    
+      <meta property="og:image" content="http://tapoueh.org/img/bug-512.png">
+    
+    
+      <meta property="og:image" content="http://tapoueh.org/img/regressiontesting.png">
+    
+    
+
+    
+
+    
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
+    
+    
+    <link rel="stylesheet" href="/css/style-u6mk0ojoywresbx8iepslrmmhl4stuhrsxuwhkpwrkrx7mryjcaimasnk4pi.min.css" />
+    
+    
+      <link rel="stylesheet" href="http://tapoueh.org//css/dim.css">
+    
+
+    
+      
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-47059482-1', 'auto');
+ga('send', 'pageview');
+</script>
+
+    
+    
+  </head>
+
+  <body>
+    <div id="blog">
+      <header id="header" data-behavior="2">
+  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+  <div class="header-title">
+    <a class="header-title-link" href="/">Dimitri Fontaine, PostgreSQL Expert</a>
+  </div>
+  
+</header>
+
+      <nav id="sidebar" data-behavior="2">
+  <div class="sidebar-container">
+    
+      <div class="sidebar-profile">
+        <a href="/#about">
+          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+        </a>
+        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
+        
+          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
+        
+      </div>
+    
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
+      
+      <span class="sidebar-button-desc">Blog</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/about/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
+      
+      <span class="sidebar-button-desc">About</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories/yesql/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-database"></i>
+      
+      <span class="sidebar-button-desc">YeSQL</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="http://masteringpostgresql.com" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
+      
+      <span class="sidebar-button-desc">Mastering PostgreSQL</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+      
+      <span class="sidebar-button-desc">GitHub</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+      
+      <span class="sidebar-button-desc">Twitter</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+      
+      <span class="sidebar-button-desc">Categories</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/index.xml">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+      
+      <span class="sidebar-button-desc">RSS</span>
+    </a>
+  </li>
+
+    </ul>
+  </div>
+</nav>
+
+      
+  <div class="post-header-cover
+              text-left
+              post-header-cover--partial"
+       style="background-image:url('/img/regressiontesting.png')"
+       data-behavior="2">
+    
+      <div class="post-header main-content-wrap text-left">
+  
+    <h1 class="post-title" itemprop="headline">
+      SQL Regression Tests
+    </h1>
+  
+  <div class="postShorten-meta post-meta">
+  
+    <time itemprop="datePublished" datetime="2017-08-08T17:55:51&#43;02:00">
+      
+  
+  
+  
+  
+    Tuesday 08 Aug 2017
+  
+
+    </time>
+  
+  
+  
+  
+    <span></span>
+    
+      <a class="category-link" href="/categories/postgresql">PostgreSQL</a>, 
+    
+      <a class="category-link" href="/categories/yesql">YeSQL</a>
+    
+  
+
+
+</div>
+
+</div>
+    
+  </div>
+
+
+      <div id="main" data-behavior="2"
+        class="hasCover
+               hasCoverMetaIn
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
+          
+          <div class="post-content markdown" itemprop="articleBody">
+            <div class="main-content-wrap">
+              <p>In a previous article here we
+saw <a href="/blog/2017/06/how-to-write-sql/">How to Write SQL</a> in your application
+code. The main idea in that article is to maintain your queries in separate
+SQL files, where it&rsquo;s easier to maintain them. In particular if you want to
+be able to test them again in production, and when you have to work and
+rewrite queries.</p>
+
+<p></p>
+
+<p>Naturally, if you consider SQL as code (which I do), then you want all the
+usual tooling around code. It&rsquo;s easy to benefit from <em>version control</em> when
+your SQL files are stored in separate files, so that&rsquo;s a checked box. It
+might be less easy to unit test and regression test your queries, you think…
+In this article we see how to do that!</p>
+
+<h1 id="table-of-contents"></h1><nav id="TableOfContents">
+<ul>
+<li><a href="#unit-testing-sql">Unit Testing SQL</a></li>
+<li><a href="#regresql">RegreSQL</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+</nav>
+
+<p>There are different ways to test your SQL queries, among them in good
+position we can do <em>Unit Testing</em> and <em>Regression Testing</em>. The <em>Unit
+Testing</em> is used to run your queries against static arguments and a static
+data set, and allows to test very basic things. The assumptions that you
+want to never break, because your code rely on them.</p>
+
+<p><em>Regression Testing</em> is about ensuring that when you change things, they
+continue to implement the same contract. In term of SQL, you can either
+change your data set (adding columns, altering data types, etc) or your
+queries. If you run the same query against a different schema or a modified
+data set that should be compatible it might be named <em>Integrity Testing</em>.</p>
+
+<h1 id="unit-testing-sql">Unit Testing SQL</h1>
+
+<p>For <em>Unit Testing</em> in PostgreSQL the perfect tool
+is <a href="http://pgtap.org/">pgTap</a>: <em>pgTAP is a suite of database functions that
+make it easy to write TAP-emitting unit tests in psql scripts or xUnit-style
+test functions. The TAP output is suitable for harvesting, analysis, and
+reporting by a TAP harness, such as those used in Perl applications.</em></p>
+
+<p>When using pgTap, see
+the
+<a href="http://pgtap.org/documentation.html#canyourelate">relation-testing functions</a> for
+implementing result set based unit tests. From the documentation, let&rsquo;s pick
+a couple example, testing against static result sets as <em>VALUES</em>:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">SELECT</span> results_eq(
+    <span style="color: #aa5500">&#39;SELECT * FROM active_users()&#39;</span>,
+    <span style="color: #FF0000; background-color: #FFAAAA">$$</span>
+      <span style="color: #0000aa">VALUES</span> (<span style="color: #009999">42</span>, <span style="color: #aa5500">&#39;Anna&#39;</span>),
+             (<span style="color: #009999">19</span>, <span style="color: #aa5500">&#39;Strongrrl&#39;</span>),
+             (<span style="color: #009999">39</span>, <span style="color: #aa5500">&#39;Theory&#39;</span>)
+    <span style="color: #FF0000; background-color: #FFAAAA">$$</span>,
+    <span style="color: #aa5500">&#39;active_users() should return active users&#39;</span>
+);
+</pre></div>
+
+<p>and <em>ARRAYS</em>:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">SELECT</span> results_eq(
+    <span style="color: #aa5500">&#39;SELECT * FROM active_user_ids()&#39;</span>,
+    <span style="color: #00aaaa">ARRAY</span>[ <span style="color: #009999">2</span>, <span style="color: #009999">3</span>, <span style="color: #009999">4</span>, <span style="color: #009999">5</span>]
+);
+</pre></div>
+
+<p>As you can see your unit tests are coded in SQL too. Which means you have
+all the SQL power at your hands to write tests, and also that you can check
+your schema integrity directly in SQL, using PostgreSQL catalog functions.</p>
+
+<p>So check out <a href="http://pgtap.org/">pgTap</a> to implement PostgreSQL Unit Tests.</p>
+
+<h1 id="regresql">RegreSQL</h1>
+
+<p>In my article <a href="/blog/2017/06/how-to-write-sql/">How to Write SQL</a> the main
+take out is that your SQL queries are to be managed in <em>.sql</em> files, just
+like in the following example:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #aaaaaa; font-style: italic">-- name: list-albums-by-artist</span>
+<span style="color: #aaaaaa; font-style: italic">-- List the album titles and duration of a given artist</span>
+  <span style="color: #0000aa">select</span> album.title <span style="color: #0000aa">as</span> album,
+         <span style="color: #0000aa">sum</span>(milliseconds) * <span style="color: #00aaaa">interval</span> <span style="color: #aa5500">&#39;1 ms&#39;</span> <span style="color: #0000aa">as</span> duration
+    <span style="color: #0000aa">from</span> album
+         <span style="color: #0000aa">join</span> artist <span style="color: #0000aa">using</span>(artistid)
+         <span style="color: #0000aa">left</span> <span style="color: #0000aa">join</span> track <span style="color: #0000aa">using</span>(albumid)
+   <span style="color: #0000aa">where</span> artist.name = :<span style="color: #aa5500">&#39;name&#39;</span>
+<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> album
+<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> album;
+</pre></div>
+
+<p>Such a query is expected to be processed either by <code>psql</code> directly thanks to
+its
+<a href="https://www.postgresql.org/docs/current/static/app-psql.html#APP-PSQL-VARIABLES">psql variables</a> support,
+or by a library like
+Clojure&rsquo;s <a href="https://github.com/krisajenkins/yesql">YeSQL</a> or
+Python&rsquo;s <a href="https://github.com/honza/anosql">anosql</a> for using in your
+application&rsquo;s code base. Implementations exist in other programming
+languages too of course, so check out if your favorite is listed already at
+the main <a href="https://github.com/krisajenkins/yesql">YeSQL</a> GitHub&rsquo;s page.</p>
+
+<p>In the <em>put your money where your mouth is</em> department, allow me to unveil
+the small and neat tool <a href="https://github.com/dimitri/regresql">RegreSQL</a>:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>$ go get github.com/dimitri/regresql
+
+$ regresql --help
+Run regression tests <span style="color: #0000aa">for</span> your SQL queries
+
+Usage:
+  regresql [command]
+
+Available Commands:
+  <span style="color: #00aaaa">help</span>        Help about any <span style="color: #00aaaa">command</span>
+  init        Initialize regresql <span style="color: #0000aa">for</span> use in your project
+  list        list candidates SQL files
+  plan        Creates missing plans <span style="color: #0000aa">for</span> new queries
+  <span style="color: #00aaaa">test</span>        Run regression tests <span style="color: #0000aa">for</span> your SQL queries
+  update      Creates or updates the expected output files
+</pre></div>
+
+<p>The idea of <em>RegreSQL</em> is to make it easy to run <em>Regression Tests</em> against
+SQL queries that you manage with a <em>YeSQL</em> like library. In a local sample
+application using the query shown above, we can use <em>RegreSQL</em> to run our
+queries and check that their result is the expected one:</p>
+
+<pre><code>$ regresql test
+Connecting to 'postgres:///chinook?sslmode=disable'… ✓
+TAP version 13
+ok 1 - src/sql/album-by-artist.1.out
+ok 2 - src/sql/album-tracks.1.out
+ok 3 - src/sql/artist.1.out
+ok 4 - src/sql/genre-topn.top-3.out
+ok 5 - src/sql/genre-topn.top-1.out
+ok 6 - src/sql/genre-tracks.out
+</code></pre>
+
+<p>To be able to do that, we need parameters to associate with our queries.
+<em>RegreSQL</em> calls that a test plan, and you can create your test plans with
+the command <code>regresql init</code> or <code>regresql plan</code> if you&rsquo;re already initialized
+a repository and just added some queries…</p>
+
+<p>If we take the <em>regresql/plans/src/sql/genre-topn.yaml</em> plan file as an
+example, it contains two sets of parameters for the <em>src/sql/genre-topn.sql</em>
+query. The YAML file contains plans. Each plan has a name, then a list of
+key and values. The keys are the SQL parameter names, and the values are the
+actual values we want to test our queries with. Here&rsquo;s the <em>genre-topn.yaml</em>
+content:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #aa5500">&quot;top-3&quot;</span>:
+  <span style="color: #aa5500">&quot;n&quot;</span>: <span style="color: #aa5500">&quot;3&quot;</span>
+<span style="color: #aa5500">&quot;top-1&quot;</span>:
+  <span style="color: #aa5500">&quot;n&quot;</span>: <span style="color: #aa5500">&quot;1&quot;</span>
+</pre></div>
+
+<p>The <em>RegreSQL</em> tool creates empty plan files with a single plan named <em>&ldquo;1&rdquo;</em>,
+and prefills it with empty string values for all the query parameters, so
+that you only have to fill-in the actual values for testing.</p>
+
+<p>Use <code>regresql update</code> to run the queries and register their output as the
+<em>expected</em> ouput. In the following usage example, we did <code>regresql update</code>
+with <code>&quot;id&quot;: &quot;1&quot;</code> in our plan file, but then changed our mind and replaced it
+with <code>&quot;id&quot;: &quot;2&quot;</code> before running <code>regresql test</code>:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>$ regresql <span style="color: #00aaaa">test</span>
+Connecting to <span style="color: #aa5500">&#39;postgres:///chinook?sslmode=disable&#39;</span>… ✓
+TAP version <span style="color: #009999">13</span>
+ok <span style="color: #009999">1</span> - src/sql/album-by-artist.1.out
+ok <span style="color: #009999">2</span> - src/sql/album-tracks.1.out
+<span style="color: #aaaaaa; font-style: italic"># Query File: &#39;src/sql/artist.sql&#39;</span>
+<span style="color: #aaaaaa; font-style: italic"># Bindings File: &#39;regresql/plans/src/sql/artist.yaml&#39;</span>
+<span style="color: #aaaaaa; font-style: italic"># Bindings Name: &#39;1&#39;</span>
+<span style="color: #aaaaaa; font-style: italic"># Query Parameters: &#39;map[n:2]&#39;</span>
+<span style="color: #aaaaaa; font-style: italic"># Expected Result File: &#39;regresql/expected/src/sql/artist.1.out&#39;</span>
+<span style="color: #aaaaaa; font-style: italic"># Actual Result File: &#39;regresql/out/src/sql/artist.1.out&#39;</span>
+<span style="color: #aaaaaa; font-style: italic"># </span>
+<span style="color: #aaaaaa; font-style: italic"># --- regresql/expected/src/sql/artist.1.out</span>
+<span style="color: #aaaaaa; font-style: italic"># +++ regresql/out/src/sql/artist.1.out</span>
+<span style="color: #aaaaaa; font-style: italic"># @@ -1,4 +1,5 @@</span>
+<span style="color: #aaaaaa; font-style: italic"># -   name     | albums</span>
+<span style="color: #aaaaaa; font-style: italic"># -------------+-------</span>
+<span style="color: #aaaaaa; font-style: italic"># -Iron Maiden | 21</span>
+<span style="color: #aaaaaa; font-style: italic"># +    name     | albums</span>
+<span style="color: #aaaaaa; font-style: italic"># +-------------+-------</span>
+<span style="color: #aaaaaa; font-style: italic"># +Iron Maiden  | 21</span>
+<span style="color: #aaaaaa; font-style: italic"># +Led Zeppelin | 14</span>
+<span style="color: #aaaaaa; font-style: italic">#  </span>
+not ok <span style="color: #009999">3</span> - src/sql/artist.1.out
+ok <span style="color: #009999">4</span> - src/sql/genre-topn.top-3.out
+ok <span style="color: #009999">5</span> - src/sql/genre-topn.top-1.out
+ok <span style="color: #009999">6</span> - src/sql/genre-tracks.out
+</pre></div>
+
+<p>We can see that the query returns the 2 most prolific artists of our
+collection rather than the expected single most prolific artist. If that&rsquo;s
+your new requirements for the query, then <em>update</em> the expected result. If
+not, then fix your query!</p>
+
+<h1 id="conclusion">Conclusion</h1>
+
+
+
+
+<div class="figure fig25 right dim-margin" >
+  
+    <img class="fig-img" src="/img/sql-filetype.svg"  alt="SQL is code!">
+  
+   
+    <span class="caption">SQL is code!</span>
+  
+</div>
+
+
+<p>SQL is code. We need a productive and complete tooling around it, and most
+of this tooling is already available. It&rsquo;s quite easy to fill-in the gaps,
+as soon as you start considering that SQL is code.</p>
+              
+            </div>
+          </div>
+          <div id="post-footer" class="post-footer main-content-wrap">
+            
+              
+                
+                
+                  <div class="post-footer-tags">
+                    <span class="text-color-light text-small"></span><br/>
+                    
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/postgresql/">PostgreSQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/yesql/">YeSQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/sql/">SQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/testing/">testing</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/regression/">regression</a>
+
+                  </div>
+                
+              
+            
+            <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    <script async id="_ck_218061" src="https://forms.convertkit.com/218061?v=6"></script>
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2017/07/from-mysql-to-postgresql/" data-tooltip="from MySQL to PostgreSQL">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f08%2fsql-regression-tests%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f08%2fsql-regression-tests%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=SQL%20Regression%20Tests with @tapoueh: http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f08%2fsql-regression-tests%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+            
+              
+                <div id="disqus_thread">
+  <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+              
+            
+          </div>
+        </article>
+        <footer id="footer" class="main-content-wrap">
+  <span class="copyrights">
+    &copy; 2017 Dimitri Fontaine. 
+  </span>
+</footer>
+
+      </div>
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="2">
+        <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    <script async id="_ck_218061" src="https://forms.convertkit.com/218061?v=6"></script>
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2017/07/from-mysql-to-postgresql/" data-tooltip="from MySQL to PostgreSQL">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f08%2fsql-regression-tests%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f08%2fsql-regression-tests%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=SQL%20Regression%20Tests with @tapoueh: http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f08%2fsql-regression-tests%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+      </div>
+      <div id="share-options-bar" class="share-options-bar" data-behavior="2">
+  <ul class="share-options">
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f08%2fsql-regression-tests%2f">
+        <i class="fa fa-google-plus"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f08%2fsql-regression-tests%2f">
+        <i class="fa fa-facebook-official"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=SQL%20Regression%20Tests with @tapoueh: http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f08%2fsql-regression-tests%2f">
+        <i class="fa fa-twitter"></i><span></span>
+      </a>
+    </li>
+  </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
+    </div>
+    
+    <div id="about">
+  <div id="about-card">
+    <div id="about-btn-close">
+      <i class="fa fa-remove"></i>
+    </div>
+    
+      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+    
+    <h4 id="about-card-name">Dimitri Fontaine</h4>
+    
+      <div id="about-card-bio">PostgreSQL Major Contributor</div>
+    
+    
+      <div id="about-card-job">
+        <i class="fa fa-briefcase"></i>
+        <br/>
+        Open Source Software Engineer
+      </div>
+    
+    
+      <div id="about-card-location">
+        <i class="fa fa-map-marker"></i>
+        <br/>
+        France
+      </div>
+    
+  </div>
+</div>
+
+    <div id="algolia-search-modal" class="modal-container">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="close-button"><i class="fa fa-close"></i></span>
+      <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+        <span class="searchby-algolia-text text-color-light text-small">by</span>
+        <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+      </a>
+      <i class="search-icon fa fa-search"></i>
+      <form id="algolia-search-form">
+        <input type="text" id="algolia-search-input" name="search"
+          class="form-control input--large search-input" placeholder="" />
+      </form>
+    </div>
+    <div class="modal-body">
+      <div class="no-result text-color-light text-center"></div>
+      <div class="results">
+        
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/08/sql-regression-tests/">
+                <h3 class="media-heading">SQL Regression Tests</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Aug 8, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>In a previous article here we
+saw <a href="/blog/2017/06/how-to-write-sql/">How to Write SQL</a> in your application
+code. The main idea in that article is to maintain your queries in separate
+SQL files, where it&rsquo;s easier to maintain them. In particular if you want to
+be able to test them again in production, and when you have to work and
+rewrite queries.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/07/from-mysql-to-postgresql/">
+                <h3 class="media-heading">from MySQL to PostgreSQL</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jul 7, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Today
+<a href="https://github.com/dimitri/pgloader/releases/tag/v3.4.1">pgloader v3.4.1</a>
+is released and available! This new release comes with 110 commits as show
+in
+<a href="https://github.com/dimitri/pgloader/compare/v3.3.2...v3.4.1">github compare view</a>.</p>
+
+<p>This release of <a href="http://pgloader.io">pgloader</a> is following the tradition of
+simplifying things for users, or if you allow me to
+quote <a href="https://en.wikiquote.org/wiki/Alan_Kay">Alan Kay</a>, I believe that if
+<em>simple things should be simple, complex things should be possible.</em></p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/07/playing-with-unicode/">
+                <h3 class="media-heading">Playing with Unicode</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jul 7, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>The reason why I like Unicode a lot is because it allows me to code in text
+based environments and still have nice output. Today, we&rsquo;re going to play
+with
+<a href="https://en.wikipedia.org/wiki/Regional_Indicator_Symbol">Regional Indicator Symbol</a>,
+which is implemented as a Unicode combinaison of letters from 🇦 to 🇿. For
+instance, if you display 🇫 then 🇷 concatenated together, you get 🇫🇷. Let&rsquo;s
+try that from our <a href="https://www.postgresql.org/">PostgreSQL</a> prompt!</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/06/postgresql-and-the-calendar/">
+                <h3 class="media-heading">PostgreSQL and the calendar</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>The modern calendar is a trap for the young engineer&rsquo;s mind. We deal with
+the calendar on a daily basis and until exposed to its insanity it&rsquo;s rather
+common to think that calendar based computations are easy. That&rsquo;s until
+you&rsquo;ve tried to do it once. A very good read about how the current calendar
+came to be the way it is now is Erik&rsquo;s
+Naggum <a href="http://naggum.no/lugm-time.html">The Long, Painful History of Time</a>.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/06/sql-and-business-logic/">
+                <h3 class="media-heading">SQL and Business Logic</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Business logic is <em>supposed to be</em> the part of the application where you
+deal with customer or user facing decisions and computations. It is often
+argued that this part should be well separated from the rest of the
+technical infrastructure of your code. Of course, SQL and relational
+database design is meant to support your business cases (or user stories),
+so then we can ask ourselves if SQL should be part of your business logic
+implementation. Or actually, how much of your business logic should be SQL?</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/06/exploring-a-data-set-in-sql/">
+                <h3 class="media-heading">Exploring a Data Set in SQL</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Sometimes you need to dive in an existing data set that you know very little
+about. Let&rsquo;s say we&rsquo;ve been lucky to have had a high level description of
+the business case covered by a database, and then access to it. Our next
+step is figuring out data organisation, content and quality. Our tool box:
+<em>the world&rsquo;s most advanced open source
+database</em>, <a href="https://www.postgresql.org">PostgreSQL</a>, and its <em>Structured
+Query Language</em>, SQL.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/06/how-to-write-sql/">
+                <h3 class="media-heading">How to Write SQL</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p><a href="https://twitter.com/krisajenkins">Kris Jenkins</a> cooked up a very nice way
+to embed SQL in your
+code: <a href="https://github.com/krisajenkins/yesql">YeSQL for Clojure</a>. The main
+idea is that you should be writing your SQL queries in <code>.sql</code> files in your
+code repository and maintain them there.</p>
+
+<p>The idea is very good and it is now possible to find alternative
+implementations of the <a href="https://clojure.org">Clojure</a> <em>yesql</em> library in
+other languages. Today, we are going to have a look at one of them for
+the <a href="https://www.python.org">python</a> programming
+language: <a href="https://github.com/honza/anosql">anosql</a>.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/05/find-the-missing-integer/">
+                <h3 class="media-heading">Find The Missing Integer</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>A recent interview question that I had to review was spelled like this:</p>
+
+<blockquote>
+<p>Find missing int element into array 1..100</p>
+</blockquote>
+
+<p>Of course at first read I got it wrong, you have only one integer to look
+for into the array. So while the obvious idea was to apply classic <em>sorting</em>
+techniques and minimize array traversal to handle complexity (time and
+space), it turns out there&rsquo;s a much simpler way to do it if you remember
+your math lessons from younger. But is it that much simpler?</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2016/04/pgconf-us-2016/">
+                <h3 class="media-heading">PGConf US 2016</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2016
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p><a href="https://www.pgconf.us/conferences/2016">PostgreSQL Conference US</a> took
+place in New York City and I had the pleasure to be a speaker there. I
+presented there a talk about why <em>You’d Better Have Tested Backups</em>. The
+important bit is that backups are not interesting, recoveries are. Also the
+only way to make sure a backup is successful is to be able to use it for
+recovery.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2015/11/all-your-base-conference-2015/">
+                <h3 class="media-heading">All Your Base Conference 2015</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Nov 11, 2015
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>I had the pleasure to be invited to speak at
+<a href="http://allyourbaseconf.com/2015/speakers#dimitri-fontaine">All Your Base Conference 2015</a>
+about
+<a href="http://www.postgresql.org">PostgreSQL</a> (of course). The conference gathers together lots of user
+experience around data management and database products, either in the now
+classic meaning of the word (I mean
+<em>relational database management systems
+here</em>) or the newer set of trade-offs represented by the NoSQL set of tools.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+      </div>
+    </div>
+    <div class="modal-footer">
+      <p class="results-count text-medium"
+         data-message-zero=""
+         data-message-one=""
+         data-message-other="">
+         238 posts found
+      </p>
+    </div>
+  </div>
+</div>
+    
+  
+    
+    <div id="cover" style="background-image:url('http://tapoueh.org/images/mayan-calendar.jpg');"></div>
+  
+
+
+    
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.8.0/highlight.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.js"></script>
+
+
+<script src="/js/script-wl33z0n6ocaypepiqrazthtivfrliqijej4rq8ek8gvrv1awftmgjuv8k4zc.min.js"></script>
+
+<script>
+$(document).ready(function() {
+  hljs.configure({ classPrefix: '', useBR: false });
+  $('pre.code-highlight').each(function(i, block) {
+    var code = "";
+    hljs.highlightAuto(block.innerText).value.split(/\r\n|\r|\n/).forEach(function(line) {
+      code += "<span class=\"line\">" + line + "</span><br>";
+    });
+    if (code.length > 0) {
+      block.innerHTML = code;  
+    }
+  });
+  $('pre > code').each(function(i, block) {
+    $(this).addClass('codeblock');
+    hljs.highlightBlock(block);
+  });
+});
+</script>
+
+  
+    
+      <script>
+        var disqus_config = function () {
+          this.page.url = 'http:\/\/tapoueh.org\/blog\/2017\/08\/sql-regression-tests\/';
+          
+            this.page.identifier = '\/blog\/2017\/08\/sql-regression-tests\/'
+          
+        };
+        (function() {
+          
+          
+          if (window.location.hostname == "localhost") {
+            return;
+          }
+          var d = document, s = d.createElement('script');
+          var disqus_shortname = 'tapoueh';
+          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+          s.setAttribute('data-timestamp', +new Date());
+          (d.head || d.body).appendChild(s);
+        })();
+      </script>
+    
+  
+
+
+
+
+
+    
+  </body>
+</html>
+
