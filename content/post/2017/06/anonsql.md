@@ -235,6 +235,15 @@ production activity with SQL embedded in your application's code. Do it now,
 and be as granular as you can (module names, class names, package names,
 etc).
 
+# Tests
+
+When implement SQL code as *.sql* files, you need to take care about test
+coverage specifically.
+My [SQL Regression Tests](/blog/2017/08/sql-regression-tests/) article gives
+more details about how to test SQL with dedicated tools, introducing
+both [pgTap](http://pgtap.org/)
+and [RegreSQL](https://github.com/dimitri/regresql).
+
 # Conclusion
 
 {{< image classes="fig25 right dim-margin"

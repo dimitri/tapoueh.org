@@ -304,4 +304,6 @@ programming language in the backend.
 So it's time to properly **learn SQL** and use it to its full potential as
 part of your backend source code, as we saw
 in [How to Write SQL](/blog/2017/06/how-to-write-sql/) previously here. And
+now that you consider SQL as code, also about how to
+do [SQL Regression Tests](/blog/2017/08/sql-regression-tests/). And
 remember, ***if you think education is expensive, try ignorance***.

@@ -173,8 +173,8 @@ that you only have to fill-in the actual values for testing.
 
 Use `regresql update` to run the queries and register their output as the
 *expected* ouput. In the following usage example, we did `regresql update`
-with `"id": "1"` in our plan file, but then changed our mind and replaced it
-with `"id": "2"` before running `regresql test`:
+with `"n": "1"` in our plan file, but then changed our mind and replaced it
+with `"n": "2"` before running `regresql test`:
 
 ~~~ bash
 $ regresql test
