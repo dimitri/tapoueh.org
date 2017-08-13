@@ -5,7 +5,7 @@ tags = ["PostgreSQL", "Extensions", "intagg", "YeSQL"]
 categories = ["PostgreSQL","YeSQL"]
 thumbnailImage = "/img/old/wordpres-seo-categories-tags.jpg"
 thumbnailImagePosition = "left"
-coverImage = "/img/old/wordpres-seo-categories-tags.jpg"
+coverImage = "/img/rock-punk-metal-music-news.jpg"
 coverSize = "partial"
 coverMeta = "in"
 aliases = ["/blog/2013/10/23-denormalizing-tags",
@@ -24,17 +24,15 @@ instance.
 
 <!--toc-->
 
-<center>*In this article, we're going to play with music related tags*</center>
-
-We're going to use the 
-[Last.fm dataset from the Million Song Dataset project](http://labrosa.ee.columbia.edu/millionsong/lastfm)
-here. The article where they present their similarity searches is providing
-the whole dataset they have as a 
-[SQLite](http://www.sqlite.org/) database and they propose to read
-their python script 
-[demo_tags_db.py](http://labrosa.ee.columbia.edu/millionsong/sites/default/files/lastfm/demo_tags_db.py) to make sense of it.
-
-<!--toc-->
+We're going to use
+the
+[Last.fm dataset from the Million Song Dataset project](http://labrosa.ee.columbia.edu/millionsong/lastfm) here.
+The article where they present their similarity searches is providing the
+whole dataset they have as a [SQLite](http://www.sqlite.org/) database and
+they propose to read their python
+script
+[demo_tags_db.py](http://labrosa.ee.columbia.edu/millionsong/sites/default/files/lastfm/demo_tags_db.py) to
+make sense of it.
 
 # The Setup
 
