@@ -1,0 +1,1115 @@
+
+
+  
+    
+  
+
+
+  
+
+
+
+
+  
+
+
+  
+
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Hugo 0.20.7">
+    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
+    <title>Regular Expressions and Grouping Sets</title>
+    <meta name="author" content="Dimitri Fontaine">
+    <meta name="keywords" content="">
+
+    <link rel="icon" href="/favicon.ico">
+    
+
+    
+    <meta name="description" content="There&rsquo;s a very rich set of PostgreSQL functions to process text, you can
+find them all at
+the
+String Functions and Operators documentation
+chapter, with functions such as overlay, substring, position or
+trim. Or aggregates such as string_agg. And then regular expression
+functions, including the very powerful regexp_split_to_table.
+
+">
+    <meta property="og:description" content="There&rsquo;s a very rich set of PostgreSQL functions to process text, you can
+find them all at
+the
+String Functions and Operators documentation
+chapter, with functions such as overlay, substring, position or
+trim. Or aggregates such as string_agg. And then regular expression
+functions, including the very powerful regexp_split_to_table.
+
+">
+    <meta property="og:type" content="blog">
+    <meta property="og:title" content="Regular Expressions and Grouping Sets">
+    <meta property="og:url" content="/blog/2017/08/regular-expressions-and-grouping-sets/">
+    <meta property="og:site_name" content="Dimitri Fontaine, PostgreSQL Expert">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Dimitri Fontaine, PostgreSQL Expert">
+    <meta name="twitter:description" content="There&rsquo;s a very rich set of PostgreSQL functions to process text, you can
+find them all at
+the
+String Functions and Operators documentation
+chapter, with functions such as overlay, substring, position or
+trim. Or aggregates such as string_agg. And then regular expression
+functions, including the very powerful regexp_split_to_table.
+
+">
+    
+      <meta name="twitter:creator" content="@tapoueh">
+    
+    
+
+    
+    
+
+    
+      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
+    
+
+    
+      <meta property="og:image" content="http://tapoueh.org/img/RegEx.png">
+    
+    
+      <meta property="og:image" content="http://tapoueh.org/img/regex.jpg">
+    
+    
+
+    
+
+    
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
+    
+    
+    <link rel="stylesheet" href="/css/style-u6mk0ojoywresbx8iepslrmmhl4stuhrsxuwhkpwrkrx7mryjcaimasnk4pi.min.css" />
+    
+    
+      <link rel="stylesheet" href="http://tapoueh.org//css/dim.css">
+    
+
+    
+      
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-47059482-1', 'auto');
+ga('send', 'pageview');
+</script>
+
+    
+    
+  </head>
+
+  <body>
+    <div id="blog">
+      <header id="header" data-behavior="2">
+  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+  <div class="header-title">
+    <a class="header-title-link" href="/">Dimitri Fontaine, PostgreSQL Expert</a>
+  </div>
+  
+</header>
+
+      <nav id="sidebar" data-behavior="2">
+  <div class="sidebar-container">
+    
+      <div class="sidebar-profile">
+        <a href="/#about">
+          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+        </a>
+        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
+        
+          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
+        
+      </div>
+    
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
+      
+      <span class="sidebar-button-desc">Blog</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/about/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
+      
+      <span class="sidebar-button-desc">About</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories/yesql/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-database"></i>
+      
+      <span class="sidebar-button-desc">YeSQL</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="http://masteringpostgresql.com" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
+      
+      <span class="sidebar-button-desc">Mastering PostgreSQL</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+      
+      <span class="sidebar-button-desc">GitHub</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+      
+      <span class="sidebar-button-desc">Twitter</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+      
+      <span class="sidebar-button-desc">Categories</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/index.xml">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+      
+      <span class="sidebar-button-desc">RSS</span>
+    </a>
+  </li>
+
+    </ul>
+  </div>
+</nav>
+
+      
+  <div class="post-header-cover
+              text-left
+              post-header-cover--partial"
+       style="background-image:url('/img/regex.jpg')"
+       data-behavior="2">
+    
+      <div class="post-header main-content-wrap text-left">
+  
+    <h1 class="post-title" itemprop="headline">
+      Regular Expressions and Grouping Sets
+    </h1>
+  
+  <div class="postShorten-meta post-meta">
+  
+    <time itemprop="datePublished" datetime="2017-08-14T16:37:53&#43;02:00">
+      
+  
+  
+  
+  
+    Monday 14 Aug 2017
+  
+
+    </time>
+  
+  
+  
+  
+    <span></span>
+    
+      <a class="category-link" href="/categories/postgresql">PostgreSQL</a>, 
+    
+      <a class="category-link" href="/categories/yesql">YeSQL</a>
+    
+  
+
+
+</div>
+
+</div>
+    
+  </div>
+
+
+      <div id="main" data-behavior="2"
+        class="hasCover
+               hasCoverMetaIn
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
+          
+          <div class="post-content markdown" itemprop="articleBody">
+            <div class="main-content-wrap">
+              <p>There&rsquo;s a very rich set of PostgreSQL functions to process text, you can
+find them all at
+the
+<a href="https://www.postgresql.org/docs/current/static/functions-string.html">String Functions and Operators</a> documentation
+chapter, with functions such as <em>overlay</em>, <em>substring</em>, <em>position</em> or
+<em>trim</em>. Or aggregates such as <em>string_agg</em>. And then <em>regular expression</em>
+functions, including the very powerful <em>regexp_split_to_table</em>.</p>
+
+<p></p>
+
+<p>The <em>regular expression</em> split functions are powerful in many use cases. In
+particular, they are very helpful when you have to work with a messy schema,
+in which a single column represents several bits of information in a pseudo
+specified way.</p>
+
+<h1 id="table-of-contents"></h1><nav id="TableOfContents">
+<ul>
+<li><a href="#some-open-data-to-play-with">Some Open Data to play with</a></li>
+<li><a href="#regular-expression-based-splitting">Regular Expression based Splitting</a></li>
+<li><a href="#grouping-sets-cube-rollup">Grouping Sets, Cube, Rollup</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+</nav>
+
+<h1 id="some-open-data-to-play-with">Some Open Data to play with</h1>
+
+<p>An example of such a data set is available in Open Data:
+the
+<a href="https://opendata.hauts-de-seine.fr/explore/dataset/archives-de-la-planete/table/?disjunctive.operateur&amp;sort=identifiant_fakir">Archives de la Planète</a> or
+“planet archives”.</p>
+
+<p>Once loaded into <a href="https://www.postgresql.org/">PostgreSQL</a> thanks
+to <a href="http://pgloader.io/">pgloader</a>, the data is available as CSV and once
+loaded looks like this:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #FF0000; background-color: #FFAAAA">\</span>pset format wrapped
+<span style="color: #FF0000; background-color: #FFAAAA">\</span>pset columns <span style="color: #009999">70</span>
+<span style="color: #0000aa">table</span> opendata.archives_planete <span style="color: #0000aa">limit</span> <span style="color: #009999">1</span>;
+</pre></div>
+
+<p>And we get the following sample data, all in French (but it doesn&rsquo;t matter
+very much):</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>-[ <span style="color: #00aaaa">RECORD</span> <span style="color: #009999">1</span> ]<span style="color: #aaaaaa; font-style: italic">----------------------------------------------------------</span>
+id          | IF39599
+inventory   | A <span style="color: #009999">2</span> <span style="color: #009999">037</span>
+orig_legend | Serbie, Monastir Bitolj, Un Turc
+legend      | Un Turc
+<span style="color: #0000aa">location</span>    | Monastir (actuelle Bitola), Macédoine
+<span style="color: #00aaaa">date</span>        | mai <span style="color: #009999">1913</span>
+<span style="color: #009999">...</span>
+themes      | Habillement &gt; Habillement traditionnel,Etres humains &gt; Ho<span style="color: #009999">.</span>
+            |<span style="color: #009999">.</span>mme,Etres humains &gt; Portrait,Relations internationales &gt; <span style="color: #009999">.</span>
+            |<span style="color: #009999">.</span>Présence <span style="color: #FF0000; background-color: #FFAAAA">é</span>trangère
+<span style="color: #009999">...</span>
+collection  | Archives de la Planète
+<span style="color: #009999">...</span>
+</pre></div>
+
+<h1 id="regular-expression-based-splitting">Regular Expression based Splitting</h1>
+
+<p>You can see that the <em>themes</em> column contains several catagories for a
+single entry, separated with a coma. Within that coma separated list, we
+find another classification, this time separated with a greater than sign,
+for which looks like a hierarchical categorization of the themes.</p>
+
+<p>So this picture id <em>IF39599</em> actually is relevant to that series of themes:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>   id    |         category          |       subcategory        
+<span style="color: #aaaaaa; font-style: italic">---------+---------------------------+--------------------------</span>
+ IF39599 | Habillement               | Habillement traditionnel
+ IF39599 | Etres humains             | Homme
+ IF39599 | Etres humains             | Portrait
+ IF39599 | Relations internationales | Présence <span style="color: #FF0000; background-color: #FFAAAA">é</span>trangère
+(<span style="color: #009999">4</span> <span style="color: #0000aa">rows</span>)
+</pre></div>
+
+<p>Question is, how do we get that information? Also, is it possible to have an
+idea of the distribution of the whole data set against the categories
+embedded in the <em>themes</em> column?</p>
+
+<p>Given PostgreSQL, it is easy enough to achieve. First step, we are going to
+split the <em>themes</em> column against a regular expression:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> id, regexp_split_to_table(themes, <span style="color: #aa5500">&#39;,&#39;</span>)
+  <span style="color: #0000aa">from</span> opendata.archives_planete
+ <span style="color: #0000aa">where</span> id = <span style="color: #aa5500">&#39;IF39599&#39;</span>;
+</pre></div>
+
+<p>We get the following table:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>   id    |             regexp_split_to_table              
+<span style="color: #aaaaaa; font-style: italic">---------+------------------------------------------------</span>
+ IF39599 | Habillement &gt; Habillement traditionnel
+ IF39599 | Etres humains &gt; Homme
+ IF39599 | Etres humains &gt; Portrait
+ IF39599 | Relations internationales &gt; Présence <span style="color: #FF0000; background-color: #FFAAAA">é</span>trangère
+(<span style="color: #009999">4</span> <span style="color: #0000aa">rows</span>)
+</pre></div>
+
+<p>Now that we have a table with an entry per theme for the same document, we
+can further split each entry into the two-levels category that it looks
+like. We do that this time with <em>regexp_split_to_array</em> so as to retain the
+categories together:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> id,
+       regexp_split_to_array(
+         regexp_split_to_table(themes, <span style="color: #aa5500">&#39;,&#39;</span>),
+         <span style="color: #aa5500">&#39; &gt; &#39;</span>)
+       <span style="color: #0000aa">as</span> categories
+  <span style="color: #0000aa">from</span> opendata.archives_planete
+ <span style="color: #0000aa">where</span> id = <span style="color: #aa5500">&#39;IF39599&#39;</span>;
+</pre></div>
+
+<p>And now we have:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>   id    |                     categories                     
+<span style="color: #aaaaaa; font-style: italic">---------+----------------------------------------------------</span>
+ IF39599 | {Habillement,<span style="color: #aa5500">&quot;Habillement traditionnel&quot;</span>}
+ IF39599 | {<span style="color: #aa5500">&quot;Etres humains&quot;</span>,Homme}
+ IF39599 | {<span style="color: #aa5500">&quot;Etres humains&quot;</span>,Portrait}
+ IF39599 | {<span style="color: #aa5500">&quot;Relations internationales&quot;</span>,<span style="color: #aa5500">&quot;Présence étrangère&quot;</span>}
+(<span style="color: #009999">4</span> <span style="color: #0000aa">rows</span>)
+</pre></div>
+
+<p>We&rsquo;re almost there, for the content to be normalized we want to have the
+categories in their own separate columns, say <em>category</em> and <em>subcategory</em>:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">with</span> categories(id, categories) <span style="color: #0000aa">as</span>
+ (
+   <span style="color: #0000aa">select</span> id,
+          regexp_split_to_array(
+            regexp_split_to_table(themes, <span style="color: #aa5500">&#39;,&#39;</span>),
+            <span style="color: #aa5500">&#39; &gt; &#39;</span>)
+          <span style="color: #0000aa">as</span> categories
+     <span style="color: #0000aa">from</span> opendata.archives_planete
+ )
+ <span style="color: #0000aa">select</span> id,
+        categories[<span style="color: #009999">1</span>] <span style="color: #0000aa">as</span> category,
+        categories[<span style="color: #009999">2</span>] <span style="color: #0000aa">as</span> subcategory
+   <span style="color: #0000aa">from</span> categories
+  <span style="color: #0000aa">where</span> id = <span style="color: #aa5500">&#39;IF39599&#39;</span>;
+</pre></div>
+
+<p>And now we make sense of the Open Data:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>   id    |         category          |       subcategory        
+<span style="color: #aaaaaa; font-style: italic">---------+---------------------------+--------------------------</span>
+ IF39599 | Habillement               | Habillement traditionnel
+ IF39599 | Etres humains             | Homme
+ IF39599 | Etres humains             | Portrait
+ IF39599 | Relations internationales | Présence <span style="color: #FF0000; background-color: #FFAAAA">é</span>trangère
+(<span style="color: #009999">4</span> <span style="color: #0000aa">rows</span>)
+</pre></div>
+
+<p>As a side note, cleaning up a data set after you&rsquo;ve imported it into
+PostgreSQL makes the difference between the classic <em>ETL</em> jobs (Extract,
+Transform, Load) and the powerful <em>ELT</em> jobs (Extract, Load, Transform)
+where you can transform your data using a data processing language, SQL.</p>
+
+<h1 id="grouping-sets-cube-rollup">Grouping Sets, Cube, Rollup</h1>
+
+<p>So, now that we know how to have a clean view of the data set, let&rsquo;s inquire
+about the categories used in our dataset:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">with</span> categories(id, categories) <span style="color: #0000aa">as</span>
+  (
+    <span style="color: #0000aa">select</span> id,
+           regexp_split_to_array(
+             regexp_split_to_table(themes, <span style="color: #aa5500">&#39;,&#39;</span>),
+             <span style="color: #aa5500">&#39; &gt; &#39;</span>)
+           <span style="color: #0000aa">as</span> categories
+      <span style="color: #0000aa">from</span> opendata.archives_planete
+  )
+  <span style="color: #0000aa">select</span> categories[<span style="color: #009999">1</span>] <span style="color: #0000aa">as</span> category,
+         categories[<span style="color: #009999">2</span>] <span style="color: #0000aa">as</span> subcategory,
+         <span style="color: #0000aa">count</span>(*)
+    <span style="color: #0000aa">from</span> categories
+<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> <span style="color: #0000aa">rollup</span>(category, subcategory);
+</pre></div>
+
+<p>That query returns 175 rows here, so here&rsquo;s an extract only:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>         category       |          subcategory         | count 
+<span style="color: #aaaaaa; font-style: italic">------------------------+------------------------------+-------</span>
+ Activite <span style="color: #FF0000; background-color: #FFAAAA">é</span>conomique    | Agriculture / <span style="color: #FF0000; background-color: #FFAAAA">é</span>levage        |   <span style="color: #009999">138</span>
+ Activite <span style="color: #FF0000; background-color: #FFAAAA">é</span>conomique    | Artisanat                    |    <span style="color: #009999">81</span>
+ Activite <span style="color: #FF0000; background-color: #FFAAAA">é</span>conomique    | Banque / finances            |     <span style="color: #009999">2</span>
+ Activite <span style="color: #FF0000; background-color: #FFAAAA">é</span>conomique    | Boutique / magasin           |    <span style="color: #009999">39</span>
+ Activite <span style="color: #FF0000; background-color: #FFAAAA">é</span>conomique    | Commerce ambulant            |     <span style="color: #009999">5</span>
+ Activite <span style="color: #FF0000; background-color: #FFAAAA">é</span>conomique    | Commerce extérieur           |     <span style="color: #009999">1</span>
+ Activite <span style="color: #FF0000; background-color: #FFAAAA">é</span>conomique    | Cueillette / chasse          |     <span style="color: #009999">9</span>
+<span style="color: #009999">...</span>
+ Art                    | Peinture                     |    <span style="color: #009999">15</span>
+ Art                    | Renaissance                  |    <span style="color: #009999">52</span>
+ Art                    | Sculpture                    |    <span style="color: #009999">87</span>
+ Art                    | Théâtre                      |     <span style="color: #009999">7</span>
+ Art                    | <span style="color: #FF0000; background-color: #FFAAAA">¤</span>                            |   <span style="color: #009999">333</span>
+<span style="color: #009999">...</span>
+ Habillement            | Uniforme militaire           |    <span style="color: #009999">18</span>
+ Habillement            | Uniforme scolaire            |     <span style="color: #009999">1</span>
+ Habillement            | Vêtement de travail          |     <span style="color: #009999">3</span>
+ Habillement            | <span style="color: #FF0000; background-color: #FFAAAA">¤</span>                            |   <span style="color: #009999">163</span>
+ Habitat / Architecture | Architecture civile publique |    <span style="color: #009999">37</span>
+ Habitat / Architecture | Architecture commerciale     |    <span style="color: #009999">24</span>
+ Habitat / Architecture | Architecture de jardin       |    <span style="color: #009999">31</span>
+<span style="color: #009999">...</span>
+ Vie quotidienne        | Vie domestique               |     <span style="color: #009999">8</span>
+ Vie quotidienne        | Vie rurale                   |     <span style="color: #009999">5</span>
+ Vie quotidienne        | <span style="color: #FF0000; background-color: #FFAAAA">¤</span>                            |    <span style="color: #009999">64</span>
+ <span style="color: #FF0000; background-color: #FFAAAA">¤</span>                      | <span style="color: #FF0000; background-color: #FFAAAA">¤</span>                            |  <span style="color: #009999">4449</span>
+(<span style="color: #009999">175</span> <span style="color: #0000aa">rows</span>)
+</pre></div>
+
+<p>Each <em>subcategory</em> appearing only within the same <em>category</em> each time,
+we&rsquo;ve choosen to do a <em>roll up</em> analysis of our data set here. Other
+<em>grouping sets</em> are available, such as the <em>cube</em>, or manual editing of the
+dimensions you&rsquo;re interested into.</p>
+
+<p>In a <em>ELT</em> assignment, we would create a new <em>categories</em> table containing
+each entry we saw in the rollup query only once, as a catalog, and a
+association table in between the main <em>opendata.archives_planete</em> table and
+this categories catalog, where each archive entry may have several
+categories and subcategories assigned and each category of course may have
+several archive entries assigned.</p>
+
+<p>Here, the topic is about text function processing in PostgreSQL, so we just
+run the query against the base data set.</p>
+
+<h1 id="conclusion">Conclusion</h1>
+
+
+
+
+<div class="figure fig25 right dim-margin" >
+  
+    <img class="fig-img" src="/img/old/sql-logo.png"  alt="PostgreSQL is YeSQL">
+  
+   
+    <span class="caption">PostgreSQL is YeSQL</span>
+  
+</div>
+
+
+<p>Next time you have to deal with a data set that needs cleaning before you
+can work correctly with it, think about the processing you have to apply to
+it, and which tool is best for the job. It might be that you need to use
+your application&rsquo;s object model to process the data, in which case a
+traditional <em>ETL</em> job with transformations using the application&rsquo;s code as a
+library might be the best solution. It might also be easier and faster to
+transform the data using SQL, once loaded in PostgreSQL. It&rsquo;s called an
+<em>ELT</em>, and you can do it too!</p>
+              
+            </div>
+          </div>
+          <div id="post-footer" class="post-footer main-content-wrap">
+            
+              
+                
+                
+                  <div class="post-footer-tags">
+                    <span class="text-color-light text-small"></span><br/>
+                    
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/postgresql/">PostgreSQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/yesql/">YeSQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/etl/">ETL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/elt/">ELT</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/sql/">SQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/grouping-sets/">Grouping Sets</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/cube/">Cube</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/rollup/">Rollup</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/regex/">regex</a>
+
+                  </div>
+                
+              
+            
+            <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    <script async id="_ck_218061" src="https://forms.convertkit.com/218061?v=6"></script>
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2017/08/sql-regression-tests/" data-tooltip="SQL Regression Tests">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f08%2fregular-expressions-and-grouping-sets%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f08%2fregular-expressions-and-grouping-sets%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=Regular%20Expressions%20and%20Grouping%20Sets with @tapoueh: http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f08%2fregular-expressions-and-grouping-sets%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+            
+              
+                <div id="disqus_thread">
+  <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+              
+            
+          </div>
+        </article>
+        <footer id="footer" class="main-content-wrap">
+  <span class="copyrights">
+    &copy; 2017 Dimitri Fontaine. 
+  </span>
+</footer>
+
+      </div>
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="2">
+        <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    <script async id="_ck_218061" src="https://forms.convertkit.com/218061?v=6"></script>
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2017/08/sql-regression-tests/" data-tooltip="SQL Regression Tests">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f08%2fregular-expressions-and-grouping-sets%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f08%2fregular-expressions-and-grouping-sets%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=Regular%20Expressions%20and%20Grouping%20Sets with @tapoueh: http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f08%2fregular-expressions-and-grouping-sets%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+      </div>
+      <div id="share-options-bar" class="share-options-bar" data-behavior="2">
+  <ul class="share-options">
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f08%2fregular-expressions-and-grouping-sets%2f">
+        <i class="fa fa-google-plus"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f08%2fregular-expressions-and-grouping-sets%2f">
+        <i class="fa fa-facebook-official"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=Regular%20Expressions%20and%20Grouping%20Sets with @tapoueh: http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f08%2fregular-expressions-and-grouping-sets%2f">
+        <i class="fa fa-twitter"></i><span></span>
+      </a>
+    </li>
+  </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
+    </div>
+    
+    <div id="about">
+  <div id="about-card">
+    <div id="about-btn-close">
+      <i class="fa fa-remove"></i>
+    </div>
+    
+      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+    
+    <h4 id="about-card-name">Dimitri Fontaine</h4>
+    
+      <div id="about-card-bio">PostgreSQL Major Contributor</div>
+    
+    
+      <div id="about-card-job">
+        <i class="fa fa-briefcase"></i>
+        <br/>
+        Open Source Software Engineer
+      </div>
+    
+    
+      <div id="about-card-location">
+        <i class="fa fa-map-marker"></i>
+        <br/>
+        France
+      </div>
+    
+  </div>
+</div>
+
+    <div id="algolia-search-modal" class="modal-container">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="close-button"><i class="fa fa-close"></i></span>
+      <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+        <span class="searchby-algolia-text text-color-light text-small">by</span>
+        <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+      </a>
+      <i class="search-icon fa fa-search"></i>
+      <form id="algolia-search-form">
+        <input type="text" id="algolia-search-input" name="search"
+          class="form-control input--large search-input" placeholder="" />
+      </form>
+    </div>
+    <div class="modal-body">
+      <div class="no-result text-color-light text-center"></div>
+      <div class="results">
+        
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/08/regular-expressions-and-grouping-sets/">
+                <h3 class="media-heading">Regular Expressions and Grouping Sets</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Aug 8, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>There&rsquo;s a very rich set of PostgreSQL functions to process text, you can
+find them all at
+the
+<a href="https://www.postgresql.org/docs/current/static/functions-string.html">String Functions and Operators</a> documentation
+chapter, with functions such as <em>overlay</em>, <em>substring</em>, <em>position</em> or
+<em>trim</em>. Or aggregates such as <em>string_agg</em>. And then <em>regular expression</em>
+functions, including the very powerful <em>regexp_split_to_table</em>.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/08/sql-regression-tests/">
+                <h3 class="media-heading">SQL Regression Tests</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Aug 8, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>In a previous article here we
+saw <a href="/blog/2017/06/how-to-write-sql/">How to Write SQL</a> in your application
+code. The main idea in that article is to maintain your queries in separate
+SQL files, where it&rsquo;s easier to maintain them. In particular if you want to
+be able to test them again in production, and when you have to work and
+rewrite queries.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/07/from-mysql-to-postgresql/">
+                <h3 class="media-heading">from MySQL to PostgreSQL</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jul 7, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Today
+<a href="https://github.com/dimitri/pgloader/releases/tag/v3.4.1">pgloader v3.4.1</a>
+is released and available! This new release comes with 110 commits as show
+in
+<a href="https://github.com/dimitri/pgloader/compare/v3.3.2...v3.4.1">github compare view</a>.</p>
+
+<p>This release of <a href="http://pgloader.io">pgloader</a> is following the tradition of
+simplifying things for users, or if you allow me to
+quote <a href="https://en.wikiquote.org/wiki/Alan_Kay">Alan Kay</a>, I believe that if
+<em>simple things should be simple, complex things should be possible.</em></p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/07/playing-with-unicode/">
+                <h3 class="media-heading">Playing with Unicode</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jul 7, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>The reason why I like Unicode a lot is because it allows me to code in text
+based environments and still have nice output. Today, we&rsquo;re going to play
+with
+<a href="https://en.wikipedia.org/wiki/Regional_Indicator_Symbol">Regional Indicator Symbol</a>,
+which is implemented as a Unicode combinaison of letters from 🇦 to 🇿. For
+instance, if you display 🇫 then 🇷 concatenated together, you get 🇫🇷. Let&rsquo;s
+try that from our <a href="https://www.postgresql.org/">PostgreSQL</a> prompt!</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/06/postgresql-and-the-calendar/">
+                <h3 class="media-heading">PostgreSQL and the calendar</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>The modern calendar is a trap for the young engineer&rsquo;s mind. We deal with
+the calendar on a daily basis and until exposed to its insanity it&rsquo;s rather
+common to think that calendar based computations are easy. That&rsquo;s until
+you&rsquo;ve tried to do it once. A very good read about how the current calendar
+came to be the way it is now is Erik&rsquo;s
+Naggum <a href="http://naggum.no/lugm-time.html">The Long, Painful History of Time</a>.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/06/sql-and-business-logic/">
+                <h3 class="media-heading">SQL and Business Logic</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Business logic is <em>supposed to be</em> the part of the application where you
+deal with customer or user facing decisions and computations. It is often
+argued that this part should be well separated from the rest of the
+technical infrastructure of your code. Of course, SQL and relational
+database design is meant to support your business cases (or user stories),
+so then we can ask ourselves if SQL should be part of your business logic
+implementation. Or actually, how much of your business logic should be SQL?</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/06/exploring-a-data-set-in-sql/">
+                <h3 class="media-heading">Exploring a Data Set in SQL</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Sometimes you need to dive in an existing data set that you know very little
+about. Let&rsquo;s say we&rsquo;ve been lucky to have had a high level description of
+the business case covered by a database, and then access to it. Our next
+step is figuring out data organisation, content and quality. Our tool box:
+<em>the world&rsquo;s most advanced open source
+database</em>, <a href="https://www.postgresql.org">PostgreSQL</a>, and its <em>Structured
+Query Language</em>, SQL.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/06/how-to-write-sql/">
+                <h3 class="media-heading">How to Write SQL</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p><a href="https://twitter.com/krisajenkins">Kris Jenkins</a> cooked up a very nice way
+to embed SQL in your
+code: <a href="https://github.com/krisajenkins/yesql">YeSQL for Clojure</a>. The main
+idea is that you should be writing your SQL queries in <code>.sql</code> files in your
+code repository and maintain them there.</p>
+
+<p>The idea is very good and it is now possible to find alternative
+implementations of the <a href="https://clojure.org">Clojure</a> <em>yesql</em> library in
+other languages. Today, we are going to have a look at one of them for
+the <a href="https://www.python.org">python</a> programming
+language: <a href="https://github.com/honza/anosql">anosql</a>.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/05/find-the-missing-integer/">
+                <h3 class="media-heading">Find The Missing Integer</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>A recent interview question that I had to review was spelled like this:</p>
+
+<blockquote>
+<p>Find missing int element into array 1..100</p>
+</blockquote>
+
+<p>Of course at first read I got it wrong, you have only one integer to look
+for into the array. So while the obvious idea was to apply classic <em>sorting</em>
+techniques and minimize array traversal to handle complexity (time and
+space), it turns out there&rsquo;s a much simpler way to do it if you remember
+your math lessons from younger. But is it that much simpler?</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2016/04/pgconf-us-2016/">
+                <h3 class="media-heading">PGConf US 2016</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2016
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p><a href="https://www.pgconf.us/conferences/2016">PostgreSQL Conference US</a> took
+place in New York City and I had the pleasure to be a speaker there. I
+presented there a talk about why <em>You’d Better Have Tested Backups</em>. The
+important bit is that backups are not interesting, recoveries are. Also the
+only way to make sure a backup is successful is to be able to use it for
+recovery.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+      </div>
+    </div>
+    <div class="modal-footer">
+      <p class="results-count text-medium"
+         data-message-zero=""
+         data-message-one=""
+         data-message-other="">
+         239 posts found
+      </p>
+    </div>
+  </div>
+</div>
+    
+  
+    
+    <div id="cover" style="background-image:url('http://tapoueh.org/images/mayan-calendar.jpg');"></div>
+  
+
+
+    
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.8.0/highlight.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.js"></script>
+
+
+<script src="/js/script-wl33z0n6ocaypepiqrazthtivfrliqijej4rq8ek8gvrv1awftmgjuv8k4zc.min.js"></script>
+
+<script>
+$(document).ready(function() {
+  hljs.configure({ classPrefix: '', useBR: false });
+  $('pre.code-highlight').each(function(i, block) {
+    var code = "";
+    hljs.highlightAuto(block.innerText).value.split(/\r\n|\r|\n/).forEach(function(line) {
+      code += "<span class=\"line\">" + line + "</span><br>";
+    });
+    if (code.length > 0) {
+      block.innerHTML = code;  
+    }
+  });
+  $('pre > code').each(function(i, block) {
+    $(this).addClass('codeblock');
+    hljs.highlightBlock(block);
+  });
+});
+</script>
+
+  
+    
+      <script>
+        var disqus_config = function () {
+          this.page.url = 'http:\/\/tapoueh.org\/blog\/2017\/08\/regular-expressions-and-grouping-sets\/';
+          
+            this.page.identifier = '\/blog\/2017\/08\/regular-expressions-and-grouping-sets\/'
+          
+        };
+        (function() {
+          
+          
+          if (window.location.hostname == "localhost") {
+            return;
+          }
+          var d = document, s = d.createElement('script');
+          var disqus_shortname = 'tapoueh';
+          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+          s.setAttribute('data-timestamp', +new Date());
+          (d.head || d.body).appendChild(s);
+        })();
+      </script>
+    
+  
+
+
+
+
+
+    
+  </body>
+</html>
+
