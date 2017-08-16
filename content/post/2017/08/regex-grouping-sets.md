@@ -49,21 +49,20 @@ table opendata.archives_planete limit 1;
 And we get the following sample data, all in French (but it doesn't matter
 very much):
 
-~~~ psql
--[ RECORD 1 ]----------------------------------------------------------
-id          | IF39599
-inventory   | A 2 037
-orig_legend | Serbie, Monastir Bitolj, Un Turc
-legend      | Un Turc
-location    | Monastir (actuelle Bitola), Macédoine
-date        | mai 1913
+~~~
+─[ RECORD 1 ]──────────────────────────────────────────────
+id          │ IF39599
+inventory   │ A 2 037
+orig_legend │ Serbie, Monastir Bitolj, Un Turc
+legend      │ Un Turc
+location    │ Monastir (actuelle Bitola), Macédoine
+date        │ mai 1913
 ...
-themes      | Habillement > Habillement traditionnel,Etres humains > Ho.
-            |.mme,Etres humains > Portrait,Relations internationales > .
-            |.Présence étrangère
+themes      │ Habillement > Habillement traditionnel,Etres …
+            │…humains > Homme,Etres humains > Portrait,Rela…
+            │…tions internationales > Présence étrangère
 ...
-collection  | Archives de la Planète
-...
+collection  │ Archives de la Planète
 ~~~
 
 # Regular Expression based Splitting
@@ -75,13 +74,13 @@ for which looks like a hierarchical categorization of the themes.
 
 So this picture id *IF39599* actually is relevant to that series of themes:
 
-~~~ psql
-   id    |         category          |       subcategory        
----------+---------------------------+--------------------------
- IF39599 | Habillement               | Habillement traditionnel
- IF39599 | Etres humains             | Homme
- IF39599 | Etres humains             | Portrait
- IF39599 | Relations internationales | Présence étrangère
+~~~
+   id    │         category          │       subcategory        
+═════════╪═══════════════════════════╪══════════════════════════
+ IF39599 │ Habillement               │ Habillement traditionnel
+ IF39599 │ Etres humains             │ Homme
+ IF39599 │ Etres humains             │ Portrait
+ IF39599 │ Relations internationales │ Présence étrangère
 (4 rows)
 ~~~
 
@@ -100,13 +99,13 @@ select id, regexp_split_to_table(themes, ',')
 
 We get the following table:
 
-~~~ psql
-   id    |             regexp_split_to_table              
----------+------------------------------------------------
- IF39599 | Habillement > Habillement traditionnel
- IF39599 | Etres humains > Homme
- IF39599 | Etres humains > Portrait
- IF39599 | Relations internationales > Présence étrangère
+~~~
+   id    │             regexp_split_to_table              
+═════════╪════════════════════════════════════════════════
+ IF39599 │ Habillement > Habillement traditionnel
+ IF39599 │ Etres humains > Homme
+ IF39599 │ Etres humains > Portrait
+ IF39599 │ Relations internationales > Présence étrangère
 (4 rows)
 ~~~
 
@@ -127,13 +126,13 @@ select id,
 
 And now we have:
 
-~~~ psql
-   id    |                     categories                     
----------+----------------------------------------------------
- IF39599 | {Habillement,"Habillement traditionnel"}
- IF39599 | {"Etres humains",Homme}
- IF39599 | {"Etres humains",Portrait}
- IF39599 | {"Relations internationales","Présence étrangère"}
+~~~
+   id    │                     categories                     
+═════════╪════════════════════════════════════════════════════
+ IF39599 │ {Habillement,"Habillement traditionnel"}
+ IF39599 │ {"Etres humains",Homme}
+ IF39599 │ {"Etres humains",Portrait}
+ IF39599 │ {"Relations internationales","Présence étrangère"}
 (4 rows)
 ~~~
 
@@ -159,13 +158,13 @@ with categories(id, categories) as
 
 And now we make sense of the Open Data:
 
-~~~ psql
-   id    |         category          |       subcategory        
----------+---------------------------+--------------------------
- IF39599 | Habillement               | Habillement traditionnel
- IF39599 | Etres humains             | Homme
- IF39599 | Etres humains             | Portrait
- IF39599 | Relations internationales | Présence étrangère
+~~~
+   id    │         category          │       subcategory        
+═════════╪═══════════════════════════╪══════════════════════════
+ IF39599 │ Habillement               │ Habillement traditionnel
+ IF39599 │ Etres humains             │ Homme
+ IF39599 │ Etres humains             │ Portrait
+ IF39599 │ Relations internationales │ Présence étrangère
 (4 rows)
 ~~~
 
@@ -198,35 +197,35 @@ group by rollup(category, subcategory);
 
 That query returns 175 rows here, so here's an extract only:
 
-~~~ psql
-         category       |          subcategory         | count 
-------------------------+------------------------------+-------
- Activite économique    | Agriculture / élevage        |   138
- Activite économique    | Artisanat                    |    81
- Activite économique    | Banque / finances            |     2
- Activite économique    | Boutique / magasin           |    39
- Activite économique    | Commerce ambulant            |     5
- Activite économique    | Commerce extérieur           |     1
- Activite économique    | Cueillette / chasse          |     9
+~~~
+         category       │          subcategory         │ count 
+════════════════════════╪══════════════════════════════╪═══════
+ Activite économique    │ Agriculture / élevage        │   138
+ Activite économique    │ Artisanat                    │    81
+ Activite économique    │ Banque / finances            │     2
+ Activite économique    │ Boutique / magasin           │    39
+ Activite économique    │ Commerce ambulant            │     5
+ Activite économique    │ Commerce extérieur           │     1
+ Activite économique    │ Cueillette / chasse          │     9
 ...
- Art                    | Peinture                     |    15
- Art                    | Renaissance                  |    52
- Art                    | Sculpture                    |    87
- Art                    | Théâtre                      |     7
- Art                    | ¤                            |   333
+ Art                    │ Peinture                     │    15
+ Art                    │ Renaissance                  │    52
+ Art                    │ Sculpture                    │    87
+ Art                    │ Théâtre                      │     7
+ Art                    │ ¤                            │   333
 ...
- Habillement            | Uniforme militaire           |    18
- Habillement            | Uniforme scolaire            |     1
- Habillement            | Vêtement de travail          |     3
- Habillement            | ¤                            |   163
- Habitat / Architecture | Architecture civile publique |    37
- Habitat / Architecture | Architecture commerciale     |    24
- Habitat / Architecture | Architecture de jardin       |    31
+ Habillement            │ Uniforme militaire           │    18
+ Habillement            │ Uniforme scolaire            │     1
+ Habillement            │ Vêtement de travail          │     3
+ Habillement            │ ¤                            │   163
+ Habitat / Architecture │ Architecture civile publique │    37
+ Habitat / Architecture │ Architecture commerciale     │    24
+ Habitat / Architecture │ Architecture de jardin       │    31
 ...
- Vie quotidienne        | Vie domestique               |     8
- Vie quotidienne        | Vie rurale                   |     5
- Vie quotidienne        | ¤                            |    64
- ¤                      | ¤                            |  4449
+ Vie quotidienne        │ Vie domestique               │     8
+ Vie quotidienne        │ Vie rurale                   │     5
+ Vie quotidienne        │ ¤                            │    64
+ ¤                      │ ¤                            │  4449
 (175 rows)
 ~~~
 

@@ -324,21 +324,21 @@ loaded looks like this:</p>
 
 <p>And we get the following sample data, all in French (but it doesn&rsquo;t matter
 very much):</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>-[ <span style="color: #00aaaa">RECORD</span> <span style="color: #009999">1</span> ]<span style="color: #aaaaaa; font-style: italic">----------------------------------------------------------</span>
-id          | IF39599
-inventory   | A <span style="color: #009999">2</span> <span style="color: #009999">037</span>
-orig_legend | Serbie, Monastir Bitolj, Un Turc
-legend      | Un Turc
-<span style="color: #0000aa">location</span>    | Monastir (actuelle Bitola), Macédoine
-<span style="color: #00aaaa">date</span>        | mai <span style="color: #009999">1913</span>
-<span style="color: #009999">...</span>
-themes      | Habillement &gt; Habillement traditionnel,Etres humains &gt; Ho<span style="color: #009999">.</span>
-            |<span style="color: #009999">.</span>mme,Etres humains &gt; Portrait,Relations internationales &gt; <span style="color: #009999">.</span>
-            |<span style="color: #009999">.</span>Présence <span style="color: #FF0000; background-color: #FFAAAA">é</span>trangère
-<span style="color: #009999">...</span>
-collection  | Archives de la Planète
-<span style="color: #009999">...</span>
-</pre></div>
+
+<pre><code>─[ RECORD 1 ]──────────────────────────────────────────────
+id          │ IF39599
+inventory   │ A 2 037
+orig_legend │ Serbie, Monastir Bitolj, Un Turc
+legend      │ Un Turc
+location    │ Monastir (actuelle Bitola), Macédoine
+date        │ mai 1913
+...
+themes      │ Habillement &gt; Habillement traditionnel,Etres …
+            │…humains &gt; Homme,Etres humains &gt; Portrait,Rela…
+            │…tions internationales &gt; Présence étrangère
+...
+collection  │ Archives de la Planète
+</code></pre>
 
 <h1 id="regular-expression-based-splitting">Regular Expression based Splitting</h1>
 
@@ -348,14 +348,15 @@ find another classification, this time separated with a greater than sign,
 for which looks like a hierarchical categorization of the themes.</p>
 
 <p>So this picture id <em>IF39599</em> actually is relevant to that series of themes:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>   id    |         category          |       subcategory        
-<span style="color: #aaaaaa; font-style: italic">---------+---------------------------+--------------------------</span>
- IF39599 | Habillement               | Habillement traditionnel
- IF39599 | Etres humains             | Homme
- IF39599 | Etres humains             | Portrait
- IF39599 | Relations internationales | Présence <span style="color: #FF0000; background-color: #FFAAAA">é</span>trangère
-(<span style="color: #009999">4</span> <span style="color: #0000aa">rows</span>)
-</pre></div>
+
+<pre><code>   id    │         category          │       subcategory        
+═════════╪═══════════════════════════╪══════════════════════════
+ IF39599 │ Habillement               │ Habillement traditionnel
+ IF39599 │ Etres humains             │ Homme
+ IF39599 │ Etres humains             │ Portrait
+ IF39599 │ Relations internationales │ Présence étrangère
+(4 rows)
+</code></pre>
 
 <p>Question is, how do we get that information? Also, is it possible to have an
 idea of the distribution of the whole data set against the categories
@@ -369,14 +370,15 @@ split the <em>themes</em> column against a regular expression:</p>
 </pre></div>
 
 <p>We get the following table:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>   id    |             regexp_split_to_table              
-<span style="color: #aaaaaa; font-style: italic">---------+------------------------------------------------</span>
- IF39599 | Habillement &gt; Habillement traditionnel
- IF39599 | Etres humains &gt; Homme
- IF39599 | Etres humains &gt; Portrait
- IF39599 | Relations internationales &gt; Présence <span style="color: #FF0000; background-color: #FFAAAA">é</span>trangère
-(<span style="color: #009999">4</span> <span style="color: #0000aa">rows</span>)
-</pre></div>
+
+<pre><code>   id    │             regexp_split_to_table              
+═════════╪════════════════════════════════════════════════
+ IF39599 │ Habillement &gt; Habillement traditionnel
+ IF39599 │ Etres humains &gt; Homme
+ IF39599 │ Etres humains &gt; Portrait
+ IF39599 │ Relations internationales &gt; Présence étrangère
+(4 rows)
+</code></pre>
 
 <p>Now that we have a table with an entry per theme for the same document, we
 can further split each entry into the two-levels category that it looks
@@ -392,14 +394,15 @@ categories together:</p>
 </pre></div>
 
 <p>And now we have:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>   id    |                     categories                     
-<span style="color: #aaaaaa; font-style: italic">---------+----------------------------------------------------</span>
- IF39599 | {Habillement,<span style="color: #aa5500">&quot;Habillement traditionnel&quot;</span>}
- IF39599 | {<span style="color: #aa5500">&quot;Etres humains&quot;</span>,Homme}
- IF39599 | {<span style="color: #aa5500">&quot;Etres humains&quot;</span>,Portrait}
- IF39599 | {<span style="color: #aa5500">&quot;Relations internationales&quot;</span>,<span style="color: #aa5500">&quot;Présence étrangère&quot;</span>}
-(<span style="color: #009999">4</span> <span style="color: #0000aa">rows</span>)
-</pre></div>
+
+<pre><code>   id    │                     categories                     
+═════════╪════════════════════════════════════════════════════
+ IF39599 │ {Habillement,&quot;Habillement traditionnel&quot;}
+ IF39599 │ {&quot;Etres humains&quot;,Homme}
+ IF39599 │ {&quot;Etres humains&quot;,Portrait}
+ IF39599 │ {&quot;Relations internationales&quot;,&quot;Présence étrangère&quot;}
+(4 rows)
+</code></pre>
 
 <p>We&rsquo;re almost there, for the content to be normalized we want to have the
 categories in their own separate columns, say <em>category</em> and <em>subcategory</em>:</p>
@@ -420,14 +423,15 @@ categories in their own separate columns, say <em>category</em> and <em>subcateg
 </pre></div>
 
 <p>And now we make sense of the Open Data:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>   id    |         category          |       subcategory        
-<span style="color: #aaaaaa; font-style: italic">---------+---------------------------+--------------------------</span>
- IF39599 | Habillement               | Habillement traditionnel
- IF39599 | Etres humains             | Homme
- IF39599 | Etres humains             | Portrait
- IF39599 | Relations internationales | Présence <span style="color: #FF0000; background-color: #FFAAAA">é</span>trangère
-(<span style="color: #009999">4</span> <span style="color: #0000aa">rows</span>)
-</pre></div>
+
+<pre><code>   id    │         category          │       subcategory        
+═════════╪═══════════════════════════╪══════════════════════════
+ IF39599 │ Habillement               │ Habillement traditionnel
+ IF39599 │ Etres humains             │ Homme
+ IF39599 │ Etres humains             │ Portrait
+ IF39599 │ Relations internationales │ Présence étrangère
+(4 rows)
+</code></pre>
 
 <p>As a side note, cleaning up a data set after you&rsquo;ve imported it into
 PostgreSQL makes the difference between the classic <em>ETL</em> jobs (Extract,
@@ -455,36 +459,37 @@ about the categories used in our dataset:</p>
 </pre></div>
 
 <p>That query returns 175 rows here, so here&rsquo;s an extract only:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>         category       |          subcategory         | count 
-<span style="color: #aaaaaa; font-style: italic">------------------------+------------------------------+-------</span>
- Activite <span style="color: #FF0000; background-color: #FFAAAA">é</span>conomique    | Agriculture / <span style="color: #FF0000; background-color: #FFAAAA">é</span>levage        |   <span style="color: #009999">138</span>
- Activite <span style="color: #FF0000; background-color: #FFAAAA">é</span>conomique    | Artisanat                    |    <span style="color: #009999">81</span>
- Activite <span style="color: #FF0000; background-color: #FFAAAA">é</span>conomique    | Banque / finances            |     <span style="color: #009999">2</span>
- Activite <span style="color: #FF0000; background-color: #FFAAAA">é</span>conomique    | Boutique / magasin           |    <span style="color: #009999">39</span>
- Activite <span style="color: #FF0000; background-color: #FFAAAA">é</span>conomique    | Commerce ambulant            |     <span style="color: #009999">5</span>
- Activite <span style="color: #FF0000; background-color: #FFAAAA">é</span>conomique    | Commerce extérieur           |     <span style="color: #009999">1</span>
- Activite <span style="color: #FF0000; background-color: #FFAAAA">é</span>conomique    | Cueillette / chasse          |     <span style="color: #009999">9</span>
-<span style="color: #009999">...</span>
- Art                    | Peinture                     |    <span style="color: #009999">15</span>
- Art                    | Renaissance                  |    <span style="color: #009999">52</span>
- Art                    | Sculpture                    |    <span style="color: #009999">87</span>
- Art                    | Théâtre                      |     <span style="color: #009999">7</span>
- Art                    | <span style="color: #FF0000; background-color: #FFAAAA">¤</span>                            |   <span style="color: #009999">333</span>
-<span style="color: #009999">...</span>
- Habillement            | Uniforme militaire           |    <span style="color: #009999">18</span>
- Habillement            | Uniforme scolaire            |     <span style="color: #009999">1</span>
- Habillement            | Vêtement de travail          |     <span style="color: #009999">3</span>
- Habillement            | <span style="color: #FF0000; background-color: #FFAAAA">¤</span>                            |   <span style="color: #009999">163</span>
- Habitat / Architecture | Architecture civile publique |    <span style="color: #009999">37</span>
- Habitat / Architecture | Architecture commerciale     |    <span style="color: #009999">24</span>
- Habitat / Architecture | Architecture de jardin       |    <span style="color: #009999">31</span>
-<span style="color: #009999">...</span>
- Vie quotidienne        | Vie domestique               |     <span style="color: #009999">8</span>
- Vie quotidienne        | Vie rurale                   |     <span style="color: #009999">5</span>
- Vie quotidienne        | <span style="color: #FF0000; background-color: #FFAAAA">¤</span>                            |    <span style="color: #009999">64</span>
- <span style="color: #FF0000; background-color: #FFAAAA">¤</span>                      | <span style="color: #FF0000; background-color: #FFAAAA">¤</span>                            |  <span style="color: #009999">4449</span>
-(<span style="color: #009999">175</span> <span style="color: #0000aa">rows</span>)
-</pre></div>
+
+<pre><code>         category       │          subcategory         │ count 
+════════════════════════╪══════════════════════════════╪═══════
+ Activite économique    │ Agriculture / élevage        │   138
+ Activite économique    │ Artisanat                    │    81
+ Activite économique    │ Banque / finances            │     2
+ Activite économique    │ Boutique / magasin           │    39
+ Activite économique    │ Commerce ambulant            │     5
+ Activite économique    │ Commerce extérieur           │     1
+ Activite économique    │ Cueillette / chasse          │     9
+...
+ Art                    │ Peinture                     │    15
+ Art                    │ Renaissance                  │    52
+ Art                    │ Sculpture                    │    87
+ Art                    │ Théâtre                      │     7
+ Art                    │ ¤                            │   333
+...
+ Habillement            │ Uniforme militaire           │    18
+ Habillement            │ Uniforme scolaire            │     1
+ Habillement            │ Vêtement de travail          │     3
+ Habillement            │ ¤                            │   163
+ Habitat / Architecture │ Architecture civile publique │    37
+ Habitat / Architecture │ Architecture commerciale     │    24
+ Habitat / Architecture │ Architecture de jardin       │    31
+...
+ Vie quotidienne        │ Vie domestique               │     8
+ Vie quotidienne        │ Vie rurale                   │     5
+ Vie quotidienne        │ ¤                            │    64
+ ¤                      │ ¤                            │  4449
+(175 rows)
+</code></pre>
 
 <p>Each <em>subcategory</em> appearing only within the same <em>category</em> each time,
 we&rsquo;ve choosen to do a <em>roll up</em> analysis of our data set here. Other
@@ -559,7 +564,9 @@ transform the data using SQL, once loaded in PostgreSQL. It&rsquo;s called an
             
             <div class="post-actions-wrap">
   <div class="post-footer-tags">
-    <script async id="_ck_218061" src="https://forms.convertkit.com/218061?v=6"></script>
+    
+    <script async id="_ck_252762" src="https://forms.convertkit.com/252762?v=6"></script>
+    
   </div>
   <nav>
     <ul class="post-actions post-action-nav">
@@ -643,7 +650,9 @@ transform the data using SQL, once loaded in PostgreSQL. It&rsquo;s called an
       <div id="bottom-bar" class="post-bottom-bar" data-behavior="2">
         <div class="post-actions-wrap">
   <div class="post-footer-tags">
-    <script async id="_ck_218061" src="https://forms.convertkit.com/218061?v=6"></script>
+    
+    <script async id="_ck_252762" src="https://forms.convertkit.com/252762?v=6"></script>
+    
   </div>
   <nav>
     <ul class="post-actions post-action-nav">
