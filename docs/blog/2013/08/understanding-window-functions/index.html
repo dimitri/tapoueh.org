@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.20.7">
+    <meta name="generator" content="Hugo 0.26">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Understanding Window Functions</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -218,7 +218,7 @@ ga('send', 'pageview');
 
   <body>
     <div id="blog">
-      <header id="header" data-behavior="2">
+      <header id="header" data-behavior="5">
   <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
   <div class="header-title">
     <a class="header-title-link" href="/">Dimitri Fontaine, PostgreSQL Expert</a>
@@ -226,7 +226,7 @@ ga('send', 'pageview');
   
 </header>
 
-      <nav id="sidebar" data-behavior="2">
+      <nav id="sidebar" data-behavior="5">
   <div class="sidebar-container">
     
       <div class="sidebar-profile">
@@ -336,7 +336,7 @@ ga('send', 'pageview');
               text-left
               post-header-cover--partial"
        style="background-image:url('/img/motor-racing.jpg')"
-       data-behavior="2">
+       data-behavior="5">
     
       <div class="post-header main-content-wrap text-left">
   
@@ -376,7 +376,7 @@ ga('send', 'pageview');
   </div>
 
 
-      <div id="main" data-behavior="2"
+      <div id="main" data-behavior="5"
         class="hasCover
                hasCoverMetaIn
                ">
@@ -454,10 +454,10 @@ understand here is that <em>frame</em>.</p>
 
 <p>First, meet with <code>array_agg</code>, an <em>aggregate</em> function that will build an
 array for you. Let&rsquo;s use this tool to understand <em>window frames</em>:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span> <span style="color: #0000aa">select</span> x, array_agg(x) over (<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> x)
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"> <span style="color: #0000aa">select</span> x, array_agg(x) over (<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> x)
    <span style="color: #0000aa">from</span> generate_series(<span style="color: #009999">1</span>, <span style="color: #009999">3</span>) <span style="color: #0000aa">as</span> t(x);
 </pre></div>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span> x | array_agg 
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"> x | array_agg 
 <span style="color: #aaaaaa; font-style: italic">---+-----------</span>
  <span style="color: #009999">1</span> | {<span style="color: #009999">1</span>}
  <span style="color: #009999">2</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">2</span>}
@@ -469,13 +469,13 @@ array for you. Let&rsquo;s use this tool to understand <em>window frames</em>:</
 full exact content of the <em>windowing</em> we&rsquo;re going to process. The window
 definition here is <code>over (order by x)</code> and actually means <code>over (order by x
 rows between unbounded preceding and current row)</code>:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span> <span style="color: #0000aa">select</span> x,
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"> <span style="color: #0000aa">select</span> x,
         array_agg(x) over (<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> x
                            <span style="color: #0000aa">rows</span> <span style="color: #0000aa">between</span> unbounded preceding
                                     <span style="color: #0000aa">and</span> <span style="color: #0000aa">current</span> <span style="color: #0000aa">row</span>)
    <span style="color: #0000aa">from</span> generate_series(<span style="color: #009999">1</span>, <span style="color: #009999">3</span>) <span style="color: #0000aa">as</span> t(x);
 </pre></div>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span> x | array_agg 
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"> x | array_agg 
 <span style="color: #aaaaaa; font-style: italic">---+-----------</span>
  <span style="color: #009999">1</span> | {<span style="color: #009999">1</span>}
  <span style="color: #009999">2</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">2</span>}
@@ -485,12 +485,12 @@ rows between unbounded preceding and current row)</code>:</p>
 
 <p>It&rsquo;s possible to work with other kind of <em>frame specifications</em> too, as in
 the following examples:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> x,
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #0000aa">select</span> x,
        array_agg(x) over (<span style="color: #0000aa">rows</span> <span style="color: #0000aa">between</span> <span style="color: #0000aa">current</span> <span style="color: #0000aa">row</span>
                                    <span style="color: #0000aa">and</span> unbounded following)
   <span style="color: #0000aa">from</span> generate_series(<span style="color: #009999">1</span>, <span style="color: #009999">3</span>) <span style="color: #0000aa">as</span> t(x);
 </pre></div>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span> x | array_agg 
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"> x | array_agg 
 <span style="color: #aaaaaa; font-style: italic">---+-----------</span>
  <span style="color: #009999">1</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">2</span>,<span style="color: #009999">3</span>}
  <span style="color: #009999">2</span> | {<span style="color: #009999">2</span>,<span style="color: #009999">3</span>}
@@ -501,13 +501,13 @@ the following examples:</p>
 <p>If no frame clause is used at all, then the default is to see the whole set
 of rows in each of them, which can be really useful if you want to compute
 sums and percentages for example:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> x,
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #0000aa">select</span> x,
        array_agg(x) over () <span style="color: #0000aa">as</span> frame,
        <span style="color: #0000aa">sum</span>(x) over () <span style="color: #0000aa">as</span> <span style="color: #0000aa">sum</span>,
        x::<span style="color: #00aaaa">float</span>/<span style="color: #0000aa">sum</span>(x) over () <span style="color: #0000aa">as</span> part
   <span style="color: #0000aa">from</span> generate_series(<span style="color: #009999">1</span>, <span style="color: #009999">3</span>) <span style="color: #0000aa">as</span> t(x);
 </pre></div>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span> x |  frame  | sum |       part        
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"> x |  frame  | sum |       part        
 <span style="color: #aaaaaa; font-style: italic">---+---------+-----+-------------------</span>
  <span style="color: #009999">1</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">2</span>,<span style="color: #009999">3</span>} |   <span style="color: #009999">6</span> | <span style="color: #009999">0.166666666666667</span>
  <span style="color: #009999">2</span> | {<span style="color: #009999">1</span>,<span style="color: #009999">2</span>,<span style="color: #009999">3</span>} |   <span style="color: #009999">6</span> | <span style="color: #009999">0.333333333333333</span>
@@ -549,7 +549,7 @@ loading the same data set.</p>
 <p>So in the <em>Ergast</em> database we have a <em>results</em> table with results from all
 the known races. We pick a race that happened just before this article was
 first published:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>-[ <span style="color: #00aaaa">RECORD</span> <span style="color: #009999">1</span> ]<span style="color: #aaaaaa; font-style: italic">-----------------------------------------------------</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">-[ <span style="color: #00aaaa">RECORD</span> <span style="color: #009999">1</span> ]<span style="color: #aaaaaa; font-style: italic">-----------------------------------------------------</span>
 raceid    | <span style="color: #009999">890</span>
 <span style="color: #0000aa">year</span>      | <span style="color: #009999">2013</span>
 round     | <span style="color: #009999">10</span>
@@ -563,7 +563,7 @@ url       | http://en<span style="color: #009999">.</span>wikipedia<span style="
 <p>And within that race we can now fetch the list of competing drivers in their
 position order (winner first), and also their ranking compared to other
 drivers from the same constructor in the race:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> surname,
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #0000aa">select</span> surname,
          constructors.name,
          <span style="color: #0000aa">position</span>,
          format(<span style="color: #aa5500">&#39;%s / %s&#39;</span>,
@@ -588,19 +588,19 @@ first time with the <code>row_number()</code> window function gives us the posit
 the race with respect to other drivers from the same constructor, and the
 second time with <code>count(*)</code> gives us how many drivers from the same
 constructor participated in the race:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>    surname    |    <span style="color: #0000aa">name</span>     | <span style="color: #0000aa">position</span> | pos same constr 
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">    surname    |    <span style="color: #0000aa">name</span>     | <span style="color: #0000aa">position</span> | pos same constr 
 <span style="color: #aaaaaa; font-style: italic">---------------+-------------+----------+-----------------</span>
  Hamilton      | Mercedes    |        <span style="color: #009999">1</span> | <span style="color: #009999">1</span> / <span style="color: #009999">2</span>
- Räikkönen     | Lotus F1    |        <span style="color: #009999">2</span> | <span style="color: #009999">1</span> / <span style="color: #009999">2</span>
+ R<span style="color: #FF0000; background-color: #FFAAAA">ä</span>ikk<span style="color: #FF0000; background-color: #FFAAAA">ö</span>nen     | Lotus F1    |        <span style="color: #009999">2</span> | <span style="color: #009999">1</span> / <span style="color: #009999">2</span>
  Vettel        | Red Bull    |        <span style="color: #009999">3</span> | <span style="color: #009999">1</span> / <span style="color: #009999">2</span>
  Webber        | Red Bull    |        <span style="color: #009999">4</span> | <span style="color: #009999">2</span> / <span style="color: #009999">2</span>
  Alonso        | Ferrari     |        <span style="color: #009999">5</span> | <span style="color: #009999">1</span> / <span style="color: #009999">2</span>
  Grosjean      | Lotus F1    |        <span style="color: #009999">6</span> | <span style="color: #009999">2</span> / <span style="color: #009999">2</span>
  Button        | McLaren     |        <span style="color: #009999">7</span> | <span style="color: #009999">1</span> / <span style="color: #009999">2</span>
  Massa         | Ferrari     |        <span style="color: #009999">8</span> | <span style="color: #009999">2</span> / <span style="color: #009999">2</span>
- Pérez         | McLaren     |        <span style="color: #009999">9</span> | <span style="color: #009999">2</span> / <span style="color: #009999">2</span>
+ P<span style="color: #FF0000; background-color: #FFAAAA">é</span>rez         | McLaren     |        <span style="color: #009999">9</span> | <span style="color: #009999">2</span> / <span style="color: #009999">2</span>
  Maldonado     | Williams    |       <span style="color: #009999">10</span> | <span style="color: #009999">1</span> / <span style="color: #009999">2</span>
- Hülkenberg    | Sauber      |       <span style="color: #009999">11</span> | <span style="color: #009999">1</span> / <span style="color: #009999">2</span>
+ H<span style="color: #FF0000; background-color: #FFAAAA">ü</span>lkenberg    | Sauber      |       <span style="color: #009999">11</span> | <span style="color: #009999">1</span> / <span style="color: #009999">2</span>
  Vergne        | Toro Rosso  |       <span style="color: #009999">12</span> | <span style="color: #009999">1</span> / <span style="color: #009999">2</span>
  Ricciardo     | Toro Rosso  |       <span style="color: #009999">13</span> | <span style="color: #009999">2</span> / <span style="color: #009999">2</span>
  van der Garde | Caterham    |       <span style="color: #009999">14</span> | <span style="color: #009999">1</span> / <span style="color: #009999">2</span>
@@ -611,7 +611,7 @@ constructor participated in the race:</p>
  Rosberg       | Mercedes    |       <span style="color: #009999">19</span> | <span style="color: #009999">2</span> / <span style="color: #009999">2</span>
  Bottas        | Williams    |        <span style="color: #FF0000; background-color: #FFAAAA">⦱</span> | <span style="color: #009999">2</span> / <span style="color: #009999">2</span>
  Sutil         | <span style="color: #0000aa">Force</span> India |        <span style="color: #FF0000; background-color: #FFAAAA">⦱</span> | <span style="color: #009999">2</span> / <span style="color: #009999">2</span>
- Gutiérrez     | Sauber      |        <span style="color: #FF0000; background-color: #FFAAAA">⦱</span> | <span style="color: #009999">2</span> / <span style="color: #009999">2</span>
+ Guti<span style="color: #FF0000; background-color: #FFAAAA">é</span>rrez     | Sauber      |        <span style="color: #FF0000; background-color: #FFAAAA">⦱</span> | <span style="color: #009999">2</span> / <span style="color: #009999">2</span>
 (<span style="color: #009999">22</span> <span style="color: #0000aa">rows</span>)
 </pre></div>
 
@@ -649,7 +649,7 @@ with
 a number
 of
 <a href="http://www.postgresql.org/docs/9.2/static/functions-window.html">built-in window functions</a>.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>  <span style="color: #0000aa">select</span> surname,
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">  <span style="color: #0000aa">select</span> surname,
          <span style="color: #0000aa">position</span>,
          row_number()
            over(<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> fastestlapspeed::<span style="color: #00aaaa">numeric</span>)
@@ -671,20 +671,20 @@ terms of <em>fastest lap speed</em>, a <em>group</em> number if we divide the dr
 a set of 4 groups thanks to the <em>ntile</em> function, the name of the previous
 driver who made it, and the name of the driver immediately next to the
 current one, thanks to the <em>lag</em> an <em>lead</em> functions:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>    surname    | <span style="color: #0000aa">position</span> | fastest | <span style="color: #0000aa">group</span> |   previous    |     <span style="color: #0000aa">next</span>      
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">    surname    | <span style="color: #0000aa">position</span> | fastest | <span style="color: #0000aa">group</span> |   previous    |     <span style="color: #0000aa">next</span>      
 <span style="color: #aaaaaa; font-style: italic">---------------+----------+---------+-------+---------------+---------------</span>
- Hamilton      |        <span style="color: #009999">1</span> |      <span style="color: #009999">20</span> |     <span style="color: #009999">1</span> | <span style="color: #FF0000; background-color: #FFAAAA">⦱</span>             | Räikkönen
- Räikkönen     |        <span style="color: #009999">2</span> |      <span style="color: #009999">17</span> |     <span style="color: #009999">1</span> | Hamilton      | Vettel
- Vettel        |        <span style="color: #009999">3</span> |      <span style="color: #009999">21</span> |     <span style="color: #009999">1</span> | Räikkönen     | Webber
+ Hamilton      |        <span style="color: #009999">1</span> |      <span style="color: #009999">20</span> |     <span style="color: #009999">1</span> | <span style="color: #FF0000; background-color: #FFAAAA">⦱</span>             | R<span style="color: #FF0000; background-color: #FFAAAA">ä</span>ikk<span style="color: #FF0000; background-color: #FFAAAA">ö</span>nen
+ R<span style="color: #FF0000; background-color: #FFAAAA">ä</span>ikk<span style="color: #FF0000; background-color: #FFAAAA">ö</span>nen     |        <span style="color: #009999">2</span> |      <span style="color: #009999">17</span> |     <span style="color: #009999">1</span> | Hamilton      | Vettel
+ Vettel        |        <span style="color: #009999">3</span> |      <span style="color: #009999">21</span> |     <span style="color: #009999">1</span> | R<span style="color: #FF0000; background-color: #FFAAAA">ä</span>ikk<span style="color: #FF0000; background-color: #FFAAAA">ö</span>nen     | Webber
  Webber        |        <span style="color: #009999">4</span> |      <span style="color: #009999">22</span> |     <span style="color: #009999">1</span> | Vettel        | Alonso
  Alonso        |        <span style="color: #009999">5</span> |      <span style="color: #009999">15</span> |     <span style="color: #009999">1</span> | Webber        | Grosjean
  Grosjean      |        <span style="color: #009999">6</span> |      <span style="color: #009999">16</span> |     <span style="color: #009999">1</span> | Alonso        | Button
  Button        |        <span style="color: #009999">7</span> |      <span style="color: #009999">12</span> |     <span style="color: #009999">1</span> | Grosjean      | Massa
- Massa         |        <span style="color: #009999">8</span> |      <span style="color: #009999">18</span> |     <span style="color: #009999">1</span> | Button        | Pérez
- Pérez         |        <span style="color: #009999">9</span> |      <span style="color: #009999">13</span> |     <span style="color: #009999">2</span> | Massa         | Maldonado
- Maldonado     |       <span style="color: #009999">10</span> |      <span style="color: #009999">14</span> |     <span style="color: #009999">2</span> | Pérez         | Hülkenberg
- Hülkenberg    |       <span style="color: #009999">11</span> |       <span style="color: #009999">9</span> |     <span style="color: #009999">2</span> | Maldonado     | Vergne
- Vergne        |       <span style="color: #009999">12</span> |      <span style="color: #009999">11</span> |     <span style="color: #009999">2</span> | Hülkenberg    | Ricciardo
+ Massa         |        <span style="color: #009999">8</span> |      <span style="color: #009999">18</span> |     <span style="color: #009999">1</span> | Button        | P<span style="color: #FF0000; background-color: #FFAAAA">é</span>rez
+ P<span style="color: #FF0000; background-color: #FFAAAA">é</span>rez         |        <span style="color: #009999">9</span> |      <span style="color: #009999">13</span> |     <span style="color: #009999">2</span> | Massa         | Maldonado
+ Maldonado     |       <span style="color: #009999">10</span> |      <span style="color: #009999">14</span> |     <span style="color: #009999">2</span> | P<span style="color: #FF0000; background-color: #FFAAAA">é</span>rez         | H<span style="color: #FF0000; background-color: #FFAAAA">ü</span>lkenberg
+ H<span style="color: #FF0000; background-color: #FFAAAA">ü</span>lkenberg    |       <span style="color: #009999">11</span> |       <span style="color: #009999">9</span> |     <span style="color: #009999">2</span> | Maldonado     | Vergne
+ Vergne        |       <span style="color: #009999">12</span> |      <span style="color: #009999">11</span> |     <span style="color: #009999">2</span> | H<span style="color: #FF0000; background-color: #FFAAAA">ü</span>lkenberg    | Ricciardo
  Ricciardo     |       <span style="color: #009999">13</span> |       <span style="color: #009999">8</span> |     <span style="color: #009999">2</span> | Vergne        | van der Garde
  van der Garde |       <span style="color: #009999">14</span> |       <span style="color: #009999">6</span> |     <span style="color: #009999">2</span> | Ricciardo     | Pic
  Pic           |       <span style="color: #009999">15</span> |       <span style="color: #009999">5</span> |     <span style="color: #009999">2</span> | van der Garde | Bianchi
@@ -692,9 +692,9 @@ current one, thanks to the <em>lag</em> an <em>lead</em> functions:</p>
  Chilton       |       <span style="color: #009999">17</span> |       <span style="color: #009999">4</span> |     <span style="color: #009999">3</span> | Bianchi       | di Resta
  di Resta      |       <span style="color: #009999">18</span> |      <span style="color: #009999">10</span> |     <span style="color: #009999">3</span> | Chilton       | Rosberg
  Rosberg       |       <span style="color: #009999">19</span> |      <span style="color: #009999">19</span> |     <span style="color: #009999">3</span> | di Resta      | Bottas
- Sutil         |        <span style="color: #FF0000; background-color: #FFAAAA">⦱</span> |       <span style="color: #009999">2</span> |     <span style="color: #009999">3</span> | Gutiérrez     | <span style="color: #FF0000; background-color: #FFAAAA">⦱</span>
- Gutiérrez     |        <span style="color: #FF0000; background-color: #FFAAAA">⦱</span> |       <span style="color: #009999">1</span> |     <span style="color: #009999">3</span> | Bottas        | Sutil
- Bottas        |        <span style="color: #FF0000; background-color: #FFAAAA">⦱</span> |       <span style="color: #009999">7</span> |     <span style="color: #009999">3</span> | Rosberg       | Gutiérrez
+ Sutil         |        <span style="color: #FF0000; background-color: #FFAAAA">⦱</span> |       <span style="color: #009999">2</span> |     <span style="color: #009999">3</span> | Guti<span style="color: #FF0000; background-color: #FFAAAA">é</span>rrez     | <span style="color: #FF0000; background-color: #FFAAAA">⦱</span>
+ Guti<span style="color: #FF0000; background-color: #FFAAAA">é</span>rrez     |        <span style="color: #FF0000; background-color: #FFAAAA">⦱</span> |       <span style="color: #009999">1</span> |     <span style="color: #009999">3</span> | Bottas        | Sutil
+ Bottas        |        <span style="color: #FF0000; background-color: #FFAAAA">⦱</span> |       <span style="color: #009999">7</span> |     <span style="color: #009999">3</span> | Rosberg       | Guti<span style="color: #FF0000; background-color: #FFAAAA">é</span>rrez
 (<span style="color: #009999">22</span> <span style="color: #0000aa">rows</span>)
 </pre></div>
 
@@ -841,7 +841,7 @@ as <a href="/tags/window-functions">Window Functions Articles</a>.</p>
 </footer>
 
       </div>
-      <div id="bottom-bar" class="post-bottom-bar" data-behavior="2">
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="5">
         <div class="post-actions-wrap">
   <div class="post-footer-tags">
     
@@ -912,7 +912,7 @@ as <a href="/tags/window-functions">Window Functions Articles</a>.</p>
 
 
       </div>
-      <div id="share-options-bar" class="share-options-bar" data-behavior="2">
+      <div id="share-options-bar" class="share-options-bar" data-behavior="5">
   <ul class="share-options">
     <li class="share-option">
       <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2013%2f08%2funderstanding-window-functions%2f">
@@ -982,6 +982,24 @@ as <a href="/tags/window-functions">Window Functions Articles</a>.</p>
       <div class="no-result text-color-light text-center"></div>
       <div class="results">
         
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/09/mastering-postgresql-in-application-development/">
+                <h3 class="media-heading">Mastering PostgreSQL in Application Development</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Sep 9, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">Mastering PostgreSQL in Application Development is the full title of the book I am currently writing. Running the PostgreSQL is YeSQL series of blog posts has shown me developers need a PostgreSQL book for developers. A book with the same properties as the YeSQL series articles in this blog:
+ we use real world data sets to put every query and SQL technique we learn in the context of a user story or business case,</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
         
           <div class="media">
             
@@ -1211,30 +1229,6 @@ your math lessons from younger. But is it that much simpler?</p></div>
             <hr>
           </div>
         
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="http://tapoueh.org/blog/2016/04/pgconf-us-2016/">
-                <h3 class="media-heading">PGConf US 2016</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Apr 4, 2016
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p><a href="https://www.pgconf.us/conferences/2016">PostgreSQL Conference US</a> took
-place in New York City and I had the pleasure to be a speaker there. I
-presented there a talk about why <em>You’d Better Have Tested Backups</em>. The
-important bit is that backups are not interesting, recoveries are. Also the
-only way to make sure a backup is successful is to be able to use it for
-recovery.</p>
-
-<p></p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
       </div>
     </div>
     <div class="modal-footer">
@@ -1242,7 +1236,7 @@ recovery.</p>
          data-message-zero=""
          data-message-one=""
          data-message-other="">
-         239 posts found
+         240 posts found
       </p>
     </div>
   </div>
