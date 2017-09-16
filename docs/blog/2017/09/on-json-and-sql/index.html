@@ -1,0 +1,2276 @@
+
+
+  
+    
+  
+
+
+  
+
+
+
+
+  
+
+
+  
+
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Hugo 0.26">
+    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
+    <title>on Json and SQL</title>
+    <meta name="author" content="Dimitri Fontaine">
+    <meta name="keywords" content="">
+
+    <link rel="icon" href="/favicon.ico">
+    
+
+    
+    <meta name="description" content="PostgreSQL has had proper
+json
+support for a while now. The unique extensibility approach of the PostgreSQL
+system allows it to enable native SQL friendly JSON
+processing.
+
+In this article we&rsquo;ll play with the Magic: the Gathering card data in JSON
+format data set, provided with a
+CC0 licence, and process the
+information provided. We also see how to normalize a JSON document into a
+proper database model that benefits from some PostgreSQL advanced features,
+and how to then inject the JSON documents into the normalized database
+schema. Finally, we compare some non-trivial processing done against both
+versions of the database schema.">
+    <meta property="og:description" content="PostgreSQL has had proper
+json
+support for a while now. The unique extensibility approach of the PostgreSQL
+system allows it to enable native SQL friendly JSON
+processing.
+
+In this article we&rsquo;ll play with the Magic: the Gathering card data in JSON
+format data set, provided with a
+CC0 licence, and process the
+information provided. We also see how to normalize a JSON document into a
+proper database model that benefits from some PostgreSQL advanced features,
+and how to then inject the JSON documents into the normalized database
+schema. Finally, we compare some non-trivial processing done against both
+versions of the database schema.">
+    <meta property="og:type" content="blog">
+    <meta property="og:title" content="on Json and SQL">
+    <meta property="og:url" content="/blog/2017/09/on-json-and-sql/">
+    <meta property="og:site_name" content="Dimitri Fontaine, PostgreSQL Expert">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="on Json and SQL">
+    <meta name="twitter:description" content="PostgreSQL has had proper
+json
+support for a while now. The unique extensibility approach of the PostgreSQL
+system allows it to enable native SQL friendly JSON
+processing.
+
+In this article we&rsquo;ll play with the Magic: the Gathering card data in JSON
+format data set, provided with a
+CC0 licence, and process the
+information provided. We also see how to normalize a JSON document into a
+proper database model that benefits from some PostgreSQL advanced features,
+and how to then inject the JSON documents into the normalized database
+schema. Finally, we compare some non-trivial processing done against both
+versions of the database schema.">
+    
+      <meta name="twitter:creator" content="@tapoueh">
+    
+    
+
+    
+    
+
+    
+      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
+    
+
+    
+      <meta property="og:image" content="http://tapoueh.org/img/JSON.png">
+    
+    
+      <meta property="og:image" content="http://tapoueh.org/img/rube-goldberg-machine.jpg">
+    
+    
+
+    
+
+    
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
+    
+    
+    <link rel="stylesheet" href="/css/style-u6mk0ojoywresbx8iepslrmmhl4stuhrsxuwhkpwrkrx7mryjcaimasnk4pi.min.css" />
+    
+    
+      <link rel="stylesheet" href="http://tapoueh.org//css/dim.css">
+    
+
+    
+      
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-47059482-1', 'auto');
+ga('send', 'pageview');
+</script>
+
+    
+    
+  </head>
+
+  <body>
+    <div id="blog">
+      <header id="header" data-behavior="5">
+  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+  <div class="header-title">
+    <a class="header-title-link" href="/">Dimitri Fontaine, PostgreSQL Expert</a>
+  </div>
+  
+</header>
+
+      <nav id="sidebar" data-behavior="5">
+  <div class="sidebar-container">
+    
+      <div class="sidebar-profile">
+        <a href="/#about">
+          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+        </a>
+        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
+        
+          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
+        
+      </div>
+    
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
+      
+      <span class="sidebar-button-desc">Blog</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/about/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
+      
+      <span class="sidebar-button-desc">About</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories/yesql/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-database"></i>
+      
+      <span class="sidebar-button-desc">YeSQL</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="http://masteringpostgresql.com" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
+      
+      <span class="sidebar-button-desc">Mastering PostgreSQL</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+      
+      <span class="sidebar-button-desc">GitHub</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+      
+      <span class="sidebar-button-desc">Twitter</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+      
+      <span class="sidebar-button-desc">Categories</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/index.xml">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+      
+      <span class="sidebar-button-desc">RSS</span>
+    </a>
+  </li>
+
+    </ul>
+  </div>
+</nav>
+
+      
+  <div class="post-header-cover
+              text-left
+              post-header-cover--partial"
+       style="background-image:url('/img/rube-goldberg-machine.jpg')"
+       data-behavior="5">
+    
+      <div class="post-header main-content-wrap text-left">
+  
+    <h1 class="post-title" itemprop="headline">
+      on Json and SQL
+    </h1>
+  
+  <div class="postShorten-meta post-meta">
+  
+    <time itemprop="datePublished" datetime="2017-09-18T10:49:03&#43;02:00">
+      
+  
+  
+  
+  
+    Monday 18 Sep 2017
+  
+
+    </time>
+  
+  
+  
+  
+    <span></span>
+    
+      <a class="category-link" href="/categories/postgresql">PostgreSQL</a>, 
+    
+      <a class="category-link" href="/categories/yesql">YeSQL</a>
+    
+  
+
+
+</div>
+
+</div>
+    
+  </div>
+
+
+      <div id="main" data-behavior="5"
+        class="hasCover
+               hasCoverMetaIn
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
+          
+          <div class="post-content markdown" itemprop="articleBody">
+            <div class="main-content-wrap">
+              <p>PostgreSQL has had proper
+<a href="https://www.postgresql.org/docs/current/static/datatype-json.html">json</a>
+support for a while now. The unique extensibility approach of the PostgreSQL
+system allows it to enable native <a href="https://www.postgresql.org/docs/current/static/functions-json.html">SQL friendly JSON
+processing</a>.</p>
+
+<p>In this article we&rsquo;ll play with the <a href="https://mtgjson.com">Magic: the Gathering card data in JSON
+format</a> data set, provided with a
+<a href="https://creativecommons.org/choose/zero/">CC0</a> licence, and process the
+information provided. We also see how to normalize a JSON document into a
+proper database model that benefits from some PostgreSQL advanced features,
+and how to then inject the JSON documents into the normalized database
+schema. Finally, we compare some non-trivial processing done against both
+versions of the database schema.</p>
+
+<p>
+<h1 id="table-of-contents"></h1><nav id="TableOfContents">
+<ul>
+<li><a href="#loading-the-data-set">Loading the data set</a></li>
+<li><a href="#finding-cards">Finding cards</a></li>
+<li><a href="#cards-sets">Cards sets</a></li>
+<li><a href="#build-a-magic-booster-deck">Build a Magic™ booster deck</a></li>
+<li><a href="#magic-card-type-type-of-card-and-subtype">Magic™ card type, type of card and subtype</a></li>
+<li><a href="#constraints-and-data-quality">Constraints and data quality</a></li>
+<li><a href="#deleting-duplicate-rows">Deleting duplicate rows</a></li>
+<li><a href="#cards-and-sets-rarities">Cards and Sets Rarities</a></li>
+<li><a href="#normalizing-the-data-set">Normalizing the data set</a>
+<ul>
+<li><a href="#sets">Sets</a></li>
+<li><a href="#cards">Cards</a></li>
+</ul></li>
+<li><a href="#dispatching-json-data-into-normalized-tables">Dispatching JSON data into normalized tables</a>
+<ul>
+<li><a href="#sets-1">Sets</a></li>
+<li><a href="#boosters">Boosters</a></li>
+<li><a href="#cards-1">Cards</a></li>
+</ul></li>
+<li><a href="#building-a-magic-booster-against-a-normalized-schema">Building a Magic™ booster against a normalized schema</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+</nav></p>
+
+<h1 id="loading-the-data-set">Loading the data set</h1>
+
+<p>First retrieve <a href="https://mtgjson.com/json/AllSets.json.zip">AllSets.json</a> and
+then load it into your local testing PostgreSQL instance as following:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">create</span> <span style="color: #0000aa">schema</span> <span style="color: #0000aa">if</span> <span style="color: #0000aa">not</span> <span style="color: #0000aa">exists</span> magic;
+<span style="color: #0000aa">create</span> <span style="color: #0000aa">table</span> magic.allsets(<span style="color: #0000aa">data</span> jsonb);
+</pre></div>
+
+<p>For loading the 27MB single json document in PostgreSQL, we can&rsquo;t directly
+use COPY this time, so we&rsquo;ll write some Python code:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #aaaaaa; font-style: italic">#! /usr/bin/env python3</span>
+
+<span style="color: #0000aa">import</span> <span style="color: #00aaaa; text-decoration: underline">psycopg2</span>
+
+PGCONNSTRING = <span style="color: #aa5500">&quot;dbname=magic&quot;</span>
+
+<span style="color: #0000aa">if</span> <span style="color: #aa0000">__name__</span> == <span style="color: #aa5500">&#39;__main__&#39;</span>:
+    pgconn = psycopg2.connect(PGCONNSTRING)
+    curs = pgconn.cursor()
+
+    allset = <span style="color: #00aaaa">open</span>(<span style="color: #aa5500">&#39;AllSets.json&#39;</span>).read()
+    allset = allset.replace(<span style="color: #aa5500">&quot;&#39;&quot;</span>, <span style="color: #aa5500">&quot;&#39;&#39;&quot;</span>)
+    sql = <span style="color: #aa5500">&quot;insert into magic.allsets(data) values(&#39;%s&#39;)&quot;</span> % allset
+
+    curs.execute(sql)
+    pgconn.commit()
+    pgconn.close()
+</pre></div>
+
+<p>Let&rsquo;s be fair though, a single json document isn&rsquo;t exactly a good example to
+show the PostgreSQL capabilities when it comes to handling this data type.
+Also, I doubt your application would do that, even when using MongoDB. I
+guess a collection of cards would be better, so let&rsquo;s transform our giant
+JSON document into such a collection:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">create</span> <span style="color: #0000aa">table</span> magic.cards
+          <span style="color: #0000aa">as</span>
+      <span style="color: #0000aa">select</span> jsonb_array_elements(value-&gt;<span style="color: #aa5500">&#39;cards&#39;</span>) <span style="color: #0000aa">as</span> <span style="color: #0000aa">data</span>
+        <span style="color: #0000aa">from</span> magic.allsets, jsonb_each(<span style="color: #0000aa">data</span>);
+      
+<span style="color: #0000aa">create</span> <span style="color: #0000aa">index</span> <span style="color: #0000aa">on</span> magic.cards <span style="color: #0000aa">using</span> gin(<span style="color: #0000aa">data</span> jsonb_path_ops);
+</pre></div>
+
+<p>On the old laptop I&rsquo;m using for typing this blog post and playing with
+PostgreSQL, extracting the Magic™ cards from the single document into 34207
+entries in the <em>magic.cards</em> table took 603.524 ms, and creating a dedicated
+<em>gin</em> index took 3121.274 ms. Of course those numbers aren&rsquo;t repeatable and
+mean nothing…</p>
+
+<h1 id="finding-cards">Finding cards</h1>
+
+<p>The home page of the <a href="https://mtgjson.com">https://mtgjson.com</a> website features the card named
+<em>Sen Triplets</em>, how can we find it in our collection? The following query is
+one way to do implement the search:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> jsonb_pretty(<span style="color: #0000aa">data</span>)
+  <span style="color: #0000aa">from</span> magic.cards
+ <span style="color: #0000aa">where</span> <span style="color: #0000aa">data</span> @&gt; <span style="color: #aa5500">&#39;{&quot;name&quot; : &quot;Sen Triplets&quot;}&#39;</span>;
+</pre></div>
+
+<p>You might have noticed that we created a <em>gin</em> index using the
+<a href="https://www.postgresql.org/docs/9.4/static/datatype-json.html#JSON-INDEXING">jsonb_path_ops</a>
+operator class, which supports only the <code>@&gt;</code> operator (it reads <em>contains</em>).
+This index is meant to speed up queries where we search a <em>json</em> object
+inside our json documents. The query plan shows the index is actually being
+used:</p>
+
+<pre><code>                                  QUERY PLAN                                   
+═══════════════════════════════════════════════════════════════════════════════
+ Bitmap Heap Scan on cards  (cost=16.27..141.81 rows=34 width=32)
+   Recheck Cond: (data @&gt; '{&quot;name&quot;: &quot;Sen Triplets&quot;}'::jsonb)
+   -&gt;  Bitmap Index Scan on cards_data_idx  (cost=0.00..16.26 rows=34 width=0)
+         Index Cond: (data @&gt; '{&quot;name&quot;: &quot;Sen Triplets&quot;}'::jsonb)
+(4 rows)
+</code></pre>
+
+<p>Now, for the result, it would be better if I were to show it as a <em>JSON</em>
+document here, rather than as a <em>psql</em> result set of one line. Save the
+query to a <em>sen-triplets.sql</em> file, then run the following command:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>psql --no-psqlrc -At -f sen-triplets.sql -d &lt;connection string&gt;
+</pre></div>
+
+<p>And here&rsquo;s our JSON object:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>{
+    <span style="color: #1e90ff; font-weight: bold">&quot;id&quot;</span>: <span style="color: #aa5500">&quot;3129aee7f26a4282ce131db7d417b1bc3338c4d4&quot;</span>,
+    <span style="color: #1e90ff; font-weight: bold">&quot;cmc&quot;</span>: <span style="color: #009999">5</span>,
+    <span style="color: #1e90ff; font-weight: bold">&quot;name&quot;</span>: <span style="color: #aa5500">&quot;Sen Triplets&quot;</span>,
+    <span style="color: #1e90ff; font-weight: bold">&quot;text&quot;</span>: <span style="color: #aa5500">&quot;At the beginning of your upkeep, choose target opponent. This turn, that player can&#39;t cast spells or activate abilities and plays with his or her hand revealed. You may play cards from that player&#39;s hand this turn.&quot;</span>,
+    <span style="color: #1e90ff; font-weight: bold">&quot;type&quot;</span>: <span style="color: #aa5500">&quot;Legendary Artifact Creature — Human Wizard&quot;</span>,
+    <span style="color: #1e90ff; font-weight: bold">&quot;power&quot;</span>: <span style="color: #aa5500">&quot;3&quot;</span>,
+    <span style="color: #1e90ff; font-weight: bold">&quot;types&quot;</span>: [
+        <span style="color: #aa5500">&quot;Artifact&quot;</span>,
+        <span style="color: #aa5500">&quot;Creature&quot;</span>
+    ],
+    <span style="color: #1e90ff; font-weight: bold">&quot;artist&quot;</span>: <span style="color: #aa5500">&quot;Greg Staples&quot;</span>,
+    <span style="color: #1e90ff; font-weight: bold">&quot;colors&quot;</span>: [
+        <span style="color: #aa5500">&quot;White&quot;</span>,
+        <span style="color: #aa5500">&quot;Blue&quot;</span>,
+        <span style="color: #aa5500">&quot;Black&quot;</span>
+    ],
+    <span style="color: #1e90ff; font-weight: bold">&quot;flavor&quot;</span>: <span style="color: #aa5500">&quot;They are the masters of your mind.&quot;</span>,
+    <span style="color: #1e90ff; font-weight: bold">&quot;layout&quot;</span>: <span style="color: #aa5500">&quot;normal&quot;</span>,
+    <span style="color: #1e90ff; font-weight: bold">&quot;number&quot;</span>: <span style="color: #aa5500">&quot;109&quot;</span>,
+    <span style="color: #1e90ff; font-weight: bold">&quot;rarity&quot;</span>: <span style="color: #aa5500">&quot;Mythic Rare&quot;</span>,
+    <span style="color: #1e90ff; font-weight: bold">&quot;manaCost&quot;</span>: <span style="color: #aa5500">&quot;{2}{W}{U}{B}&quot;</span>,
+    <span style="color: #1e90ff; font-weight: bold">&quot;subtypes&quot;</span>: [
+        <span style="color: #aa5500">&quot;Human&quot;</span>,
+        <span style="color: #aa5500">&quot;Wizard&quot;</span>
+    ],
+    <span style="color: #1e90ff; font-weight: bold">&quot;imageName&quot;</span>: <span style="color: #aa5500">&quot;sen triplets&quot;</span>,
+    <span style="color: #1e90ff; font-weight: bold">&quot;mciNumber&quot;</span>: <span style="color: #aa5500">&quot;109&quot;</span>,
+    <span style="color: #1e90ff; font-weight: bold">&quot;toughness&quot;</span>: <span style="color: #aa5500">&quot;3&quot;</span>,
+    <span style="color: #1e90ff; font-weight: bold">&quot;supertypes&quot;</span>: [
+        <span style="color: #aa5500">&quot;Legendary&quot;</span>
+    ],
+    <span style="color: #1e90ff; font-weight: bold">&quot;multiverseid&quot;</span>: <span style="color: #009999">180607</span>,
+    <span style="color: #1e90ff; font-weight: bold">&quot;colorIdentity&quot;</span>: [
+        <span style="color: #aa5500">&quot;W&quot;</span>,
+        <span style="color: #aa5500">&quot;U&quot;</span>,
+        <span style="color: #aa5500">&quot;B&quot;</span>
+    ]
+}
+</pre></div>
+
+<p>Now this <em>Mana Cost</em> expression does seem quite complex, and I guess it&rsquo;s
+pretty rare to find it. Let&rsquo;s figure that out:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> <span style="color: #0000aa">count</span>(*)
+  <span style="color: #0000aa">from</span> magic.cards
+ <span style="color: #0000aa">where</span> <span style="color: #0000aa">data</span> @&gt; <span style="color: #aa5500">&#39;{&quot;manaCost&quot;: &quot;{2}{W}{U}{B}&quot;}&#39;</span>;
+</pre></div>
+
+<p>Only 3 cards in our complete collection do match such a <em>Mana Cost</em>.</p>
+
+<p>In order to show other ways to query our collection and benefit from the
+index, we could count how many cards are found with the 3 colors <code>[&quot;White&quot;,
+&quot;Blue&quot;, &quot;Black&quot;]</code> as this one. The <em>contains</em> operator (spelled <code>@&gt;</code>) when
+given a json array searches for arrays that <em>intersect</em> with the search
+query. It means that it finds arrays with more elements than those in the
+search query, as seen in the following example:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>  <span style="color: #0000aa">select</span> <span style="color: #0000aa">data</span>-&gt;<span style="color: #aa5500">&#39;colors&#39;</span> <span style="color: #0000aa">as</span> colors,
+         <span style="color: #0000aa">count</span>(*)
+    <span style="color: #0000aa">from</span> magic.cards
+   <span style="color: #0000aa">where</span> <span style="color: #0000aa">data</span> @&gt; <span style="color: #aa5500">&#39;{&quot;colors&quot;: [&quot;White&quot;,&quot;Blue&quot;,&quot;Black&quot;]}&#39;</span>
+<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> <span style="color: #0000aa">grouping</span> <span style="color: #0000aa">sets</span>(<span style="color: #0000aa">data</span>-&gt;<span style="color: #aa5500">&#39;colors&#39;</span>, ())
+<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> <span style="color: #0000aa">count</span> <span style="color: #0000aa">desc</span>;
+</pre></div>
+
+<p>Note we used a <em>grouping sets</em> expression that returns both the total count
+and the count per specific array of colors:</p>
+
+<pre><code>                   colors                   │ count 
+════════════════════════════════════════════╪═══════
+ ¤                                          │    98
+ [&quot;White&quot;, &quot;Blue&quot;, &quot;Black&quot;]                 │    57
+ [&quot;White&quot;, &quot;Blue&quot;, &quot;Black&quot;, &quot;Red&quot;, &quot;Green&quot;] │    37
+ [&quot;White&quot;, &quot;Blue&quot;, &quot;Black&quot;, &quot;Green&quot;]        │     2
+ [&quot;White&quot;, &quot;Blue&quot;, &quot;Black&quot;, &quot;Red&quot;]          │     2
+(5 rows)
+</code></pre>
+
+<h1 id="cards-sets">Cards sets</h1>
+
+<p>When creating our <em>magic.cards</em> table, we didn&rsquo;t keep the sets information,
+and for more interesting queries we&rsquo;re going to need that.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">begin</span>;
+
+<span style="color: #0000aa">create</span> <span style="color: #0000aa">table</span> magic.<span style="color: #0000aa">sets</span>
+    <span style="color: #0000aa">as</span>
+<span style="color: #0000aa">select</span> <span style="color: #0000aa">key</span> <span style="color: #0000aa">as</span> name, value - <span style="color: #aa5500">&#39;cards&#39;</span> <span style="color: #0000aa">as</span> <span style="color: #0000aa">data</span>
+  <span style="color: #0000aa">from</span> magic.allsets, jsonb_each(<span style="color: #0000aa">data</span>);
+  
+<span style="color: #0000aa">drop</span> <span style="color: #0000aa">table</span> magic.cards;
+
+<span style="color: #0000aa">create</span> <span style="color: #0000aa">table</span> magic.cards
+    <span style="color: #0000aa">as</span>
+  <span style="color: #0000aa">with</span> collection <span style="color: #0000aa">as</span>
+  (
+     <span style="color: #0000aa">select</span> <span style="color: #0000aa">key</span> <span style="color: #0000aa">as</span> <span style="color: #0000aa">set</span>,
+            value-&gt;<span style="color: #aa5500">&#39;cards&#39;</span> <span style="color: #0000aa">as</span> <span style="color: #0000aa">data</span>
+       <span style="color: #0000aa">from</span> magic.allsets,
+            <span style="color: #0000aa">lateral</span> jsonb_each(<span style="color: #0000aa">data</span>)
+  )
+  <span style="color: #0000aa">select</span> <span style="color: #0000aa">set</span>, jsonb_array_elements(<span style="color: #0000aa">data</span>) <span style="color: #0000aa">as</span> <span style="color: #0000aa">data</span>
+    <span style="color: #0000aa">from</span> collection;
+
+<span style="color: #0000aa">commit</span>;
+</pre></div>
+
+<p>The expression <em>value - &lsquo;cards&rsquo;</em> allow to remove the <em>cards</em> key from the
+JSON object. In our case this allows to register only the collection parts
+of the object, and leave away the cards for the other table.</p>
+
+<h1 id="build-a-magic-booster-deck">Build a Magic™ booster deck</h1>
+
+<p>With this data we can see about building a booster from any edition of the
+cards collection. First, let&rsquo;s have a look at the <em>Limited Edition Alpha</em>
+edtition:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">with</span> booster <span style="color: #0000aa">as</span>
+(
+    <span style="color: #0000aa">select</span> name,
+           initcap(
+             jsonb_array_elements_text(<span style="color: #0000aa">sets</span>.<span style="color: #0000aa">data</span>-&gt;<span style="color: #aa5500">&#39;booster&#39;</span>)
+           ) <span style="color: #0000aa">as</span> rarity,
+           <span style="color: #0000aa">count</span>(*)
+      <span style="color: #0000aa">from</span> magic.<span style="color: #0000aa">sets</span>
+     <span style="color: #0000aa">where</span> name = <span style="color: #aa5500">&#39;LEA&#39;</span>
+  <span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> name, rarity
+)
+   <span style="color: #0000aa">select</span> rarity, booster.<span style="color: #0000aa">count</span>, <span style="color: #0000aa">count</span>(*)
+     <span style="color: #0000aa">from</span> booster
+          <span style="color: #0000aa">left</span> <span style="color: #0000aa">join</span> magic.cards
+            <span style="color: #0000aa">on</span> cards.<span style="color: #0000aa">set</span> = booster.name
+           <span style="color: #0000aa">and</span> cards.<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;rarity&#39;</span> = booster.rarity
+  <span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> rarity, <span style="color: #0000aa">count</span>
+  <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> rarity &lt;&gt; <span style="color: #aa5500">&#39;Uncommon&#39;</span>, rarity &lt;&gt; <span style="color: #aa5500">&#39;Common&#39;</span>;
+</pre></div>
+
+<p>This query shows several interesting techniques:</p>
+
+<ul>
+<li><p>we have to normalize the data embedded into the json data field so that
+we can use them in our join operation: the sets contain a booster field
+with is an array of card rarity to form the booster, but all lower case
+when the <em>&ldquo;rarity&rdquo;</em> key in the cards are capitalized, that&rsquo;s why we use
+<em>initcap</em> in the query,</p></li>
+
+<li><p>the <em>left join</em> operation is done against data extracted on the fly from
+the cards, here we have no indexing support for that but the data set
+being very small (34207 different cards) that&rsquo;s no problem,</p></li>
+
+<li><p>finally we abuse the knowledge that <em>false</em> sorts arbitrarily before
+<em>true</em> in PostgreSQL to build a custom <em>order by</em> rule, we want to see
+<em>Uncommon</em> then <em>Common</em> and then only <em>Rare</em>.</p></li>
+</ul>
+
+<p>And here&rsquo;s the result set:</p>
+
+<pre><code>  rarity  │ count │ count 
+══════════╪═══════╪═══════
+ Uncommon │     3 │    95
+ Common   │    11 │    74
+ Rare     │     1 │   116
+(3 rows)
+</code></pre>
+
+<p>So, to build a magic deck from the <em>LEA</em> set we need to pick 3 uncommon
+cards among 95 available, then 11 common cards among the 74 available and
+finally 1 rare in the 116 rare cards from the collection.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #FF0000; background-color: #FFAAAA">\</span><span style="color: #0000aa">set</span> collection <span style="color: #aa5500">&#39;LEA&#39;</span>
+
+<span style="color: #0000aa">with</span> booster <span style="color: #0000aa">as</span>
+(
+    <span style="color: #0000aa">select</span> name,
+           initcap(
+             jsonb_array_elements_text(<span style="color: #0000aa">sets</span>.<span style="color: #0000aa">data</span>-&gt;<span style="color: #aa5500">&#39;booster&#39;</span>)
+           ) <span style="color: #0000aa">as</span> rarity,
+           <span style="color: #0000aa">count</span>(*)
+      <span style="color: #0000aa">from</span> magic.<span style="color: #0000aa">sets</span>
+     <span style="color: #0000aa">where</span> name = :<span style="color: #aa5500">&#39;collection&#39;</span>
+  <span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> name, rarity
+)
+   <span style="color: #0000aa">select</span> cards.<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;rarity&#39;</span> <span style="color: #0000aa">as</span> rarity,
+          cards.<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;name&#39;</span> <span style="color: #0000aa">as</span> name,
+          cards.<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;manaCost&#39;</span> <span style="color: #0000aa">as</span> manacost,
+          cards.<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;type&#39;</span> <span style="color: #0000aa">as</span> <span style="color: #0000aa">type</span>
+     <span style="color: #0000aa">from</span> booster
+          <span style="color: #0000aa">left</span> <span style="color: #0000aa">join</span> <span style="color: #0000aa">lateral</span>
+          (
+            <span style="color: #0000aa">select</span> <span style="color: #0000aa">data</span>
+              <span style="color: #0000aa">from</span> magic.cards
+             <span style="color: #0000aa">where</span> cards.<span style="color: #0000aa">set</span> = booster.name
+               <span style="color: #0000aa">and</span> cards.<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;rarity&#39;</span> = booster.rarity
+          <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> random()
+             <span style="color: #0000aa">limit</span> booster.<span style="color: #0000aa">count</span>
+          )
+          <span style="color: #0000aa">as</span> cards
+          <span style="color: #0000aa">on</span> <span style="color: #0000aa">true</span>
+  <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> cards.<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;rarity&#39;</span> &lt;&gt; <span style="color: #aa5500">&#39;Uncommon&#39;</span>,
+           cards.<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;rarity&#39;</span> &lt;&gt; <span style="color: #aa5500">&#39;Common&#39;</span>;
+</pre></div>
+
+<p>The <em>left join lateral</em> allows to inject directly how many rows we need in
+the subquery limit clause. We use the <em>order by random()</em> trick here to get
+our cards. It&rsquo;s ok because we know that a booster doesn&rsquo;t contain that many
+items, and as said before, even this laptop where the article is typed has
+no problem dealing with 34207 rows. Should you need to pick a <em>random()</em>
+number of items in a bigger list of choice, read <a href="http://blog.rhodiumtoad.org.uk/2009/03/08/selecting-random-rows-from-a-table/">Selecting random rows from
+a
+table</a>
+by <a href="http://blog.rhodiumtoad.org.uk">The Rhodium Toad</a>, PostgreSQL committer.</p>
+
+<p>And here&rsquo;s such a booster pack:</p>
+
+<pre><code>  rarity  │             name             │ manaCost │           type           
+══════════╪══════════════════════════════╪══════════╪══════════════════════════
+ Uncommon │ White Ward                   │ {W}      │ Enchantment — Aura
+ Uncommon │ Berserk                      │ {G}      │ Instant
+ Uncommon │ Bog Wraith                   │ {3}{B}   │ Creature — Wraith
+ Common   │ Ironclaw Orcs                │ {1}{R}   │ Creature — Orc
+ Common   │ False Orders                 │ {R}      │ Instant
+ Common   │ Twiddle                      │ {U}      │ Instant
+ Common   │ Red Elemental Blast          │ {R}      │ Instant
+ Common   │ Samite Healer                │ {1}{W}   │ Creature — Human Cleric
+ Common   │ Shanodin Dryads              │ {G}      │ Creature — Nymph Dryad
+ Common   │ Weakness                     │ {B}      │ Enchantment — Aura
+ Common   │ Wall of Wood                 │ {G}      │ Creature — Wall
+ Common   │ Llanowar Elves               │ {G}      │ Creature — Elf Druid
+ Common   │ Benalish Hero                │ {W}      │ Creature — Human Soldier
+ Common   │ Merfolk of the Pearl Trident │ {U}      │ Creature — Merfolk
+ Rare     │ Contract from Below          │ {B}      │ Sorcery
+(15 rows)
+</code></pre>
+
+<p>When consuming the data in JSON in your application, you might want to
+return directly <em>cards.data</em>, which is a json document, rather than
+extracting some of the fields only like we&rsquo;ve done here.</p>
+
+<h1 id="magic-card-type-type-of-card-and-subtype">Magic™ card type, type of card and subtype</h1>
+
+<p>From the <a href="https://mtgjson.com/documentation.html">MTGjson documentation</a> we
+have different kind of types for a single card:</p>
+
+<ul>
+<li><p><em>type</em></p>
+
+<p>The card type. This is the type you would see on the card if printed
+today.</p></li>
+
+<li><p><em>types</em></p>
+
+<p>The types of the card. These appear to the left of the dash in a card
+type. Example values: Instant, Sorcery, Artifact, Creature, Enchantment,
+Land, Planeswalker</p></li>
+
+<li><p><em>supertypes</em></p>
+
+<p>The supertypes of the card. These appear to the far left of the card
+type. Example values: Basic, Legendary, Snow, World, Ongoing.</p></li>
+
+<li><p><em>subtypes</em></p>
+
+<p>The subtypes of the card. These appear to the right of the dash in a
+card type. Usually each word is its own subtype. Example values: Trap,
+Arcane, Equipment, Aura, Human, Rat, Squirrel, etc.</p></li>
+</ul>
+
+<p>Of course those are repeated a lot in every card instance, as we can see
+with the following queries:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>  <span style="color: #0000aa">select</span> <span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;type&#39;</span> <span style="color: #0000aa">as</span> <span style="color: #0000aa">type</span>, <span style="color: #0000aa">count</span>(*)
+    <span style="color: #0000aa">from</span> magic.cards
+<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> <span style="color: #0000aa">type</span>
+<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> <span style="color: #0000aa">count</span> <span style="color: #0000aa">desc</span>
+   <span style="color: #0000aa">limit</span> <span style="color: #009999">3</span>;
+</pre></div>
+
+<pre><code>    type     │ count 
+═════════════╪═══════
+ Instant     │  4052
+ Sorcery     │  3805
+ Enchantment │  2020
+(3 rows)
+</code></pre>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>  <span style="color: #0000aa">select</span> jsonb_array_elements_text(<span style="color: #0000aa">data</span>-&gt;<span style="color: #aa5500">&#39;subtypes&#39;</span>) <span style="color: #0000aa">as</span> subtypes, <span style="color: #0000aa">count</span>(*)
+    <span style="color: #0000aa">from</span> magic.cards
+<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> subtypes
+<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> <span style="color: #0000aa">count</span> <span style="color: #0000aa">desc</span>
+   <span style="color: #0000aa">limit</span> <span style="color: #009999">3</span>;
+</pre></div>
+
+<pre><code>    type     │ count 
+═════════════╪═══════
+ Instant     │  4052
+ Sorcery     │  3805
+ Enchantment │  2020
+(3 rows)
+</code></pre>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>  <span style="color: #0000aa">select</span> jsonb_array_elements_text(<span style="color: #0000aa">data</span>-&gt;<span style="color: #aa5500">&#39;types&#39;</span>) <span style="color: #0000aa">as</span> types, <span style="color: #0000aa">count</span>(*)
+    <span style="color: #0000aa">from</span> magic.cards
+<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> types
+<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> <span style="color: #009999">2</span> <span style="color: #0000aa">desc</span>
+   <span style="color: #0000aa">limit</span> <span style="color: #009999">3</span>;
+</pre></div>
+
+<pre><code>    types    │ count 
+═════════════╪═══════
+ Creature    │ 15827
+ Instant     │  4201
+ Enchantment │  3875
+(3 rows)
+</code></pre>
+
+<p>We had a repetition problem with the <em>rarity</em> already, now with the three
+different kinds of types a card might have, and then there&rsquo;s also the
+<em>artist</em>. It&rsquo;s going to be quite hard to maintain that data set, so… I can&rsquo;t
+resist.</p>
+
+<p>First, to check some basic guarantees, second, to normalize the data.</p>
+
+<h1 id="constraints-and-data-quality">Constraints and data quality</h1>
+
+<p>The data being available in JSON and easy enough to process could be all we
+need. Sometimes your application or business rules require data quality, and
+Relational Data Base Management Systems provide that with the help of
+constraints. As a user, it means quite some work has to be done to declare
+the kind of data quality we want.</p>
+
+<p>The <a href="https://mtgjson.com/documentation.html">MTGjson documentation</a> tells us
+that the cards <em>id</em> field is</p>
+
+<blockquote>
+<p>A unique id for this card. It is made up by doing an SHA1 hash of
+setCode + cardName + cardImageName</p>
+</blockquote>
+
+<p>There&rsquo;s no constraint to guarantee that the <em>id</em> is actually unique, in the
+JSON file. Let&rsquo;s have a look. Here&rsquo;s a classic query to find duplicates, and
+we expect no result:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>  <span style="color: #0000aa">select</span> <span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;id&#39;</span> <span style="color: #0000aa">as</span> id, <span style="color: #0000aa">count</span>(*)
+    <span style="color: #0000aa">from</span> magic.cards
+<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> id
+  <span style="color: #0000aa">having</span> <span style="color: #0000aa">count</span>(*)&gt;<span style="color: #009999">1</span>;
+</pre></div>
+
+<p>Oh. Oopsie:</p>
+
+<pre><code>                    id                    │ count 
+══════════════════════════════════════════╪═══════
+ 2ba1628b4169e33a4a6773124bec72fadfb6c983 │     2
+ 34bbf9e14b771f9eb4c4c2970ed54b8ff836118a │     2
+(2 rows)
+</code></pre>
+
+<p>Details? Sure:</p>
+
+<pre><code>select ctid,
+       data-&gt;&gt;'name' as name,
+       data-&gt;&gt;'mciNumber' as mci_number,
+       data-&gt;&gt;'multiverseid' as multiverseid,
+       md5(data::text)
+  from magic.cards
+ where data @&gt; '{&quot;id&quot;:&quot;2ba1628b4169e33a4a6773124bec72fadfb6c983&quot;}'
+    or data @&gt; '{&quot;id&quot;:&quot;34bbf9e14b771f9eb4c4c2970ed54b8ff836118a&quot;}';
+</code></pre>
+
+<p>So, real duplicates it seems:</p>
+
+<pre><code>  ctid   │         name          │ mci_number │ multiverseid │               md5                
+═════════╪═══════════════════════╪════════════╪══════════════╪══════════════════════════════════
+ (493,7) │ Jaraku the Interloper │ 31b        │ 74489        │ 81afc561a6055eac8d2b59be00b63946
+ (493,8) │ Jaraku the Interloper │ 31b        │ 74489        │ 81afc561a6055eac8d2b59be00b63946
+ (497,6) │ Scarmaker             │ 69b        │ 74476        │ 975c9860656b05e81d7e46d6af17c507
+ (497,7) │ Scarmaker             │ 69b        │ 74476        │ 975c9860656b05e81d7e46d6af17c507
+(4 rows)
+</code></pre>
+
+<p>Now, to clean up the mess, we need a way to distinguish two rows that are
+entirely the same. No user column differ. Mmm.</p>
+
+<h1 id="deleting-duplicate-rows">Deleting duplicate rows</h1>
+
+<p>The <em>ctid</em> is one of the <a href="https://www.postgresql.org/docs/current/static/ddl-system-columns.html">PostgreSQL System
+Columns</a>.
+It is accessible to us users, and to use with care. From the docs:</p>
+
+<blockquote>
+<p>The physical location of the row version within its table. Note that
+although the ctid can be used to locate the row version very quickly, a
+row&rsquo;s ctid will change if it is updated or moved by VACUUM FULL. Therefore
+ctid is useless as a long-term row identifier. The OID, or even better a
+user-defined serial number, should be used to identify logical rows.</p>
+</blockquote>
+
+<p>So we can actually clean up this mess:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">begin</span>;
+
+<span style="color: #0000aa">delete</span>
+  <span style="color: #0000aa">from</span> magic.cards
+ <span style="color: #0000aa">where</span> <span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;id&#39;</span> = <span style="color: #aa5500">&#39;2ba1628b4169e33a4a6773124bec72fadfb6c983&#39;</span>
+   <span style="color: #0000aa">and</span> ctid = <span style="color: #aa5500">&#39;(493,8)&#39;</span>;
+
+<span style="color: #0000aa">delete</span>
+  <span style="color: #0000aa">from</span> magic.cards
+ <span style="color: #0000aa">where</span> <span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;id&#39;</span> = <span style="color: #aa5500">&#39;34bbf9e14b771f9eb4c4c2970ed54b8ff836118a&#39;</span>
+   <span style="color: #0000aa">and</span> ctid = <span style="color: #aa5500">&#39;(497,7)&#39;</span>;
+
+<span style="color: #0000aa">commit</span>;
+</pre></div>
+
+<p>You can see in the <em>delete</em> statements above that we use <strong><em>both</em></strong> the
+system column <em>ctid</em> and a user column, here <em>data-&gt;&gt;&lsquo;id&rsquo;</em>. This allows to
+<em>delete</em> nothing should concurrent activity move the data around on disk.
+You never know.</p>
+
+<div class="alert info ">
+  <p>If you like this kind of <em>dive into SQL</em> content, where every SQL query is
+presented in a context, and with a real data set that you can download and
+play with at home, then you will love my new book: <a href="http://masteringpostgresql.com">Mastering PostgreSQL in
+Application Development</a>.</p>
+</div>
+
+<script async id="_ck_252762" src="https://forms.convertkit.com/252762?v=6"></script>
+
+
+<h1 id="cards-and-sets-rarities">Cards and Sets Rarities</h1>
+
+<p>As we&rsquo;ve seen in a previous section of this document, cards and set&rsquo;s
+boosters rarities are oddly different. Let&rsquo;s have a closer look now. For the
+cards, it&rsquo;s quite simple as each card has a simple <em>rarity</em> key:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>  <span style="color: #0000aa">select</span> <span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;rarity&#39;</span> <span style="color: #0000aa">as</span> rarity, <span style="color: #0000aa">count</span>(*)
+    <span style="color: #0000aa">from</span> magic.cards
+<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> rarity
+<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> <span style="color: #0000aa">count</span> <span style="color: #0000aa">desc</span>;
+</pre></div>
+
+<p>It&rsquo;s interesting to count the cards by <em>rarity</em> classification, because
+that&rsquo;s how it supposed to be classified. We expect <em>Rare</em> cards have a
+lesser count than <em>Common</em> ones, and that&rsquo;s what we have:</p>
+
+<pre><code>   rarity    │ count 
+═════════════╪═══════
+ Common      │ 11297
+ Uncommon    │  9618
+ Rare        │  8711
+ Basic Land  │  1854
+ Special     │  1704
+ Mythic Rare │  1021
+(6 rows)
+</code></pre>
+
+<p>Now, the sets objects have a <em>booster</em> key, which has its own full blown
+documentation paragraph at the <a href="https://mtgjson.com/documentation.html">MTGjson
+documentation</a> page. Quoting from it:</p>
+
+<blockquote>
+<p>The &lsquo;booster&rsquo; key is present for each set that has physical boosters (so
+not present for box sets, duel decks, digital masters editions, etc.). It
+is an array containing one item per card in the booster. Thus the array
+length is how many cards are in a booster. Each item in the array is
+either a string representing the type of booster card or an array of
+strings representing possible types for that booster card.</p>
+</blockquote>
+
+<p>Here&rsquo;s how to extract all the different possible values from the <em>boosters</em>,
+and it&rsquo;s more complex than we would like it to:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>  <span style="color: #0000aa">select</span> <span style="color: #0000aa">case</span> jsonb_typeof(booster)
+              <span style="color: #0000aa">when</span> <span style="color: #aa5500">&#39;array&#39;</span>
+              <span style="color: #0000aa">then</span> initcap(jsonb_array_elements_text(booster))
+              <span style="color: #0000aa">else</span> initcap(booster #&gt;&gt; <span style="color: #aa5500">&#39;{}&#39;</span>)
+          <span style="color: #0000aa">end</span>
+         <span style="color: #0000aa">as</span> rarity,
+         <span style="color: #0000aa">count</span>(*)
+    <span style="color: #0000aa">from</span> magic.<span style="color: #0000aa">sets</span>,
+         jsonb_array_elements(<span style="color: #0000aa">data</span>-&gt;<span style="color: #aa5500">&#39;booster&#39;</span>) booster
+<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> rarity
+<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> <span style="color: #0000aa">count</span> <span style="color: #0000aa">desc</span>;
+</pre></div>
+
+<p>As the <em>booster</em> key is associated with an array value, we <em>unnest</em> the
+array with <em>jsonb_array_elements</em> again. As each element of the array might
+be either another array or a text, we can&rsquo;t use <em>jsonb_array_elements_text</em>
+this time. We have to <em>unnest</em> nested array elements or to extrat the text
+from a single json text value.</p>
+
+<p>To extract the single json text value as a PostgreSQL text, without the
+extra json double-quoting, we use the <code>#&gt;&gt;</code> operator, that reads <em>extract
+text at path</em>. And the json path for a single text element is <code>{}</code>.</p>
+
+<p>On the result set, we have the following list of entries this time:</p>
+
+<pre><code>          rarity          │ count 
+══════════════════════════╪═══════
+ Common                   │  1138
+ Uncommon                 │   331
+ Rare                     │   110
+ Land                     │    50
+ Mythic Rare              │    44
+ Marketing                │    43
+ Timeshifted Common       │    14
+ Checklist                │     5
+ Foil Mythic Rare         │     4
+ Foil Rare                │     4
+ Foil Common              │     4
+ Foil Uncommon            │     4
+ Timeshifted Uncommon     │     4
+ Double Faced Uncommon    │     2
+ Draft-Matters            │     2
+ Double Faced Rare        │     2
+ Timeshifted Rare         │     2
+ Timeshifted Purple       │     2
+ Double Faced Mythic Rare │     2
+ Double Faced Common      │     2
+ Foil                     │     1
+ Urza Land                │     1
+ Power Nine               │     1
+ Double Faced             │     1
+(24 rows)
+</code></pre>
+
+<p>The first thing we notice is that our cards collection only has 6 different
+rarities and the boosters contain 24 different ones. It&rsquo;s going to be
+complex to build some of those boosters…</p>
+
+<p>Other than that, we want to generalize the rules to build a booster. Those
+alternative choices — represented as an array in the JSON format — might be
+a good representation for every entry in the <em>booster</em> so as to unify the
+processing of the field. Matching an element against and array is easy to
+implement in SQL thanks to both the <a href="https://www.postgresql.org/docs/current/static/functions-comparisons.html">Row and Array
+Comparisons</a>
+and the <em>array contains item</em> operator, spelled <code>@&gt;</code>.</p>
+
+<p>PostgreSQL has support for arrays, and support for enumerated types. It
+should be no surprise that PostgreSQL covers arrays of enums too. So our
+choice for representing a booster pack is going to be able to use an array
+of <em>rarity_t</em> elements:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">create</span> <span style="color: #0000aa">type</span> rarity_t <span style="color: #0000aa">as</span> enum
+ (
+  <span style="color: #aa5500">&#39;Common&#39;</span>, <span style="color: #aa5500">&#39;Uncommon&#39;</span>, <span style="color: #aa5500">&#39;Rare&#39;</span>, <span style="color: #aa5500">&#39;Land&#39;</span>, <span style="color: #aa5500">&#39;Mythic Rare&#39;</span>,
+  <span style="color: #aa5500">&#39;Marketing&#39;</span>, <span style="color: #aa5500">&#39;Timeshifted Common&#39;</span>, <span style="color: #aa5500">&#39;Checklist&#39;</span>,
+  <span style="color: #aa5500">&#39;Foil Mythic Rare&#39;</span>, <span style="color: #aa5500">&#39;Foil Rare&#39;</span>, <span style="color: #aa5500">&#39;Foil Common&#39;</span>, <span style="color: #aa5500">&#39;Foil Uncommon&#39;</span>,
+  <span style="color: #aa5500">&#39;Timeshifted Uncommon&#39;</span>, <span style="color: #aa5500">&#39;Double Faced Uncommon&#39;</span>,
+  <span style="color: #aa5500">&#39;Draft-Matters&#39;</span>, <span style="color: #aa5500">&#39;Double Faced Rare&#39;</span>,
+  <span style="color: #aa5500">&#39;Timeshifted Rare&#39;</span>, <span style="color: #aa5500">&#39;Timeshifted Purple&#39;</span>,
+  <span style="color: #aa5500">&#39;Double Faced Mythic Rare&#39;</span>, <span style="color: #aa5500">&#39;Double Faced Common&#39;</span>,
+  <span style="color: #aa5500">&#39;Foil&#39;</span>, <span style="color: #aa5500">&#39;Urza Land&#39;</span>, <span style="color: #aa5500">&#39;Power Nine&#39;</span>, <span style="color: #aa5500">&#39;Double Faced&#39;</span>,
+  <span style="color: #aa5500">&#39;Basic Land&#39;</span>, <span style="color: #aa5500">&#39;Special&#39;</span>
+ );
+</pre></div>
+
+<p>With that data type, we now are able to build arrays of <em>rarity_t</em> elements,
+and check if a card&rsquo;s <em>rarity</em> value is contained into such as array.</p>
+
+<h1 id="normalizing-the-data-set">Normalizing the data set</h1>
+
+<p>PostgreSQL is very good at mixing SQL and JSON, as we&rsquo;ve seen in the
+previous query, thanks to advanced processing functions such as
+<code>jsonb_array_elements_text</code> and operators such as <code>-&gt;</code>, <code>-&gt;&gt;</code> and <code>@&gt;</code>.</p>
+
+<p>That said, minor inconsistencies such as the <em>rarity</em> information being
+spelled in different ways in different contexts is a problem. Duplicate
+entries is an ever greater concern.</p>
+
+<p>There&rsquo;s no way for PostgreSQL to guarantee any data quality when all it
+knows about are opaque <em>json</em> documents. We won&rsquo;t host a lecture of the
+<a href="https://en.wikipedia.org/wiki/Database_normalization">Normal Forms</a>
+benefits here, but we can still see how to turn our JSON documents into a
+proper relational model.</p>
+
+<h2 id="sets">Sets</h2>
+
+<p>PostgreSQL makes the translation from the JSON document to a proper schema
+quite easy, as we are going to see now. First, the sets.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">create</span> <span style="color: #0000aa">type</span> border_t <span style="color: #0000aa">as</span> enum
+ (
+  <span style="color: #aa5500">&#39;black&#39;</span>, <span style="color: #aa5500">&#39;white&#39;</span>, <span style="color: #aa5500">&#39;silver&#39;</span>
+ );
+ 
+<span style="color: #0000aa">create</span> <span style="color: #0000aa">table</span> settype
+ (
+   settypeid  <span style="color: #00aaaa">serial</span> <span style="color: #0000aa">primary</span> <span style="color: #0000aa">key</span>,
+   name       <span style="color: #00aaaa">text</span>,
+   
+   <span style="color: #0000aa">unique</span>(name)
+ );
+
+<span style="color: #0000aa">create</span> <span style="color: #0000aa">table</span> <span style="color: #0000aa">set</span>
+ (
+   setid     <span style="color: #00aaaa">serial</span> <span style="color: #0000aa">primary</span> <span style="color: #0000aa">key</span>,
+   mkmid     <span style="color: #00aaaa">integer</span>,
+   name      <span style="color: #00aaaa">text</span>,
+   code      <span style="color: #00aaaa">text</span>,
+   info_code <span style="color: #00aaaa">text</span>,
+   release   <span style="color: #00aaaa">date</span>,
+   border    border_t,
+   settypeid <span style="color: #00aaaa">integer</span> <span style="color: #0000aa">not</span> <span style="color: #0000aa">null</span> <span style="color: #0000aa">references</span> settype(settypeid)
+ );
+ 
+<span style="color: #0000aa">create</span> <span style="color: #0000aa">table</span> booster
+ (
+   setid      <span style="color: #00aaaa">integer</span> <span style="color: #0000aa">not</span> <span style="color: #0000aa">null</span> <span style="color: #0000aa">references</span> <span style="color: #0000aa">set</span>(setid),
+   num        <span style="color: #00aaaa">integer</span>,
+   rarity     rarity_t[],
+   
+   <span style="color: #0000aa">primary</span> <span style="color: #0000aa">key</span>(setid, num)
+ );
+</pre></div>
+
+<p>We made some trade-offs here, and didn&rsquo;t follow the <em>Normal Forms</em> rules to
+the letter. The <em>booster</em> is now a proper reference table with as many
+entries as cards, each having a “number”, as in card number 1 is a “Mythic
+Rare” and card number 2 is an “Uncommon”. Each entry of the <em>booster</em> table
+associates a <em>set</em> with a <em>rarity</em> array containing alternative choices for
+this card of the booster. When there&rsquo;s no alternative, we will have there an
+array of a single value.</p>
+
+<p>We also chose to create an enumerated data type for the <em>border</em> rather than
+a reference table. Well since its creation about 25 years ago, only 3 border
+types have been produced. I think using an <em>enum</em> here is a good trade-off.</p>
+
+<h2 id="cards">Cards</h2>
+
+<p>Now about the cards themselves:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">create</span> <span style="color: #0000aa">type</span> color_t <span style="color: #0000aa">as</span> enum
+ (
+  <span style="color: #aa5500">&#39;Black&#39;</span>, <span style="color: #aa5500">&#39;Blue&#39;</span>, <span style="color: #aa5500">&#39;Green&#39;</span>, <span style="color: #aa5500">&#39;Red&#39;</span>, <span style="color: #aa5500">&#39;White&#39;</span>
+ );
+
+<span style="color: #0000aa">create</span> <span style="color: #0000aa">table</span> artist
+ (
+   artistid <span style="color: #00aaaa">serial</span> <span style="color: #0000aa">primary</span> <span style="color: #0000aa">key</span>,
+   name     <span style="color: #00aaaa">text</span>,
+   
+   <span style="color: #0000aa">unique</span>(name)
+ );
+
+<span style="color: #0000aa">create</span> <span style="color: #0000aa">table</span> layout
+ (
+  layoutid  <span style="color: #00aaaa">serial</span> <span style="color: #0000aa">primary</span> <span style="color: #0000aa">key</span>,
+  layout    <span style="color: #00aaaa">text</span>,
+  
+  <span style="color: #0000aa">unique</span>(layout)
+ );
+
+<span style="color: #0000aa">create</span> <span style="color: #0000aa">table</span> cardtype
+ (
+  cardtypeid   <span style="color: #00aaaa">serial</span> <span style="color: #0000aa">primary</span> <span style="color: #0000aa">key</span>,
+  cardtype     <span style="color: #00aaaa">text</span>,
+  
+  <span style="color: #0000aa">unique</span>(cardtype)
+ );
+ 
+<span style="color: #0000aa">create</span> <span style="color: #0000aa">table</span> subtype
+ (
+  subtypeid <span style="color: #00aaaa">serial</span> <span style="color: #0000aa">primary</span> <span style="color: #0000aa">key</span>,
+  subtype   <span style="color: #00aaaa">text</span>,
+
+  <span style="color: #0000aa">unique</span>(subtype)
+);
+
+<span style="color: #0000aa">create</span> <span style="color: #0000aa">table</span> <span style="color: #0000aa">type</span>
+ (
+  typeid <span style="color: #00aaaa">serial</span> <span style="color: #0000aa">primary</span> <span style="color: #0000aa">key</span>,
+  <span style="color: #0000aa">type</span>   <span style="color: #00aaaa">text</span>,
+
+  <span style="color: #0000aa">unique</span>(<span style="color: #0000aa">type</span>)
+ );
+
+<span style="color: #0000aa">create</span> <span style="color: #0000aa">table</span> card
+ (
+  id           <span style="color: #00aaaa">text</span> <span style="color: #0000aa">primary</span> <span style="color: #0000aa">key</span>,
+  setid        <span style="color: #00aaaa">integer</span> <span style="color: #0000aa">not</span> <span style="color: #0000aa">null</span> <span style="color: #0000aa">references</span> <span style="color: #0000aa">set</span>(setid),
+  name         <span style="color: #00aaaa">text</span>,
+  flavor       <span style="color: #00aaaa">text</span>,
+  description  <span style="color: #00aaaa">text</span>,
+  image_name   <span style="color: #00aaaa">text</span>,
+  layoutid     <span style="color: #00aaaa">integer</span> <span style="color: #0000aa">not</span> <span style="color: #0000aa">null</span> <span style="color: #0000aa">references</span> layout(layoutid),
+  artistid     <span style="color: #00aaaa">integer</span> <span style="color: #0000aa">not</span> <span style="color: #0000aa">null</span> <span style="color: #0000aa">references</span> artist(artistid),
+  cardtypeid   <span style="color: #00aaaa">integer</span> <span style="color: #0000aa">not</span> <span style="color: #0000aa">null</span> <span style="color: #0000aa">references</span> cardtype(cardtypeid),
+  types        <span style="color: #00aaaa">integer</span>[],
+  subtypes     <span style="color: #00aaaa">integer</span>[],
+  colors       color_t[],
+  color_id     color_t[],
+  rarity       rarity_t,
+  mci          <span style="color: #00aaaa">text</span>,
+  multiverseid <span style="color: #00aaaa">integer</span>,
+  <span style="color: #00aaaa">number</span>       <span style="color: #00aaaa">text</span>,
+  cmc          <span style="color: #00aaaa">numeric</span>,
+  power        <span style="color: #00aaaa">text</span>,
+  toughness    <span style="color: #00aaaa">text</span>,
+  manacost     jsonb,
+  extra        jsonb
+ ); 
+</pre></div>
+
+<p>This isn&rsquo;t a fully normalized schema. Rather than going to full distance and
+having association tables between a <em>color</em> reference table and the <em>card</em>
+table, we chose to declare the color as an enumerate data type. That&rsquo;s
+because we know that the Magic™ game is defined by those 5 colors. No data
+maintenance with new colors is to be expected.</p>
+
+<p>New cards layouts and types have been known to appear in some special
+editions, packs, or collections. So we need to have an easy way to manage
+them, each in their own reference table.</p>
+
+<p>Still, rather than having a proper association table for this many to many
+relationship, we use a PostgreSQL array: once a card is edited, its
+properties have zero maintenance needs. Also, PostgreSQL makes it easy to
+index and search into arrays.</p>
+
+<p>The only problem with those arrays is that we can&rsquo;t implement a <em>foreign
+key</em> to the reference tables type and subtype.</p>
+
+<h1 id="dispatching-json-data-into-normalized-tables">Dispatching JSON data into normalized tables</h1>
+
+<p>Now that we have a table schema that should make our work easier, how do we
+populate it? Well, in SQL of course!</p>
+
+<h2 id="sets-1">Sets</h2>
+
+<p>It begins with the sets and their type:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">insert</span> <span style="color: #0000aa">into</span> settype(name)
+     <span style="color: #0000aa">select</span> <span style="color: #0000aa">distinct</span>(<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;type&#39;</span>)
+       <span style="color: #0000aa">from</span> magic.<span style="color: #0000aa">sets</span>;
+</pre></div>
+
+<p>And we have our 17 types of sets registered. On to the sets themselves:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">insert</span> <span style="color: #0000aa">into</span> <span style="color: #0000aa">set</span>(mkmid, name, code, info_code,
+                release, border, settypeid)
+     <span style="color: #0000aa">select</span> (<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;mkm_id&#39;</span>)::<span style="color: #00aaaa">int</span>,
+            <span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;name&#39;</span>,
+            <span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;code&#39;</span>,
+            <span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;magicCardsInfoCode&#39;</span>,
+            (<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;releaseDate&#39;</span>)::<span style="color: #00aaaa">date</span>,
+            (<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;border&#39;</span>)::border_t,
+            settypeid
+       <span style="color: #0000aa">from</span> magic.<span style="color: #0000aa">sets</span>
+            <span style="color: #0000aa">join</span> settype
+              <span style="color: #0000aa">on</span> <span style="color: #0000aa">sets</span>.<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;type&#39;</span> = settype.name;
+</pre></div>
+
+<p>As you can see the PostgreSQL json operator <code>-&gt;&gt;</code> extract the data as <em>text</em>
+and we need to convert those text entries to their target data types at
+times. It&rsquo;s easy to do, and ensures we know what we&rsquo;re dealing with.</p>
+
+<p>And now we have a clean data set for the sets:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> setid, mkmid, <span style="color: #0000aa">set</span>.name, code, release, settype.name
+  <span style="color: #0000aa">from</span> <span style="color: #0000aa">set</span>
+       <span style="color: #0000aa">join</span> settype <span style="color: #0000aa">using</span>(settypeid)
+ <span style="color: #0000aa">limit</span> <span style="color: #009999">10</span>;
+</pre></div>
+
+<pre><code> setid │ mkmid │         name          │ code │  release   │   name    
+═══════╪═══════╪═══════════════════════╪══════╪════════════╪═══════════
+     1 │    74 │ Tenth Edition         │ 10E  │ 2007-07-13 │ core
+     2 │     3 │ Unlimited Edition     │ 2ED  │ 1993-12-01 │ core
+     3 │     6 │ Revised Edition       │ 3ED  │ 1994-04-01 │ core
+     4 │    10 │ Fourth Edition        │ 4ED  │ 1995-04-01 │ core
+     5 │    47 │ Fifth Dawn            │ 5DN  │ 2004-06-04 │ expansion
+     6 │    23 │ Fifth Edition         │ 5ED  │ 1997-03-24 │ core
+     7 │    29 │ Classic Sixth Edition │ 6ED  │ 1999-04-21 │ core
+     8 │    37 │ Seventh Edition       │ 7ED  │ 2001-04-11 │ core
+     9 │    44 │ Eighth Edition        │ 8ED  │ 2003-07-28 │ core
+    10 │    49 │ Ninth Edition         │ 9ED  │ 2005-07-29 │ core
+(10 rows)
+</code></pre>
+
+<h2 id="boosters">Boosters</h2>
+
+<p>Our <em>set</em> table is missing the <em>booster</em> information, which is now handled
+separately. It is now time for us to handle it.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">insert</span> <span style="color: #0000aa">into</span> booster(setid, num, rarity)
+     <span style="color: #0000aa">select</span> setid,
+            row_number() over(partition <span style="color: #0000aa">by</span> setid) <span style="color: #0000aa">as</span> num,
+            <span style="color: #0000aa">case</span> jsonb_typeof(booster)
+                 <span style="color: #0000aa">when</span> <span style="color: #aa5500">&#39;array&#39;</span>
+                 <span style="color: #0000aa">then</span> (
+                       <span style="color: #0000aa">select</span> array_agg(initcap(rarity)::rarity_t)
+                         <span style="color: #0000aa">from</span> jsonb_array_elements_text(booster) <span style="color: #0000aa">as</span> rarity
+                      )
+                 <span style="color: #0000aa">else</span> <span style="color: #00aaaa">array</span>[initcap(booster #&gt;&gt; <span style="color: #aa5500">&#39;{}&#39;</span>)::rarity_t]
+             <span style="color: #0000aa">end</span>
+            <span style="color: #0000aa">as</span> rarity
+       <span style="color: #0000aa">from</span> magic.<span style="color: #0000aa">sets</span>
+            <span style="color: #0000aa">join</span> <span style="color: #0000aa">set</span> <span style="color: #0000aa">on</span> <span style="color: #0000aa">set</span>.code = <span style="color: #0000aa">sets</span>.name,
+            <span style="color: #0000aa">lateral</span> jsonb_array_elements(<span style="color: #0000aa">data</span>-&gt;<span style="color: #aa5500">&#39;booster&#39;</span>) booster
+   <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> setid;
+</pre></div>
+
+<p>In this query, we process the booster array elements in the same way as
+before, depending on if they are an array again (and then fetch each array
+element as text, capitalize this text using the <em>initcap</em> function and
+casting the result as a <em>rarity_t</em> enum value) or a scalar text value, in
+which case we build an array containing a single element, the extracted text
+value as a <em>rarity_t</em> enum value.</p>
+
+<p>We use a <em>lateral join</em> in the query in order to <em>unnest</em> the
+<em>data-&gt;&lsquo;booster&rsquo;</em> entry for each set found. In the output of the query, we
+also use the window function <em>row_number()</em> over peers as defined by the
+expression <em>partition by setid</em> so as to associate to each element of the
+array its index position, and keep that in our <em>booster</em> target table.</p>
+
+<p>Keeping the array index position should allow us to display booster
+configurations and randomly generated booster instances in the right order.</p>
+
+<p>We may have a look at one particular booster definition, the first one ever:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> mkmid, release, <span style="color: #0000aa">set</span>.name,
+       booster.num, booster.rarity
+  <span style="color: #0000aa">from</span> booster
+       <span style="color: #0000aa">join</span> <span style="color: #0000aa">set</span> <span style="color: #0000aa">using</span>(setid)
+ <span style="color: #0000aa">where</span> <span style="color: #0000aa">set</span>.code = <span style="color: #aa5500">&#39;LEA&#39;</span>;
+</pre></div>
+
+<p>And here&rsquo;s what the booster for the <em>Limiter Edition Alpha</em> looks like in
+our setup:</p>
+
+<pre><code> mkmid │  release   │         name          │ num │   rarity   
+═══════╪════════════╪═══════════════════════╪═════╪════════════
+     1 │ 1993-08-05 │ Limited Edition Alpha │   1 │ {Rare}
+     1 │ 1993-08-05 │ Limited Edition Alpha │   2 │ {Uncommon}
+     1 │ 1993-08-05 │ Limited Edition Alpha │   3 │ {Uncommon}
+     1 │ 1993-08-05 │ Limited Edition Alpha │   4 │ {Uncommon}
+     1 │ 1993-08-05 │ Limited Edition Alpha │   5 │ {Common}
+     1 │ 1993-08-05 │ Limited Edition Alpha │   6 │ {Common}
+     1 │ 1993-08-05 │ Limited Edition Alpha │   7 │ {Common}
+     1 │ 1993-08-05 │ Limited Edition Alpha │   8 │ {Common}
+     1 │ 1993-08-05 │ Limited Edition Alpha │   9 │ {Common}
+     1 │ 1993-08-05 │ Limited Edition Alpha │  10 │ {Common}
+     1 │ 1993-08-05 │ Limited Edition Alpha │  11 │ {Common}
+     1 │ 1993-08-05 │ Limited Edition Alpha │  12 │ {Common}
+     1 │ 1993-08-05 │ Limited Edition Alpha │  13 │ {Common}
+     1 │ 1993-08-05 │ Limited Edition Alpha │  14 │ {Common}
+     1 │ 1993-08-05 │ Limited Edition Alpha │  15 │ {Common}
+(15 rows)
+</code></pre>
+
+<p>Now that we have the booster information properly organized, we can get more
+information about them. Not every set type has a booster attached, and we
+have boosters with different number of cards in them. Is there something to
+learn about that?</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">with</span> stats <span style="color: #0000aa">as</span>
+(
+      <span style="color: #0000aa">select</span> settype.name <span style="color: #0000aa">as</span> <span style="color: #0000aa">type</span>,
+             <span style="color: #0000aa">count</span>(booster.num) <span style="color: #0000aa">as</span> cards
+        <span style="color: #0000aa">from</span> <span style="color: #0000aa">set</span>
+             <span style="color: #0000aa">join</span> settype <span style="color: #0000aa">using</span>(settypeid)
+             <span style="color: #0000aa">left</span> <span style="color: #0000aa">join</span> booster <span style="color: #0000aa">using</span>(setid)
+    <span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> setid, settype.name
+      <span style="color: #0000aa">having</span> <span style="color: #0000aa">count</span>(booster.num) &gt; <span style="color: #009999">0</span>
+)
+  <span style="color: #0000aa">select</span> <span style="color: #0000aa">type</span>, cards, <span style="color: #0000aa">count</span>(*)
+    <span style="color: #0000aa">from</span> stats
+<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> <span style="color: #0000aa">type</span>, cards
+<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> <span style="color: #0000aa">type</span>, cards <span style="color: #0000aa">desc</span>;
+</pre></div>
+
+<p>In this very classic SQL query we see a couple for join operations and the
+use of the <em>having</em> clause to select only those groups with at least a card
+in their attached booster, as in the expression <em>count(booster.num) &gt; 0</em>.
+That&rsquo;s because the <em>left join</em> will still produce an entry when there&rsquo;s no
+booster associated, and the entry will be <em>NULL</em>.</p>
+
+<p>The query is written in two steps, the first one gets how many cards is
+found in each booster associated with every Magic™ set we know about, and
+the second step then groups those <em>settype, count of cards</em> together and
+count their occurences:</p>
+
+<pre><code>    type    │ cards │ count 
+════════════╪═══════╪═══════
+ conspiracy │    16 │     2
+ core       │    16 │     8
+ core       │    15 │    10
+ expansion  │    16 │    33
+ expansion  │    15 │    37
+ expansion  │    12 │     1
+ expansion  │     8 │     5
+ masters    │    15 │     5
+ reprint    │    15 │     5
+ reprint    │    12 │     1
+ starter    │    15 │     3
+ starter    │    10 │     1
+ un         │    15 │     1
+ un         │    10 │     1
+(14 rows)
+</code></pre>
+
+<p>Without knowing more about the game itself, it&rsquo;s kind of hard to conclude
+anything from this dataset, other than saying that only 7 of the 17
+different set types have a booster. How many cards per booster seems to be
+quite random from those numbers.</p>
+
+<div class="alert warning ">
+  <p>Exercise left to the reader, try to find other parameters that influence how
+many cards are found in each booster. You might begin with the sets release
+dates, for example.</p>
+
+<p>This is a pretty good exercise into <a href="/blog/2017/06/exploring-a-data-set-in-sql/">Exploring a Data Set in
+SQL</a> as we saw here in a recent
+article.</p>
+</div>
+
+<h2 id="cards-1">Cards</h2>
+
+<p>On to the artists, with a easy query:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">insert</span> <span style="color: #0000aa">into</span> artist(name)
+     <span style="color: #0000aa">select</span> <span style="color: #0000aa">distinct</span>(<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;artist&#39;</span>)
+       <span style="color: #0000aa">from</span> magic.cards;
+</pre></div>
+
+<p>And we have 663 different artists. Now, the layouts:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">insert</span> <span style="color: #0000aa">into</span> layout(layout)
+     <span style="color: #0000aa">select</span> <span style="color: #0000aa">distinct</span>(<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;layout&#39;</span>)
+       <span style="color: #0000aa">from</span> magic.cards;
+</pre></div>
+
+<p>And we have only 12 different layouts used in our cards collection. Now, the
+rarity:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">insert</span> <span style="color: #0000aa">into</span> rarity(rarity)
+     <span style="color: #0000aa">select</span> <span style="color: #0000aa">distinct</span>(<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;rarity&#39;</span>)
+       <span style="color: #0000aa">from</span> magic.cards;
+</pre></div>
+
+<p>And we have only 6 different rarities in all our cards collection. Only 6.
+For 34207 cards. That&rsquo;s a lot of repetition in there. Now, the card types:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">insert</span> <span style="color: #0000aa">into</span> cardtype(cardtype)
+     <span style="color: #0000aa">select</span> <span style="color: #0000aa">distinct</span>(<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;type&#39;</span>)
+       <span style="color: #0000aa">from</span> magic.cards;
+</pre></div>
+
+<p>And we have 1541 card types to work with. What about the types and subtypes,
+which are JSON arrays this time? It might be more complex… but thanks to
+PostgreSQL advanced support for JSON in SQL, not that much:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">insert</span> <span style="color: #0000aa">into</span> subtype(subtype)
+     <span style="color: #0000aa">select</span> <span style="color: #0000aa">distinct</span>(jsonb_array_elements_text(<span style="color: #0000aa">data</span>-&gt;<span style="color: #aa5500">&#39;subtypes&#39;</span>))
+       <span style="color: #0000aa">from</span> magic.cards;
+</pre></div>
+
+<p>And we have now 349 subtypes registered. The types are going to have about
+the same level of complexity of course:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">insert</span> <span style="color: #0000aa">into</span> <span style="color: #0000aa">type</span>(<span style="color: #0000aa">type</span>)
+     <span style="color: #0000aa">select</span> <span style="color: #0000aa">distinct</span>(jsonb_array_elements_text(<span style="color: #0000aa">data</span>-&gt;<span style="color: #aa5500">&#39;types&#39;</span>))
+       <span style="color: #0000aa">from</span> magic.cards;
+</pre></div>
+
+<p>And that&rsquo;s 20 types for our 34207 cards. We&rsquo;re left with the main table now:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">insert</span> <span style="color: #0000aa">into</span> card(id, setid, name, flavor, description, image_name,
+                 layoutid, artistid, cardtypeid,
+                 types, subtypes, colors, color_id,
+                 rarity, mci, multiverseid, <span style="color: #00aaaa">number</span>,
+                 cmc, power, toughness, manacost, extra)
+     <span style="color: #0000aa">select</span> <span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;id&#39;</span>,
+            <span style="color: #0000aa">set</span>.setid,
+            <span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;name&#39;</span>,
+            <span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;flavour&#39;</span>,
+            <span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;text&#39;</span>,
+            <span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;imageName&#39;</span>,
+            layoutid,
+            artistid,
+            cardtypeid,
+            (
+             <span style="color: #0000aa">select</span> array_agg(typeid <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> typeid)
+               <span style="color: #0000aa">from</span> <span style="color: #0000aa">type</span>
+              <span style="color: #0000aa">where</span> <span style="color: #0000aa">data</span>-&gt;<span style="color: #aa5500">&#39;types&#39;</span> @&gt; format(<span style="color: #aa5500">&#39;[&quot;%s&quot;]&#39;</span>, <span style="color: #0000aa">type</span>)::jsonb
+            ),
+            (
+             <span style="color: #0000aa">select</span> array_agg(subtypeid <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> subtypeid)
+               <span style="color: #0000aa">from</span> subtype
+              <span style="color: #0000aa">where</span> <span style="color: #0000aa">data</span>-&gt;<span style="color: #aa5500">&#39;subtypes&#39;</span> @&gt; format(<span style="color: #aa5500">&#39;[&quot;%s&quot;]&#39;</span>, subtype)::jsonb
+            ),
+            (
+             <span style="color: #0000aa">select</span> array_agg(color::color_t <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> color::color_t)
+               <span style="color: #0000aa">from</span> jsonb_array_elements_text(<span style="color: #0000aa">data</span>-&gt;<span style="color: #aa5500">&#39;colors&#39;</span>) <span style="color: #0000aa">as</span> color
+            ),
+            (
+             <span style="color: #0000aa">select</span> array_agg(<span style="color: #0000aa">case</span> <span style="color: #0000aa">when</span> color = <span style="color: #aa5500">&#39;B&#39;</span> <span style="color: #0000aa">then</span> <span style="color: #aa5500">&#39;Black&#39;</span>::color_t
+                                   <span style="color: #0000aa">when</span> color = <span style="color: #aa5500">&#39;U&#39;</span> <span style="color: #0000aa">then</span> <span style="color: #aa5500">&#39;Blue&#39;</span>::color_t
+                                   <span style="color: #0000aa">when</span> color = <span style="color: #aa5500">&#39;G&#39;</span> <span style="color: #0000aa">then</span> <span style="color: #aa5500">&#39;Green&#39;</span>::color_t
+                                   <span style="color: #0000aa">when</span> color = <span style="color: #aa5500">&#39;R&#39;</span> <span style="color: #0000aa">then</span> <span style="color: #aa5500">&#39;Red&#39;</span>::color_t
+                                   <span style="color: #0000aa">when</span> color = <span style="color: #aa5500">&#39;W&#39;</span> <span style="color: #0000aa">then</span> <span style="color: #aa5500">&#39;White&#39;</span>::color_t
+                               <span style="color: #0000aa">end</span>
+                             )
+               <span style="color: #0000aa">from</span> jsonb_array_elements_text(<span style="color: #0000aa">data</span>-&gt;<span style="color: #aa5500">&#39;colorIdentity&#39;</span>) <span style="color: #0000aa">as</span> color
+            ),
+            (<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;rarity&#39;</span>)::rarity_t,
+            <span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;mciNumber&#39;</span>,
+            (<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;multiverseid&#39;</span>)::<span style="color: #00aaaa">integer</span>,
+            <span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;number&#39;</span>,
+            (<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;cmc&#39;</span>)::<span style="color: #00aaaa">numeric</span>,
+            <span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;power&#39;</span>,
+            <span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;toughness&#39;</span>,
+            <span style="color: #0000aa">data</span>-&gt;<span style="color: #aa5500">&#39;manaCost&#39;</span>,
+
+            <span style="color: #0000aa">data</span> - <span style="color: #aa5500">&#39;id&#39;</span> - <span style="color: #aa5500">&#39;name&#39;</span> - <span style="color: #aa5500">&#39;flavor&#39;</span> - <span style="color: #aa5500">&#39;text&#39;</span> - <span style="color: #aa5500">&#39;imageName&#39;</span>
+                 - <span style="color: #aa5500">&#39;layout&#39;</span> - <span style="color: #aa5500">&#39;artist&#39;</span> - <span style="color: #aa5500">&#39;type&#39;</span> - <span style="color: #aa5500">&#39;rarity&#39;</span>
+                 - <span style="color: #aa5500">&#39;types&#39;</span> - <span style="color: #aa5500">&#39;subtypes&#39;</span> - <span style="color: #aa5500">&#39;colors&#39;</span> - <span style="color: #aa5500">&#39;colorIdentity&#39;</span>
+                 - <span style="color: #aa5500">&#39;mciNumber&#39;</span> - <span style="color: #aa5500">&#39;multiverseid&#39;</span> - <span style="color: #aa5500">&#39;number&#39;</span>
+                 - <span style="color: #aa5500">&#39;cmc&#39;</span> - <span style="color: #aa5500">&#39;power&#39;</span> - <span style="color: #aa5500">&#39;toughness&#39;</span> - <span style="color: #aa5500">&#39;manaCost&#39;</span>
+            
+       <span style="color: #0000aa">from</span> magic.cards
+            <span style="color: #0000aa">join</span> <span style="color: #0000aa">set</span> <span style="color: #0000aa">on</span> <span style="color: #0000aa">set</span>.code = cards.<span style="color: #0000aa">set</span>
+            <span style="color: #0000aa">join</span> layout <span style="color: #0000aa">on</span> layout.layout = cards.<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;layout&#39;</span>
+            <span style="color: #0000aa">join</span> artist <span style="color: #0000aa">on</span> artist.name = cards.<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;artist&#39;</span>
+            <span style="color: #0000aa">join</span> cardtype <span style="color: #0000aa">on</span> cardtype = cards.<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;type&#39;</span>;
+</pre></div>
+
+<p>And our 34205 cards are now loaded into a normalized (enough) schema, with
+some guarantees.</p>
+
+<p>It might be interesting to note that the cumulated size of the normalized
+tables is 17 MB while the <em>magic.cards</em> table fits into 23 MB. To be honest,
+the <em>magic.allset</em> single document entry table with all the cards in there
+is only 8632 kB, which is quite impressive.</p>
+
+<p>As another interesting point, you can see that we didn&rsquo;t normalize all the
+<em>JSON</em> document fields into our <em>card</em> table. That&rsquo;s because most of the
+<em>extra</em> fields are only set for some cards, so I didn&rsquo;t want to spend too
+much time on them. It&rsquo;s easy to check how many are set, and we find 8055
+rows where <code>extra &lt;&gt; '{}'::jsonb</code>, an empty value.</p>
+
+<p>You might have spotted that several <em>number</em> fields are left as text, that&rsquo;s
+because they may contain non numeric entries. We find cards with the
+<em>mciNumber</em> 128a, or with a <em>power</em> of “2+*”.</p>
+
+<p>As I really can&rsquo;t resists those nice bar-diagram-in-the-console tricks,
+here&rsquo;s the repartition of cards by their types:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>  <span style="color: #0000aa">select</span> <span style="color: #0000aa">type</span>, <span style="color: #0000aa">count</span>(*),
+         repeat(<span style="color: #aa5500">&#39;■&#39;</span>, (   <span style="color: #009999">100</span>.<span style="color: #009999">0</span> 
+                       * <span style="color: #0000aa">count</span>(*)
+                       / <span style="color: #0000aa">sum</span>(<span style="color: #0000aa">count</span>(*)) over ()
+                     )::<span style="color: #00aaaa">int</span>
+               ) <span style="color: #0000aa">as</span> pct
+    <span style="color: #0000aa">from</span> <span style="color: #0000aa">type</span>
+         <span style="color: #0000aa">left</span> <span style="color: #0000aa">join</span> card
+                <span style="color: #0000aa">on</span> card.types @&gt; <span style="color: #00aaaa">array</span>[typeid]
+<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> <span style="color: #0000aa">type</span>
+<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> <span style="color: #0000aa">type</span>;
+</pre></div>
+
+<p>The query shows how to join the <em>type</em> and the <em>card</em> table when a single
+card references several types from a single column, an array of types. We do
+that with the PostgreSQL array operator <code>@&gt;</code> that reads <em>contains</em> and works
+against an array on each side. And here&rsquo;s the console bar diagram:</p>
+
+<pre><code>     type     │ count │                      pct                      
+══════════════╪═══════╪═══════════════════════════════════════════════
+ Artifact     │  3429 │ ■■■■■■■■■■
+ Conspiracy   │    25 │ 
+ Creature     │ 15825 │ ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+ Eaturecray   │     1 │ 
+ Enchant      │     7 │ 
+ Enchantment  │  3875 │ ■■■■■■■■■■■
+ Ever         │     1 │ 
+ Instant      │  4201 │ ■■■■■■■■■■■■
+ Land         │  3549 │ ■■■■■■■■■■
+ Phenomenon   │    16 │ 
+ Plane        │   152 │ 
+ Planeswalker │   183 │ ■
+ Player       │     2 │ 
+ Scariest     │     1 │ 
+ Scheme       │    65 │ 
+ See          │     1 │ 
+ Sorcery      │  3868 │ ■■■■■■■■■■■
+ Tribal       │    83 │ 
+ Vanguard     │   116 │ 
+ You'll       │     1 │ 
+(20 rows)
+</code></pre>
+
+<p>The <em>“You&rsquo;ll”</em> type reads quite strange, almost like a bug. So let&rsquo;s try and
+see where this comes from, by querying the original data set, before
+normalization:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> <span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;name&#39;</span> <span style="color: #0000aa">as</span> name, <span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;types&#39;</span> <span style="color: #0000aa">as</span> types
+  <span style="color: #0000aa">from</span> magic.cards
+ <span style="color: #0000aa">where</span> <span style="color: #0000aa">data</span>-&gt;<span style="color: #aa5500">&#39;types&#39;</span> @&gt; <span style="color: #aa5500">&#39;[&quot;You&#39;&#39;ll&quot;]&#39;</span>;
+</pre></div>
+
+<p>And here&rsquo;s what we get:</p>
+
+<pre><code>─[ RECORD 1 ]────────────────────────────────────────────
+name  │ B.F.M. (Big Furry Monster)
+types │ [&quot;Scariest&quot;, &quot;Creature&quot;, &quot;You'll&quot;, &quot;Ever&quot;, &quot;See&quot;]
+</code></pre>
+
+<p>Well, it might be that people encoding the JSON data set had good reasons to
+turn that sentence into card types, or it might be a bug.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>  <span style="color: #0000aa">select</span> card.name, <span style="color: #0000aa">count</span>(<span style="color: #0000aa">distinct</span> card.id)
+    <span style="color: #0000aa">from</span> card
+         <span style="color: #0000aa">join</span> <span style="color: #0000aa">type</span>
+           <span style="color: #0000aa">on</span> <span style="color: #0000aa">type</span>.typeid = <span style="color: #0000aa">any</span> (card.types)
+          <span style="color: #0000aa">and</span> <span style="color: #0000aa">type</span>.<span style="color: #0000aa">type</span> = <span style="color: #0000aa">any</span>(<span style="color: #aa5500">&#39;{&quot;Scariest&quot;, &quot;You&#39;&#39;ll&quot;, &quot;Ever&quot;, &quot;See&quot;}&#39;</span>::<span style="color: #00aaaa">text</span>[])
+<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> card.id;
+</pre></div>
+
+<p>In this query we search for all the cards that have one of the words as a
+type, with <em>card.types</em> being an array of <em>type.typeid</em> integers. And of
+course we omit the <em>Creature</em> word from the sentence, as we know that&rsquo;s a
+pretty common card type to fund around. And here we go:</p>
+
+<pre><code>            name            │ count 
+════════════════════════════╪═══════
+ B.F.M. (Big Furry Monster) │     1
+(1 row)
+</code></pre>
+
+<p>Looks like a bug in the JSON encoding to me.</p>
+
+<h1 id="building-a-magic-booster-against-a-normalized-schema">Building a Magic™ booster against a normalized schema</h1>
+
+<p>For comparing purposes, let&rsquo;s place the previous query against the JSON
+encoded data set first:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #FF0000; background-color: #FFAAAA">\</span><span style="color: #0000aa">set</span> collection <span style="color: #aa5500">&#39;LEA&#39;</span>
+
+<span style="color: #0000aa">with</span> booster <span style="color: #0000aa">as</span>
+(
+    <span style="color: #0000aa">select</span> name,
+           initcap(
+             jsonb_array_elements_text(<span style="color: #0000aa">sets</span>.<span style="color: #0000aa">data</span>-&gt;<span style="color: #aa5500">&#39;booster&#39;</span>)
+           ) <span style="color: #0000aa">as</span> rarity,
+           <span style="color: #0000aa">count</span>(*)
+      <span style="color: #0000aa">from</span> magic.<span style="color: #0000aa">sets</span>
+     <span style="color: #0000aa">where</span> name = :<span style="color: #aa5500">&#39;collection&#39;</span>
+  <span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> name, rarity
+)
+   <span style="color: #0000aa">select</span> cards.<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;rarity&#39;</span> <span style="color: #0000aa">as</span> rarity,
+          cards.<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;name&#39;</span> <span style="color: #0000aa">as</span> name,
+          cards.<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;manaCost&#39;</span> <span style="color: #0000aa">as</span> manacost,
+          cards.<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;type&#39;</span> <span style="color: #0000aa">as</span> <span style="color: #0000aa">type</span>
+     <span style="color: #0000aa">from</span> booster
+          <span style="color: #0000aa">left</span> <span style="color: #0000aa">join</span> <span style="color: #0000aa">lateral</span>
+          (
+            <span style="color: #0000aa">select</span> <span style="color: #0000aa">data</span>
+              <span style="color: #0000aa">from</span> magic.cards
+             <span style="color: #0000aa">where</span> cards.<span style="color: #0000aa">set</span> = booster.name
+               <span style="color: #0000aa">and</span> cards.<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;rarity&#39;</span> = booster.rarity
+          <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> random()
+             <span style="color: #0000aa">limit</span> booster.<span style="color: #0000aa">count</span>
+          )
+          <span style="color: #0000aa">as</span> cards
+          <span style="color: #0000aa">on</span> <span style="color: #0000aa">true</span>
+  <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> cards.<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;rarity&#39;</span> &lt;&gt; <span style="color: #aa5500">&#39;Uncommon&#39;</span>,
+           cards.<span style="color: #0000aa">data</span>-&gt;&gt;<span style="color: #aa5500">&#39;rarity&#39;</span> &lt;&gt; <span style="color: #aa5500">&#39;Common&#39;</span>;
+</pre></div>
+
+<p>To build a <em>booster</em> for a given Magic™ set, we have to randomly select a
+card of the right <em>rarity</em> for each one of the <em>booster</em>&rsquo;s slots. Remember
+that each <em>booster</em> slot is an array of rarity alternative choices, so a
+card of any of those rarity levels may be choosen for that slot entry.</p>
+
+<p>Our task is now to rewrite the same sentence, only in SQL:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> booster.num,
+       booster.rarity,
+       card.name,
+       card.rarity,
+       card.cardtype
+  <span style="color: #0000aa">from</span> booster
+       <span style="color: #0000aa">join</span> <span style="color: #0000aa">set</span> <span style="color: #0000aa">using</span>(setid)
+       <span style="color: #0000aa">left</span> <span style="color: #0000aa">join</span> <span style="color: #0000aa">lateral</span>
+       (
+         <span style="color: #0000aa">select</span> card.name, card.rarity, cardtype.cardtype
+           <span style="color: #0000aa">from</span> card
+                <span style="color: #0000aa">join</span> cardtype <span style="color: #0000aa">using</span>(cardtypeid)
+          <span style="color: #0000aa">where</span> setid = booster.setid
+            <span style="color: #0000aa">and</span> card.rarity = <span style="color: #0000aa">any</span>(booster.rarity)
+       <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> random()
+          <span style="color: #0000aa">limit</span> <span style="color: #009999">1</span>
+       )
+       <span style="color: #0000aa">as</span> card
+       <span style="color: #0000aa">on</span> <span style="color: #0000aa">true</span>
+ <span style="color: #0000aa">where</span> <span style="color: #0000aa">set</span>.code = :<span style="color: #aa5500">&#39;collection&#39;</span>;
+</pre></div>
+
+<p>Compare to the query used before we normalized the data set, which had to
+<em>unnest</em> the booster definition in a first CTE with the
+<em>jsonb_array_elements_text</em> function, and also to capitalize the obtained
+<em>rarity</em> to be able to compare it to the <em>data-&gt;&gt;rarity</em> of all the cards…</p>
+
+<p>This previous query also had to aggregate the count of each rarity asked for
+in the booster so as to then use a <em>limit booster.count</em> in the lateral
+subquery in order to fetch the right amount of cards.</p>
+
+<p>In the “normalized enough” version of the query, we still have a <em>left join
+lateral</em> dance with an <em>order by random() limit 1</em> which allows to randomly
+fetch a single card per open slot in the booster definition, and we retain a
+booster card entry position.</p>
+
+<p>Also this time we spell the <em>array contains element</em> operation differently.
+We could have used the <code>@&gt;</code> operator support for PostgreSQL arrays, as in
+<code>array_expression @&gt; array[item]</code>, but chose to use the <a href="https://www.postgresql.org/docs/current/static/functions-comparisons.html">=
+any</a>
+operator instead, as in <code>card.rarity = any(booster.rarity)</code>.</p>
+
+<p>And here&rsquo;s an instance of such a booster:</p>
+
+<pre><code> num │   rarity   │        name         │  rarity  │          cardtype          
+═════╪════════════╪═════════════════════╪══════════╪════════════════════════════
+   1 │ {Rare}     │ Defiant Bloodlord   │ Rare     │ Creature — Vampire
+   2 │ {Uncommon} │ Castle              │ Uncommon │ Enchantment
+   3 │ {Uncommon} │ Wall of Omens       │ Uncommon │ Creature — Wall
+   4 │ {Uncommon} │ Leeching Licid      │ Uncommon │ Creature — Licid
+   5 │ {Common}   │ Dizzy Spell         │ Common   │ Instant
+   6 │ {Common}   │ Fertilid            │ Common   │ Creature — Elemental
+   7 │ {Common}   │ Sibsig Host         │ Common   │ Creature — Zombie
+   8 │ {Common}   │ Shock               │ Common   │ Instant
+   9 │ {Common}   │ Zombie Outlander    │ Common   │ Creature — Zombie Scout
+  10 │ {Common}   │ Hyena Umbra         │ Common   │ Enchantment — Aura
+  11 │ {Common}   │ Lay of the Land     │ Common   │ Sorcery
+  12 │ {Common}   │ Sandblast           │ Common   │ Instant
+  13 │ {Common}   │ Varchild's Crusader │ Common   │ Creature — Human Knight
+  14 │ {Common}   │ Aviary Mechanic     │ Common   │ Creature — Dwarf Artificer
+  15 │ {Common}   │ Fertile Ground      │ Common   │ Enchantment — Aura
+(15 rows)
+</code></pre>
+
+<p>Now, we can also try to generate a booster of cards for the <em>Dark Ascension</em>
+set, which contains specification for cards rarity we don&rsquo;t have in our
+collection. For that we run the same query as previously, and before running
+it we issue the command <code>\set collection 'DKA'</code>. We get the following
+result:</p>
+
+<pre><code> num │        rarity         │         name         │  rarity  │            cardtype            
+═════╪═══════════════════════╪══════════════════════╪══════════╪════════════════════════════════
+   1 │ {Rare,&quot;Mythic Rare&quot;}  │ Blessed Reversal     │ Rare     │ Instant
+   2 │ {Uncommon}            │ Brain Pry            │ Uncommon │ Sorcery
+   3 │ {Uncommon}            │ Goldmeadow Lookout   │ Uncommon │ Creature — Kithkin Spellshaper
+   4 │ {Uncommon}            │ Explosive Revelation │ Uncommon │ Sorcery
+   5 │ {Common}              │ Orzhov Basilica      │ Common   │ Land
+   6 │ {Common}              │ Tinder Farm          │ Common   │ Land
+   7 │ {Common}              │ Dark Banishing       │ Common   │ Instant
+   8 │ {Common}              │ Elvish Warrior       │ Common   │ Creature — Elf Warrior
+   9 │ {Common}              │ Aether Swooper       │ Common   │ Creature — Vedalken Artificer
+  10 │ {Common}              │ Divine Offering      │ Common   │ Instant
+  11 │ {Common}              │ Skyhunter Patrol     │ Common   │ Creature — Cat Knight
+  12 │ {Common}              │ Orcish Conscripts    │ Common   │ Creature — Orc
+  13 │ {Common}              │ Cloud Sprite         │ Common   │ Creature — Faerie
+  14 │ {Common}              │ Vedalken Dismisser   │ Common   │ Creature — Vedalken Wizard
+  15 │ {Land}                │ ¤                    │ ¤        │ ¤
+  16 │ {Marketing,Checklist} │ ¤                    │ ¤        │ ¤
+(16 rows)
+</code></pre>
+
+<p>As there&rsquo;s no card of rarities <em>Land</em>, <em>Marketing</em>, or <em>Checklist</em> in our
+set, then those booster&rsquo;s slot requiring them are left empty.</p>
+
+<h1 id="conclusion">Conclusion</h1>
+
+<p>PostgreSQL is exceptionally good at providing a modern implementation of the
+SQL language. Its extensible design means PostgreSQL is capable of
+integrating powerful and advanced features from the non-relational world in
+a beautiful way. When processing JSON documents in PostgreSQL, we are still
+doing SQL and benefiting from its many features. Of course the
+implementation of <em>unnest</em> functions and the <em>lateral join</em> operation
+against them are key to a great success, as we saw in this article.</p>
+
+
+
+
+<div class="figure fig25 left dim-margin" >
+  
+    <img class="fig-img" src="/img/icon-sql-json.png" >
+  
+  
+</div>
+
+
+<p>Still, it proves much easier to both maintain data quality and write
+analytics queries when using a <em>normalized</em> database model. PostgreSQL
+provides some tricks beyond the classic <em>Normal Forms</em> and allows working
+with e.g. <em>enumerated types</em>, <em>arrays</em>, and <em>json</em> data: this is a trade-off
+one might find interesting when relaxing <em>foreign key</em> references in a
+database schema.</p>
+
+<p>Of course, being used to SQL, my own preference leans towards a normalized
+schema. Also, I know that PostgreSQL has been designed and implemented to
+make the best out of such a schema, with an advanced query planner and
+optimizer and several fine tuned algorithms to implement the supported join
+operations.</p>
+
+<p>Well, PostgreSQL is YeSQL!</p>
+              
+            </div>
+          </div>
+          <div id="post-footer" class="post-footer main-content-wrap">
+            
+              
+                
+                
+                  <div class="post-footer-tags">
+                    <span class="text-color-light text-small"></span><br/>
+                    
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/postgresql/">PostgreSQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/yesql/">YeSQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/json/">json</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/normalization/">Normalization</a>
+
+                  </div>
+                
+              
+            
+            <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    
+    <script async id="_ck_252762" src="https://forms.convertkit.com/252762?v=6"></script>
+    
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2017/09/mastering-postgresql-in-application-development/" data-tooltip="Mastering PostgreSQL in Application Development">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f09%2fon-json-and-sql%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f09%2fon-json-and-sql%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=on%20Json%20and%20SQL with @tapoueh: http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f09%2fon-json-and-sql%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+            
+              
+                <div id="disqus_thread">
+  <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+              
+            
+          </div>
+        </article>
+        <footer id="footer" class="main-content-wrap">
+  <span class="copyrights">
+    &copy; 2017 Dimitri Fontaine. 
+  </span>
+</footer>
+
+      </div>
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="5">
+        <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    
+    <script async id="_ck_252762" src="https://forms.convertkit.com/252762?v=6"></script>
+    
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2017/09/mastering-postgresql-in-application-development/" data-tooltip="Mastering PostgreSQL in Application Development">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f09%2fon-json-and-sql%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f09%2fon-json-and-sql%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=on%20Json%20and%20SQL with @tapoueh: http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f09%2fon-json-and-sql%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+      </div>
+      <div id="share-options-bar" class="share-options-bar" data-behavior="5">
+  <ul class="share-options">
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f09%2fon-json-and-sql%2f">
+        <i class="fa fa-google-plus"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f09%2fon-json-and-sql%2f">
+        <i class="fa fa-facebook-official"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=on%20Json%20and%20SQL with @tapoueh: http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f09%2fon-json-and-sql%2f">
+        <i class="fa fa-twitter"></i><span></span>
+      </a>
+    </li>
+  </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
+    </div>
+    
+    <div id="about">
+  <div id="about-card">
+    <div id="about-btn-close">
+      <i class="fa fa-remove"></i>
+    </div>
+    
+      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+    
+    <h4 id="about-card-name">Dimitri Fontaine</h4>
+    
+      <div id="about-card-bio">PostgreSQL Major Contributor</div>
+    
+    
+      <div id="about-card-job">
+        <i class="fa fa-briefcase"></i>
+        <br/>
+        Open Source Software Engineer
+      </div>
+    
+    
+      <div id="about-card-location">
+        <i class="fa fa-map-marker"></i>
+        <br/>
+        France
+      </div>
+    
+  </div>
+</div>
+
+    <div id="algolia-search-modal" class="modal-container">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="close-button"><i class="fa fa-close"></i></span>
+      <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+        <span class="searchby-algolia-text text-color-light text-small">by</span>
+        <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+      </a>
+      <i class="search-icon fa fa-search"></i>
+      <form id="algolia-search-form">
+        <input type="text" id="algolia-search-input" name="search"
+          class="form-control input--large search-input" placeholder="" />
+      </form>
+    </div>
+    <div class="modal-body">
+      <div class="no-result text-color-light text-center"></div>
+      <div class="results">
+        
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/09/on-json-and-sql/">
+                <h3 class="media-heading">on Json and SQL</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Sep 9, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>PostgreSQL has had proper
+<a href="https://www.postgresql.org/docs/current/static/datatype-json.html">json</a>
+support for a while now. The unique extensibility approach of the PostgreSQL
+system allows it to enable native <a href="https://www.postgresql.org/docs/current/static/functions-json.html">SQL friendly JSON
+processing</a>.</p>
+
+<p>In this article we&rsquo;ll play with the <a href="https://mtgjson.com">Magic: the Gathering card data in JSON
+format</a> data set, provided with a
+<a href="https://creativecommons.org/choose/zero/">CC0</a> licence, and process the
+information provided. We also see how to normalize a JSON document into a
+proper database model that benefits from some PostgreSQL advanced features,
+and how to then inject the JSON documents into the normalized database
+schema. Finally, we compare some non-trivial processing done against both
+versions of the database schema.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/09/mastering-postgresql-in-application-development/">
+                <h3 class="media-heading">Mastering PostgreSQL in Application Development</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Sep 9, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">Mastering PostgreSQL in Application Development is the full title of the book I am currently writing. Running the PostgreSQL is YeSQL series of blog posts has shown me developers need a PostgreSQL book for developers. A book with the same properties as the YeSQL series articles in this blog:
+ we use real world data sets to put every query and SQL technique we learn in the context of a user story or business case,</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/08/regular-expressions-and-grouping-sets/">
+                <h3 class="media-heading">Regular Expressions and Grouping Sets</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Aug 8, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>There&rsquo;s a very rich set of PostgreSQL functions to process text, you can
+find them all at
+the
+<a href="https://www.postgresql.org/docs/current/static/functions-string.html">String Functions and Operators</a> documentation
+chapter, with functions such as <em>overlay</em>, <em>substring</em>, <em>position</em> or
+<em>trim</em>. Or aggregates such as <em>string_agg</em>. And then <em>regular expression</em>
+functions, including the very powerful <em>regexp_split_to_table</em>.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/08/sql-regression-tests/">
+                <h3 class="media-heading">SQL Regression Tests</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Aug 8, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>In a previous article here we
+saw <a href="/blog/2017/06/how-to-write-sql/">How to Write SQL</a> in your application
+code. The main idea in that article is to maintain your queries in separate
+SQL files, where it&rsquo;s easier to maintain them. In particular if you want to
+be able to test them again in production, and when you have to work and
+rewrite queries.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/07/from-mysql-to-postgresql/">
+                <h3 class="media-heading">from MySQL to PostgreSQL</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jul 7, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Today
+<a href="https://github.com/dimitri/pgloader/releases/tag/v3.4.1">pgloader v3.4.1</a>
+is released and available! This new release comes with 110 commits as show
+in
+<a href="https://github.com/dimitri/pgloader/compare/v3.3.2...v3.4.1">github compare view</a>.</p>
+
+<p>This release of <a href="http://pgloader.io">pgloader</a> is following the tradition of
+simplifying things for users, or if you allow me to
+quote <a href="https://en.wikiquote.org/wiki/Alan_Kay">Alan Kay</a>, I believe that if
+<em>simple things should be simple, complex things should be possible.</em></p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/07/playing-with-unicode/">
+                <h3 class="media-heading">Playing with Unicode</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jul 7, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>The reason why I like Unicode a lot is because it allows me to code in text
+based environments and still have nice output. Today, we&rsquo;re going to play
+with
+<a href="https://en.wikipedia.org/wiki/Regional_Indicator_Symbol">Regional Indicator Symbol</a>,
+which is implemented as a Unicode combinaison of letters from 🇦 to 🇿. For
+instance, if you display 🇫 then 🇷 concatenated together, you get 🇫🇷. Let&rsquo;s
+try that from our <a href="https://www.postgresql.org/">PostgreSQL</a> prompt!</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/06/postgresql-and-the-calendar/">
+                <h3 class="media-heading">PostgreSQL and the calendar</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>The modern calendar is a trap for the young engineer&rsquo;s mind. We deal with
+the calendar on a daily basis and until exposed to its insanity it&rsquo;s rather
+common to think that calendar based computations are easy. That&rsquo;s until
+you&rsquo;ve tried to do it once. A very good read about how the current calendar
+came to be the way it is now is Erik&rsquo;s
+Naggum <a href="http://naggum.no/lugm-time.html">The Long, Painful History of Time</a>.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/06/sql-and-business-logic/">
+                <h3 class="media-heading">SQL and Business Logic</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Business logic is <em>supposed to be</em> the part of the application where you
+deal with customer or user facing decisions and computations. It is often
+argued that this part should be well separated from the rest of the
+technical infrastructure of your code. Of course, SQL and relational
+database design is meant to support your business cases (or user stories),
+so then we can ask ourselves if SQL should be part of your business logic
+implementation. Or actually, how much of your business logic should be SQL?</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/06/exploring-a-data-set-in-sql/">
+                <h3 class="media-heading">Exploring a Data Set in SQL</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Sometimes you need to dive in an existing data set that you know very little
+about. Let&rsquo;s say we&rsquo;ve been lucky to have had a high level description of
+the business case covered by a database, and then access to it. Our next
+step is figuring out data organisation, content and quality. Our tool box:
+<em>the world&rsquo;s most advanced open source
+database</em>, <a href="https://www.postgresql.org">PostgreSQL</a>, and its <em>Structured
+Query Language</em>, SQL.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/06/how-to-write-sql/">
+                <h3 class="media-heading">How to Write SQL</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p><a href="https://twitter.com/krisajenkins">Kris Jenkins</a> cooked up a very nice way
+to embed SQL in your
+code: <a href="https://github.com/krisajenkins/yesql">YeSQL for Clojure</a>. The main
+idea is that you should be writing your SQL queries in <code>.sql</code> files in your
+code repository and maintain them there.</p>
+
+<p>The idea is very good and it is now possible to find alternative
+implementations of the <a href="https://clojure.org">Clojure</a> <em>yesql</em> library in
+other languages. Today, we are going to have a look at one of them for
+the <a href="https://www.python.org">python</a> programming
+language: <a href="https://github.com/honza/anosql">anosql</a>.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+      </div>
+    </div>
+    <div class="modal-footer">
+      <p class="results-count text-medium"
+         data-message-zero=""
+         data-message-one=""
+         data-message-other="">
+         241 posts found
+      </p>
+    </div>
+  </div>
+</div>
+    
+  
+    
+    <div id="cover" style="background-image:url('http://tapoueh.org/images/mayan-calendar.jpg');"></div>
+  
+
+
+    
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.8.0/highlight.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.js"></script>
+
+
+<script src="/js/script-wl33z0n6ocaypepiqrazthtivfrliqijej4rq8ek8gvrv1awftmgjuv8k4zc.min.js"></script>
+
+<script>
+$(document).ready(function() {
+  hljs.configure({ classPrefix: '', useBR: false });
+  $('pre.code-highlight').each(function(i, block) {
+    var code = "";
+    hljs.highlightAuto(block.innerText).value.split(/\r\n|\r|\n/).forEach(function(line) {
+      code += "<span class=\"line\">" + line + "</span><br>";
+    });
+    if (code.length > 0) {
+      block.innerHTML = code;  
+    }
+  });
+  $('pre > code').each(function(i, block) {
+    $(this).addClass('codeblock');
+    hljs.highlightBlock(block);
+  });
+});
+</script>
+
+  
+    
+      <script>
+        var disqus_config = function () {
+          this.page.url = 'http:\/\/tapoueh.org\/blog\/2017\/09\/on-json-and-sql\/';
+          
+            this.page.identifier = '\/blog\/2017\/09\/on-json-and-sql\/'
+          
+        };
+        (function() {
+          
+          
+          if (window.location.hostname == "localhost") {
+            return;
+          }
+          var d = document, s = d.createElement('script');
+          var disqus_shortname = 'tapoueh';
+          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+          s.setAttribute('data-timestamp', +new Date());
+          (d.head || d.body).appendChild(s);
+        })();
+      </script>
+    
+  
+
+
+
+
+
+    
+  </body>
+</html>
+
