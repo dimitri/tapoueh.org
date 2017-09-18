@@ -1203,7 +1203,7 @@ rows where `extra <> '{}'::jsonb`, an empty value.
 
 You might have spotted that several *number* fields are left as text, that's
 because they may contain non numeric entries. We find cards with the
-*mciNumber* 128a, or with a *power* of “2+*”.
+*mciNumber* “128a”, or with a *power* of “2+*”.
 
 As I really can't resists those nice bar-diagram-in-the-console tricks,
 here's the repartition of cards by their types:
@@ -1286,7 +1286,7 @@ group by card.id;
 In this query we search for all the cards that have one of the words as a
 type, with *card.types* being an array of *type.typeid* integers. And of
 course we omit the *Creature* word from the sentence, as we know that's a
-pretty common card type to fund around. And here we go:
+pretty common card type to find around. And here we go:
 
 ~~~
             name            │ count 
@@ -1382,7 +1382,7 @@ booster card entry position.
 
 Also this time we spell the *array contains element* operation differently.
 We could have used the `@>` operator support for PostgreSQL arrays, as in
-`array_expression @> array[item]`, but chose to use the [=
+`booster.rarity @> array[card.rarity]`, but chose to use the [=
 any](https://www.postgresql.org/docs/current/static/functions-comparisons.html)
 operator instead, as in `card.rarity = any(booster.rarity)`.
 
