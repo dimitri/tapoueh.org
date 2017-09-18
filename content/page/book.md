@@ -21,9 +21,11 @@ be the best option out there, if sometimes you wish SQL was easier to
 maintain than those concatenated strings with conditionals, then this book
 can't wait for you!
 
-{{< image classes="fig33 right fancybox dim-margin" src="/images/book-320.jpg" >}}
+{{< image classes="fig33 clean fancybox dim-margin"
+              src="/img/MasteringPostgreSQLinAppDev-Cover.png" >}}
 
-*Mastering PostgreSQL in Application Development* is answering practical
+[Mastering PostgreSQL in Application
+Development](http://masteringpostgresql.com) is answering practical
 questions every developer is confronted to when using PostgreSQL. For
 instance, should PostgreSQL be a convenient remote storage facility, or is
 there something more to it that comes with those ACID properties?
