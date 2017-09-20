@@ -425,11 +425,11 @@ order by count desc
 ~~~
 
 ~~~
-    type     │ count 
-═════════════╪═══════
- Instant     │  4052
- Sorcery     │  3805
- Enchantment │  2020
+ subtypes │ count 
+══════════╪═══════
+ Human    │  3192
+ Aura     │  1669
+ Wizard   │  1013
 (3 rows)
 ~~~
 
