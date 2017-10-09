@@ -2,7 +2,7 @@
 ;;; Convert Muse sources for tapoueh.org into Markdown documents
 ;;;
 
-(defpackage #:migration (:use #:cl))
+(defpackage #:migration (:use #:cl #:trivia))
 
 (in-package #:migration)
 
@@ -11,6 +11,9 @@
 
 (defparameter *md-article-root*
   (asdf:system-relative-pathname :migration "./"))
+
+(defparameter *cf-article-root*
+  (asdf:system-relative-pathname :migration "../conf/"))
 
 (defparameter *static-image-root*
   (asdf:system-relative-pathname :migration "../../static/img/old/"))
@@ -35,6 +38,28 @@
                                    :defaults target-dir)))
                     (ensure-directories-exist target-dir)
                     (muse-to-markdown article target)))))
+    (uiop:collect-sub*directories root
+                                  (constantly t)
+                                  (constantly t)
+                                  #'process-files)))
+
+(defun walk-tapoueh-confs-directory (&optional (root tapoueh::*confs-directory*))
+  "Walk Tapoueh confs directory and reproduce the content in *cf-article-root*."
+  (flet ((process-files (directory)
+           (loop :for article :in (uiop:directory-files directory)
+              :when (string= "muse" (pathname-type article))
+              :do (let* ((relpath (uiop:enough-pathname article root))
+                         (target-reldir (directory-namestring relpath))
+                         (target-dir    (uiop:merge-pathnames*
+                                         target-reldir
+                                         *cf-article-root*))
+                         (target  (uiop:make-pathname*
+                                   ;; we drop the day of month
+                                   :name (subseq (pathname-name article) 3)
+                                   :type "md"
+                                   :defaults target-dir)))
+                    (ensure-directories-exist target-dir)
+                    (conf-muse-to-markdown article target)))))
     (uiop:collect-sub*directories root
                                   (constantly t)
                                   (constantly t)
@@ -79,6 +104,46 @@
         (format s "+++~%"))
 
       (unparse-muse-article-to-markdown s (tapoueh::muse-contents muse)))
+
+    ;; and return the pathname of the markdown output file
+    md-pathname))
+
+(defun conf-muse-to-markdown (article-pathname md-pathname)
+  "Read the ARTICLE-PATHNAME and write a markdown conference document."
+  (let* ((chap (tapoueh::muse-parse-chapeau article-pathname))
+         (muse (tapoueh::muse-parse-article article-pathname))
+         (*print-pretty* t)
+         (*current-article-path* (tapoueh::muse-pathname muse))
+         (*current-article-cover-image*
+          (maybe-copy-image
+           (tapoueh::muse-extract-article-image-source chap)))
+         (*current-article-cover-image*
+          ;; in some cases we might want to actually change our mind.
+          (or (maybe-pick-new-cover-image) *current-article-cover-image*))
+         (pdf-list
+          (tapoueh::muse-extract-conf-pdf-list muse)))
+    (if pdf-list
+        (progn
+          (format t "~a~%" md-pathname)
+          (with-open-file (s md-pathname
+                             :direction :output
+                             :if-exists :supersede
+                             :if-does-not-exist :create
+                             :external-format :utf-8)
+            (format s "+++~%")
+            (format s "date = \"~a\"~%" (tapoueh::parse-date
+                                         (tapoueh::muse-date muse)))
+            (format s "title = ~s~%" (tapoueh::muse-title muse))
+            (format s "~<categories = [~;~s~^,~_~i~s~;]~:>~%"
+                    (pick-categories (tapoueh::muse-tags muse)))
+            (format s "city = ~s~%" (tapoueh::muse-city muse))
+            (format s "~<slides = [~;~s~^,~_~i~s~;]~:>~%"
+                    (loop :for slide :in pdf-list
+                       :collect (format nil "~a;~a"
+                                        (slide-cover slide)
+                                        (slide-pdf slide))))
+            (format s "+++~%")))
+        (format t "~a skipped: no slides found~%" article-pathname))
 
     ;; and return the pathname of the markdown output file
     md-pathname))
@@ -366,3 +431,33 @@
               (member cover *new-cover-images* :test #'string= :key #'car))))
     (when match
       (cdr (first match)))))
+
+(defstruct slide cover pdf)
+
+(defmethod tapoueh::muse-extract-conf-pdf-list ((article tapoueh::muse))
+  "Extract the image source from the article"
+  (let ((pdf-list '()))
+    (loop :for previous := nil :then node
+       :for node :in (tapoueh::muse-contents article)
+       :do (typecase node
+             (list
+              (destructuring-bind (tag . rest)
+                  node
+                (case tag
+                  (:center
+                   ;; rest is ((:a :href PDF (:img :src PNG)))
+                   (when (and (listp (first rest))
+                              (eq :a (first (first rest))))
+                     (destructuring-bind (a href link text)
+                         (first rest)
+                       (declare (ignore a href))
+                       (when (and (listp text)
+                                  (eq :img (first text)))
+                         (destructuring-bind (img src png)
+                             text
+                           (declare (ignore img src))
+                           (maybe-copy-pdf link)
+                           (maybe-copy-pdf png)
+                           (push (make-slide :cover png :pdf link)
+                                 pdf-list)))))))))))
+    pdf-list))

@@ -14,6 +14,7 @@
                  #:alexandria           ; some utils
                  #:tapoueh              ; Muse document parser
                  #:puri                 ; parse URLs
+                 #:trivia               ; CL pattern matching
                  )
     :components ((:file "migration")))
 
