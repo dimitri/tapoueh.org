@@ -564,7 +564,7 @@ Application Development](http://masteringpostgresql.com).
 
 {{< /alert >}}
 
-{{< ckbookcover >}}
+<script async id="_ck_279686" src="https://forms.convertkit.com/279686?v=6"></script>
 
 # Cards and Sets Rarities
 
@@ -622,6 +622,14 @@ and it's more complex than we would like it to:
 group by rarity
 order by count desc;
 ~~~
+
+{{< alert warning >}}
+
+This query won't run in PostgreSQL 10, to get the fixed version and know
+why, and understand how to fix it, please read [Set Returning Fonctions and
+PostgreSQL 10](/blog/2017/10/set-returning-fonctions-and-postgresql-10/).
+
+{{< /alert >}}
 
 As the *booster* key is associated with an array value, we *unnest* the
 array with *jsonb_array_elements* again. As each element of the array might
