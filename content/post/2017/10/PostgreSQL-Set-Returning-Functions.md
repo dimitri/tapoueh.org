@@ -1,5 +1,5 @@
 +++
-title = "Set Returning Fonctions and PostgreSQL 10"
+title = "Set Returning Functions and PostgreSQL 10"
 date = "2017-10-13T13:25:21+02:00"
 tags = ["PostgreSQL","YeSQL","lateral","SRF"]
 categories = ["PostgreSQL","YeSQL"]
