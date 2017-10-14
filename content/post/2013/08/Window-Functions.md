@@ -51,7 +51,7 @@ array for you. Let's use this tool to understand *window frames*:
  select x, array_agg(x) over (order by x)
    from generate_series(1, 3) as t(x);
 ~~~
-~~~ psql 
+~~~
  x | array_agg 
 ---+-----------
  1 | {1}
@@ -73,7 +73,7 @@ rows between unbounded preceding and current row)`:
                                     and current row)
    from generate_series(1, 3) as t(x);
 ~~~
-~~~ psql
+~~~
  x | array_agg 
 ---+-----------
  1 | {1}
@@ -92,7 +92,7 @@ select x,
                                    and unbounded following)
   from generate_series(1, 3) as t(x);
 ~~~
-~~~ psql 
+~~~
  x | array_agg 
 ---+-----------
  1 | {1,2,3}
@@ -113,7 +113,7 @@ select x,
        x::float/sum(x) over () as part
   from generate_series(1, 3) as t(x);
 ~~~
-~~~ psql  
+~~~ 
  x |  frame  | sum |       part        
 ---+---------+-----+-------------------
  1 | {1,2,3} |   6 | 0.166666666666667
@@ -164,7 +164,7 @@ So in the *Ergast* database we have a *results* table with results from all
 the known races. We pick a race that happened just before this article was
 first published:
 
-~~~ psql
+~~~
 -[ RECORD 1 ]-----------------------------------------------------
 raceid    | 890
 year      | 2013
@@ -207,7 +207,7 @@ the race with respect to other drivers from the same constructor, and the
 second time with `count(*)` gives us how many drivers from the same
 constructor participated in the race:
 
-~~~ psql
+~~~
     surname    |    name     | position | pos same constr 
 ---------------+-------------+----------+-----------------
  Hamilton      | Mercedes    |        1 | 1 / 2
@@ -296,7 +296,7 @@ a set of 4 groups thanks to the *ntile* function, the name of the previous
 driver who made it, and the name of the driver immediately next to the
 current one, thanks to the *lag* an *lead* functions:
 
-~~~ psql
+~~~
     surname    | position | fastest | group |   previous    |     next      
 ---------------+----------+---------+-------+---------------+---------------
  Hamilton      |        1 |      20 |     1 | ⦱             | Räikkönen
