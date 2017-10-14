@@ -8,6 +8,7 @@ coverMeta = "in"
 coverSize = "partial"
 thumbnailImage = "/img/srf.jpg"
 thumbnailImagePosition = "left"
+aliases = ["/blog/2017/10/set-returning-fonctions-and-postgresql-10/"]
 
 +++
 
