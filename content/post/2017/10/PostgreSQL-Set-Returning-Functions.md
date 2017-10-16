@@ -122,7 +122,7 @@ with booster(rarity_js) as (
   select case jsonb_typeof(booster)
               when 'array'
               then booster
-              else array_to_json(array[booster])::jsonb
+              else jsonb_build_array(booster)
           end
     from magic.sets,
          jsonb_array_elements(data->'booster') as booster
