@@ -626,8 +626,8 @@ order by count desc;
 {{< alert warning >}}
 
 This query won't run in PostgreSQL 10, to get the fixed version and know
-why, and understand how to fix it, please read [Set Returning Fonctions and
-PostgreSQL 10](/blog/2017/10/set-returning-fonctions-and-postgresql-10/).
+why, and understand how to fix it, please read [Set Returning Functions and
+PostgreSQL 10](/blog/2017/10/set-returning-functions-and-postgresql-10/).
 
 {{< /alert >}}
 
