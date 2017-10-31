@@ -6,10 +6,10 @@ if __name__ == '__main__':
     pgconn = psycopg2.connect("")
     curs = pgconn.cursor()
 
-    allset = open('MagicAllSets.json').read()
+    allset = open('AllSets.json').read()
     allset = allset.replace("'", "''")
-    sql = "insert into magic.allsets(data) values('%s')" % allset
+    sql = "insert into magic.allsets(data) values(%s)"
 
-    curs.execute(sql)
+    curs.execute(sql, (allset,))
     pgconn.commit()
     pgconn.close()
