@@ -62,7 +62,7 @@ Let&rsquo;s do the same setup as he did, with a table containing some randomly g
       <meta property="og:image" content="http://tapoueh.org/img/old/transpose-matrix.jpg">
     
     
-      <meta property="og:image" content="http://tapoueh.org/img/old/transpose-matrix.jpg">
+      <meta property="og:image" content="http://tapoueh.org/img/transpose.jpg">
     
     
 
@@ -254,7 +254,7 @@ ga('send', 'pageview');
   <div class="post-header-cover
               text-left
               post-header-cover--partial"
-       style="background-image:url('/img/old/transpose-matrix.jpg')"
+       style="background-image:url('/img/transpose.jpg')"
        data-behavior="5">
     
   </div>
@@ -319,19 +319,21 @@ row rather than in separate rows. The article from
 <p>Let&rsquo;s do the same setup as he did, with a table containing some randomly
 generated data about hypothetical visits to a web page, say, by date then by
 operating system.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">create</span> <span style="color: #0000aa">table</span> daily_visits_per_os <span style="color: #0000aa">as</span>
+    <span style="color: #0000aa">select</span> <span style="color: #00aaaa">date</span>::<span style="color: #00aaaa">date</span>,
+           b.<span style="color: #0000aa">desc</span> <span style="color: #0000aa">AS</span> <span style="color: #0000aa">TYPE</span>,
+           (random() * <span style="color: #009999">10000</span> + <span style="color: #009999">1</span>)::<span style="color: #00aaaa">int</span> <span style="color: #0000aa">AS</span> val
+     <span style="color: #0000aa">from</span> generate_series((now() - <span style="color: #aa5500">&#39;100 days&#39;</span>::<span style="color: #00aaaa">interval</span>)::<span style="color: #00aaaa">date</span>,
+                          now()::<span style="color: #00aaaa">date</span>,
+                          <span style="color: #aa5500">&#39;1 day&#39;</span>::<span style="color: #00aaaa">interval</span>) <span style="color: #0000aa">as</span> t(<span style="color: #00aaaa">date</span>),
+          (<span style="color: #0000aa">SELECT</span> <span style="color: #0000aa">unnest</span>(<span style="color: #00aaaa">ARRAY</span>[<span style="color: #aa5500">&#39;OSX&#39;</span>, <span style="color: #aa5500">&#39;Windows&#39;</span>, <span style="color: #aa5500">&#39;Linux&#39;</span>]) <span style="color: #0000aa">AS</span> <span style="color: #0000aa">DESC</span>) b;
+</pre></div>
 
-<pre><code>~# create table daily_visits_per_os as
-      select date::date,
-             b.desc AS TYPE,
-             (random() * 10000 + 1)::int AS val
-       from generate_series((now() - '100 days'::interval)::date,
-                            now()::date,
-                            '1 day'::interval) as t(date),
-            (SELECT unnest(ARRAY['OSX', 'Windows', 'Linux']) AS DESC) b;
-SELECT 303
+<p>And we can see those lines with the following SQL:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">table</span> daily_visits_per_os <span style="color: #0000aa">limit</span> <span style="color: #009999">12</span>;
+</pre></div>
 
-~# table daily_visits_per_os limit 12;
-    date    |  type   | val  
+<pre><code>    date    |  type   | val  
 ------------+---------+------
  2013-03-26 | OSX     | 1583
  2013-03-26 | Windows | 3075
@@ -354,17 +356,17 @@ SELECT 303
 visits per os as different columns, having a result with 4 columns: the
 date, the number of visits using OSX that day, then using Windows, then
 using Linux. How to do that in plain SQL?</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>   <span style="color: #0000aa">select</span> <span style="color: #00aaaa">date</span>,
+          <span style="color: #0000aa">sum</span>(<span style="color: #0000aa">case</span> <span style="color: #0000aa">when</span> <span style="color: #0000aa">type</span> = <span style="color: #aa5500">&#39;OSX&#39;</span> <span style="color: #0000aa">then</span> val <span style="color: #0000aa">end</span>) <span style="color: #0000aa">as</span> osx,
+          <span style="color: #0000aa">sum</span>(<span style="color: #0000aa">case</span> <span style="color: #0000aa">when</span> <span style="color: #0000aa">type</span> = <span style="color: #aa5500">&#39;Windows&#39;</span> <span style="color: #0000aa">then</span> val <span style="color: #0000aa">end</span>) <span style="color: #0000aa">as</span> windows,
+          <span style="color: #0000aa">sum</span>(<span style="color: #0000aa">case</span> <span style="color: #0000aa">when</span> <span style="color: #0000aa">type</span> = <span style="color: #aa5500">&#39;Linux&#39;</span> <span style="color: #0000aa">then</span> val <span style="color: #0000aa">end</span>) <span style="color: #0000aa">as</span> linux
+     <span style="color: #0000aa">from</span> daily_visits_per_os
+ <span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> <span style="color: #00aaaa">date</span>
+ <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> <span style="color: #00aaaa">date</span>
+    <span style="color: #0000aa">limit</span> <span style="color: #009999">4</span>;
+</pre></div>
 
-<pre><code>~# select date,
-          sum(case when type = 'OSX' then val end) as osx,
-          sum(case when type = 'Windows' then val end) as windows,
-          sum(case when type = 'Linux' then val end) as linux
-     from daily_visits_per_os
- group by date
- order by date
-    limit 4;
-
-    date    | osx  | windows | linux 
+<pre><code>    date    | osx  | windows | linux 
 ------------+------+---------+-------
  2013-03-26 | 1583 |    3075 |   848
  2013-03-27 | 4377 |    7685 |  9550
@@ -380,6 +382,18 @@ category (after all, the data definition is not normalized here, it&rsquo;s know
 as
 <a href="http://en.wikipedia.org/wiki/Entity%E2%80%93attribute%E2%80%93value_model">EAV</a> and you want to stay away from that as much as possible), then the
 <code>sum(case)</code> query will work just fine.</p>
+
+<p>Starting with PostgreSQL 9.4 it&rsquo;s also possible to write the query using the
+<code>FILTER</code> syntax as in the following:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>   <span style="color: #0000aa">select</span> <span style="color: #00aaaa">date</span>,
+          <span style="color: #0000aa">sum</span>(val) filter(<span style="color: #0000aa">where</span> <span style="color: #0000aa">type</span> = <span style="color: #aa5500">&#39;OSX&#39;</span>) <span style="color: #0000aa">as</span> osx,
+          <span style="color: #0000aa">sum</span>(val) filter(<span style="color: #0000aa">where</span> <span style="color: #0000aa">type</span> = <span style="color: #aa5500">&#39;Windows&#39;</span>) <span style="color: #0000aa">as</span> windows,
+          <span style="color: #0000aa">sum</span>(val) filter(<span style="color: #0000aa">where</span> <span style="color: #0000aa">type</span> = <span style="color: #aa5500">&#39;Linux&#39;</span>) <span style="color: #0000aa">as</span> linux
+     <span style="color: #0000aa">from</span> daily_visits_per_os
+ <span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> <span style="color: #00aaaa">date</span>
+ <span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> <span style="color: #00aaaa">date</span>
+    <span style="color: #0000aa">limit</span> <span style="color: #009999">4</span>;
+</pre></div>
 
               
             </div>

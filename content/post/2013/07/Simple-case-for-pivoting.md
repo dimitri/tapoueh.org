@@ -5,7 +5,8 @@ tags = ["PostgreSQL", "tricks", "YeSQL"]
 categories = ["PostgreSQL","YeSQL"]
 thumbnailImage = "/img/old/transpose-matrix.jpg"
 thumbnailImagePosition = "left"
-coverImage = "/img/old/transpose-matrix.jpg"
+#coverImage = "/img/old/transpose-matrix.jpg"
+coverImage = "/img/transpose.jpg"
 coverSize = "partial"
 coverMeta = "out"
 aliases = ["/blog/2013/07/04-Simple-case-for-pivoting",
@@ -28,18 +29,23 @@ Let's do the same setup as he did, with a table containing some randomly
 generated data about hypothetical visits to a web page, say, by date then by
 operating system.
 
+~~~ sql
+create table daily_visits_per_os as
+    select date::date,
+           b.desc AS TYPE,
+           (random() * 10000 + 1)::int AS val
+     from generate_series((now() - '100 days'::interval)::date,
+                          now()::date,
+                          '1 day'::interval) as t(date),
+          (SELECT unnest(ARRAY['OSX', 'Windows', 'Linux']) AS DESC) b;
 ~~~
-~# create table daily_visits_per_os as
-      select date::date,
-             b.desc AS TYPE,
-             (random() * 10000 + 1)::int AS val
-       from generate_series((now() - '100 days'::interval)::date,
-                            now()::date,
-                            '1 day'::interval) as t(date),
-            (SELECT unnest(ARRAY['OSX', 'Windows', 'Linux']) AS DESC) b;
-SELECT 303
 
-~# table daily_visits_per_os limit 12;
+And we can see those lines with the following SQL:
+
+~~~ sql
+table daily_visits_per_os limit 12;
+~~~
+~~~
     date    |  type   | val  
 ------------+---------+------
  2013-03-26 | OSX     | 1583
@@ -65,8 +71,8 @@ visits per os as different columns, having a result with 4 columns: the
 date, the number of visits using OSX that day, then using Windows, then
 using Linux. How to do that in plain SQL?
 
-~~~
-~# select date,
+~~~ sql
+   select date,
           sum(case when type = 'OSX' then val end) as osx,
           sum(case when type = 'Windows' then val end) as windows,
           sum(case when type = 'Linux' then val end) as linux
@@ -74,7 +80,8 @@ using Linux. How to do that in plain SQL?
  group by date
  order by date
     limit 4;
-
+~~~
+~~~
     date    | osx  | windows | linux 
 ------------+------+---------+-------
  2013-03-26 | 1583 |    3075 |   848
@@ -92,3 +99,17 @@ category (after all, the data definition is not normalized here, it's known
 as 
 [EAV](http://en.wikipedia.org/wiki/Entity%E2%80%93attribute%E2%80%93value_model) and you want to stay away from that as much as possible), then the
 `sum(case)` query will work just fine.
+
+Starting with PostgreSQL 9.4 it's also possible to write the query using the
+`FILTER` syntax as in the following:
+
+~~~ sql
+   select date,
+          sum(val) filter(where type = 'OSX') as osx,
+          sum(val) filter(where type = 'Windows') as windows,
+          sum(val) filter(where type = 'Linux') as linux
+     from daily_visits_per_os
+ group by date
+ order by date
+    limit 4;
+~~~
