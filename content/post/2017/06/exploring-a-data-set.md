@@ -523,6 +523,15 @@ All those albums are successfully assigned a single genre now. The genre we
 chose is the most common value found in the album's track, and for our
 interactive discovery of the data set, it's plenty good enough.
 
+{{< alert warning >}}
+
+There's a better way to write this query, as you can read in the comments
+below this post. I've written another post about the technique, which uses
+[the Mode Ordered-Set Aggregate
+Function](/blog/2017/11/the-mode-ordered-set-aggregate-function/).
+
+{{< /alert >}}
+
 # Statistics per genre
 
 Now that we are able to actually play with a single genre per album, what
