@@ -24,7 +24,7 @@ of their queries.
 <center>
 
 {{< figure src="/img/MasteringPostgreSQLinAppDev-Cover-th.png"
-          link="http://masteringpostgresql.com"
+          link="https://masteringpostgresql.com"
           title="Buy it online!" >}}
 
 </center>
