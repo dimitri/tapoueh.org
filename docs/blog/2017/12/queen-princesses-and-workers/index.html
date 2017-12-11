@@ -1,0 +1,1138 @@
+
+
+  
+    
+  
+
+
+  
+
+
+
+
+  
+
+
+  
+
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Hugo 0.26">
+    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
+    <title>Queen, Princesses, and Workers</title>
+    <meta name="author" content="Dimitri Fontaine">
+    <meta name="keywords" content="">
+
+    <link rel="icon" href="/favicon.ico">
+    
+
+    
+    <meta name="description" content="The PostgreSQL community made the explicit choice
+some times ago that they would not use the infamous master and slave
+terminology. Instead, the documentation introduces the concepts of High
+Availability, Load Balancing, and
+Replication
+with the terms Primary and Standby, and the even more generic term
+Replica is used in contexts when only the data flow is considered, rather
+than the particular role of a node.">
+    <meta property="og:description" content="The PostgreSQL community made the explicit choice
+some times ago that they would not use the infamous master and slave
+terminology. Instead, the documentation introduces the concepts of High
+Availability, Load Balancing, and
+Replication
+with the terms Primary and Standby, and the even more generic term
+Replica is used in contexts when only the data flow is considered, rather
+than the particular role of a node.">
+    <meta property="og:type" content="blog">
+    <meta property="og:title" content="Queen, Princesses, and Workers">
+    <meta property="og:url" content="/blog/2017/12/queen-princesses-and-workers/">
+    <meta property="og:site_name" content="Dimitri Fontaine, PostgreSQL Expert">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Queen, Princesses, and Workers">
+    <meta name="twitter:description" content="The PostgreSQL community made the explicit choice
+some times ago that they would not use the infamous master and slave
+terminology. Instead, the documentation introduces the concepts of High
+Availability, Load Balancing, and
+Replication
+with the terms Primary and Standby, and the even more generic term
+Replica is used in contexts when only the data flow is considered, rather
+than the particular role of a node.">
+    
+      <meta name="twitter:creator" content="@tapoueh">
+    
+    
+
+    
+    
+
+    
+      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
+    
+
+    
+      <meta property="og:image" content="http://tapoueh.org/img/bee-logo.jpg">
+    
+    
+      <meta property="og:image" content="http://tapoueh.org/img/bee.jpg">
+    
+    
+
+    
+
+    
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
+    
+    
+    <link rel="stylesheet" href="/css/style-u6mk0ojoywresbx8iepslrmmhl4stuhrsxuwhkpwrkrx7mryjcaimasnk4pi.min.css" />
+    
+    
+      <link rel="stylesheet" href="http://tapoueh.org//css/dim.css">
+    
+      <link rel="stylesheet" href="http://tapoueh.org//css/nav.css">
+    
+
+    
+      
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-47059482-1', 'auto');
+ga('send', 'pageview');
+</script>
+
+    
+    
+  </head>
+
+  <body>
+    <div id="blog">
+      <header id="header" data-behavior="5">
+  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+  <div class="navbar-collapse collapse header-title" id="navigation">
+    <ul class="nav navbar-nav navbar-right">
+      
+      <li class="dropdown">
+        
+        <a href="/">blog</a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a href="/conf/">talks</a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a href="http://pgloader.io/">pgloader</a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a href="http://masteringpostgresql.com/">Mastering PostgreSQL</a>
+        
+      </li>
+      
+    </ul>
+  </div>
+
+  
+    
+      <a class="header-right-icon "
+         href="http://masteringpostgresql.com" target="_blank">
+    
+    
+      <i class="fa fa-lg fa-book"></i>
+    
+    
+    </a>
+  
+</header>
+
+      <nav id="sidebar" data-behavior="5">
+  <div class="sidebar-container">
+    
+      <div class="sidebar-profile">
+        <a href="/#about">
+          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+        </a>
+        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
+        
+          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
+        
+      </div>
+    
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
+      
+      <span class="sidebar-button-desc">Blog</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/about/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
+      
+      <span class="sidebar-button-desc">About</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories/yesql/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-database"></i>
+      
+      <span class="sidebar-button-desc">YeSQL</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="http://masteringpostgresql.com" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
+      
+      <span class="sidebar-button-desc">Mastering PostgreSQL</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+      
+      <span class="sidebar-button-desc">GitHub</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+      
+      <span class="sidebar-button-desc">Twitter</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+      
+      <span class="sidebar-button-desc">Categories</span>
+    </a>
+  </li>
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/index.xml">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+      
+      <span class="sidebar-button-desc">RSS</span>
+    </a>
+  </li>
+
+    </ul>
+  </div>
+</nav>
+
+      
+  <div class="post-header-cover
+              text-left
+              post-header-cover--partial"
+       style="background-image:url('/img/bee.jpg')"
+       data-behavior="5">
+    
+      <div class="post-header main-content-wrap text-left">
+  
+    <h1 class="post-title" itemprop="headline">
+      Queen, Princesses, and Workers
+    </h1>
+  
+  <div class="postShorten-meta post-meta">
+  
+    <time itemprop="datePublished" datetime="2017-12-11T10:19:24&#43;01:00">
+      
+  
+  
+  
+  
+    Monday 11 Dec 2017
+  
+
+    </time>
+  
+  
+  
+  
+    <span></span>
+    
+      <a class="category-link" href="/categories/postgresql">PostgreSQL</a>
+    
+  
+
+
+</div>
+
+</div>
+    
+  </div>
+
+
+      <div id="main" data-behavior="5"
+        class="hasCover
+               hasCoverMetaIn
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
+          
+          <div class="post-content markdown" itemprop="articleBody">
+            <div class="main-content-wrap">
+              <p>The <a href="https://postgresql.org">PostgreSQL</a> community made the explicit choice
+some times ago that they would not use the infamous <em>master</em> and <em>slave</em>
+terminology. Instead, the documentation introduces the concepts of <a href="https://www.postgresql.org/docs/current/static/high-availability.html">High
+Availability, Load Balancing, and
+Replication</a>
+with the terms <em>Primary</em> and <em>Standby</em>, and the even more generic term
+<em>Replica</em> is used in contexts when only the data flow is considered, rather
+than the particular role of a node.</p>
+
+<p>
+<h1 id="table-of-contents"></h1><nav id="TableOfContents">
+<ul>
+<li><a href="#multi-nodes-architectures-and-roles">Multi-Nodes Architectures and Roles</a></li>
+<li><a href="#high-availability">High-Availability</a></li>
+<li><a href="#load-balancing">Load-Balancing</a></li>
+<li><a href="#mixed-architectures">Mixed Architectures</a></li>
+<li><a href="#queen-princesses-and-workers">Queen, Princesses, and Workers</a></li>
+<li><a href="#a-better-terminology">A Better Terminology</a></li>
+</ul>
+</nav></p>
+
+<h1 id="multi-nodes-architectures-and-roles">Multi-Nodes Architectures and Roles</h1>
+
+<p>In current Production Architectures we often have to deal with multi-nodes
+systems. It always begins with High-Availability concerns: what if my main
+database server gets hit by a meteorite and is then unable to handle any
+processing at all?</p>
+
+<p>Also, when dealing with a <em>database server</em>, the availability isn&rsquo;t just
+about the service. The data is needed too, otherwise we might have to
+declare bankruptcy. So we need a mecanism to have the <strong>data</strong> available at
+all times. The only way to ensure that is by implementing <em>online backups</em>
+and <em>Point In Time Recovery</em> archiving, when using PostgreSQL. With other
+data systems, the terminology might be different, the concepts will be the
+same.</p>
+
+<p>Now with backups and <strong>automated recovery</strong> in place, in case when our
+primary PostgreSQL server crashes then the plan is simple:</p>
+
+<ol>
+<li><p>Get a new PostgreSQL server online.</p></li>
+
+<li><p>Run the automated recovery job on this new server.</p></li>
+
+<li><p>Open the service again.</p></li>
+</ol>
+
+<p>The second step here might take quite some time, depending on how much
+volume needs to be transfered over the network. While the transfering and
+recovering are happening, the service is unavailable…</p>
+
+<h1 id="high-availability">High-Availability</h1>
+
+<p>In order to reduce the maintenance window at the time when we replace the
+<em>primary</em> PostgreSQL server, we might want to have a <em>secondary</em> server
+ready to serve. When using PostgreSQL, it&rsquo;s as easy as implementing <em>Hot
+Standby</em> in between two servers, and <em>promoting the standby</em> in case the
+primary server isn&rsquo;t available anymore.</p>
+
+<blockquote>
+<p>Do you know why it&rsquo;s called <strong>Hot-Standby</strong>?</p>
+
+<p>That&rsquo;s because not only the standy server is open to read-only queries,
+but also at the time when the promotion of the standby to being the new
+primary occurs, the read-only queries that are currently running aren&rsquo;t
+affected by the promotion.</p>
+</blockquote>
+
+<p>So now we have multiple PostgreSQL nodes in production, or a multi-node
+architecture, with well defined roles:</p>
+
+<ol>
+<li><p>The <em>primary</em> server handles all the traffic.</p></li>
+
+<li><p>The <em>secondary</em> server replays the write-traffic and is ready to take
+ over the whole production traffic in case we need to halt the <em>primary</em>.</p></li>
+
+<li><p>We might have more than one <em>secondary</em> server, even in a cascading
+ setup. Which is very useful in multi-datacenters setup, or multiple
+ Availability Zones cases.</p></li>
+</ol>
+
+<p>Now, in this setup, every <em>secondary</em> server accepts read-only queries.</p>
+
+
+<figure >
+    
+        <img src="/img/sr-hs-2s.png" />
+    
+    
+</figure>
+
+
+<h1 id="load-balancing">Load-Balancing</h1>
+
+<p>Having several <em>secondary</em> servers up-to-date or lagging less than a second
+behind the <em>primary</em> server, it&rsquo;s tempting to use them for the <em>reporting</em>
+activities.</p>
+
+<p>One thing leading to another, the <em>secondary</em> servers soon enough receive
+quite an important read-only traffic:</p>
+
+<ul>
+<li><p>The nightly batches for business reporting (D-1 and the like).</p></li>
+
+<li><p>Those other business exports (for customers, invoicing, finance, etc).</p></li>
+
+<li><p>Some end-user traffic that&rsquo;s know to be read-only.</p></li>
+</ul>
+
+<p>And then someday the default for the end-user facing production traffic is
+to hit one of the <em>secondary</em> servers. The <em>primary</em> server is left to deal
+with only the write traffic, or as close as possible to that.</p>
+
+<blockquote>
+<p>Hint: when doing <em>write-then-read</em> within the same end-user activity,
+always do that on the same database connection. That&rsquo;s the only proper way
+to avoid data inconsistencies where the correctness of your processing
+depends on the lag of the secondary systems.</p>
+</blockquote>
+
+<h1 id="mixed-architectures">Mixed Architectures</h1>
+
+<p>And our production systems implement a Mixed Architecture, where hopefully
+the role of every part of the system is well known, and clearly labeled.
+Let&rsquo;s see about that:</p>
+
+<ol>
+<li><p>The <em>primary</em> server handles all the writes and is known as the <em>single
+ source of truth</em> of the architecture, both by the operators and the
+ application code.</p></li>
+
+<li><p>A couple of <em>secondary</em> servers are used to implement High-Availability
+ and take over on the <em>primary</em> role when this is needed.</p></li>
+
+<li><p>A bunch of <em>secondary</em> servers are used to implement Load-Balancing and
+ serve read-only traffic that comes either from background activities
+ (such as mighly batches, exports, and reportings) or directly serving
+ user-facing activities.</p></li>
+</ol>
+
+<p>Oopsie. I think we have a problem in our choice of terminology now. When
+dealing with a <em>secondary</em> server, it could either be a <em>primary redundancy</em>
+or a load-balancing node.</p>
+
+
+<figure >
+    
+        <img src="/img/lb-2dc.png" />
+    
+    
+</figure>
+
+
+<h1 id="queen-princesses-and-workers">Queen, Princesses, and Workers</h1>
+
+<p>My proposal to clarify the situation is to use a well-known terminology,
+taken from the bees. In a bee hive, we can see different roles that are well
+defined:</p>
+
+<ul>
+<li><p>The <a href="https://en.wikipedia.org/wiki/Queen_bee">Queen Bee</a></p>
+
+<p>In any bee hive, there is a single Queen. Her role is clearly defined
+(she serves as the reproducer, and that&rsquo;s it), and only one Bee at a
+time in the Hive (or colony) is allowed this role.</p></li>
+
+<li><p>The princess</p>
+
+<p>In the <a href="https://en.wikipedia.org/wiki/Queen_bee">Queen Bee</a> Wikipedia
+article, we read:</p>
+
+<blockquote>
+<p>As the queen ages her pheromone output diminishes. A queen bee that
+becomes old, or is diseased or failing, is replaced by the workers in
+a procedure known as &ldquo;supersedure&rdquo;.</p>
+</blockquote>
+
+<p>To replace the Queen Bee you need a special kind of bee, raised in a
+Queen Cell and fed with Royal Jelly. So when it&rsquo;s time to <em>supersedure</em>
+the Queen, the candidates are clearly identified.</p>
+
+<p>In the bee terminology we don&rsquo;t use the term princess. On the other
+hand, everyone knows that a Princess is only raised to be a Queen
+someday. Not that every Princess is going to have the opportunity, mind
+you.</p></li>
+
+<li><p>The <a href="https://en.wikipedia.org/wiki/Worker_bee">Worker Bees</a></p>
+
+<p>Their role is pretty clear: they do all the work that needs to be done
+in the hive, except for the role of the Queen, which they assist in
+several ways.</p></li>
+</ul>
+
+<h1 id="a-better-terminology">A Better Terminology</h1>
+
+<p>As a conclusion, I think that the Bee terminology is a better one in for
+Multi-Nodes Architectures. The goal of a terminology is dual. First, the
+choice of vocabulary will have an impact on how you think about the world
+around you, so picking positive and warm-feelings words has an impact.
+Second, in mixed architectures, it&rsquo;s important that everybody has a shared
+understanding of the role of each server:</p>
+
+<ul>
+<li><p>The Queen is the source of truth and handles all the write traffic.</p></li>
+
+<li><p>A Princess is maintained so as to be able to take-over the Queen when
+needed, usually when it dies or becomes unable to sustain the workload.</p></li>
+
+<li><p>Workers do everything else.</p></li>
+</ul>
+
+<p>Will you use this terminology on your next Architecture diagrams?</p>
+
+
+<figure >
+    
+        <img src="/img/lb-2dc-qpw.png" />
+    
+    
+</figure>
+
+
+<p>This terminology makes our understanding and expectations clearer. Now it&rsquo;s
+easy for everybody to understand that the <strong>Queen</strong> is expected to be unique
+in its role, at any time. That the <strong>Princess</strong> servers are only expected to
+be able to take-over within as small a maintenance window as possible, in
+case something happens to the Queen. And finally, the <strong>Workers</strong> are
+expected to be doing the heavy work.</p>
+              
+            </div>
+          </div>
+          <div id="post-footer" class="post-footer main-content-wrap">
+            
+              
+                
+                
+                  <div class="post-footer-tags">
+                    <span class="text-color-light text-small"></span><br/>
+                    
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/postgresql/">PostgreSQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/yesql/">YeSQL</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/master/">Master</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/slave/">Slave</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/high-availability/">High-Availability</a>
+
+  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/load-balancing/">Load Balancing</a>
+
+                  </div>
+                
+              
+            
+            <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    
+    <script async id="_ck_252762" src="https://forms.convertkit.com/252762?v=6"></script>
+    
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2017/12/scaling-python-released/" data-tooltip="Scaling Python released">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f12%2fqueen-princesses-and-workers%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f12%2fqueen-princesses-and-workers%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=Queen%2c%20Princesses%2c%20and%20Workers with @tapoueh: http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f12%2fqueen-princesses-and-workers%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+            
+              
+                <div id="disqus_thread">
+  <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+              
+            
+          </div>
+        </article>
+        <footer id="footer" class="main-content-wrap">
+  <span class="copyrights">
+    &copy; 2017 Dimitri Fontaine. 
+  </span>
+</footer>
+
+      </div>
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="5">
+        <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    
+    <script async id="_ck_252762" src="https://forms.convertkit.com/252762?v=6"></script>
+    
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2017/12/scaling-python-released/" data-tooltip="Scaling Python released">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f12%2fqueen-princesses-and-workers%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f12%2fqueen-princesses-and-workers%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=Queen%2c%20Princesses%2c%20and%20Workers with @tapoueh: http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f12%2fqueen-princesses-and-workers%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+      </div>
+      <div id="share-options-bar" class="share-options-bar" data-behavior="5">
+  <ul class="share-options">
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f12%2fqueen-princesses-and-workers%2f">
+        <i class="fa fa-google-plus"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f12%2fqueen-princesses-and-workers%2f">
+        <i class="fa fa-facebook-official"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=Queen%2c%20Princesses%2c%20and%20Workers with @tapoueh: http%3a%2f%2ftapoueh.org%2fblog%2f2017%2f12%2fqueen-princesses-and-workers%2f">
+        <i class="fa fa-twitter"></i><span></span>
+      </a>
+    </li>
+  </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
+    </div>
+    
+    <div id="about">
+  <div id="about-card">
+    <div id="about-btn-close">
+      <i class="fa fa-remove"></i>
+    </div>
+    
+      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+    
+    <h4 id="about-card-name">Dimitri Fontaine</h4>
+    
+      <div id="about-card-bio">PostgreSQL Major Contributor</div>
+    
+    
+      <div id="about-card-job">
+        <i class="fa fa-briefcase"></i>
+        <br/>
+        Open Source Software Engineer
+      </div>
+    
+    
+      <div id="about-card-location">
+        <i class="fa fa-map-marker"></i>
+        <br/>
+        France
+      </div>
+    
+  </div>
+</div>
+
+    <div id="algolia-search-modal" class="modal-container">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="close-button"><i class="fa fa-close"></i></span>
+      <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+        <span class="searchby-algolia-text text-color-light text-small">by</span>
+        <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+      </a>
+      <i class="search-icon fa fa-search"></i>
+      <form id="algolia-search-form">
+        <input type="text" id="algolia-search-input" name="search"
+          class="form-control input--large search-input" placeholder="" />
+      </form>
+    </div>
+    <div class="modal-body">
+      <div class="no-result text-color-light text-center"></div>
+      <div class="results">
+        
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/12/queen-princesses-and-workers/">
+                <h3 class="media-heading">Queen, Princesses, and Workers</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Dec 12, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>The <a href="https://postgresql.org">PostgreSQL</a> community made the explicit choice
+some times ago that they would not use the infamous <em>master</em> and <em>slave</em>
+terminology. Instead, the documentation introduces the concepts of <a href="https://www.postgresql.org/docs/current/static/high-availability.html">High
+Availability, Load Balancing, and
+Replication</a>
+with the terms <em>Primary</em> and <em>Standby</em>, and the even more generic term
+<em>Replica</em> is used in contexts when only the data flow is considered, rather
+than the particular role of a node.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/12/scaling-python-released/">
+                <h3 class="media-heading">Scaling Python released</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Dec 12, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Today I am very pleased to announce the release of the book <a href="https://scaling-python.com">Scaling
+Python</a> from my good friend <a href="https://julien.danjou.info/">Julien
+Danjou</a>!</p>
+
+<p>As Julien says, <strong>Python applications can handle millions of requests.</strong>
+Well, we know here that it&rsquo;s easier on them when they are using PostgreSQL
+of course!</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/11/simple-data-modeling-with-a-test-data-set/">
+                <h3 class="media-heading">Simple Data Modeling with a Test Data Set</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Nov 11, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>In <a href="/blog/2017/06/how-to-write-sql/">How to Write SQL</a> we saw how to write
+SQL queries as separate <code>.sql</code> files, and we learnt about using query
+parameters with the <em>psql</em> syntax for that (<code>:variable</code>, <code>:'variable'</code>, and
+<code>:&quot;identifier&quot;</code>).</p>
+
+<p>For writing our database model, the same tooling is all we need. An
+important aspect of using <em>psql</em> is its capacity to provide immediate
+feedback, and we can also have that with modeling too.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/11/the-mode-ordered-set-aggregate-function/">
+                <h3 class="media-heading">The Mode Ordered-Set Aggregate Function</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Nov 11, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>In our article <a href="/blog/2017/06/exploring-a-data-set-in-sql/">Exploring a Data Set in
+SQL</a> we discovered a data set
+related to music: the <a href="https://github.com/lerocha/chinook-database">Chinook</a>
+sample database.</p>
+
+<p>Our discovery led us to find albums containing tracks of multiple genres,
+and for the analytics we were then pursuing, we wanted to <em>clean</em> the data
+set and assign a single genre per album. We did that in SQL of course, and
+didn&rsquo;t actually edit the data.</p>
+
+<p>Finding the most frequent input value in a group is a job for the <code>mode()
+WITHIN GROUP (ORDER BY sort_expression)</code> Ordered-Set Aggregate Function, as
+documented in the PostgreSQL page about <a href="https://www.postgresql.org/docs/current/static/functions-aggregate.html#FUNCTIONS-ORDEREDSET-TABLE">Aggregate
+Functions</a>.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/11/whats-in-a-name-mastering/">
+                <h3 class="media-heading">What&#39;s in a name: “Mastering”</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Nov 11, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Now that my book <a href="https://masteringpostgresql.com">Mastering PostgreSQL in Application
+Development</a> is released (and selling well,
+thanks guys!), I&rsquo;ve had some questions about the title.</p>
+
+<p>The idea is that to become good at anything, we need to practice. We
+practice a lot, and it&rsquo;s even better when we are actively trying to learn,
+following what&rsquo;s named <a href="https://en.wikipedia.org/wiki/Practice_(learning_method)#Deliberate_practice">deliberate
+practice</a>.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/11/mastering-postgresql-in-application-development-launches/">
+                <h3 class="media-heading">Mastering PostgreSQL in Application Development launches!</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Nov 11, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">Today is the day my book Mastering PostgreSQL in Application Development launches! I&rsquo;m all excited that everybody interested is now able to actually read my book!
+Mastering PostgreSQL in Application Development targets application developers who want to learn SQL properly, and actually master this programming language. Most developers don&rsquo;t think of SQL as a programming language, mainly because they don&rsquo;t have full control of the execution plan of their queries.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/10/set-returning-functions-and-postgresql-10/">
+                <h3 class="media-heading">Set Returning Functions and PostgreSQL 10</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Oct 10, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>PostgreSQL 10 is now available for everyone to use, and hinted by <a href="http://fetter.org">David
+Fetter</a> I had to review my previous article <a href="/blog/2017/09/on-json-and-sql/">on Json and
+SQL</a> to adapt to <em>Set Returning Functions</em>
+changes.</p>
+
+<p>A <em>Set Returning Function</em> is a PostgreSQL <em>Stored Procedure</em> that can be
+used as a relation: from a single call it returns an entire result set, much
+like a subquery or a table.</p>
+
+<p>It used to be possible to use <em>SRF</em> in the <em>SELECT</em> clause, with dubious
+(but useful at times) semantics, and also in <em>scalar</em> contexts. The
+semantics have been fixed and are now much clearer, and the uses in scalar
+contexts are forbidden — they were a hack and never made sense anyway.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/09/on-json-and-sql/">
+                <h3 class="media-heading">on Json and SQL</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Sep 9, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>PostgreSQL has had proper
+<a href="https://www.postgresql.org/docs/current/static/datatype-json.html">json</a>
+support for a while now. The unique extensibility approach of the PostgreSQL
+system allows it to enable native <a href="https://www.postgresql.org/docs/current/static/functions-json.html">SQL friendly JSON
+processing</a>.</p>
+
+<p>In this article we&rsquo;ll play with the <a href="https://mtgjson.com">Magic: the Gathering card data in JSON
+format</a> data set, provided with a
+<a href="https://creativecommons.org/choose/zero/">CC0</a> licence, and process the
+information provided. We also see how to normalize a JSON document into a
+proper database model that benefits from some PostgreSQL advanced features,
+and how to then inject the JSON documents into the normalized database
+schema. Finally, we compare some non-trivial processing done against both
+versions of the database schema.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/09/mastering-postgresql-in-application-development/">
+                <h3 class="media-heading">Mastering PostgreSQL in Application Development</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Sep 9, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">Mastering PostgreSQL in Application Development is the full title of the book I am currently writing. Running the PostgreSQL is YeSQL series of blog posts has shown me developers need a PostgreSQL book for developers. A book with the same properties as the YeSQL series articles in this blog:
+ we use real world data sets to put every query and SQL technique we learn in the context of a user story or business case,</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/08/regular-expressions-and-grouping-sets/">
+                <h3 class="media-heading">Regular Expressions and Grouping Sets</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Aug 8, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>There&rsquo;s a very rich set of PostgreSQL functions to process text, you can
+find them all at
+the
+<a href="https://www.postgresql.org/docs/current/static/functions-string.html">String Functions and Operators</a> documentation
+chapter, with functions such as <em>overlay</em>, <em>substring</em>, <em>position</em> or
+<em>trim</em>. Or aggregates such as <em>string_agg</em>. And then <em>regular expression</em>
+functions, including the very powerful <em>regexp_split_to_table</em>.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+      </div>
+    </div>
+    <div class="modal-footer">
+      <p class="results-count text-medium"
+         data-message-zero=""
+         data-message-one=""
+         data-message-other="">
+         249 posts found
+      </p>
+    </div>
+  </div>
+</div>
+    
+  
+    
+    <div id="cover" style="background-image:url('http://tapoueh.org/images/mayan-calendar.jpg');"></div>
+  
+
+
+    
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.8.0/highlight.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.js"></script>
+
+
+<script src="/js/script-wl33z0n6ocaypepiqrazthtivfrliqijej4rq8ek8gvrv1awftmgjuv8k4zc.min.js"></script>
+
+<script>
+$(document).ready(function() {
+  hljs.configure({ classPrefix: '', useBR: false });
+  $('pre.code-highlight').each(function(i, block) {
+    var code = "";
+    hljs.highlightAuto(block.innerText).value.split(/\r\n|\r|\n/).forEach(function(line) {
+      code += "<span class=\"line\">" + line + "</span><br>";
+    });
+    if (code.length > 0) {
+      block.innerHTML = code;  
+    }
+  });
+  $('pre > code').each(function(i, block) {
+    $(this).addClass('codeblock');
+    hljs.highlightBlock(block);
+  });
+});
+</script>
+
+  
+    
+      <script>
+        var disqus_config = function () {
+          this.page.url = 'http:\/\/tapoueh.org\/blog\/2017\/12\/queen-princesses-and-workers\/';
+          
+            this.page.identifier = '\/blog\/2017\/12\/queen-princesses-and-workers\/'
+          
+        };
+        (function() {
+          
+          
+          if (window.location.hostname == "localhost") {
+            return;
+          }
+          var d = document, s = d.createElement('script');
+          var disqus_shortname = 'tapoueh';
+          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+          s.setAttribute('data-timestamp', +new Date());
+          (d.head || d.body).appendChild(s);
+        })();
+      </script>
+    
+  
+
+
+
+
+
+    
+  </body>
+</html>
+
