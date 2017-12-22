@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.26">
+    <meta name="generator" content="Hugo 0.31.1">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>SQL and Business Logic</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -92,7 +92,7 @@ implementation. Or actually, how much of your business logic should be SQL?
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
     
     
-    <link rel="stylesheet" href="/css/style-u6mk0ojoywresbx8iepslrmmhl4stuhrsxuwhkpwrkrx7mryjcaimasnk4pi.min.css" />
+    <link rel="stylesheet" href="/css/style-jsjn0006wyhpyzivf6yceb31gvpjatbcs3qzjvlumobfnugccvobqwxnnaj8.min.css" />
     
     
       <link rel="stylesheet" href="http://tapoueh.org//css/dim.css">
@@ -210,7 +210,7 @@ ga('send', 'pageview');
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="http://masteringpostgresql.com" target="_blank">
+      <a class="sidebar-button-link " href="http://masteringpostgresql.com" target="_blank" rel="noopener">
     
       <i class="sidebar-button-icon fa fa-lg fa-book"></i>
       
@@ -218,12 +218,13 @@ ga('send', 'pageview');
     </a>
   </li>
 
+
     </ul>
     <ul class="sidebar-buttons">
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank">
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener">
     
       <i class="sidebar-button-icon fa fa-lg fa-github"></i>
       
@@ -233,7 +234,7 @@ ga('send', 'pageview');
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank">
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener">
     
       <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
       
@@ -251,6 +252,7 @@ ga('send', 'pageview');
     </a>
   </li>
 
+
     </ul>
     <ul class="sidebar-buttons">
       
@@ -263,6 +265,7 @@ ga('send', 'pageview');
       <span class="sidebar-button-desc">RSS</span>
     </a>
   </li>
+
 
     </ul>
   </div>
@@ -291,10 +294,11 @@ ga('send', 'pageview');
       SQL and Business Logic
     </h1>
   
-  <div class="postShorten-meta post-meta">
   
-    <time itemprop="datePublished" datetime="2017-06-19T13:30:19&#43;02:00">
-      
+  <div class="postShorten-meta post-meta">
+    
+      <time itemprop="datePublished" datetime="2017-06-19T13:30:19&#43;02:00">
+        
   
   
   
@@ -302,9 +306,9 @@ ga('send', 'pageview');
     Monday 19 Jun 2017
   
 
-    </time>
-  
-  
+      </time>
+    
+    
   
   
     <span></span>
@@ -315,8 +319,7 @@ ga('send', 'pageview');
     
   
 
-
-</div>
+  </div>
 
 </div>
           
@@ -365,15 +368,14 @@ the <a href="https://github.com/lerocha/chinook-database/">Chinook database</a> 
 it models a music collection of tracks, artists, albums, and genre.</p>
 
 <div class="alert info ">
-  <p>With the latest <a href="http://pgloader.io/">pgloader</a> code (yet to be released at
+  <p><p>With the latest <a href="http://pgloader.io/">pgloader</a> code (yet to be released at
 the time of this writing), you can install the Chinook database in a single
 command:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>$ createdb chinook
-$ pgloader https://github.com/lerocha/chinook-database/raw/master/ChinookDatabase/DataSources/Chinook_Sqlite_AutoIncrementPKs.sqlite pgsql:///chinook
-</pre></div>
-
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ createdb chinook
+$ pgloader https://github.com/lerocha/chinook-database/raw/master/ChinookDatabase/DataSources/Chinook_Sqlite_AutoIncrementPKs.sqlite pgsql:///chinook</code></pre></div>
 <p>Well ok a single command line once you&rsquo;ve created the target database. I
 guess that makes it two commands.</p>
+</p>
 </div>
 
 <p>Let&rsquo;s pick quite a simple user story: display the list of albums from a
@@ -383,16 +385,14 @@ given artist, each with its total duration.</p>
 <em>milliseconds</em>. Each track is associated with an album through its
 <em>albumid</em>, and each album is the work of one artist that we reach through
 <em>artistid</em>. Let&rsquo;s write a query for solving our business case:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>  <span style="color: #0000aa">select</span> album.title <span style="color: #0000aa">as</span> album,
-         <span style="color: #0000aa">sum</span>(milliseconds) * <span style="color: #00aaaa">interval</span> <span style="color: #aa5500">&#39;1 ms&#39;</span> <span style="color: #0000aa">as</span> duration
-    <span style="color: #0000aa">from</span> album
-         <span style="color: #0000aa">join</span> artist <span style="color: #0000aa">using</span>(artistid)
-         <span style="color: #0000aa">left</span> <span style="color: #0000aa">join</span> track <span style="color: #0000aa">using</span>(albumid)
-   <span style="color: #0000aa">where</span> artist.name = <span style="color: #aa5500">&#39;Red Hot Chili Peppers&#39;</span>
-<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> album
-<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> album;
-</pre></div>
-
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span> album.title <span style="color:#00a">as</span> album,
+         <span style="color:#00a">sum</span>(milliseconds) * <span style="color:#0aa">interval</span> <span style="color:#a50">&#39;1 ms&#39;</span> <span style="color:#00a">as</span> duration
+    <span style="color:#00a">from</span> album
+         <span style="color:#00a">join</span> artist <span style="color:#00a">using</span>(artistid)
+         <span style="color:#00a">left</span> <span style="color:#00a">join</span> track <span style="color:#00a">using</span>(albumid)
+   <span style="color:#00a">where</span> artist.name = <span style="color:#a50">&#39;Red Hot Chili Peppers&#39;</span>
+<span style="color:#00a">group</span> <span style="color:#00a">by</span> album
+<span style="color:#00a">order</span> <span style="color:#00a">by</span> album;</code></pre></div>
 <p>The output is:</p>
 
 <pre><code>         album         │           duration           
@@ -418,73 +418,69 @@ query against the Python model.</p>
 <p>The goal of this Python exercise is to obtain classic application&rsquo;s code and
 to mimic to some degree the usual layers of abstractions such as found in
 ORM librairies. Here goes:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #aaaaaa; font-style: italic">#! /usr/bin/env python3</span>
-<span style="color: #aaaaaa; font-style: italic"># -*- coding: utf-8 -*-</span>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#aaa;font-style:italic">#! /usr/bin/env python3</span>
+<span style="color:#aaa;font-style:italic"># -*- coding: utf-8 -*-</span>
 
-<span style="color: #0000aa">import</span> <span style="color: #00aaaa; text-decoration: underline">psycopg2</span>
-<span style="color: #0000aa">import</span> <span style="color: #00aaaa; text-decoration: underline">psycopg2.extras</span>
-<span style="color: #0000aa">import</span> <span style="color: #00aaaa; text-decoration: underline">sys</span>
-<span style="color: #0000aa">from</span> <span style="color: #00aaaa; text-decoration: underline">datetime</span> <span style="color: #0000aa">import</span> timedelta
+<span style="color:#00a">import</span> <span style="color:#0aa">psycopg2</span>
+<span style="color:#00a">import</span> <span style="color:#0aa">psycopg2.extras</span>
+<span style="color:#00a">import</span> <span style="color:#0aa">sys</span>
+<span style="color:#00a">from</span> <span style="color:#0aa">datetime</span> <span style="color:#00a">import</span> timedelta
 
-DEBUGSQL = <span style="color: #00aaaa">False</span>
-PGCONNSTRING = <span style="color: #aa5500">&quot;dbname=chinook application_name=cdstore&quot;</span>
-
-
-<span style="color: #0000aa">class</span> <span style="color: #00aa00; text-decoration: underline">Model</span>(<span style="color: #00aaaa">object</span>):
-    tablename = <span style="color: #00aaaa">None</span>
-    columns = <span style="color: #00aaaa">None</span>
-
-    <span style="color: #888888">@classmethod</span>
-    <span style="color: #0000aa">def</span> <span style="color: #00aa00">buildsql</span>(<span style="color: #00aaaa">cls</span>, pgconn, **kwargs): ...
-
-    <span style="color: #888888">@classmethod</span>
-    <span style="color: #0000aa">def</span> <span style="color: #00aa00">fetchone</span>(<span style="color: #00aaaa">cls</span>, pgconn, **kwargs): ...
-
-    <span style="color: #888888">@classmethod</span>
-    <span style="color: #0000aa">def</span> <span style="color: #00aa00">fetchall</span>(<span style="color: #00aaaa">cls</span>, pgconn, **kwargs): ...
+DEBUGSQL = False
+PGCONNSTRING = <span style="color:#a50"></span><span style="color:#a50">&#34;dbname=chinook application_name=cdstore&#34;</span>
 
 
-<span style="color: #0000aa">class</span> <span style="color: #00aa00; text-decoration: underline">Artist</span>(Model):
-    tablename = <span style="color: #aa5500">&quot;artist&quot;</span>
-    columns = [<span style="color: #aa5500">&quot;artistid&quot;</span>, <span style="color: #aa5500">&quot;name&quot;</span>]
+<span style="color:#00a">class</span> <span style="color:#0a0">Model</span>(<span style="color:#0aa">object</span>):
+    tablename = None
+    columns = None
+
+    <span style="color:#888">@classmethod</span>
+    <span style="color:#00a">def</span> <span style="color:#0a0">buildsql</span>(cls, pgconn, **kwargs): ...
+
+    <span style="color:#888">@classmethod</span>
+    <span style="color:#00a">def</span> <span style="color:#0a0">fetchone</span>(cls, pgconn, **kwargs): ...
+
+    <span style="color:#888">@classmethod</span>
+    <span style="color:#00a">def</span> <span style="color:#0a0">fetchall</span>(cls, pgconn, **kwargs): ...
+
+
+<span style="color:#00a">class</span> <span style="color:#0a0">Artist</span>(Model):
+    tablename = <span style="color:#a50"></span><span style="color:#a50">&#34;artist&#34;</span>
+    columns = [<span style="color:#a50"></span><span style="color:#a50">&#34;artistid&#34;</span>, <span style="color:#a50"></span><span style="color:#a50">&#34;name&#34;</span>]
     ...
 
 
-<span style="color: #0000aa">class</span> <span style="color: #00aa00; text-decoration: underline">Album</span>(Model):
-    tablename = <span style="color: #aa5500">&quot;album&quot;</span>
-    columns = [<span style="color: #aa5500">&quot;albumid&quot;</span>, <span style="color: #aa5500">&quot;title&quot;</span>]
+<span style="color:#00a">class</span> <span style="color:#0a0">Album</span>(Model):
+    tablename = <span style="color:#a50"></span><span style="color:#a50">&#34;album&#34;</span>
+    columns = [<span style="color:#a50"></span><span style="color:#a50">&#34;albumid&#34;</span>, <span style="color:#a50"></span><span style="color:#a50">&#34;title&#34;</span>]
     ...
 
 
-<span style="color: #0000aa">class</span> <span style="color: #00aa00; text-decoration: underline">Track</span>(Model):
-    tablename = <span style="color: #aa5500">&quot;track&quot;</span>
-    columns = [<span style="color: #aa5500">&quot;trackid&quot;</span>, <span style="color: #aa5500">&quot;name&quot;</span>, <span style="color: #aa5500">&quot;milliseconds&quot;</span>, <span style="color: #aa5500">&quot;bytes&quot;</span>, <span style="color: #aa5500">&quot;unitprice&quot;</span>]
+<span style="color:#00a">class</span> <span style="color:#0a0">Track</span>(Model):
+    tablename = <span style="color:#a50"></span><span style="color:#a50">&#34;track&#34;</span>
+    columns = [<span style="color:#a50"></span><span style="color:#a50">&#34;trackid&#34;</span>, <span style="color:#a50"></span><span style="color:#a50">&#34;name&#34;</span>, <span style="color:#a50"></span><span style="color:#a50">&#34;milliseconds&#34;</span>, <span style="color:#a50"></span><span style="color:#a50">&#34;bytes&#34;</span>, <span style="color:#a50"></span><span style="color:#a50">&#34;unitprice&#34;</span>]
     ...
 
 
-<span style="color: #0000aa">if</span> <span style="color: #aa0000">__name__</span> == <span style="color: #aa5500">&#39;__main__&#39;</span>:
-    <span style="color: #0000aa">if</span> <span style="color: #00aaaa">len</span>(sys.argv) &gt; <span style="color: #009999">1</span>:
+<span style="color:#00a">if</span> __name__ == <span style="color:#a50"></span><span style="color:#a50">&#39;__main__&#39;</span>:
+    <span style="color:#00a">if</span> <span style="color:#0aa">len</span>(sys.argv) &gt; <span style="color:#099">1</span>:
         pgconn = psycopg2.connect(PGCONNSTRING)
-        artist = Artist.fetchone(pgconn, name=sys.argv[<span style="color: #009999">1</span>])
+        artist = Artist.fetchone(pgconn, name=sys.argv[<span style="color:#099">1</span>])
 
-        <span style="color: #0000aa">for</span> album <span style="color: #0000aa">in</span> Album.fetchall(pgconn, artistid=artist.id):
-            ms = <span style="color: #009999">0</span>
-            <span style="color: #0000aa">for</span> track <span style="color: #0000aa">in</span> Track.fetchall(pgconn, albumid=album.id):
+        <span style="color:#00a">for</span> album <span style="color:#00a">in</span> Album.fetchall(pgconn, artistid=artist.<span style="color:#0aa">id</span>):
+            ms = <span style="color:#099">0</span>
+            <span style="color:#00a">for</span> track <span style="color:#00a">in</span> Track.fetchall(pgconn, albumid=album.<span style="color:#0aa">id</span>):
                 ms += track.duration
 
             duration = timedelta(milliseconds=ms)
-            <span style="color: #0000aa">print</span>(<span style="color: #aa5500">&quot;%25s: %s&quot;</span> % (album.title, duration))
-    <span style="color: #0000aa">else</span>:
-        <span style="color: #0000aa">print</span>(<span style="color: #aa5500">&#39;albums.py &lt;artist name&gt;&#39;</span>)
-</pre></div>
-
+            <span style="color:#00a">print</span>(<span style="color:#a50"></span><span style="color:#a50">&#34;</span><span style="color:#a50">%25s</span><span style="color:#a50">: </span><span style="color:#a50">%s</span><span style="color:#a50">&#34;</span> % (album.title, duration))
+    <span style="color:#00a">else</span>:
+        <span style="color:#00a">print</span>(<span style="color:#a50"></span><span style="color:#a50">&#39;albums.py &lt;artist name&gt;&#39;</span>)</code></pre></div>
 <p>When we run the code we have the same result as before with the query:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>$ ./albums.py <span style="color: #aa5500">&quot;Red Hot Chili Peppers&quot;</span>
-    Blood Sugar Sex Magik: <span style="color: #009999">1</span>:13:57.073000
-               By The Way: <span style="color: #009999">1</span>:08:49.951000
-          Californication: <span style="color: #009999">0</span>:56:25.461000
-</pre></div>
-
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ ./albums.py <span style="color:#a50">&#34;Red Hot Chili Peppers&#34;</span>
+    Blood Sugar Sex Magik: <span style="color:#099">1</span>:13:57.073000
+               By The Way: <span style="color:#099">1</span>:08:49.951000
+          Californication: <span style="color:#099">0</span>:56:25.461000</code></pre></div>
 <p>What can we learn about those two implementations of the same business case?</p>
 
 <h1 id="correctness">Correctness</h1>
@@ -537,28 +533,24 @@ all…</p>
 
 <p>In terms of code maitenance we have to compare the SQL with only those 9
 lines of Python code:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>artist = Artist.fetchone(pgconn, name=sys.argv[<span style="color: #009999">1</span>])
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python">artist = Artist.fetchone(pgconn, name=sys.argv[<span style="color:#099">1</span>])
 
-<span style="color: #0000aa">for</span> album <span style="color: #0000aa">in</span> Album.fetchall(pgconn, artistid=artist.id):
-    ms = <span style="color: #009999">0</span>
-    <span style="color: #0000aa">for</span> track <span style="color: #0000aa">in</span> Track.fetchall(pgconn, albumid=album.id):
+<span style="color:#00a">for</span> album <span style="color:#00a">in</span> Album.fetchall(pgconn, artistid=artist.<span style="color:#0aa">id</span>):
+    ms = <span style="color:#099">0</span>
+    <span style="color:#00a">for</span> track <span style="color:#00a">in</span> Track.fetchall(pgconn, albumid=album.<span style="color:#0aa">id</span>):
         ms += track.duration
 
     duration = timedelta(milliseconds=ms)
-    <span style="color: #0000aa">print</span>(<span style="color: #aa5500">&quot;%25s: %s&quot;</span> % (album.title, duration))
-</pre></div>
-
+    <span style="color:#00a">print</span>(<span style="color:#a50"></span><span style="color:#a50">&#34;</span><span style="color:#a50">%25s</span><span style="color:#a50">: </span><span style="color:#a50">%s</span><span style="color:#a50">&#34;</span> % (album.title, duration))</code></pre></div>
 <p>With the equivalent query written as:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>  <span style="color: #0000aa">select</span> album.title <span style="color: #0000aa">as</span> album,
-         <span style="color: #0000aa">sum</span>(milliseconds) * <span style="color: #00aaaa">interval</span> <span style="color: #aa5500">&#39;1 ms&#39;</span> <span style="color: #0000aa">as</span> duration
-    <span style="color: #0000aa">from</span> album
-         <span style="color: #0000aa">join</span> artist <span style="color: #0000aa">using</span>(artistid)
-         <span style="color: #0000aa">left</span> <span style="color: #0000aa">join</span> track <span style="color: #0000aa">using</span>(albumid)
-   <span style="color: #0000aa">where</span> artist.name = <span style="color: #aa5500">&#39;Red Hot Chili Peppers&#39;</span>
-<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> album
-<span style="color: #0000aa">order</span> <span style="color: #0000aa">by</span> album;
-</pre></div>
-
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span> album.title <span style="color:#00a">as</span> album,
+         <span style="color:#00a">sum</span>(milliseconds) * <span style="color:#0aa">interval</span> <span style="color:#a50">&#39;1 ms&#39;</span> <span style="color:#00a">as</span> duration
+    <span style="color:#00a">from</span> album
+         <span style="color:#00a">join</span> artist <span style="color:#00a">using</span>(artistid)
+         <span style="color:#00a">left</span> <span style="color:#00a">join</span> track <span style="color:#00a">using</span>(albumid)
+   <span style="color:#00a">where</span> artist.name = <span style="color:#a50">&#39;Red Hot Chili Peppers&#39;</span>
+<span style="color:#00a">group</span> <span style="color:#00a">by</span> album
+<span style="color:#00a">order</span> <span style="color:#00a">by</span> album;</code></pre></div>
 <p>It seems to me that the expected maintenance burden of both the solution are
 roughly equivalent. The main difference is that in the second case
 PostgreSQL is smart enough to pick the proper join algorithm depending on
@@ -572,21 +564,20 @@ result ordering. Say now we want to display the album list sorted by album&rsquo
 duration, shortest first.</p>
 
 <div class="alert warning ">
-  <p>Exercice to the reader: implement the new ordering specification in the
+  <p><p>Exercice to the reader: implement the new ordering specification in the
 application&rsquo;s code, where you deal with business logic.</p>
 
 <p>Note that the Chinook database model does not have a per-album duration so
 you can&rsquo;t rely on <code>.orderBy(duration)</code> or something like that at your ORM
 layer.</p>
+</p>
 </div>
 
 <p>In the SQL solution, this translates to changing the <em>order by</em> clause of
 course, and the change is easy for your peers to review before your commit
 makes it to the release branch:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #aa0000">-order by album;</span>
-<span style="color: #00aa00">+order by duration;</span>
-</pre></div>
-
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-diff" data-lang="diff"><span style="color:#a00">-order by album;
+</span><span style="color:#a00"></span><span style="color:#f00;background-color:#faa">+order by duration;</span></code></pre></div>
 <p>Unfortunately we don&rsquo;t have the album&rsquo;s date of release in the Chinook
 database model, that would be the proper ordering here I guess.</p>
 
@@ -628,15 +619,15 @@ remember, <strong><em>if you think education is expensive, try ignorance</em></s
                   <div class="post-footer-tags">
                     <span class="text-color-light text-small"></span><br/>
                     
-  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/postgresql/">PostgreSQL</a>
+  <a class="tag tag--primary tag--small" href="/tags/postgresql/">PostgreSQL</a>
 
-  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/yesql/">YeSQL</a>
+  <a class="tag tag--primary tag--small" href="/tags/yesql/">YeSQL</a>
 
-  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/python/">Python</a>
+  <a class="tag tag--primary tag--small" href="/tags/python/">Python</a>
 
-  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/anosql/">AnoSQL</a>
+  <a class="tag tag--primary tag--small" href="/tags/anosql/">AnoSQL</a>
 
-  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/sql/">SQL</a>
+  <a class="tag tag--primary tag--small" href="/tags/sql/">SQL</a>
 
                   </div>
                 
@@ -854,7 +845,7 @@ remember, <strong><em>if you think education is expensive, try ignorance</em></s
   <div class="modal">
     <div class="modal-header">
       <span class="close-button"><i class="fa fa-close"></i></span>
-      <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+      <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
         <span class="searchby-algolia-text text-color-light text-small">by</span>
         <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
       </a>
@@ -868,6 +859,30 @@ remember, <strong><em>if you think education is expensive, try ignorance</em></s
       <div class="no-result text-color-light text-center"></div>
       <div class="results">
         
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/12/setting-up-psql/">
+                <h3 class="media-heading">Setting up psql</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Dec 12, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>PostgreSQL ships with an interactive console with the command line tool
+named <a href="https://www.postgresql.org/docs/current/static/app-psql.html">psql</a>.
+It can be used both for scripting and interactive usage and is moreover
+quite a powerful tool. Interactive features includes <em>autocompletion</em>,
+<em>readline</em> support (history searches, modern keyboard movements, etc), input
+and output redirection, formatted output, and more.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
         
           <div class="media">
             
@@ -1100,36 +1115,6 @@ contexts are forbidden — they were a hack and never made sense anyway.</p>
             <hr>
           </div>
         
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/09/on-json-and-sql/">
-                <h3 class="media-heading">on Json and SQL</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Sep 9, 2017
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p>PostgreSQL has had proper
-<a href="https://www.postgresql.org/docs/current/static/datatype-json.html">json</a>
-support for a while now. The unique extensibility approach of the PostgreSQL
-system allows it to enable native <a href="https://www.postgresql.org/docs/current/static/functions-json.html">SQL friendly JSON
-processing</a>.</p>
-
-<p>In this article we&rsquo;ll play with the <a href="https://mtgjson.com">Magic: the Gathering card data in JSON
-format</a> data set, provided with a
-<a href="https://creativecommons.org/choose/zero/">CC0</a> licence, and process the
-information provided. We also see how to normalize a JSON document into a
-proper database model that benefits from some PostgreSQL advanced features,
-and how to then inject the JSON documents into the normalized database
-schema. Finally, we compare some non-trivial processing done against both
-versions of the database schema.</p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
       </div>
     </div>
     <div class="modal-footer">
@@ -1150,32 +1135,29 @@ versions of the database schema.</p></div>
 
 
     
-<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
-<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.8.0/highlight.min.js"></script>
-<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.min.js"></script>
-<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
 
 
-<script src="/js/script-wl33z0n6ocaypepiqrazthtivfrliqijej4rq8ek8gvrv1awftmgjuv8k4zc.min.js"></script>
+<script src="/js/script-qi9wbxp2ya2j6p7wx1i6tgavftewndznf4v0hy2gvivk1rxgc3lm7njqb6bz.min.js"></script>
+
+
 
 <script>
 $(document).ready(function() {
   hljs.configure({ classPrefix: '', useBR: false });
-  $('pre.code-highlight').each(function(i, block) {
-    var code = "";
-    hljs.highlightAuto(block.innerText).value.split(/\r\n|\r|\n/).forEach(function(line) {
-      code += "<span class=\"line\">" + line + "</span><br>";
-    });
-    if (code.length > 0) {
-      block.innerHTML = code;  
+  $('pre.code-highlight > code, pre > code').each(function(i, block) {
+    if (!$(this).hasClass('codeblock')) {
+      $(this).addClass('codeblock');
     }
-  });
-  $('pre > code').each(function(i, block) {
-    $(this).addClass('codeblock');
     hljs.highlightBlock(block);
   });
 });
 </script>
+
 
   
     
@@ -1202,8 +1184,6 @@ $(document).ready(function() {
       </script>
     
   
-
-
 
 
 

@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.26">
+    <meta name="generator" content="Hugo 0.31.1">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Aggregating NBA data, PostgreSQL vs MongoDB</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -95,7 +95,7 @@ create aggregate.
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
     
     
-    <link rel="stylesheet" href="/css/style-u6mk0ojoywresbx8iepslrmmhl4stuhrsxuwhkpwrkrx7mryjcaimasnk4pi.min.css" />
+    <link rel="stylesheet" href="/css/style-jsjn0006wyhpyzivf6yceb31gvpjatbcs3qzjvlumobfnugccvobqwxnnaj8.min.css" />
     
     
       <link rel="stylesheet" href="http://tapoueh.org//css/dim.css">
@@ -213,7 +213,7 @@ ga('send', 'pageview');
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="http://masteringpostgresql.com" target="_blank">
+      <a class="sidebar-button-link " href="http://masteringpostgresql.com" target="_blank" rel="noopener">
     
       <i class="sidebar-button-icon fa fa-lg fa-book"></i>
       
@@ -221,12 +221,13 @@ ga('send', 'pageview');
     </a>
   </li>
 
+
     </ul>
     <ul class="sidebar-buttons">
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank">
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener">
     
       <i class="sidebar-button-icon fa fa-lg fa-github"></i>
       
@@ -236,7 +237,7 @@ ga('send', 'pageview');
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank">
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener">
     
       <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
       
@@ -254,6 +255,7 @@ ga('send', 'pageview');
     </a>
   </li>
 
+
     </ul>
     <ul class="sidebar-buttons">
       
@@ -266,6 +268,7 @@ ga('send', 'pageview');
       <span class="sidebar-button-desc">RSS</span>
     </a>
   </li>
+
 
     </ul>
   </div>
@@ -284,10 +287,11 @@ ga('send', 'pageview');
       Aggregating NBA data, PostgreSQL vs MongoDB
     </h1>
   
-  <div class="postShorten-meta post-meta">
   
-    <time itemprop="datePublished" datetime="2014-02-17T23:40:00&#43;01:00">
-      
+  <div class="postShorten-meta post-meta">
+    
+      <time itemprop="datePublished" datetime="2014-02-17T23:40:00&#43;01:00">
+        
   
   
   
@@ -295,9 +299,9 @@ ga('send', 'pageview');
     Monday 17 Feb 2014
   
 
-    </time>
-  
-  
+      </time>
+    
+    
   
   
     <span></span>
@@ -308,8 +312,7 @@ ga('send', 'pageview');
     
   
 
-
-</div>
+  </div>
 
 </div>
     
@@ -376,30 +379,26 @@ per team, which would be a boolean but is a number in the given
 we store only the scores. Here&rsquo;s the main table definition of the stats we
 are going to be playing with, the
 <code>game</code> table:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">create</span> <span style="color: #0000aa">table</span> nba.game (
-  id          <span style="color: #00aaaa">serial</span> <span style="color: #0000aa">primary</span> <span style="color: #0000aa">key</span>,
-  <span style="color: #00aaaa">date</span>        timestamptz,
-  <span style="color: #0000aa">host</span>        <span style="color: #00aaaa">int</span> <span style="color: #0000aa">references</span> nba.team(id),
-  guest       <span style="color: #00aaaa">int</span> <span style="color: #0000aa">references</span> nba.team(id),
-  host_score  <span style="color: #00aaaa">int</span>,
-  guest_score <span style="color: #00aaaa">int</span>
-);
-</pre></div>
-
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span> <span style="color:#00a">table</span> nba.game (
+  id          <span style="color:#0aa">serial</span> <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
+  <span style="color:#0aa">date</span>        timestamptz,
+  <span style="color:#00a">host</span>        <span style="color:#0aa">int</span> <span style="color:#00a">references</span> nba.team(id),
+  guest       <span style="color:#0aa">int</span> <span style="color:#00a">references</span> nba.team(id),
+  host_score  <span style="color:#0aa">int</span>,
+  guest_score <span style="color:#0aa">int</span>
+);</code></pre></div>
 <p>As much of the aggregates in the referenced article are playing with
 statistics from teams who actually
 <em>won</em> the game, let&rsquo;s create a view to
 simplify our SQL queries thereafter:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">create</span> <span style="color: #0000aa">view</span> winners <span style="color: #0000aa">as</span>
-  <span style="color: #0000aa">select</span> id,
-         <span style="color: #00aaaa">date</span>,
-         <span style="color: #0000aa">case</span> <span style="color: #0000aa">when</span> host_score &gt; guest_score
-              <span style="color: #0000aa">then</span> <span style="color: #0000aa">host</span>
-              <span style="color: #0000aa">else</span> guest
-          <span style="color: #0000aa">end</span> <span style="color: #0000aa">as</span> winner
-    <span style="color: #0000aa">from</span> game;
-</pre></div>
-
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span> <span style="color:#00a">view</span> winners <span style="color:#00a">as</span>
+  <span style="color:#00a">select</span> id,
+         <span style="color:#0aa">date</span>,
+         <span style="color:#00a">case</span> <span style="color:#00a">when</span> host_score &gt; guest_score
+              <span style="color:#00a">then</span> <span style="color:#00a">host</span>
+              <span style="color:#00a">else</span> guest
+          <span style="color:#00a">end</span> <span style="color:#00a">as</span> winner
+    <span style="color:#00a">from</span> game;</code></pre></div>
 <p>If you&rsquo;re not doing much SQL, remember that creating such a view is common
 practice in the relational world.</p>
 
@@ -407,38 +406,36 @@ practice in the relational world.</p>
 
 <p>Now that we have the extra useful view, it&rsquo;s possible to implement the first
 <a href="http://www.mongodb.org/">MongoDB</a> query in SQL. First, let&rsquo;s have a look at the MongoDB query:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>db.games.aggregate([
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-js" data-lang="js">db.games.aggregate([
   {
     $match : {
       date : {
-        $gt : ISODate(<span style="color: #aa5500">&quot;1999-08-01T00:00:00Z&quot;</span>),
-        $lt : ISODate(<span style="color: #aa5500">&quot;2000-08-01T00:00:00Z&quot;</span>)
+        $gt : ISODate(<span style="color:#a50">&#34;1999-08-01T00:00:00Z&#34;</span>),
+        $lt : ISODate(<span style="color:#a50">&#34;2000-08-01T00:00:00Z&#34;</span>)
       }
     }
   },
   {
-    $unwind : <span style="color: #aa5500">&#39;$teams&#39;</span>
+    $unwind : <span style="color:#a50">&#39;$teams&#39;</span>
   },
   {
     $match : {
-      <span style="color: #aa5500">&#39;teams.won&#39;</span> : <span style="color: #009999">1</span>
+      <span style="color:#a50">&#39;teams.won&#39;</span> : <span style="color:#099">1</span>
     }
   },
   {
     $group : {
-      _id : <span style="color: #aa5500">&#39;$teams.name&#39;</span>,
-      wins : { $sum : <span style="color: #009999">1</span> }
+      _id : <span style="color:#a50">&#39;$teams.name&#39;</span>,
+      wins : { $sum : <span style="color:#099">1</span> }
     }
   },
   {
-    $sort : { wins : -<span style="color: #009999">1</span> }
+    $sort : { wins : -<span style="color:#099">1</span> }
   },
   {
-    $limit : <span style="color: #009999">5</span>
+    $limit : <span style="color:#099">5</span>
   }
-]);
-</pre></div>
-
+]);</code></pre></div>
 <p>I don&rsquo;t know about you, but I have quite a hard time deciphering what that
 query is actually doing, and when the explanation text talks about
 <em>using a
@@ -449,26 +446,24 @@ format itself, as it&rsquo;s obviously meant to be generated by a tool rather th
 typed by a human being.</p>
 
 <p>Here&rsquo;s the same query in SQL, with the result this time:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>  <span style="color: #0000aa">SELECT</span> abbrev, name, <span style="color: #0000aa">count</span>(*)
-    <span style="color: #0000aa">FROM</span> winners <span style="color: #0000aa">JOIN</span> team <span style="color: #0000aa">ON</span> team.id = winners.winner
-   <span style="color: #0000aa">WHERE</span>     <span style="color: #00aaaa">date</span> &gt; <span style="color: #aa5500">&#39;1999-08-01T00:00:00Z&#39;</span>
-         <span style="color: #0000aa">AND</span> <span style="color: #00aaaa">date</span> &lt; <span style="color: #aa5500">&#39;2000-08-01T00:00:00Z&#39;</span>
-<span style="color: #0000aa">GROUP</span> <span style="color: #0000aa">BY</span> winner, abbrev, name
-<span style="color: #0000aa">ORDER</span> <span style="color: #0000aa">BY</span> <span style="color: #0000aa">count</span>(*) <span style="color: #0000aa">DESC</span>
-   <span style="color: #0000aa">LIMIT</span> <span style="color: #009999">5</span>;
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">SELECT</span> abbrev, name, <span style="color:#00a">count</span>(*)
+    <span style="color:#00a">FROM</span> winners <span style="color:#00a">JOIN</span> team <span style="color:#00a">ON</span> team.id = winners.winner
+   <span style="color:#00a">WHERE</span>     <span style="color:#0aa">date</span> &gt; <span style="color:#a50">&#39;1999-08-01T00:00:00Z&#39;</span>
+         <span style="color:#00a">AND</span> <span style="color:#0aa">date</span> &lt; <span style="color:#a50">&#39;2000-08-01T00:00:00Z&#39;</span>
+<span style="color:#00a">GROUP</span> <span style="color:#00a">BY</span> winner, abbrev, name
+<span style="color:#00a">ORDER</span> <span style="color:#00a">BY</span> <span style="color:#00a">count</span>(*) <span style="color:#00a">DESC</span>
+   <span style="color:#00a">LIMIT</span> <span style="color:#099">5</span>;
 
- abbrev |          name          | <span style="color: #0000aa">count</span> 
-<span style="color: #aaaaaa; font-style: italic">--------+------------------------+-------</span>
- LAL    | Los Angeles Lakers     |    <span style="color: #009999">67</span>
- POR    | Portland Trail Blazers |    <span style="color: #009999">59</span>
- IND    | Indiana Pacers         |    <span style="color: #009999">56</span>
- UTA    | Utah Jazz              |    <span style="color: #009999">55</span>
- SAS    | San Antonio Spurs      |    <span style="color: #009999">53</span>
-(<span style="color: #009999">5</span> <span style="color: #0000aa">rows</span>)
+ abbrev |          name          | <span style="color:#00a">count</span> 
+<span style="color:#aaa;font-style:italic">--------+------------------------+-------
+</span><span style="color:#aaa;font-style:italic"></span> LAL    | Los Angeles Lakers     |    <span style="color:#099">67</span>
+ POR    | Portland Trail Blazers |    <span style="color:#099">59</span>
+ IND    | Indiana Pacers         |    <span style="color:#099">56</span>
+ UTA    | Utah Jazz              |    <span style="color:#099">55</span>
+ SAS    | San Antonio Spurs      |    <span style="color:#099">53</span>
+(<span style="color:#099">5</span> <span style="color:#00a">rows</span>)
 
-Time: <span style="color: #009999">8</span>.<span style="color: #009999">101</span> ms
-</pre></div>
-
+Time: <span style="color:#099">8</span>.<span style="color:#099">101</span> ms</code></pre></div>
 <p>What we have here is a pretty basic query using a
 <em>join</em>, a
 <em>where</em> clause to
@@ -483,26 +478,24 @@ of similar ones.</p>
 
 <p>Here&rsquo;s, as in the original article, the same query against a much larger
 data set this time, with all games of the 2000s decade:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span>   <span style="color: #0000aa">SELECT</span> abbrev, name, <span style="color: #0000aa">count</span>(*)
-     <span style="color: #0000aa">FROM</span> winners <span style="color: #0000aa">join</span> team <span style="color: #0000aa">on</span> team.id = winners.winner
-    <span style="color: #0000aa">WHERE</span>     <span style="color: #00aaaa">date</span> &gt; <span style="color: #aa5500">&#39;2000-08-01T00:00:00Z&#39;</span>
-          <span style="color: #0000aa">AND</span> <span style="color: #00aaaa">date</span> &lt; <span style="color: #aa5500">&#39;2010-08-01T00:00:00Z&#39;</span>
- <span style="color: #0000aa">GROUP</span> <span style="color: #0000aa">BY</span> winner, abbrev, name
- <span style="color: #0000aa">ORDER</span> <span style="color: #0000aa">BY</span> <span style="color: #0000aa">count</span>(*) <span style="color: #0000aa">DESC</span>
-    <span style="color: #0000aa">LIMIT</span> <span style="color: #009999">5</span>;
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">   <span style="color:#00a">SELECT</span> abbrev, name, <span style="color:#00a">count</span>(*)
+     <span style="color:#00a">FROM</span> winners <span style="color:#00a">join</span> team <span style="color:#00a">on</span> team.id = winners.winner
+    <span style="color:#00a">WHERE</span>     <span style="color:#0aa">date</span> &gt; <span style="color:#a50">&#39;2000-08-01T00:00:00Z&#39;</span>
+          <span style="color:#00a">AND</span> <span style="color:#0aa">date</span> &lt; <span style="color:#a50">&#39;2010-08-01T00:00:00Z&#39;</span>
+ <span style="color:#00a">GROUP</span> <span style="color:#00a">BY</span> winner, abbrev, name
+ <span style="color:#00a">ORDER</span> <span style="color:#00a">BY</span> <span style="color:#00a">count</span>(*) <span style="color:#00a">DESC</span>
+    <span style="color:#00a">LIMIT</span> <span style="color:#099">5</span>;
 
- abbrev |        name        | <span style="color: #0000aa">count</span> 
-<span style="color: #aaaaaa; font-style: italic">--------+--------------------+-------</span>
- SAS    | San Antonio Spurs  |   <span style="color: #009999">579</span>
- DAL    | Dallas Mavericks   |   <span style="color: #009999">568</span>
- LAL    | Los Angeles Lakers |   <span style="color: #009999">524</span>
- PHO    | Phoenix Suns       |   <span style="color: #009999">495</span>
- DET    | Detroit Pistons    |   <span style="color: #009999">489</span>
-(<span style="color: #009999">5</span> <span style="color: #0000aa">rows</span>)
+ abbrev |        name        | <span style="color:#00a">count</span> 
+<span style="color:#aaa;font-style:italic">--------+--------------------+-------
+</span><span style="color:#aaa;font-style:italic"></span> SAS    | San Antonio Spurs  |   <span style="color:#099">579</span>
+ DAL    | Dallas Mavericks   |   <span style="color:#099">568</span>
+ LAL    | Los Angeles Lakers |   <span style="color:#099">524</span>
+ PHO    | Phoenix Suns       |   <span style="color:#099">495</span>
+ DET    | Detroit Pistons    |   <span style="color:#099">489</span>
+(<span style="color:#099">5</span> <span style="color:#00a">rows</span>)
 
-Time: <span style="color: #009999">24</span>.<span style="color: #009999">713</span> ms
-</pre></div>
-
+Time: <span style="color:#099">24</span>.<span style="color:#099">713</span> ms</code></pre></div>
 <h1 id="correlating-stats-with-wins">Correlating stats with wins</h1>
 
 <p>The goal here is to compute how often a team wins when they record more
@@ -516,23 +509,21 @@ winner team registered a greater
 how many times</em> in SQL is usually written as a
 <code>sum(case when &lt;condition&gt; then
 1 else 0 end)</code>, which is what we&rsquo;re doing here:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">select</span> <span style="color: #0000aa">count</span>(*) <span style="color: #0000aa">as</span> games,
-       <span style="color: #0000aa">sum</span>(<span style="color: #0000aa">case</span> <span style="color: #0000aa">when</span> ws.drb &gt; ls.drb <span style="color: #0000aa">then</span> <span style="color: #009999">1</span> <span style="color: #0000aa">else</span> <span style="color: #009999">0</span> <span style="color: #0000aa">end</span>) <span style="color: #0000aa">as</span> drb,
-       <span style="color: #0000aa">sum</span>(<span style="color: #0000aa">case</span> <span style="color: #0000aa">when</span> ws.drb &gt; ls.drb <span style="color: #0000aa">then</span> <span style="color: #009999">1</span> <span style="color: #0000aa">else</span> <span style="color: #009999">0</span> <span style="color: #0000aa">end</span>)::<span style="color: #00aaaa">float</span> / <span style="color: #0000aa">count</span>(*) * <span style="color: #009999">100</span> <span style="color: #0000aa">as</span> pct
-  <span style="color: #0000aa">from</span> winlose wl
-       <span style="color: #0000aa">join</span> team w <span style="color: #0000aa">on</span> wl.winner = w.id
-       <span style="color: #0000aa">join</span> team l <span style="color: #0000aa">on</span> wl.loser = l.id
-       <span style="color: #0000aa">join</span> team_stats ws <span style="color: #0000aa">on</span> ws.game = wl.id <span style="color: #0000aa">and</span> ws.team = wl.winner
-       <span style="color: #0000aa">join</span> team_stats ls <span style="color: #0000aa">on</span> ls.game = wl.id <span style="color: #0000aa">and</span> ls.team = wl.loser;
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> <span style="color:#00a">count</span>(*) <span style="color:#00a">as</span> games,
+       <span style="color:#00a">sum</span>(<span style="color:#00a">case</span> <span style="color:#00a">when</span> ws.drb &gt; ls.drb <span style="color:#00a">then</span> <span style="color:#099">1</span> <span style="color:#00a">else</span> <span style="color:#099">0</span> <span style="color:#00a">end</span>) <span style="color:#00a">as</span> drb,
+       <span style="color:#00a">sum</span>(<span style="color:#00a">case</span> <span style="color:#00a">when</span> ws.drb &gt; ls.drb <span style="color:#00a">then</span> <span style="color:#099">1</span> <span style="color:#00a">else</span> <span style="color:#099">0</span> <span style="color:#00a">end</span>)::<span style="color:#0aa">float</span> / <span style="color:#00a">count</span>(*) * <span style="color:#099">100</span> <span style="color:#00a">as</span> pct
+  <span style="color:#00a">from</span> winlose wl
+       <span style="color:#00a">join</span> team w <span style="color:#00a">on</span> wl.winner = w.id
+       <span style="color:#00a">join</span> team l <span style="color:#00a">on</span> wl.loser = l.id
+       <span style="color:#00a">join</span> team_stats ws <span style="color:#00a">on</span> ws.game = wl.id <span style="color:#00a">and</span> ws.team = wl.winner
+       <span style="color:#00a">join</span> team_stats ls <span style="color:#00a">on</span> ls.game = wl.id <span style="color:#00a">and</span> ls.team = wl.loser;
 
  games |  drb  |       pct        
-<span style="color: #aaaaaa; font-style: italic">-------+-------+------------------</span>
- <span style="color: #009999">31686</span> | <span style="color: #009999">22292</span> | <span style="color: #009999">70</span>.<span style="color: #009999">3528372151739</span>
-(<span style="color: #009999">1</span> <span style="color: #0000aa">row</span>)
+<span style="color:#aaa;font-style:italic">-------+-------+------------------
+</span><span style="color:#aaa;font-style:italic"></span> <span style="color:#099">31686</span> | <span style="color:#099">22292</span> | <span style="color:#099">70</span>.<span style="color:#099">3528372151739</span>
+(<span style="color:#099">1</span> <span style="color:#00a">row</span>)
 
-Time: <span style="color: #009999">276</span>.<span style="color: #009999">669</span> ms
-</pre></div>
-
+Time: <span style="color:#099">276</span>.<span style="color:#099">669</span> ms</code></pre></div>
 <p>We note here than in the original MongoDB article the aggregation query is
 short of computing the
 <em>percentage</em> directly, apparently it&rsquo;s been done in the
@@ -560,28 +551,26 @@ of defensive rebounds they recorded.</p>
 <p>I&rsquo;m not sure I understand what they achieve with averaging ones when a team
 wins and zero when a team loses, so I couldn&rsquo;t quite reproduce their result.
 Here&rsquo;s an approaching query tho:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">with</span> game_stats <span style="color: #0000aa">as</span> (
-    <span style="color: #0000aa">select</span> t.id, <span style="color: #0000aa">count</span>(*)
-      <span style="color: #0000aa">from</span> team t <span style="color: #0000aa">join</span> game <span style="color: #0000aa">on</span> game.<span style="color: #0000aa">host</span> = t.id <span style="color: #0000aa">or</span> game.guest = t.id
-   <span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> t.id
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span> game_stats <span style="color:#00a">as</span> (
+    <span style="color:#00a">select</span> t.id, <span style="color:#00a">count</span>(*)
+      <span style="color:#00a">from</span> team t <span style="color:#00a">join</span> game <span style="color:#00a">on</span> game.<span style="color:#00a">host</span> = t.id <span style="color:#00a">or</span> game.guest = t.id
+   <span style="color:#00a">group</span> <span style="color:#00a">by</span> t.id
 )
-<span style="color: #0000aa">select</span> ts.team, round(<span style="color: #0000aa">avg</span>(drb), <span style="color: #009999">2</span>) <span style="color: #0000aa">as</span> drb,
-       round(<span style="color: #0000aa">count</span>(*) / gs.<span style="color: #0000aa">count</span>::<span style="color: #00aaaa">numeric</span> * <span style="color: #009999">100</span>, <span style="color: #009999">2</span>) <span style="color: #0000aa">as</span> winpct,
-       <span style="color: #0000aa">count</span>(*) <span style="color: #0000aa">as</span> wins, gs.<span style="color: #0000aa">count</span> <span style="color: #0000aa">as</span> games
-  <span style="color: #0000aa">from</span> team_stats ts
-       <span style="color: #0000aa">join</span> game <span style="color: #0000aa">on</span> game.id = ts.game
-                <span style="color: #0000aa">and</span> game.<span style="color: #0000aa">host</span> = ts.team
-                <span style="color: #0000aa">and</span> game.host_score &gt; game.guest_score
-       <span style="color: #0000aa">join</span> game_stats gs <span style="color: #0000aa">on</span> gs.id = ts.team
-<span style="color: #0000aa">group</span> <span style="color: #0000aa">by</span> ts.team, gs.<span style="color: #0000aa">count</span>;
+<span style="color:#00a">select</span> ts.team, round(<span style="color:#00a">avg</span>(drb), <span style="color:#099">2</span>) <span style="color:#00a">as</span> drb,
+       round(<span style="color:#00a">count</span>(*) / gs.<span style="color:#00a">count</span>::<span style="color:#0aa">numeric</span> * <span style="color:#099">100</span>, <span style="color:#099">2</span>) <span style="color:#00a">as</span> winpct,
+       <span style="color:#00a">count</span>(*) <span style="color:#00a">as</span> wins, gs.<span style="color:#00a">count</span> <span style="color:#00a">as</span> games
+  <span style="color:#00a">from</span> team_stats ts
+       <span style="color:#00a">join</span> game <span style="color:#00a">on</span> game.id = ts.game
+                <span style="color:#00a">and</span> game.<span style="color:#00a">host</span> = ts.team
+                <span style="color:#00a">and</span> game.host_score &gt; game.guest_score
+       <span style="color:#00a">join</span> game_stats gs <span style="color:#00a">on</span> gs.id = ts.team
+<span style="color:#00a">group</span> <span style="color:#00a">by</span> ts.team, gs.<span style="color:#00a">count</span>;
 
  team |  drb  | winpct | wins | games 
-<span style="color: #aaaaaa; font-style: italic">------+-------+--------+------+-------</span>
-    <span style="color: #009999">4</span> | <span style="color: #009999">31</span>.<span style="color: #009999">59</span> |  <span style="color: #009999">31</span>.<span style="color: #009999">46</span> |  <span style="color: #009999">710</span> |  <span style="color: #009999">2257</span>
-    <span style="color: #009999">7</span> | <span style="color: #009999">32</span>.<span style="color: #009999">55</span> |  <span style="color: #009999">31</span>.<span style="color: #009999">89</span> |  <span style="color: #009999">720</span> |  <span style="color: #009999">2258</span>
-   <span style="color: #009999">16</span> | <span style="color: #009999">31</span>.<span style="color: #009999">70</span> |  <span style="color: #009999">37</span>.<span style="color: #009999">62</span> |  <span style="color: #009999">849</span> |  <span style="color: #009999">2257</span>
-</pre></div>
-
+<span style="color:#aaa;font-style:italic">------+-------+--------+------+-------
+</span><span style="color:#aaa;font-style:italic"></span>    <span style="color:#099">4</span> | <span style="color:#099">31</span>.<span style="color:#099">59</span> |  <span style="color:#099">31</span>.<span style="color:#099">46</span> |  <span style="color:#099">710</span> |  <span style="color:#099">2257</span>
+    <span style="color:#099">7</span> | <span style="color:#099">32</span>.<span style="color:#099">55</span> |  <span style="color:#099">31</span>.<span style="color:#099">89</span> |  <span style="color:#099">720</span> |  <span style="color:#099">2258</span>
+   <span style="color:#099">16</span> | <span style="color:#099">31</span>.<span style="color:#099">70</span> |  <span style="color:#099">37</span>.<span style="color:#099">62</span> |  <span style="color:#099">849</span> |  <span style="color:#099">2257</span></code></pre></div>
 <p>I only pasted the first few lines of the result because I&rsquo;m not sure how to
 make sense of it, really.</p>
 
@@ -604,45 +593,43 @@ on 12/26/1995 despite recording only 14 defensive rebounds.</p>
 <a href="http://www.postgresql.org/docs/9.3/static/tutorial-window.html">Window Function</a> for good measure, we get actually 4
 different games with the minimum defensive rebounds in our history of NBA
 games, 14:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">with</span> stats(game, team, drb, <span style="color: #0000aa">min</span>) <span style="color: #0000aa">as</span> (
-    <span style="color: #0000aa">select</span> ts.game, ts.team, drb, <span style="color: #0000aa">min</span>(drb) over ()
-      <span style="color: #0000aa">from</span> team_stats ts
-           <span style="color: #0000aa">join</span> winners w <span style="color: #0000aa">on</span> w.id = ts.game <span style="color: #0000aa">and</span> w.winner = ts.team
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span> stats(game, team, drb, <span style="color:#00a">min</span>) <span style="color:#00a">as</span> (
+    <span style="color:#00a">select</span> ts.game, ts.team, drb, <span style="color:#00a">min</span>(drb) over ()
+      <span style="color:#00a">from</span> team_stats ts
+           <span style="color:#00a">join</span> winners w <span style="color:#00a">on</span> w.id = ts.game <span style="color:#00a">and</span> w.winner = ts.team
 )
-<span style="color: #0000aa">select</span> game.<span style="color: #00aaaa">date</span>::<span style="color: #00aaaa">date</span>,
-       <span style="color: #0000aa">host</span>.name || <span style="color: #aa5500">&#39; -- &#39;</span> || host_score <span style="color: #0000aa">as</span> <span style="color: #0000aa">host</span>,
-       guest.name || <span style="color: #aa5500">&#39; -- &#39;</span> || guest_score <span style="color: #0000aa">as</span> guest,
-       stats.drb <span style="color: #0000aa">as</span> winner_drb
-  <span style="color: #0000aa">from</span> stats
-       <span style="color: #0000aa">join</span> game <span style="color: #0000aa">on</span> game.id = stats.game
-       <span style="color: #0000aa">join</span> team <span style="color: #0000aa">host</span> <span style="color: #0000aa">on</span> <span style="color: #0000aa">host</span>.id = game.<span style="color: #0000aa">host</span>
-       <span style="color: #0000aa">join</span> team guest <span style="color: #0000aa">on</span> guest.id = game.guest
- <span style="color: #0000aa">where</span> drb = <span style="color: #0000aa">min</span>;
+<span style="color:#00a">select</span> game.<span style="color:#0aa">date</span>::<span style="color:#0aa">date</span>,
+       <span style="color:#00a">host</span>.name || <span style="color:#a50">&#39; -- &#39;</span> || host_score <span style="color:#00a">as</span> <span style="color:#00a">host</span>,
+       guest.name || <span style="color:#a50">&#39; -- &#39;</span> || guest_score <span style="color:#00a">as</span> guest,
+       stats.drb <span style="color:#00a">as</span> winner_drb
+  <span style="color:#00a">from</span> stats
+       <span style="color:#00a">join</span> game <span style="color:#00a">on</span> game.id = stats.game
+       <span style="color:#00a">join</span> team <span style="color:#00a">host</span> <span style="color:#00a">on</span> <span style="color:#00a">host</span>.id = game.<span style="color:#00a">host</span>
+       <span style="color:#00a">join</span> team guest <span style="color:#00a">on</span> guest.id = game.guest
+ <span style="color:#00a">where</span> drb = <span style="color:#00a">min</span>;
 
--[ RECORD <span style="color: #009999">1</span> ]<span style="color: #aaaaaa; font-style: italic">----------------------------</span>
-<span style="color: #00aaaa">date</span>       | <span style="color: #009999">1995</span>-<span style="color: #009999">12</span>-<span style="color: #009999">26</span>
-<span style="color: #0000aa">host</span>       | Toronto Raptors <span style="color: #aaaaaa; font-style: italic">-- 93</span>
-guest      | Milwaukee Bucks <span style="color: #aaaaaa; font-style: italic">-- 87</span>
-winner_drb | <span style="color: #009999">14</span>
--[ RECORD <span style="color: #009999">2</span> ]<span style="color: #aaaaaa; font-style: italic">----------------------------</span>
-<span style="color: #00aaaa">date</span>       | <span style="color: #009999">1996</span>-<span style="color: #009999">02</span>-<span style="color: #009999">02</span>
-<span style="color: #0000aa">host</span>       | Golden <span style="color: #0000aa">State</span> Warriors <span style="color: #aaaaaa; font-style: italic">-- 114</span>
-guest      | Toronto Raptors <span style="color: #aaaaaa; font-style: italic">-- 111</span>
-winner_drb | <span style="color: #009999">14</span>
--[ RECORD <span style="color: #009999">3</span> ]<span style="color: #aaaaaa; font-style: italic">----------------------------</span>
-<span style="color: #00aaaa">date</span>       | <span style="color: #009999">1998</span>-<span style="color: #009999">03</span>-<span style="color: #009999">31</span>
-<span style="color: #0000aa">host</span>       | Vancouver Grizzlies <span style="color: #aaaaaa; font-style: italic">-- 101</span>
-guest      | Dallas Mavericks <span style="color: #aaaaaa; font-style: italic">-- 104</span>
-winner_drb | <span style="color: #009999">14</span>
--[ RECORD <span style="color: #009999">4</span> ]<span style="color: #aaaaaa; font-style: italic">----------------------------</span>
-<span style="color: #00aaaa">date</span>       | <span style="color: #009999">2009</span>-<span style="color: #009999">01</span>-<span style="color: #009999">14</span>
-<span style="color: #0000aa">host</span>       | <span style="color: #0000aa">New</span> York Knicks <span style="color: #aaaaaa; font-style: italic">-- 128</span>
-guest      | Washington Wizards <span style="color: #aaaaaa; font-style: italic">-- 122</span>
-winner_drb | <span style="color: #009999">14</span>
+-[ RECORD <span style="color:#099">1</span> ]<span style="color:#aaa;font-style:italic">----------------------------
+</span><span style="color:#aaa;font-style:italic"></span><span style="color:#0aa">date</span>       | <span style="color:#099">1995</span>-<span style="color:#099">12</span>-<span style="color:#099">26</span>
+<span style="color:#00a">host</span>       | Toronto Raptors <span style="color:#aaa;font-style:italic">-- 93
+</span><span style="color:#aaa;font-style:italic"></span>guest      | Milwaukee Bucks <span style="color:#aaa;font-style:italic">-- 87
+</span><span style="color:#aaa;font-style:italic"></span>winner_drb | <span style="color:#099">14</span>
+-[ RECORD <span style="color:#099">2</span> ]<span style="color:#aaa;font-style:italic">----------------------------
+</span><span style="color:#aaa;font-style:italic"></span><span style="color:#0aa">date</span>       | <span style="color:#099">1996</span>-<span style="color:#099">02</span>-<span style="color:#099">02</span>
+<span style="color:#00a">host</span>       | Golden <span style="color:#00a">State</span> Warriors <span style="color:#aaa;font-style:italic">-- 114
+</span><span style="color:#aaa;font-style:italic"></span>guest      | Toronto Raptors <span style="color:#aaa;font-style:italic">-- 111
+</span><span style="color:#aaa;font-style:italic"></span>winner_drb | <span style="color:#099">14</span>
+-[ RECORD <span style="color:#099">3</span> ]<span style="color:#aaa;font-style:italic">----------------------------
+</span><span style="color:#aaa;font-style:italic"></span><span style="color:#0aa">date</span>       | <span style="color:#099">1998</span>-<span style="color:#099">03</span>-<span style="color:#099">31</span>
+<span style="color:#00a">host</span>       | Vancouver Grizzlies <span style="color:#aaa;font-style:italic">-- 101
+</span><span style="color:#aaa;font-style:italic"></span>guest      | Dallas Mavericks <span style="color:#aaa;font-style:italic">-- 104
+</span><span style="color:#aaa;font-style:italic"></span>winner_drb | <span style="color:#099">14</span>
+-[ RECORD <span style="color:#099">4</span> ]<span style="color:#aaa;font-style:italic">----------------------------
+</span><span style="color:#aaa;font-style:italic"></span><span style="color:#0aa">date</span>       | <span style="color:#099">2009</span>-<span style="color:#099">01</span>-<span style="color:#099">14</span>
+<span style="color:#00a">host</span>       | <span style="color:#00a">New</span> York Knicks <span style="color:#aaa;font-style:italic">-- 128
+</span><span style="color:#aaa;font-style:italic"></span>guest      | Washington Wizards <span style="color:#aaa;font-style:italic">-- 122
+</span><span style="color:#aaa;font-style:italic"></span>winner_drb | <span style="color:#099">14</span>
 
-Time: <span style="color: #009999">126</span>.<span style="color: #009999">276</span> ms
-</pre></div>
-
+Time: <span style="color:#099">126</span>.<span style="color:#099">276</span> ms</code></pre></div>
 <p>To understand all there&rsquo;s to know about
 <em>window functions</em>, have a look at my
 article on the topic:
@@ -660,42 +647,40 @@ despite recording 75 total rebounds.</p>
 </blockquote>
 
 <p>Which we translate in SQL as the following query:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #0000aa">with</span> stats <span style="color: #0000aa">as</span> (
-    <span style="color: #0000aa">select</span> ts.game, ts.team, trb,
-           <span style="color: #0000aa">min</span>(trb) over () <span style="color: #0000aa">as</span> <span style="color: #0000aa">min</span>,
-           <span style="color: #0000aa">max</span>(trb) over () <span style="color: #0000aa">as</span> <span style="color: #0000aa">max</span>
-      <span style="color: #0000aa">from</span> team_stats ts
-           <span style="color: #0000aa">join</span> winners w <span style="color: #0000aa">on</span> w.id = ts.game <span style="color: #0000aa">and</span> w.winner = ts.team
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span> stats <span style="color:#00a">as</span> (
+    <span style="color:#00a">select</span> ts.game, ts.team, trb,
+           <span style="color:#00a">min</span>(trb) over () <span style="color:#00a">as</span> <span style="color:#00a">min</span>,
+           <span style="color:#00a">max</span>(trb) over () <span style="color:#00a">as</span> <span style="color:#00a">max</span>
+      <span style="color:#00a">from</span> team_stats ts
+           <span style="color:#00a">join</span> winners w <span style="color:#00a">on</span> w.id = ts.game <span style="color:#00a">and</span> w.winner = ts.team
 )
-<span style="color: #0000aa">select</span> game.<span style="color: #00aaaa">date</span>::<span style="color: #00aaaa">date</span>,
-       <span style="color: #0000aa">host</span>.name || <span style="color: #aa5500">&#39; -- &#39;</span> || host_score <span style="color: #0000aa">as</span> <span style="color: #0000aa">host</span>,
-       guest.name || <span style="color: #aa5500">&#39; -- &#39;</span> || guest_score <span style="color: #0000aa">as</span> guest,
-       stats.trb <span style="color: #0000aa">as</span> winner_trb
-  <span style="color: #0000aa">from</span> stats
-       <span style="color: #0000aa">join</span> game <span style="color: #0000aa">on</span> game.id = stats.game
-       <span style="color: #0000aa">join</span> team <span style="color: #0000aa">host</span> <span style="color: #0000aa">on</span> <span style="color: #0000aa">host</span>.id = game.<span style="color: #0000aa">host</span>
-       <span style="color: #0000aa">join</span> team guest <span style="color: #0000aa">on</span> guest.id = game.guest
- <span style="color: #0000aa">where</span> trb = <span style="color: #0000aa">min</span> <span style="color: #0000aa">or</span> trb = <span style="color: #0000aa">max</span>;
+<span style="color:#00a">select</span> game.<span style="color:#0aa">date</span>::<span style="color:#0aa">date</span>,
+       <span style="color:#00a">host</span>.name || <span style="color:#a50">&#39; -- &#39;</span> || host_score <span style="color:#00a">as</span> <span style="color:#00a">host</span>,
+       guest.name || <span style="color:#a50">&#39; -- &#39;</span> || guest_score <span style="color:#00a">as</span> guest,
+       stats.trb <span style="color:#00a">as</span> winner_trb
+  <span style="color:#00a">from</span> stats
+       <span style="color:#00a">join</span> game <span style="color:#00a">on</span> game.id = stats.game
+       <span style="color:#00a">join</span> team <span style="color:#00a">host</span> <span style="color:#00a">on</span> <span style="color:#00a">host</span>.id = game.<span style="color:#00a">host</span>
+       <span style="color:#00a">join</span> team guest <span style="color:#00a">on</span> guest.id = game.guest
+ <span style="color:#00a">where</span> trb = <span style="color:#00a">min</span> <span style="color:#00a">or</span> trb = <span style="color:#00a">max</span>;
 
--[ RECORD <span style="color: #009999">1</span> ]<span style="color: #aaaaaa; font-style: italic">--------------------------</span>
-<span style="color: #00aaaa">date</span>       | <span style="color: #009999">1995</span>-<span style="color: #009999">12</span>-<span style="color: #009999">28</span>
-<span style="color: #0000aa">host</span>       | Dallas Mavericks <span style="color: #aaaaaa; font-style: italic">-- 103</span>
-guest      | Vancouver Grizzlies <span style="color: #aaaaaa; font-style: italic">-- 101</span>
-winner_trb | <span style="color: #009999">76</span>
--[ RECORD <span style="color: #009999">2</span> ]<span style="color: #aaaaaa; font-style: italic">--------------------------</span>
-<span style="color: #00aaaa">date</span>       | <span style="color: #009999">1996</span>-<span style="color: #009999">04</span>-<span style="color: #009999">11</span>
-<span style="color: #0000aa">host</span>       | <span style="color: #0000aa">New</span> York Knicks <span style="color: #aaaaaa; font-style: italic">-- 97</span>
-guest      | Cleveland Cavaliers <span style="color: #aaaaaa; font-style: italic">-- 101</span>
-winner_trb | <span style="color: #009999">21</span>
--[ RECORD <span style="color: #009999">3</span> ]<span style="color: #aaaaaa; font-style: italic">--------------------------</span>
-<span style="color: #00aaaa">date</span>       | <span style="color: #009999">2007</span>-<span style="color: #009999">01</span>-<span style="color: #009999">29</span>
-<span style="color: #0000aa">host</span>       | Utah Jazz <span style="color: #aaaaaa; font-style: italic">-- 115</span>
-guest      | <span style="color: #0000aa">New</span> Jersey Nets <span style="color: #aaaaaa; font-style: italic">-- 116</span>
-winner_trb | <span style="color: #009999">21</span>
+-[ RECORD <span style="color:#099">1</span> ]<span style="color:#aaa;font-style:italic">--------------------------
+</span><span style="color:#aaa;font-style:italic"></span><span style="color:#0aa">date</span>       | <span style="color:#099">1995</span>-<span style="color:#099">12</span>-<span style="color:#099">28</span>
+<span style="color:#00a">host</span>       | Dallas Mavericks <span style="color:#aaa;font-style:italic">-- 103
+</span><span style="color:#aaa;font-style:italic"></span>guest      | Vancouver Grizzlies <span style="color:#aaa;font-style:italic">-- 101
+</span><span style="color:#aaa;font-style:italic"></span>winner_trb | <span style="color:#099">76</span>
+-[ RECORD <span style="color:#099">2</span> ]<span style="color:#aaa;font-style:italic">--------------------------
+</span><span style="color:#aaa;font-style:italic"></span><span style="color:#0aa">date</span>       | <span style="color:#099">1996</span>-<span style="color:#099">04</span>-<span style="color:#099">11</span>
+<span style="color:#00a">host</span>       | <span style="color:#00a">New</span> York Knicks <span style="color:#aaa;font-style:italic">-- 97
+</span><span style="color:#aaa;font-style:italic"></span>guest      | Cleveland Cavaliers <span style="color:#aaa;font-style:italic">-- 101
+</span><span style="color:#aaa;font-style:italic"></span>winner_trb | <span style="color:#099">21</span>
+-[ RECORD <span style="color:#099">3</span> ]<span style="color:#aaa;font-style:italic">--------------------------
+</span><span style="color:#aaa;font-style:italic"></span><span style="color:#0aa">date</span>       | <span style="color:#099">2007</span>-<span style="color:#099">01</span>-<span style="color:#099">29</span>
+<span style="color:#00a">host</span>       | Utah Jazz <span style="color:#aaa;font-style:italic">-- 115
+</span><span style="color:#aaa;font-style:italic"></span>guest      | <span style="color:#00a">New</span> Jersey Nets <span style="color:#aaa;font-style:italic">-- 116
+</span><span style="color:#aaa;font-style:italic"></span>winner_trb | <span style="color:#099">21</span>
 
-Time: <span style="color: #009999">127</span>.<span style="color: #009999">771</span> ms
-</pre></div>
-
+Time: <span style="color:#099">127</span>.<span style="color:#099">771</span> ms</code></pre></div>
 <p>Again it&rsquo;s easy enough in SQL to have more details about the
 <em>aside</em> presented
 in our source article, and we get a slightly different story.</p>
@@ -746,11 +731,11 @@ particular its implementation in PostgreSQL!</p>
                   <div class="post-footer-tags">
                     <span class="text-color-light text-small"></span><br/>
                     
-  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/postgresql/">PostgreSQL</a>
+  <a class="tag tag--primary tag--small" href="/tags/postgresql/">PostgreSQL</a>
 
-  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/mongodb/">MongoDB</a>
+  <a class="tag tag--primary tag--small" href="/tags/mongodb/">MongoDB</a>
 
-  <a class="tag tag--primary tag--small" href="http://tapoueh.org//tags/yesql/">YeSQL</a>
+  <a class="tag tag--primary tag--small" href="/tags/yesql/">YeSQL</a>
 
                   </div>
                 
@@ -968,7 +953,7 @@ particular its implementation in PostgreSQL!</p>
   <div class="modal">
     <div class="modal-header">
       <span class="close-button"><i class="fa fa-close"></i></span>
-      <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+      <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
         <span class="searchby-algolia-text text-color-light text-small">by</span>
         <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
       </a>
@@ -982,6 +967,30 @@ particular its implementation in PostgreSQL!</p>
       <div class="no-result text-color-light text-center"></div>
       <div class="results">
         
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/12/setting-up-psql/">
+                <h3 class="media-heading">Setting up psql</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Dec 12, 2017
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>PostgreSQL ships with an interactive console with the command line tool
+named <a href="https://www.postgresql.org/docs/current/static/app-psql.html">psql</a>.
+It can be used both for scripting and interactive usage and is moreover
+quite a powerful tool. Interactive features includes <em>autocompletion</em>,
+<em>readline</em> support (history searches, modern keyboard movements, etc), input
+and output redirection, formatted output, and more.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
         
           <div class="media">
             
@@ -1214,36 +1223,6 @@ contexts are forbidden — they were a hack and never made sense anyway.</p>
             <hr>
           </div>
         
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="http://tapoueh.org/blog/2017/09/on-json-and-sql/">
-                <h3 class="media-heading">on Json and SQL</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Sep 9, 2017
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p>PostgreSQL has had proper
-<a href="https://www.postgresql.org/docs/current/static/datatype-json.html">json</a>
-support for a while now. The unique extensibility approach of the PostgreSQL
-system allows it to enable native <a href="https://www.postgresql.org/docs/current/static/functions-json.html">SQL friendly JSON
-processing</a>.</p>
-
-<p>In this article we&rsquo;ll play with the <a href="https://mtgjson.com">Magic: the Gathering card data in JSON
-format</a> data set, provided with a
-<a href="https://creativecommons.org/choose/zero/">CC0</a> licence, and process the
-information provided. We also see how to normalize a JSON document into a
-proper database model that benefits from some PostgreSQL advanced features,
-and how to then inject the JSON documents into the normalized database
-schema. Finally, we compare some non-trivial processing done against both
-versions of the database schema.</p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
       </div>
     </div>
     <div class="modal-footer">
@@ -1264,32 +1243,29 @@ versions of the database schema.</p></div>
 
 
     
-<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
-<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.8.0/highlight.min.js"></script>
-<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.min.js"></script>
-<script src="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
 
 
-<script src="/js/script-wl33z0n6ocaypepiqrazthtivfrliqijej4rq8ek8gvrv1awftmgjuv8k4zc.min.js"></script>
+<script src="/js/script-qi9wbxp2ya2j6p7wx1i6tgavftewndznf4v0hy2gvivk1rxgc3lm7njqb6bz.min.js"></script>
+
+
 
 <script>
 $(document).ready(function() {
   hljs.configure({ classPrefix: '', useBR: false });
-  $('pre.code-highlight').each(function(i, block) {
-    var code = "";
-    hljs.highlightAuto(block.innerText).value.split(/\r\n|\r|\n/).forEach(function(line) {
-      code += "<span class=\"line\">" + line + "</span><br>";
-    });
-    if (code.length > 0) {
-      block.innerHTML = code;  
+  $('pre.code-highlight > code, pre > code').each(function(i, block) {
+    if (!$(this).hasClass('codeblock')) {
+      $(this).addClass('codeblock');
     }
-  });
-  $('pre > code').each(function(i, block) {
-    $(this).addClass('codeblock');
     hljs.highlightBlock(block);
   });
 });
 </script>
+
 
   
     
@@ -1316,8 +1292,6 @@ $(document).ready(function() {
       </script>
     
   
-
-
 
 
 
