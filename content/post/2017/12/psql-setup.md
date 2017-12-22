@@ -1,5 +1,5 @@
 +++
-title = "Setting up psql"
+title = "Setting up psql, the PostgreSQL CLI"
 date = "2017-12-22T15:23:43+01:00"
 tags = ["PostgreSQL","YeSQL","psql","setup"]
 categories = ["PostgreSQL","YeSQL"]
@@ -8,6 +8,7 @@ coverMeta = "in"
 coverSize = "partial"
 thumbnailImage = "/img/icon-cli.png"
 thumbnailImagePosition = "left"
+aliases = ["/blog/2017/12/setting-up-psql/"]
 
 +++
 
