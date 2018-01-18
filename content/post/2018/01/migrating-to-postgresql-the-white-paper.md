@@ -88,7 +88,7 @@ implements fully automated database migrations!
 
 {{< figure class="right"
              src="/img/MasteringPostgreSQLinAppDev-Cover-th.png"
-            link="http://masteringpostgresql.com" >}}
+            link="https://masteringpostgresql.com" >}}
 
 For your developers to be ready when it comes to making the most out of
 PostgreSQL, consider reading [Mastering PostgreSQL in Application
