@@ -43,10 +43,8 @@ visits to this website's pages:
 > Magic](https://momjian.us/main/writings/pgsql/window.pdf)!
 >
 > Or even watch it in video here:
-
-{{< youtube D8Q4n6YXdpk >}}
-
-> And now to the <http://tapoueh.org> article itself:
+>
+> {{< youtube D8Q4n6YXdpk >}}
 
 <figure style="float: right; clear: left; display: block; width: 140px; height: 140px; margin-bottom: 2em;">
     <a href="/blog/2013/08/understanding-window-functions/">
