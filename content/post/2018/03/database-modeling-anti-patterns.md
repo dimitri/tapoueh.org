@@ -319,7 +319,8 @@ every concurrent and distributed transaction against a common centralized
 *sequence*, which would then act as a *Single Point Of Failure*, or *SPOF*.
 
 That said, neither sequences nor *UUID* provides a natural primary key for
-your data, as seen in the [Primary Keys](#pkeys) section.
+your data, as seen in the [Primary
+Keys](/blog/2018/03/database-normalization-and-primary-keys/) section.
 
 # Conclusion
 
