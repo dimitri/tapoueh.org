@@ -91,8 +91,8 @@ Naguum then writes the following summary:
 > generic function paradigm, you can define generic functions without ever
 > defining any classes. This tends to blow "OO" people's mind.
 
-If you're interested into generic functions in the Common Lisp Object
-System, one of the best resource available is the book [Practical Common
+If you're interested in generic functions in the Common Lisp Object System,
+one of the best resource available is the book [Practical Common
 Lisp](http://www.gigamonkeys.com/book/) from Peter Seibel, and in particular
 the chapters [Object Reorientation: Generic
 Functions](http://www.gigamonkeys.com/book/object-reorientation-generic-functions.html)
