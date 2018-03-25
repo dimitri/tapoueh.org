@@ -40,7 +40,7 @@ in Application Development](https://masteringpostgresql.com), check it out!
 
 # Entity Attribute Values
 
-The [entity attribue
+The [entity attribute
 values](https://en.wikipedia.org/wiki/Entity%E2%80%93attribute%E2%80%93value_model)
 or *EAV* is a design that tries to accommodate with a lack of
 specifications. In our application, we have to deal with parameters and new
