@@ -20,7 +20,7 @@ would now publish said Primary Key section!
 
 So in this article, we dive into Primary Keys as being a cornerstone of
 database normalization. It's so important to get Primary Keys right that you
-would thing everybody knows how to do it, and yet, most of the primary key
+would think everybody knows how to do it, and yet, most of the primary key
 constraints I've seen used in database design are actually not primary keys
 at all.
 
