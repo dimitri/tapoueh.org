@@ -1,0 +1,1094 @@
+
+
+  
+    
+  
+
+
+  
+
+
+
+
+  
+
+
+  
+
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Hugo 0.31.1">
+    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
+    <title>PostgreSQL Data Types: Text Encoding</title>
+    <meta name="author" content="Dimitri Fontaine">
+    <meta name="keywords" content="">
+
+    <link rel="icon" href="/favicon.ico">
+    
+
+    
+    <meta name="description" content="Continuing our series of PostgreSQL Data Types today
+we&rsquo;re going to introduce the PostgreSQL text data type. The first notion to
+understand when processing text in any program is of course the notion of
+encoding.
+
+So when addressing the text datatype we must mention encoding settings, and
+possibly also issues. An encoding is a particular representation of
+characters in bits and bytes. In the ASCII encoding the letter A is
+encoded as the 7-bits byte 1000001, or 65 in decimal, or 41 in
+hexadecimal. All those numbers are going to be written the same way on-disk,
+and the letter A too.">
+    <meta property="og:description" content="Continuing our series of PostgreSQL Data Types today
+we&rsquo;re going to introduce the PostgreSQL text data type. The first notion to
+understand when processing text in any program is of course the notion of
+encoding.
+
+So when addressing the text datatype we must mention encoding settings, and
+possibly also issues. An encoding is a particular representation of
+characters in bits and bytes. In the ASCII encoding the letter A is
+encoded as the 7-bits byte 1000001, or 65 in decimal, or 41 in
+hexadecimal. All those numbers are going to be written the same way on-disk,
+and the letter A too.">
+    <meta property="og:type" content="blog">
+    <meta property="og:title" content="PostgreSQL Data Types: Text Encoding">
+    <meta property="og:url" content="/blog/2018/04/postgresql-data-types-text-encoding/">
+    <meta property="og:site_name" content="Dimitri Fontaine, PostgreSQL Expert">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="PostgreSQL Data Types: Text Encoding">
+    <meta name="twitter:description" content="Continuing our series of PostgreSQL Data Types today
+we&rsquo;re going to introduce the PostgreSQL text data type. The first notion to
+understand when processing text in any program is of course the notion of
+encoding.
+
+So when addressing the text datatype we must mention encoding settings, and
+possibly also issues. An encoding is a particular representation of
+characters in bits and bytes. In the ASCII encoding the letter A is
+encoded as the 7-bits byte 1000001, or 65 in decimal, or 41 in
+hexadecimal. All those numbers are going to be written the same way on-disk,
+and the letter A too.">
+    
+      <meta name="twitter:creator" content="@tapoueh">
+    
+    
+
+    
+    
+
+    
+      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
+    
+
+    
+      <meta property="og:image" content="https://tapoueh.org/img/220px-Wikipedia_Logo_1.0.png">
+    
+    
+      <meta property="og:image" content="https://tapoueh.org/img/encodings.png">
+    
+    
+
+    
+
+    
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
+    
+    
+    <link rel="stylesheet" href="/css/style-jsjn0006wyhpyzivf6yceb31gvpjatbcs3qzjvlumobfnugccvobqwxnnaj8.min.css" />
+    
+    
+      <link rel="stylesheet" href="https://tapoueh.org/css/dim.css">
+    
+      <link rel="stylesheet" href="https://tapoueh.org/css/nav.css">
+    
+
+    
+      
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-47059482-1', 'auto');
+ga('send', 'pageview');
+</script>
+
+    
+    
+  </head>
+
+  <body>
+    <div id="blog">
+      <header id="header" data-behavior="5">
+  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+  <div class="navbar-collapse collapse header-title" id="navigation">
+    <ul class="nav navbar-nav navbar-right">
+      
+      <li class="dropdown">
+        
+        <a href="/">blog</a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a href="/conf/">talks</a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a href="http://pgloader.io/">pgloader</a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a href="http://masteringpostgresql.com/">Mastering PostgreSQL</a>
+        
+      </li>
+      
+    </ul>
+  </div>
+
+  
+    
+      <a class="header-right-icon "
+         href="http://masteringpostgresql.com" target="_blank">
+    
+    
+      <i class="fa fa-lg fa-book"></i>
+    
+    
+    </a>
+  
+</header>
+
+      <nav id="sidebar" data-behavior="5">
+  <div class="sidebar-container">
+    
+      <div class="sidebar-profile">
+        <a href="/#about">
+          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+        </a>
+        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
+        
+          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
+        
+      </div>
+    
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
+      
+      <span class="sidebar-button-desc">Blog</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/about/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
+      
+      <span class="sidebar-button-desc">About</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories/yesql/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-database"></i>
+      
+      <span class="sidebar-button-desc">YeSQL</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="http://masteringpostgresql.com" target="_blank" rel="noopener">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
+      
+      <span class="sidebar-button-desc">Mastering PostgreSQL</span>
+    </a>
+  </li>
+
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+      
+      <span class="sidebar-button-desc">GitHub</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+      
+      <span class="sidebar-button-desc">Twitter</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+      
+      <span class="sidebar-button-desc">Categories</span>
+    </a>
+  </li>
+
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/index.xml">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+      
+      <span class="sidebar-button-desc">RSS</span>
+    </a>
+  </li>
+
+
+    </ul>
+  </div>
+</nav>
+
+      
+  <div class="post-header-cover
+              text-left
+              post-header-cover--partial"
+       style="background-image:url('/img/encodings.png')"
+       data-behavior="5">
+    
+  </div>
+
+
+      <div id="main" data-behavior="5"
+        class="hasCover
+               hasCoverMetaOut
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
+          
+            <div class="post-header main-content-wrap text-left">
+  
+    <h1 class="post-title" itemprop="headline">
+      PostgreSQL Data Types: Text Encoding
+    </h1>
+  
+  
+  <div class="postShorten-meta post-meta">
+    
+      <time itemprop="datePublished" datetime="2018-04-09T13:33:01&#43;02:00">
+        
+  
+  
+  
+  
+    Monday 09 Apr 2018
+  
+
+      </time>
+    
+    
+  
+  
+    <span></span>
+    
+      <a class="category-link" href="/categories/postgresql">PostgreSQL</a>, 
+    
+      <a class="category-link" href="/categories/yesql">YeSQL</a>
+    
+  
+
+  </div>
+
+</div>
+          
+          <div class="post-content markdown" itemprop="articleBody">
+            <div class="main-content-wrap">
+              <p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL text data type. The first notion to
+understand when processing text in any program is of course the notion of
+encoding.</p>
+
+<p>So when addressing the text datatype we must mention encoding settings, and
+possibly also issues. An encoding is a particular representation of
+characters in bits and bytes. In the ASCII encoding the letter <code>A</code> is
+encoded as the 7-bits byte <code>1000001</code>, or 65 in decimal, or 41 in
+hexadecimal. All those numbers are going to be written the same way on-disk,
+and the letter <code>A</code> too.</p>
+
+<p>
+<h1 id="table-of-contents"></h1><nav id="TableOfContents">
+<ul>
+<li><a href="#postgresql-server-side-encoding">PostgreSQL Server Side Encoding</a></li>
+<li><a href="#postgresql-client-side-encoding">PostgreSQL Client Side Encoding</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+</nav></p>
+
+<h1 id="postgresql-server-side-encoding">PostgreSQL Server Side Encoding</h1>
+
+<p>To know which encoding your database is using, run the <em>psql</em> command <code>\l</code>:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql">                                  List of databases
+   Name    │  Owner   │ Encoding │   Collate   │    Ctype    │ …
+═══════════╪══════════╪══════════╪═════════════╪═════════════╪═
+ chinook   │ dim      │ UTF8     │ en_US.UTF-8 │ en_US.UTF-8 │ …
+ f1db      │ dim      │ UTF8     │ en_US.UTF-8 │ en_US.UTF-8 │ …
+ pgloader  │ dim      │ UTF8     │ en_US.UTF-8 │ en_US.UTF-8 │ …
+ template0 │ postgres │ UTF8     │ en_US.UTF-8 │ en_US.UTF-8 │ …
+ template1 │ postgres │ UTF8     │ en_US.UTF-8 │ en_US.UTF-8 │ …
+ yesql     │ dim      │ UTF8     │ en_US.UTF-8 │ en_US.UTF-8 │ …
+(6 rows)</code></pre></div>
+<p>In this output, I&rsquo;ve stripped down the last column of output for better
+integration for the page size here, so you don&rsquo;t get to see the <em>Access
+privileges</em> for those databases.</p>
+
+<p>The encoding here is UTF8 which is the best choice these days, and you can
+see that the collation and ctype are English based in the UTF-8 encoding,
+which is good for my installation. You might, of course, pick something
+else.</p>
+
+<p>The non-encoding SQL_ASCII accepts any data you throw at it, whereas the
+UTF8 encoding (and some others) do check for valid input. Never use
+SQL_ASCII, as you will not be able to retrieve data in any encoding and will
+lose data because of that! Migrating away from SQL_ASCII to a proper
+encoding such as UTF8 is possible but lossy and complex.</p>
+
+<div class="alert info ">
+  <p>You can read my articles <a href="/blog/2010/02/getting-out-of-sql_ascii-part-1/">Getting out of SQL_ASCII, part
+1</a> and <a href="/blog/2010/02/getting-out-of-sql_ascii-part-2/">Getting out of
+SQL_ASCII, part 2</a> that I
+wrote in 2010 when I had to get out of this tricky situation.</p>
+</div>
+
+<h1 id="postgresql-client-side-encoding">PostgreSQL Client Side Encoding</h1>
+
+<p>You can also have an UTF8 encoded database and use a legacy application (or
+programming language) that doesn&rsquo;t know how to handle Unicode properly. In
+that case, you can ask PostgreSQL to convert all and any data on the fly
+between the server-side encoding and your favorite client-side encoding,
+thanks to the <em>client_encoding</em> setting.</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">show</span> client_encoding;</code></pre></div>
+<p>Here again, we use UTF8 client side, which allows handling French
+accentuated characters, for instance.</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql"> client_encoding 
+═════════════════
+ UTF8
+(1 row)</code></pre></div>
+<p>Be aware that not all combinations of <em>server encoding</em> and <em>client
+encoding</em> make sense. While it is possible for PostgreSQL to communicate
+with your application using the <em>latin1</em> encoding on the client side, if the
+server side dataset includes texts in incompatible encodings, PostgreSQL
+will issue an error. Such texts might be written using non-Latin scripts
+such as Cyrillic, Chinese, Japanese, Arabic or other languages.</p>
+
+<p>From the Emacs facility <code>M-x view-hello-file</code>, here&rsquo;s a table with spelling
+of hello in plenty of different languages and scripts, all encoded in
+<em>UTF8</em>:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql">          language          │            hello        
+════════════════════════════╪═════════════════════════════
+ Czech (čeština)            │ Dobrý den
+ Danish (dansk)             │ Hej / Goddag / Halløj
+ Dutch (Nederlands)         │ Hallo / Dag
+ English /ˈɪŋɡlɪʃ/          │ Hello
+ Esperanto                  │ Saluton (Eĥoŝanĝo ĉiuĵaŭde)
+ Estonian (eesti keel)      │ Tere päevast / Tere õhtust
+ Finnish (suomi)            │ Hei / Hyvää päivää
+ French (français)          │ Bonjour / Salut
+ Georgian (ქართველი)        │ გამარჯობა
+ German (Deutsch)           │ Guten Tag / Grüß Gott
+ Greek (ελληνικά)           │ Γειά σας
+ Greek, ancient (ἑλληνική)  │ Οὖλέ τε καὶ μέγα χαῖρε
+ Hungarian (magyar)         │ Szép jó napot!
+ Italian (italiano)         │ Ciao / Buon giorno
+ Maltese (il-Malti)         │ Bonġu / Saħħa
+ Mathematics                │ ∀ p ∈ world • hello p  □
+ Mongolian (монгол хэл)     │ Сайн байна уу?
+ Norwegian (norsk)          │ Hei / God dag
+ Polish  (język polski)     │ Dzień dobry! / Cześć!
+ Russian (русский)          │ Здра́вствуйте!
+ Slovak (slovenčina)        │ Dobrý deň
+ Slovenian (slovenščina)    │ Pozdravljeni!
+ Spanish (español)          │ ¡Hola!
+ Swedish (svenska)          │ Hej / Goddag / Hallå
+ Turkish (Türkçe)           │ Merhaba
+ Ukrainian (українська)     │ Вітаю
+ Vietnamese (tiếng Việt)    │ Chào bạn
+ Japanese (日本語)          │ こんにちは / ｺﾝﾆﾁﾊ
+ Chinese (中文,普通话,汉语) │ 你好
+ Cantonese (粵語,廣東話)    │ 早晨, 你好</code></pre></div>
+<p>Now, of course, I can&rsquo;t have that data sent to me in <em>latin1</em>:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql">yesql# set client_encoding to latin1;
+SET
+yesql# select * from hello where language ~ &#39;Georgian&#39;;
+ERROR:  character with byte sequence 0xe1 0x83 0xa5 in encoding &#34;UTF8&#34; ⏎
+has no equivalent in encoding &#34;LATIN1&#34;
+yesql# reset client_encoding ;
+RESET</code></pre></div>
+<p>So if it&rsquo;s possible for you, use <em>UTF-8</em> encoding and you&rsquo;ll have a much
+simpler life. It must be noted that Unicode encoding makes comparing and
+sorting text a rather costly operation. That said being fast and wrong is
+not an option, so we are going to still use unicode text!</p>
+
+<h1 id="conclusion">Conclusion</h1>
+
+
+<figure class="right">
+    <a href="https://masteringpostgresql.com">
+        <img src="/img/MasteringPostgreSQLinAppDev-Cover-th.png" />
+    </a>
+    
+</figure>
+
+
+<p>This article is an extract from my book <a href="https://masteringpostgresql.com">Mastering PostgreSQL in Application
+Development</a>, which teaches SQL to
+developers so that they may replace thousands of lines of code with very
+simple queries. The book has a full chapter about data types in PostgreSQL,
+check it out!</p>
+              
+            </div>
+          </div>
+          <div id="post-footer" class="post-footer main-content-wrap">
+            
+              
+                
+                
+                  <div class="post-footer-tags">
+                    <span class="text-color-light text-small"></span><br/>
+                    
+  <a class="tag tag--primary tag--small" href="/tags/postgresql/">PostgreSQL</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/yesql/">YeSQL</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/data-types/">Data Types</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/text/">Text</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/encoding/">Encoding</a>
+
+                  </div>
+                
+              
+            
+            <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    
+    <script async id="_ck_252762" src="https://forms.convertkit.com/252762?v=6"></script>
+    
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/04/postgresql-data-types-an-intro/" data-tooltip="PostgreSQL Data Types: an intro">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f04%2fpostgresql-data-types-text-encoding%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f04%2fpostgresql-data-types-text-encoding%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=PostgreSQL%20Data%20Types%3a%20Text%20Encoding with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f04%2fpostgresql-data-types-text-encoding%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+            
+              
+                <div id="disqus_thread">
+  <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+              
+            
+          </div>
+        </article>
+        <footer id="footer" class="main-content-wrap">
+  <span class="copyrights">
+    &copy; 2018 Dimitri Fontaine. 
+  </span>
+</footer>
+
+      </div>
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="5">
+        <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    
+    <script async id="_ck_252762" src="https://forms.convertkit.com/252762?v=6"></script>
+    
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/04/postgresql-data-types-an-intro/" data-tooltip="PostgreSQL Data Types: an intro">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f04%2fpostgresql-data-types-text-encoding%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f04%2fpostgresql-data-types-text-encoding%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=PostgreSQL%20Data%20Types%3a%20Text%20Encoding with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f04%2fpostgresql-data-types-text-encoding%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+      </div>
+      <div id="share-options-bar" class="share-options-bar" data-behavior="5">
+  <ul class="share-options">
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f04%2fpostgresql-data-types-text-encoding%2f">
+        <i class="fa fa-google-plus"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f04%2fpostgresql-data-types-text-encoding%2f">
+        <i class="fa fa-facebook-official"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=PostgreSQL%20Data%20Types%3a%20Text%20Encoding with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f04%2fpostgresql-data-types-text-encoding%2f">
+        <i class="fa fa-twitter"></i><span></span>
+      </a>
+    </li>
+  </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
+    </div>
+    
+    <div id="about">
+  <div id="about-card">
+    <div id="about-btn-close">
+      <i class="fa fa-remove"></i>
+    </div>
+    
+      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+    
+    <h4 id="about-card-name">Dimitri Fontaine</h4>
+    
+      <div id="about-card-bio">PostgreSQL Major Contributor</div>
+    
+    
+      <div id="about-card-job">
+        <i class="fa fa-briefcase"></i>
+        <br/>
+        Open Source Software Engineer
+      </div>
+    
+    
+      <div id="about-card-location">
+        <i class="fa fa-map-marker"></i>
+        <br/>
+        France
+      </div>
+    
+  </div>
+</div>
+
+    <div id="algolia-search-modal" class="modal-container">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="close-button"><i class="fa fa-close"></i></span>
+      <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
+        <span class="searchby-algolia-text text-color-light text-small">by</span>
+        <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+      </a>
+      <i class="search-icon fa fa-search"></i>
+      <form id="algolia-search-form">
+        <input type="text" id="algolia-search-input" name="search"
+          class="form-control input--large search-input" placeholder="" />
+      </form>
+    </div>
+    <div class="modal-body">
+      <div class="no-result text-color-light text-center"></div>
+      <div class="results">
+        
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/04/postgresql-data-types-text-encoding/">
+                <h3 class="media-heading">PostgreSQL Data Types: Text Encoding</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL text data type. The first notion to
+understand when processing text in any program is of course the notion of
+encoding.</p>
+
+<p>So when addressing the text datatype we must mention encoding settings, and
+possibly also issues. An encoding is a particular representation of
+characters in bits and bytes. In the ASCII encoding the letter <code>A</code> is
+encoded as the 7-bits byte <code>1000001</code>, or 65 in decimal, or 41 in
+hexadecimal. All those numbers are going to be written the same way on-disk,
+and the letter <code>A</code> too.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/04/postgresql-data-types-an-intro/">
+                <h3 class="media-heading">PostgreSQL Data Types: an intro</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Today, we&rsquo;re going to begin a dive into the PostgreSQL Data Types. As my
+colleague <a href="https://bitfission.com">Will Leinweber</a> said recently in his talk
+<a href="https://www.postgresql.eu/events/pgdayparis2018/schedule/session/1835-constraints-a-developers-secret-weapon/">Constraints: a Developer&rsquo;s Secret
+Weapon</a>
+that he gave at <a href="https://2018.pgday.paris">pgDay Paris</a>: <a href="https://www.citusdata.com/blog/2018/03/19/postgres-database-constraints/">database
+constraints in Postgres are the last line of
+defense</a>.</p>
+
+<p>The most important of those constraints is the data type, or the <em>attribute
+domain</em> in normalization slang. By declaring an attribute to be of a certain
+data type, then PostgreSQL ensures that this property is always true, and
+then implements advanced processing features for each data type, so that you
+may push the computation to the data, when needed.</p>
+
+<p>This article is the first of a series that will go through many of the
+PostgreSQL data types, and we open the journey with <code>boolean</code>.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/03/object-relational-database-management-system/">
+                <h3 class="media-heading">Object Relational Database Management System</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Mar 3, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p><a href="https://www.postgresql.org">PostgreSQL</a> is the world&rsquo;s most advanced open
+source database, and per the <a href="https://en.wikipedia.org/wiki/PostgreSQL">PostgreSQL Wikipedia
+page</a> it is <em>an
+<strong>object-relational</strong> database management system (ORDBMS) with an emphasis
+on extensibility and standards compliance</em>.</p>
+
+<p>In this article, we try to understand why would PostgreSQL be named an
+<em>object-relational</em> thing. What is Object Oriented Programming and how does
+that apply to a database system?</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/03/database-normalization-and-primary-keys/">
+                <h3 class="media-heading">Database Normalization and Primary Keys</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Mar 3, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>In our previous article we saw three classic <a href="/blog/2018/03/database-modelization-anti-patterns/">Database Modelization
+Anti-Patterns</a>. The
+article also contains a reference to a Primary Key section of my book
+<a href="https://masteringpostgresql.com">Mastering PostgreSQL in Application
+Development</a>, so it&rsquo;s only fair that I
+would now publish said Primary Key section!</p>
+
+<p>So in this article, we dive into Primary Keys as being a cornerstone of
+database normalization. It&rsquo;s so important to get Primary Keys right that you
+would think everybody knows how to do it, and yet, most of the primary key
+constraints I&rsquo;ve seen used in database design are actually not primary keys
+at all.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/03/database-modelization-anti-patterns/">
+                <h3 class="media-heading">Database Modelization Anti-Patterns</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Mar 3, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Next week we see two awesome PostgreSQL conferences in Europe, back to back,
+with a day in between just so that people may attend both! In chronological
+order we have first <a href="https://2018.nordicpgday.org">Nordic pgDay</a> in Oslo
+where I will have the pleasure to talk about <a href="https://www.postgresql.eu/events/nordicpgday2018/schedule/session/1896-data-modeling-normalization-and-denormalization/">Data Modeling, Normalization
+and
+Denormalization</a>.
+Then we have <a href="https://2018.pgday.paris">pgday.paris</a> with an awesome
+schedule and a strong focus on the needs of application developers!</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/02/sustainable-open-source-development/">
+                <h3 class="media-heading">Sustainable Open Source Development</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Feb 2, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Current trend in software deployments is to rely on open source software for
+entire production stacks. You can find open source software in the core
+technical stacks of every startup out there, I&rsquo;m told. If you&rsquo;re using Cloud
+based offerings, most of Cloud providers are running <a href="https://www.gnu.org/philosophy/floss-and-foss.en.html">Free/Libre Open Source
+Software</a> as their
+foundation.</p>
+
+<p>This article is a deep dive into the economic models behind successful open
+source projects and communities, and how as a professional, enterprise grade
+user, you depend on the long-term sustainability of all the open source
+projects you&rsquo;re using. And because you depend on the projects you&rsquo;re using
+to be successful, how to contribute and guarantee their success.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/02/find-the-number-of-the-longest-continuously-rising-days-for-a-stock/">
+                <h3 class="media-heading">Find the number of the longest continuously rising days for a stock</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Feb 2, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Today I want to react to an article that claims that <a href="https://www.datasciencecentral.com/profiles/blogs/relational-algebra-is-the-root-of-sql-problems">Relational Algebra Is
+the Root of SQL
+Problems</a>
+in which the author hand-waves the following position:</p>
+
+<blockquote>
+<p>SQL becomes more a hindrance to data manipulation than an efficient tool.
+SQL’s greatest problem isn’t in the implementation level, but at its
+theory foundation. The problem can’t be solved by application
+optimization. Relational algebra isn’t sophisticated enough for handling
+the complicated data manipulation scenarios.</p>
+</blockquote>
+
+<p>Then they go on to several <em>arguments from authority</em> to “prove” their
+point. My reading of the article is that SQL is very hard when you didn&rsquo;t
+care to learn it, as most technologies are.</p>
+
+<p>In this article, we&rsquo;re going to look at the <em>simple examples</em> provided where
+apparently SQL makes it so much harder to find a solution compared to
+writing some Java or C++ code. Contrary to the original article, we go as
+far as to actually writing both the SQL solution and a complete Python
+solution, so that we can compare.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/01/exporting-a-hierarchy-in-json-with-recursive-queries/">
+                <h3 class="media-heading">Exporting a Hierarchy in JSON: with recursive queries</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jan 1, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>In another article here, entitled <a href="/blog/2017/09/on-json-and-sql/">on JSON and
+SQL</a>, we saw in great details how to import
+a data set only available as a giant JSON file. Then we normalized the data
+set, so as to be able to write SQL and process our data. This approach is
+sometimes very useful and was a good way to learn some of the JSON functions
+provided by PostgreSQL.</p>
+
+<p>In this article, we&rsquo;re going to use SQL to export the data from our
+relational model into a JSON document. The trick that makes it complex in
+this example is that we have a recursive data model, with a notion of a
+<em>parent</em> row that exists in the same table as the current one. That&rsquo;s a nice
+excuse to learn more about the SQL construct <a href="https://www.postgresql.org/docs/current/static/queries-with.html">WITH
+RECURSIVE</a>.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/01/a-year-in-review-most-read-articles-in-2017/">
+                <h3 class="media-heading">A Year in Review: Most Read Articles in 2017</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jan 1, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>It seems to be usual nowadays to review the previous year, and readers
+apparently like Top-N Lists — <em>that&rsquo;s you now, so let&rsquo;s hope that my
+understanding works with you too</em>.</p>
+
+<p>Of course 2018 will see its own amount of new and original content added to
+this blog, with a continuous focus towards how to make the best out of the
+SQL powerful programming language, and its advanced concurrency semantics.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/01/working-at-citus-data/">
+                <h3 class="media-heading">Working at Citus Data</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jan 1, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>You might have read it in the news already in Citus&rsquo; blog post by <a href="https://www.citusdata.com/about/team/">Sumedh
+Pathak</a>: <a href="https://www.citusdata.com/blog/2018/01/12/dimitri-fontaine-postgresql-contributor-joins-citus-data/">PostgreSQL Expert Dimitri
+Fontaine joins Citus
+Data</a>.
+I am very happy to join a talented team here at Citus, and excited to work
+on an Open Source solution for distributed SQL on-top of PostgreSQL! In this
+article I&rsquo;m going to cover my first technical contributions to Citus
+database, as it happens that a few patches of mine made it to the main
+source tree already.</p>
+
+<p><strong>TL;DR</strong> It&rsquo;s good to be working on PostgreSQL related source code again,
+and to have the opportunity to solve PostgreSQL related problems at scale!</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+      </div>
+    </div>
+    <div class="modal-footer">
+      <p class="results-count text-medium"
+         data-message-zero=""
+         data-message-one=""
+         data-message-other="">
+         263 posts found
+      </p>
+    </div>
+  </div>
+</div>
+    
+  
+    
+    <div id="cover" style="background-image:url('https://tapoueh.org/images/mayan-calendar.jpg');"></div>
+  
+
+
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
+
+
+<script src="/js/script-qi9wbxp2ya2j6p7wx1i6tgavftewndznf4v0hy2gvivk1rxgc3lm7njqb6bz.min.js"></script>
+
+
+
+<script>
+$(document).ready(function() {
+  hljs.configure({ classPrefix: '', useBR: false });
+  $('pre.code-highlight > code, pre > code').each(function(i, block) {
+    if (!$(this).hasClass('codeblock')) {
+      $(this).addClass('codeblock');
+    }
+    hljs.highlightBlock(block);
+  });
+});
+</script>
+
+
+  
+    
+      <script>
+        var disqus_config = function () {
+          this.page.url = 'https:\/\/tapoueh.org\/blog\/2018\/04\/postgresql-data-types-text-encoding\/';
+          
+            this.page.identifier = '\/blog\/2018\/04\/postgresql-data-types-text-encoding\/'
+          
+        };
+        (function() {
+          
+          
+          if (window.location.hostname == "localhost") {
+            return;
+          }
+          var d = document, s = d.createElement('script');
+          var disqus_shortname = 'tapoueh';
+          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+          s.setAttribute('data-timestamp', +new Date());
+          (d.head || d.body).appendChild(s);
+        })();
+      </script>
+    
+  
+
+
+
+    
+  </body>
+</html>
+
