@@ -1,0 +1,1217 @@
+
+
+  
+    
+  
+
+
+  
+
+
+
+
+  
+
+
+  
+
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Hugo 0.31.1">
+    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
+    <title>PostgreSQL Data Types: Date, Timestamp, and Time Zones</title>
+    <meta name="author" content="Dimitri Fontaine">
+    <meta name="keywords" content="">
+
+    <link rel="icon" href="/favicon.ico">
+    
+
+    
+    <meta name="description" content="Continuing our series of PostgreSQL Data Types today
+we&rsquo;re going to introduce date, timestamp, and interval data types.
+
+PostgreSQL implementation of the calendar is very good, and we&rsquo;re going to
+show some mice example about how confusing this matter is. The time zone
+notion in particular is mainly a political tool these days, and it makes no
+sense on an engineering principle: there&rsquo;s no way to solve time zone
+problems from first hand principles!">
+    <meta property="og:description" content="Continuing our series of PostgreSQL Data Types today
+we&rsquo;re going to introduce date, timestamp, and interval data types.
+
+PostgreSQL implementation of the calendar is very good, and we&rsquo;re going to
+show some mice example about how confusing this matter is. The time zone
+notion in particular is mainly a political tool these days, and it makes no
+sense on an engineering principle: there&rsquo;s no way to solve time zone
+problems from first hand principles!">
+    <meta property="og:type" content="blog">
+    <meta property="og:title" content="PostgreSQL Data Types: Date, Timestamp, and Time Zones">
+    <meta property="og:url" content="/blog/2018/04/postgresql-data-types-date-timestamp-and-time-zones/">
+    <meta property="og:site_name" content="Dimitri Fontaine, PostgreSQL Expert">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="PostgreSQL Data Types: Date, Timestamp, and Time Zones">
+    <meta name="twitter:description" content="Continuing our series of PostgreSQL Data Types today
+we&rsquo;re going to introduce date, timestamp, and interval data types.
+
+PostgreSQL implementation of the calendar is very good, and we&rsquo;re going to
+show some mice example about how confusing this matter is. The time zone
+notion in particular is mainly a political tool these days, and it makes no
+sense on an engineering principle: there&rsquo;s no way to solve time zone
+problems from first hand principles!">
+    
+      <meta name="twitter:creator" content="@tapoueh">
+    
+    
+
+    
+    
+
+    
+      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
+    
+
+    
+      <meta property="og:image" content="https://tapoueh.org/img/world-clock-logo.png">
+    
+    
+      <meta property="og:image" content="https://tapoueh.org/img/World_Time_Zones_Map.png">
+    
+    
+
+    
+
+    
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
+    
+    
+    <link rel="stylesheet" href="/css/style-jsjn0006wyhpyzivf6yceb31gvpjatbcs3qzjvlumobfnugccvobqwxnnaj8.min.css" />
+    
+    
+      <link rel="stylesheet" href="https://tapoueh.org/css/dim.css">
+    
+      <link rel="stylesheet" href="https://tapoueh.org/css/nav.css">
+    
+
+    
+      
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-47059482-1', 'auto');
+ga('send', 'pageview');
+</script>
+
+    
+    
+  </head>
+
+  <body>
+    <div id="blog">
+      <header id="header" data-behavior="5">
+  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+  <div class="navbar-collapse collapse header-title" id="navigation">
+    <ul class="nav navbar-nav navbar-right">
+      
+      <li class="dropdown">
+        
+        <a href="/">blog</a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a href="/conf/">talks</a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a href="http://pgloader.io/">pgloader</a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a href="http://masteringpostgresql.com/">Mastering PostgreSQL</a>
+        
+      </li>
+      
+    </ul>
+  </div>
+
+  
+    
+      <a class="header-right-icon "
+         href="http://masteringpostgresql.com" target="_blank">
+    
+    
+      <i class="fa fa-lg fa-book"></i>
+    
+    
+    </a>
+  
+</header>
+
+      <nav id="sidebar" data-behavior="5">
+  <div class="sidebar-container">
+    
+      <div class="sidebar-profile">
+        <a href="/#about">
+          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+        </a>
+        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
+        
+          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
+        
+      </div>
+    
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
+      
+      <span class="sidebar-button-desc">Blog</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/about/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
+      
+      <span class="sidebar-button-desc">About</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories/yesql/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-database"></i>
+      
+      <span class="sidebar-button-desc">YeSQL</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="http://masteringpostgresql.com" target="_blank" rel="noopener">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
+      
+      <span class="sidebar-button-desc">Mastering PostgreSQL</span>
+    </a>
+  </li>
+
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+      
+      <span class="sidebar-button-desc">GitHub</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+      
+      <span class="sidebar-button-desc">Twitter</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+      
+      <span class="sidebar-button-desc">Categories</span>
+    </a>
+  </li>
+
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/index.xml">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+      
+      <span class="sidebar-button-desc">RSS</span>
+    </a>
+  </li>
+
+
+    </ul>
+  </div>
+</nav>
+
+      
+  <div class="post-header-cover
+              text-left
+              post-header-cover--partial"
+       style="background-image:url('/img/World_Time_Zones_Map.png')"
+       data-behavior="5">
+    
+      <div class="post-header main-content-wrap text-left">
+  
+    <h1 class="post-title" itemprop="headline">
+      PostgreSQL Data Types: Date, Timestamp, and Time Zones
+    </h1>
+  
+  
+  <div class="postShorten-meta post-meta">
+    
+      <time itemprop="datePublished" datetime="2018-04-13T00:15:44&#43;02:00">
+        
+  
+  
+  
+  
+    Friday 13 Apr 2018
+  
+
+      </time>
+    
+    
+  
+  
+    <span></span>
+    
+      <a class="category-link" href="/categories/postgresql">PostgreSQL</a>, 
+    
+      <a class="category-link" href="/categories/yesql">YeSQL</a>
+    
+  
+
+  </div>
+
+</div>
+    
+  </div>
+
+
+      <div id="main" data-behavior="5"
+        class="hasCover
+               hasCoverMetaIn
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
+          
+          <div class="post-content markdown" itemprop="articleBody">
+            <div class="main-content-wrap">
+              <p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce date, timestamp, and interval data types.</p>
+
+<p>PostgreSQL implementation of the calendar is very good, and we&rsquo;re going to
+show some mice example about how confusing this matter is. The time zone
+notion in particular is mainly a political tool these days, and it makes no
+sense on an engineering principle: there&rsquo;s no way to solve time zone
+problems from first hand principles!</p>
+
+<p>
+<h1 id="table-of-contents"></h1><nav id="TableOfContents">
+<ul>
+<li><a href="#date-time-and-time-zones">Date/Time and Time Zones</a></li>
+<li><a href="#time-intervals">Time Intervals</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+</nav></p>
+
+<h1 id="date-time-and-time-zones">Date/Time and Time Zones</h1>
+
+<p>Handling dates and time and time zones is a very complex matter, and on this
+topic, you can read Erik Naggum&rsquo;s piece <a href="http://naggum.no/lugm-time.html">The Long, Painful History of
+Time</a>.</p>
+
+<p>The PostgreSQL documentation chapters with the titles <a href="https://www.postgresql.org/docs/current/static/datatype-datetime.html">Date/Time
+Types</a>,
+<a href="https://www.postgresql.org/docs/current/static/functions-formatting.html">Data Type Formatting
+Functions</a>,
+and <a href="https://www.postgresql.org/docs/current/static/functions-datetime.html">Date/Time Functions and
+Operators</a>
+cover all you need to know about date, time, timestamps, and time zones with
+PostgreSQL.</p>
+
+<p>The first question we need to answer here is about using timestamps with or
+without <em>time zones</em> from our applications. The answer is simple: always use
+<em>timestamps WITH time zones</em>.</p>
+
+<p>A common myth is that storing time zones will certainly add to your storage
+and memory footprint. It&rsquo;s actually not the case:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> pg_column_size(<span style="color:#00a">timestamp</span> <span style="color:#00a">without</span> time <span style="color:#00a">zone</span> <span style="color:#a50">&#39;now&#39;</span>),
+       pg_column_size(<span style="color:#00a">timestamp</span> <span style="color:#00a">with</span> time <span style="color:#00a">zone</span> <span style="color:#a50">&#39;now&#39;</span>);</code></pre></div><div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql"> pg_column_size │ pg_column_size 
+════════════════╪════════════════
+              8 │              8
+(1 row)</code></pre></div>
+<p>PostgreSQL defaults to using <em>bigint</em> internally to store timestamps, and
+the on-disk and in-memory format are the same with or without time zone
+support. Here&rsquo;s their whole type definition in the PostgreSQL source code
+(in <code>src/include/datatype/timestamp.h</code>):</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#00a">typedef</span> int64 Timestamp;
+<span style="color:#00a">typedef</span> int64 TimestampTz;</code></pre></div>
+<p>From the PostgreSQL documentation for timestamps, here&rsquo;s how it works:</p>
+
+<blockquote>
+<p>For timestamp with time zone, the internally stored value is always in UTC
+(Universal Coordinated Time, traditionally known as Greenwich Mean Time,
+GMT). An input value that has an explicit time zone specified is converted
+to UTC using the appropriate offset for that time zone. If no time zone is
+stated in the input string, then it is assumed to be in the time zone
+indicated by the system&rsquo;s TimeZone parameter, and is converted to UTC
+using the offset for the timezone zone.</p>
+</blockquote>
+
+<p>PostgreSQL doesn&rsquo;t store the time zone they come from with your timestamp.
+Instead it converts to and from the input and output timezone much like
+we&rsquo;ve seen for text with <em>client_encoding</em>.</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
+
+<span style="color:#00a">drop</span> <span style="color:#00a">table</span> <span style="color:#00a">if</span> <span style="color:#00a">exists</span> tstz;
+
+<span style="color:#00a">create</span> <span style="color:#00a">table</span> tstz(ts <span style="color:#00a">timestamp</span>, tstz timestamptz);
+
+<span style="color:#00a">set</span> timezone <span style="color:#00a">to</span> <span style="color:#a50">&#39;Europe/Paris&#39;</span>;
+<span style="color:#00a">select</span> now();
+<span style="color:#00a">insert</span> <span style="color:#00a">into</span> tstz <span style="color:#00a">values</span>(now(), now());
+
+<span style="color:#00a">set</span> timezone <span style="color:#00a">to</span> <span style="color:#a50">&#39;Pacific/Tahiti&#39;</span>;
+<span style="color:#00a">select</span> now();
+<span style="color:#00a">insert</span> <span style="color:#00a">into</span> tstz <span style="color:#00a">values</span>(now(), now());
+
+<span style="color:#00a">set</span> timezone <span style="color:#00a">to</span> <span style="color:#a50">&#39;Europe/Paris&#39;</span>;
+<span style="color:#00a">table</span> tstz;
+
+<span style="color:#00a">set</span> timezone <span style="color:#00a">to</span> <span style="color:#a50">&#39;Pacific/Tahiti&#39;</span>;
+<span style="color:#00a">table</span> tstz;
+
+<span style="color:#00a">commit</span>;</code></pre></div>
+<p>In this script, we play with the client&rsquo;s setting <em>timezone</em> and change from
+a French value to another French value, as Tahiti is an island in the
+Pacific that is part of France. Here&rsquo;s the full output as seen when running
+this script, when launched with <code>psql -a -f tz.sql</code>:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql">BEGIN
+...
+set timezone to &#39;Europe/Paris&#39;;
+SET
+select now();
+              now              
+═══════════════════════════════
+ 2017-08-19 14:22:11.802755+02
+(1 row)
+
+insert into tstz values(now(), now());
+INSERT 0 1
+set timezone to &#39;Pacific/Tahiti&#39;;
+SET
+select now();
+              now              
+═══════════════════════════════
+ 2017-08-19 02:22:11.802755-10
+(1 row)
+
+insert into tstz values(now(), now());
+INSERT 0 1
+set timezone to &#39;Europe/Paris&#39;;
+SET
+table tstz;
+             ts             │             tstz              
+════════════════════════════╪═══════════════════════════════
+ 2017-08-19 14:22:11.802755 │ 2017-08-19 14:22:11.802755+02
+ 2017-08-19 02:22:11.802755 │ 2017-08-19 14:22:11.802755+02
+(2 rows)
+
+set timezone to &#39;Pacific/Tahiti&#39;;
+SET
+table tstz;
+             ts             │             tstz              
+════════════════════════════╪═══════════════════════════════
+ 2017-08-19 14:22:11.802755 │ 2017-08-19 02:22:11.802755-10
+ 2017-08-19 02:22:11.802755 │ 2017-08-19 02:22:11.802755-10
+(2 rows)
+
+commit;
+COMMIT</code></pre></div>
+<p>First, we see that the <em>now()</em> function always returns the same timestamp
+within a single transaction. If you want to see the clock running while in a
+transaction, use the <em>clock_timestamp()</em> function instead.</p>
+
+<p>Then, we see that when we change the <em>timezone</em> client setting, PostgreSQL
+outputs timestamps as expected, in the selected timezone. If you manage an
+application with users in different time zones and you want to display time
+in their own local preferred time zone, then you can <em>set timezone</em> in your
+application code before doing any timestamp related processing, and have
+PostgreSQL do all the hard work for you.</p>
+
+<p>Finally, when selecting back from the <em>tstz</em> table, we see that the column
+<em>tstz</em> realizes that both the inserted values actually are the same point in
+time, but seen from different places in the world, whereas the <em>ts</em> column
+makes it impossible to compare the entries and realize they actually
+happened at exactly the same time.</p>
+
+<p>As said before, even when using timestamps <em>with</em> time zone, PostgreSQL will
+not store the time zone in use at input time, so there&rsquo;s no way from our
+<em>tstz</em> table to know that the entries are at the same time but just from
+different places.</p>
+
+<p>The opening of this section links to <a href="http://naggum.no/lugm-time.html">The Long, Painful History of
+Time</a>, and if you didn&rsquo;t read it yet, maybe
+now is a good time. Allow me to quote a relevant part of the article here:</p>
+
+<blockquote>
+<p><em>The basic problem with time is that we need to express both time and
+place whenever we want to place some event in time and space, yet we tend
+to assume spatial coordinates even more than we assume temporal
+coordinates, and in the case of time in ordinary communication, it is
+simply left out entirely. Despite the existence of time zones and strange
+daylight saving time regimes around the world, most people are blithely
+unaware of their own time zone and certainly of how it relates to standard
+references. Most people are equally unaware that by choosing a notation
+that is close to the spoken or written expression of dates, they make it
+meaningless to people who may not share the culture, but can still read
+the language. It is unlikely that people will change enough to put these
+issues to rest, so responsible computer people need to address the issues
+and resist the otherwise overpowering urge to abbreviate and drop
+context.</em></p>
+</blockquote>
+
+<p>Several options are available to input timestamp values in PostgreSQL. The
+easiest is to use the ISO format, so if your application&rsquo;s code allows that
+you&rsquo;re all set. In the following example we leave the time zone out, as
+usually, it&rsquo;s handled by the <em>timezone</em> session parameter, as seen above. If
+you need to, of course, you can input the time zone in the timestamp values
+directly:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> timestamptz <span style="color:#a50">&#39;2017-01-08 04:05:06&#39;</span>,
+       timestamptz <span style="color:#a50">&#39;2017-01-08 04:05:06+02&#39;</span>;</code></pre></div>
+<p>At insert or update time, use the same literal strings without the type
+decoration: PostgreSQL already knows the type of the target column, and it
+uses that to parse the values literal in the DML statement.</p>
+
+<p>Some application use-cases only need the date. Then use the <em>date</em> data type
+in PostgreSQL. It is of course then possible to compare a <em>date</em> and a
+<em>timestamp with time zone</em> in your SQL queries, and even to append a time
+offset on top of your date to construct a <em>timestamp</em>.</p>
+
+<h1 id="time-intervals">Time Intervals</h1>
+
+<p>PostgreSQL implements an <em>interval</em> data type along with the <em>time</em>, <em>date</em>
+and <em>timestamptz</em> data types. An <em>interval</em> describes a duration, like a
+month or two weeks, or even a millisecond:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">set</span> intervalstyle <span style="color:#00a">to</span> postgres;
+
+<span style="color:#00a">select</span> <span style="color:#0aa">interval</span> <span style="color:#a50">&#39;1 month&#39;</span>,
+       <span style="color:#0aa">interval</span> <span style="color:#a50">&#39;2 weeks&#39;</span>,
+       <span style="color:#099">2</span> * <span style="color:#0aa">interval</span> <span style="color:#a50">&#39;1 week&#39;</span>,
+       <span style="color:#099">78389</span> * <span style="color:#0aa">interval</span> <span style="color:#a50">&#39;1 ms&#39;</span>;</code></pre></div>
+<p>The default PostgreSQL output looks like this:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql"> interval │ interval │ ?column? │   ?column?   
+══════════╪══════════╪══════════╪══════════════
+ 1 mon    │ 14 days  │ 14 days  │ 00:01:18.389
+(1 row)</code></pre></div>
+<p>Several <em>intervalstyle</em> values are possible, and the setting
+<em>postgres_verbose</em> is quite nice for interactive <em>psql</em> sessions:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">set</span> intervalstyle <span style="color:#00a">to</span> postgres_verbose;
+
+<span style="color:#00a">select</span> <span style="color:#0aa">interval</span> <span style="color:#a50">&#39;1 month&#39;</span>,
+       <span style="color:#0aa">interval</span> <span style="color:#a50">&#39;2 weeks&#39;</span>,
+       <span style="color:#099">2</span> * <span style="color:#0aa">interval</span> <span style="color:#a50">&#39;1 week&#39;</span>,
+       <span style="color:#099">78389</span> * <span style="color:#0aa">interval</span> <span style="color:#a50">&#39;1 ms&#39;</span>;</code></pre></div>
+<p>This time we get a user-friendly output:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql"> interval │ interval  │ ?column?  │      ?column?       
+══════════╪═══════════╪═══════════╪═════════════════════
+ @ 1 mon  │ @ 14 days │ @ 14 days │ @ 1 min 18.389 secs
+(1 row)</code></pre></div>
+<p>How long is a month? Well, it depends on which month, and PostgreSQL knows
+that:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> d::<span style="color:#0aa">date</span> <span style="color:#00a">as</span> <span style="color:#00a">month</span>,
+       (d + <span style="color:#0aa">interval</span> <span style="color:#a50">&#39;1 month&#39;</span> - <span style="color:#0aa">interval</span> <span style="color:#a50">&#39;1 day&#39;</span>)::<span style="color:#0aa">date</span> <span style="color:#00a">as</span> month_end,
+       (d + <span style="color:#0aa">interval</span> <span style="color:#a50">&#39;1 month&#39;</span>)::<span style="color:#0aa">date</span> <span style="color:#00a">as</span> next_month,
+       (d + <span style="color:#0aa">interval</span> <span style="color:#a50">&#39;1 month&#39;</span>)::<span style="color:#0aa">date</span> - d::<span style="color:#0aa">date</span> <span style="color:#00a">as</span> days
+
+  <span style="color:#00a">from</span> generate_series(
+                       <span style="color:#0aa">date</span> <span style="color:#a50">&#39;2017-01-01&#39;</span>,
+                       <span style="color:#0aa">date</span> <span style="color:#a50">&#39;2017-12-01&#39;</span>,
+                       <span style="color:#0aa">interval</span> <span style="color:#a50">&#39;1 month&#39;</span>
+                      )
+       <span style="color:#00a">as</span> t(d);</code></pre></div>
+<p>When you attach an <em>interval</em> to a date or timestamp in PostgreSQL then the
+number of days in that interval adjusts to the specific calendar entry
+you&rsquo;ve picked. Otherwise, an interval of a month is considered to be 30
+days. Here we see that computing the last day of February is very easy:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql">   month    │ month_end  │ next_month │ days 
+════════════╪════════════╪════════════╪══════
+ 2017-01-01 │ 2017-01-31 │ 2017-02-01 │   31
+ 2017-02-01 │ 2017-02-28 │ 2017-03-01 │   28
+ 2017-03-01 │ 2017-03-31 │ 2017-04-01 │   31
+ 2017-04-01 │ 2017-04-30 │ 2017-05-01 │   30
+ 2017-05-01 │ 2017-05-31 │ 2017-06-01 │   31
+ 2017-06-01 │ 2017-06-30 │ 2017-07-01 │   30
+ 2017-07-01 │ 2017-07-31 │ 2017-08-01 │   31
+ 2017-08-01 │ 2017-08-31 │ 2017-09-01 │   31
+ 2017-09-01 │ 2017-09-30 │ 2017-10-01 │   30
+ 2017-10-01 │ 2017-10-31 │ 2017-11-01 │   31
+ 2017-11-01 │ 2017-11-30 │ 2017-12-01 │   30
+ 2017-12-01 │ 2017-12-31 │ 2018-01-01 │   31
+(12 rows)</code></pre></div>
+<h1 id="conclusion">Conclusion</h1>
+
+<p>PostgreSQL&rsquo;s implementation of the calendar is very good, so use it!</p>
+
+
+<figure class="right">
+    <a href="https://masteringpostgresql.com">
+        <img src="/img/MasteringPostgreSQLinAppDev-Cover-th.png" />
+    </a>
+    
+</figure>
+
+
+<p>This article is an extract from my book <a href="https://masteringpostgresql.com">Mastering PostgreSQL in Application
+Development</a>, which teaches SQL to
+developers so that they may replace thousands of lines of code with very
+simple queries. The book has a full chapter about data types in PostgreSQL,
+check it out!</p>
+              
+            </div>
+          </div>
+          <div id="post-footer" class="post-footer main-content-wrap">
+            
+              
+                
+                
+                  <div class="post-footer-tags">
+                    <span class="text-color-light text-small"></span><br/>
+                    
+  <a class="tag tag--primary tag--small" href="/tags/postgresql/">PostgreSQL</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/yesql/">YeSQL</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/data-types/">Data Types</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/date/">Date</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/time/">Time</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/timestamp/">Timestamp</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/time-zone/">Time Zone</a>
+
+                  </div>
+                
+              
+            
+            <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    
+    <script async id="_ck_252762" src="https://forms.convertkit.com/252762?v=6"></script>
+    
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/04/postgresql-data-types-text-processing/" data-tooltip="PostgreSQL Data Types: Text Processing">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f04%2fpostgresql-data-types-date-timestamp-and-time-zones%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f04%2fpostgresql-data-types-date-timestamp-and-time-zones%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=PostgreSQL%20Data%20Types%3a%20Date%2c%20Timestamp%2c%20and%20Time%20Zones with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f04%2fpostgresql-data-types-date-timestamp-and-time-zones%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+            
+              
+                <div id="disqus_thread">
+  <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+              
+            
+          </div>
+        </article>
+        <footer id="footer" class="main-content-wrap">
+  <span class="copyrights">
+    &copy; 2018 Dimitri Fontaine. 
+  </span>
+</footer>
+
+      </div>
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="5">
+        <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    
+    <script async id="_ck_252762" src="https://forms.convertkit.com/252762?v=6"></script>
+    
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/04/postgresql-data-types-text-processing/" data-tooltip="PostgreSQL Data Types: Text Processing">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f04%2fpostgresql-data-types-date-timestamp-and-time-zones%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f04%2fpostgresql-data-types-date-timestamp-and-time-zones%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=PostgreSQL%20Data%20Types%3a%20Date%2c%20Timestamp%2c%20and%20Time%20Zones with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f04%2fpostgresql-data-types-date-timestamp-and-time-zones%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+      </div>
+      <div id="share-options-bar" class="share-options-bar" data-behavior="5">
+  <ul class="share-options">
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f04%2fpostgresql-data-types-date-timestamp-and-time-zones%2f">
+        <i class="fa fa-google-plus"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f04%2fpostgresql-data-types-date-timestamp-and-time-zones%2f">
+        <i class="fa fa-facebook-official"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=PostgreSQL%20Data%20Types%3a%20Date%2c%20Timestamp%2c%20and%20Time%20Zones with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f04%2fpostgresql-data-types-date-timestamp-and-time-zones%2f">
+        <i class="fa fa-twitter"></i><span></span>
+      </a>
+    </li>
+  </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
+    </div>
+    
+    <div id="about">
+  <div id="about-card">
+    <div id="about-btn-close">
+      <i class="fa fa-remove"></i>
+    </div>
+    
+      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+    
+    <h4 id="about-card-name">Dimitri Fontaine</h4>
+    
+      <div id="about-card-bio">PostgreSQL Major Contributor</div>
+    
+    
+      <div id="about-card-job">
+        <i class="fa fa-briefcase"></i>
+        <br/>
+        Open Source Software Engineer
+      </div>
+    
+    
+      <div id="about-card-location">
+        <i class="fa fa-map-marker"></i>
+        <br/>
+        France
+      </div>
+    
+  </div>
+</div>
+
+    <div id="algolia-search-modal" class="modal-container">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="close-button"><i class="fa fa-close"></i></span>
+      <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
+        <span class="searchby-algolia-text text-color-light text-small">by</span>
+        <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+      </a>
+      <i class="search-icon fa fa-search"></i>
+      <form id="algolia-search-form">
+        <input type="text" id="algolia-search-input" name="search"
+          class="form-control input--large search-input" placeholder="" />
+      </form>
+    </div>
+    <div class="modal-body">
+      <div class="no-result text-color-light text-center"></div>
+      <div class="results">
+        
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/04/postgresql-data-types-date-timestamp-and-time-zones/">
+                <h3 class="media-heading">PostgreSQL Data Types: Date, Timestamp, and Time Zones</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce date, timestamp, and interval data types.</p>
+
+<p>PostgreSQL implementation of the calendar is very good, and we&rsquo;re going to
+show some mice example about how confusing this matter is. The time zone
+notion in particular is mainly a political tool these days, and it makes no
+sense on an engineering principle: there&rsquo;s no way to solve time zone
+problems from first hand principles!</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/04/postgresql-data-types-text-processing/">
+                <h3 class="media-heading">PostgreSQL Data Types: Text Processing</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce some of the PostgreSQL text processing functions.</p>
+
+<p>There&rsquo;s a very rich set of PostgreSQL functions to process text — you can
+find them all in the <a href="https://www.postgresql.org/docs/current/static/functions-string.html">string functions and
+operators</a>
+documentation chapter — with functions such as <em>overlay()</em>, <em>substring()</em>,
+<em>position()</em> or <em>trim()</em>. Or aggregates such as <em>string_agg()</em>. There are
+also <em>regular expression</em> functions, including the very powerful
+<em>regexp_split_to_table()</em>. In this article we see practical example putting
+them in practice.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/04/postgresql-data-types-text-encoding/">
+                <h3 class="media-heading">PostgreSQL Data Types: Text Encoding</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL text data type. The first notion to
+understand when processing text in any program is of course the notion of
+encoding.</p>
+
+<p>So when addressing the text datatype we must mention encoding settings, and
+possibly also issues. An encoding is a particular representation of
+characters in bits and bytes. In the ASCII encoding the letter <code>A</code> is
+encoded as the 7-bits byte <code>1000001</code>, or 65 in decimal, or 41 in
+hexadecimal. All those numbers are going to be written the same way on-disk,
+and the letter <code>A</code> too.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/04/postgresql-data-types-an-intro/">
+                <h3 class="media-heading">PostgreSQL Data Types: an intro</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Today, we&rsquo;re going to begin a dive into the PostgreSQL Data Types. As my
+colleague <a href="https://bitfission.com">Will Leinweber</a> said recently in his talk
+<a href="https://www.postgresql.eu/events/pgdayparis2018/schedule/session/1835-constraints-a-developers-secret-weapon/">Constraints: a Developer&rsquo;s Secret
+Weapon</a>
+that he gave at <a href="https://2018.pgday.paris">pgDay Paris</a>: <a href="https://www.citusdata.com/blog/2018/03/19/postgres-database-constraints/">database
+constraints in Postgres are the last line of
+defense</a>.</p>
+
+<p>The most important of those constraints is the data type, or the <em>attribute
+domain</em> in normalization slang. By declaring an attribute to be of a certain
+data type, then PostgreSQL ensures that this property is always true, and
+then implements advanced processing features for each data type, so that you
+may push the computation to the data, when needed.</p>
+
+<p>This article is the first of a series that will go through many of the
+PostgreSQL data types, and we open the journey with <code>boolean</code>.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/03/object-relational-database-management-system/">
+                <h3 class="media-heading">Object Relational Database Management System</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Mar 3, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p><a href="https://www.postgresql.org">PostgreSQL</a> is the world&rsquo;s most advanced open
+source database, and per the <a href="https://en.wikipedia.org/wiki/PostgreSQL">PostgreSQL Wikipedia
+page</a> it is <em>an
+<strong>object-relational</strong> database management system (ORDBMS) with an emphasis
+on extensibility and standards compliance</em>.</p>
+
+<p>In this article, we try to understand why would PostgreSQL be named an
+<em>object-relational</em> thing. What is Object Oriented Programming and how does
+that apply to a database system?</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/03/database-normalization-and-primary-keys/">
+                <h3 class="media-heading">Database Normalization and Primary Keys</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Mar 3, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>In our previous article we saw three classic <a href="/blog/2018/03/database-modelization-anti-patterns/">Database Modelization
+Anti-Patterns</a>. The
+article also contains a reference to a Primary Key section of my book
+<a href="https://masteringpostgresql.com">Mastering PostgreSQL in Application
+Development</a>, so it&rsquo;s only fair that I
+would now publish said Primary Key section!</p>
+
+<p>So in this article, we dive into Primary Keys as being a cornerstone of
+database normalization. It&rsquo;s so important to get Primary Keys right that you
+would think everybody knows how to do it, and yet, most of the primary key
+constraints I&rsquo;ve seen used in database design are actually not primary keys
+at all.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/03/database-modelization-anti-patterns/">
+                <h3 class="media-heading">Database Modelization Anti-Patterns</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Mar 3, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Next week we see two awesome PostgreSQL conferences in Europe, back to back,
+with a day in between just so that people may attend both! In chronological
+order we have first <a href="https://2018.nordicpgday.org">Nordic pgDay</a> in Oslo
+where I will have the pleasure to talk about <a href="https://www.postgresql.eu/events/nordicpgday2018/schedule/session/1896-data-modeling-normalization-and-denormalization/">Data Modeling, Normalization
+and
+Denormalization</a>.
+Then we have <a href="https://2018.pgday.paris">pgday.paris</a> with an awesome
+schedule and a strong focus on the needs of application developers!</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/02/sustainable-open-source-development/">
+                <h3 class="media-heading">Sustainable Open Source Development</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Feb 2, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Current trend in software deployments is to rely on open source software for
+entire production stacks. You can find open source software in the core
+technical stacks of every startup out there, I&rsquo;m told. If you&rsquo;re using Cloud
+based offerings, most of Cloud providers are running <a href="https://www.gnu.org/philosophy/floss-and-foss.en.html">Free/Libre Open Source
+Software</a> as their
+foundation.</p>
+
+<p>This article is a deep dive into the economic models behind successful open
+source projects and communities, and how as a professional, enterprise grade
+user, you depend on the long-term sustainability of all the open source
+projects you&rsquo;re using. And because you depend on the projects you&rsquo;re using
+to be successful, how to contribute and guarantee their success.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/02/find-the-number-of-the-longest-continuously-rising-days-for-a-stock/">
+                <h3 class="media-heading">Find the number of the longest continuously rising days for a stock</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Feb 2, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Today I want to react to an article that claims that <a href="https://www.datasciencecentral.com/profiles/blogs/relational-algebra-is-the-root-of-sql-problems">Relational Algebra Is
+the Root of SQL
+Problems</a>
+in which the author hand-waves the following position:</p>
+
+<blockquote>
+<p>SQL becomes more a hindrance to data manipulation than an efficient tool.
+SQL’s greatest problem isn’t in the implementation level, but at its
+theory foundation. The problem can’t be solved by application
+optimization. Relational algebra isn’t sophisticated enough for handling
+the complicated data manipulation scenarios.</p>
+</blockquote>
+
+<p>Then they go on to several <em>arguments from authority</em> to “prove” their
+point. My reading of the article is that SQL is very hard when you didn&rsquo;t
+care to learn it, as most technologies are.</p>
+
+<p>In this article, we&rsquo;re going to look at the <em>simple examples</em> provided where
+apparently SQL makes it so much harder to find a solution compared to
+writing some Java or C++ code. Contrary to the original article, we go as
+far as to actually writing both the SQL solution and a complete Python
+solution, so that we can compare.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/01/exporting-a-hierarchy-in-json-with-recursive-queries/">
+                <h3 class="media-heading">Exporting a Hierarchy in JSON: with recursive queries</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jan 1, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>In another article here, entitled <a href="/blog/2017/09/on-json-and-sql/">on JSON and
+SQL</a>, we saw in great details how to import
+a data set only available as a giant JSON file. Then we normalized the data
+set, so as to be able to write SQL and process our data. This approach is
+sometimes very useful and was a good way to learn some of the JSON functions
+provided by PostgreSQL.</p>
+
+<p>In this article, we&rsquo;re going to use SQL to export the data from our
+relational model into a JSON document. The trick that makes it complex in
+this example is that we have a recursive data model, with a notion of a
+<em>parent</em> row that exists in the same table as the current one. That&rsquo;s a nice
+excuse to learn more about the SQL construct <a href="https://www.postgresql.org/docs/current/static/queries-with.html">WITH
+RECURSIVE</a>.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+      </div>
+    </div>
+    <div class="modal-footer">
+      <p class="results-count text-medium"
+         data-message-zero=""
+         data-message-one=""
+         data-message-other="">
+         265 posts found
+      </p>
+    </div>
+  </div>
+</div>
+    
+  
+    
+    <div id="cover" style="background-image:url('https://tapoueh.org/images/mayan-calendar.jpg');"></div>
+  
+
+
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
+
+
+<script src="/js/script-qi9wbxp2ya2j6p7wx1i6tgavftewndznf4v0hy2gvivk1rxgc3lm7njqb6bz.min.js"></script>
+
+
+
+<script>
+$(document).ready(function() {
+  hljs.configure({ classPrefix: '', useBR: false });
+  $('pre.code-highlight > code, pre > code').each(function(i, block) {
+    if (!$(this).hasClass('codeblock')) {
+      $(this).addClass('codeblock');
+    }
+    hljs.highlightBlock(block);
+  });
+});
+</script>
+
+
+  
+    
+      <script>
+        var disqus_config = function () {
+          this.page.url = 'https:\/\/tapoueh.org\/blog\/2018\/04\/postgresql-data-types-date-timestamp-and-time-zones\/';
+          
+            this.page.identifier = '\/blog\/2018\/04\/postgresql-data-types-date-timestamp-and-time-zones\/'
+          
+        };
+        (function() {
+          
+          
+          if (window.location.hostname == "localhost") {
+            return;
+          }
+          var d = document, s = d.createElement('script');
+          var disqus_shortname = 'tapoueh';
+          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+          s.setAttribute('data-timestamp', +new Date());
+          (d.head || d.body).appendChild(s);
+        })();
+      </script>
+    
+  
+
+
+
+    
+  </body>
+</html>
+
