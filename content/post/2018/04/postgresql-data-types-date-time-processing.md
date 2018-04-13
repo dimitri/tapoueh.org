@@ -1,6 +1,6 @@
 +++
 title = "PostgreSQL Data Types: Date and Time Processing"
-date = "2018-04-13T00:30:26+02:00"
+date = "2018-04-13T13:35:47+02:00"
 tags = ["PostgreSQL","YeSQL","Data Types","Date","Time","Timestamp","Time Zone"]
 categories = ["PostgreSQL","YeSQL"]
 coverImage = "/img/World_Time_Zones_Map.png"
@@ -8,7 +8,6 @@ coverMeta = "in"
 coverSize = "partial"
 thumbnailImage = "/img/cog-256.png"
 thumbnailImagePosition = "left"
-draft = "True"
 
 +++
 
@@ -36,7 +35,7 @@ in our local *commitlog* table:
 ~~~ sql
   select project, hash, author, ats, committer, cts, subject
     from commitlog
-   where project = 'postgresql'
+   where project = 'postgres'
 order by ats desc
    limit 1;
 ~~~
@@ -50,14 +49,14 @@ To get the most recent entry from a table we *order by* dates in
 a single line of output:
 
 ~~~ psql
-─[ RECORD 1 ]────────────────────────────────────────────────────────────────
-project   │ postgresql
-hash      │ b1c2d76a2fcef812af0be3343082414d401909c8
+─[ RECORD 1 ]───────────────────────────────────────
+project   │ postgres
+hash      │ 65a69dfa08e212556d11e44a5a8a1861fd826ccd
 author    │ Tom Lane
-ats       │ 2017-08-19 19:39:37+02
+ats       │ 2018-04-13 00:39:51+02
 committer │ Tom Lane
-cts       │ 2017-08-19 19:39:51+02
-subject   │ Fix possible core dump in parallel restore when using a TOC list.
+cts       │ 2018-04-13 00:39:51+02
+subject   │ Fix bogus affix-merging code.
 ~~~
 
 # Time based statistics
@@ -67,7 +66,7 @@ commits each project received each year in their whole history:
 
 ~~~ sql
   select extract(year from ats) as year,
-         count(*) filter(where project = 'postgresql') as postgresql,
+         count(*) filter(where project = 'postgres') as postgres,
          count(*) filter(where project = 'pgloader') as pgloader
     from commitlog
 group by year
@@ -79,31 +78,32 @@ better with a *pivot* query. We can see more than 20 years of sustained
 activity for the PostgreSQL project, and a less active project for pgloader:
 
 ~~~ psql
- year │ postgresql │ pgloader 
-══════╪════════════╪══════════
- 1996 │        876 │        0
- 1997 │       1698 │        0
- 1998 │       1744 │        0
- 1999 │       1788 │        0
- 2000 │       2535 │        0
- 2001 │       3061 │        0
- 2002 │       2654 │        0
- 2003 │       2416 │        0
- 2004 │       2548 │        0
- 2005 │       2418 │        3
- 2006 │       2153 │        3
- 2007 │       2188 │       42
- 2008 │       1651 │       63
- 2009 │       1389 │        3
- 2010 │       1800 │       29
- 2011 │       2030 │        2
- 2012 │       1605 │        2
- 2013 │       1368 │      385
- 2014 │       1745 │      367
- 2015 │       1815 │      202
- 2016 │       2086 │      136
- 2017 │       1721 │      142
-(22 rows)
+ year │ postgres │ pgloader 
+══════╪══════════╪══════════
+ 1996 │      876 │        0
+ 1997 │     1698 │        0
+ 1998 │     1744 │        0
+ 1999 │     1788 │        0
+ 2000 │     2535 │        0
+ 2001 │     3061 │        0
+ 2002 │     2654 │        0
+ 2003 │     2416 │        0
+ 2004 │     2548 │        0
+ 2005 │     2418 │        0
+ 2006 │     2153 │        0
+ 2007 │     2188 │        0
+ 2008 │     1651 │        0
+ 2009 │     1389 │        0
+ 2010 │     1800 │        0
+ 2011 │     2030 │        0
+ 2012 │     1605 │        0
+ 2013 │     1368 │      385
+ 2014 │     1745 │      367
+ 2015 │     1815 │      202
+ 2016 │     2087 │      136
+ 2017 │     2469 │      193
+ 2018 │      765 │       40
+(23 rows)
 ~~~
 
 We can also build a reporting on the repartition of commits by weekday from
@@ -117,7 +117,7 @@ on the project on the job only, or mostly during their free time (weekend).
          round(100.0*count(*)/sum(count(*)) over(), 2) as pct,
          repeat('■', (100*count(*)/sum(count(*)) over())::int) as hist
     from commitlog
-   where project = 'postgresql'
+   where project = 'postgres'
 group by dow, day
 order by dow;
 ~~~
@@ -127,15 +127,15 @@ it, but less so on the weekend. The project's lucky enough to have a solid
 team of committers being paid to work on PostgreSQL:
 
 ~~~ psql
- dow │    day    │ commits │  pct  │       hist        
-═════╪═══════════╪═════════╪═══════╪═══════════════════
-   1 │ Monday    │    6552 │ 15.14 │ ■■■■■■■■■■■■■■■
-   2 │ Tuesday   │    7164 │ 16.55 │ ■■■■■■■■■■■■■■■■■
-   3 │ Wednesday │    6477 │ 14.96 │ ■■■■■■■■■■■■■■■
-   4 │ Thursday  │    7061 │ 16.31 │ ■■■■■■■■■■■■■■■■
-   5 │ Friday    │    7008 │ 16.19 │ ■■■■■■■■■■■■■■■■
-   6 │ Saturday  │    4690 │ 10.83 │ ■■■■■■■■■■■
-   7 │ Sunday    │    4337 │ 10.02 │ ■■■■■■■■■■
+ dow │    day    │ commits │  pct  │       hist       
+═════╪═══════════╪═════════╪═══════╪══════════════════
+   1 │ Monday    │    6746 │ 15.06 │ ■■■■■■■■■■■■■■■
+   2 │ Tuesday   │    7376 │ 16.46 │ ■■■■■■■■■■■■■■■■
+   3 │ Wednesday │    6759 │ 15.09 │ ■■■■■■■■■■■■■■■
+   4 │ Thursday  │    7357 │ 16.42 │ ■■■■■■■■■■■■■■■■
+   5 │ Friday    │    7276 │ 16.24 │ ■■■■■■■■■■■■■■■■
+   6 │ Saturday  │    4855 │ 10.84 │ ■■■■■■■■■■■
+   7 │ Sunday    │    4434 │  9.90 │ ■■■■■■■■■■
 (7 rows)
 ~~~
 
@@ -166,36 +166,36 @@ with perc_arrays as
 Here's a detailed output of the time difference statistics, per project:
 
 ~~~ psql
-─[ RECORD 1 ]───────────────────────────────────
+─[ RECORD 1 ]─────────────────────────────────────
 project │ pgloader
-average │ @ 4 days 22 hours 7 mins 41.18 secs
-median  │ @ 5 mins 21.5 secs
-%90th   │ @ 1 day 20 hours 49 mins 49.2 secs
-%95th   │ @ 25 days 15 hours 53 mins 48.15 secs
-%99th   │ @ 169 days 24 hours 33 mins 26.18 secs
-═[ RECORD 2 ]═══════════════════════════════════
+average │ @ 4 days 12 hours 43 mins 10.220859 secs
+median  │ @ 4 mins 50 secs
+%90th   │ @ 21 hours 49 mins 23.8 secs
+%95th   │ @ 24 days 38 hours 54.5 secs
+%99th   │ @ 163 days 35 hours 37 mins 40.84 secs
+═[ RECORD 2 ]═════════════════════════════════════
 project │ postgres
-average │ @ 1 day 10 hours 15 mins 9.706809 secs
-median  │ @ 2 mins 4 secs
-%90th   │ @ 1 hour 46 mins 13.5 secs
-%95th   │ @ 1 day 17 hours 58 mins 7.5 secs
-%99th   │ @ 40 days 20 hours 36 mins 43.1 secs
+average │ @ 1 day 18 hours 48 mins 36.053773 secs
+median  │ @ 2 mins 11 secs
+%90th   │ @ 3 hours 27 mins 43 secs
+%95th   │ @ 3 days 6 hours 1 min 31.2 secs
+%99th   │ @ 49 days 22 hours 40 mins 59.84 secs
 ~~~
 
 # Time Based Reporting
 
 Reporting is a strong use case for SQL. Application will also send more
 classic queries. We can show the commits for the PostgreSQL project for the
-1st of June 2017:
+12th of April 2018:
 
 ~~~ sql
-\set day '2017-06-01'
+\set day '2018-04-12'
 
   select ats::time,
          substring(hash from 1 for 8) as hash,
          substring(subject from 1 for 40) || '…' as subject
     from commitlog
-   where project = 'postgresql'
+   where project = 'postgres'
      and ats >= date :'day'
      and ats  < date :'day' + interval '1 day'
 order by ats;
@@ -214,12 +214,18 @@ the query, so that's a single parameter to send from the application.
 ~~~ psql
    ats    │   hash   │                  subject                  
 ══════════╪══════════╪═══════════════════════════════════════════
- 01:39:27 │ 3d79013b │ Make ALTER SEQUENCE, including RESTART, …
- 02:03:10 │ 66510455 │ Modify sequence catalog tuple before inv…
- 04:35:33 │ de492c17 │ doc: Add note that DROP SUBSCRIPTION dro…
- 19:32:55 │ e9a3c047 │ Always use -fPIC, not -fpic, when buildi…
- 23:45:53 │ f112f175 │ Fix typo…
-(5 rows)
+ 00:11:29 │ d1e90792 │ Ignore nextOid when replaying an ONLINE …
+ 02:27:12 │ 9e9befac │ Set relispartition correctly for index p…
+ 12:02:45 │ c9c875a2 │ Rename IndexInfo.ii_KeyAttrNumbers array…
+ 12:22:56 │ 08ea7a22 │ Revert MERGE patch…
+ 15:37:22 │ c266ed31 │ Cleanup covering infrastructure…
+ 16:25:13 │ 52405459 │ Fix interference between covering indexe…
+ 16:38:48 │ 3e110a37 │ Fix YA parallel-make hazard, this one in…
+ 20:08:10 │ a4d56f58 │ Use the right memory context for partkey…
+ 21:12:06 │ 2fe97771 │ YA attempt to stabilize the results of t…
+ 21:51:55 │ 181ccbb5 │ Add comment about default partition in c…
+ 21:53:27 │ b8ca984b │ Revert lowering of lock level for ATTACH…
+(11 rows)
 ~~~
 
 # Date and Time Formatting
@@ -237,7 +243,7 @@ set lc_time to 'fr_FR';
          substring(hash from 1 for 8) as hash,
          substring(subject from 1 for 40) || '…' as subject
     from commitlog
-   where project = 'postgresql'
+   where project = 'postgres'
      and ats >= date :'day'
      and ats  < date :'day' + interval '1 day'
 order by ats;
@@ -246,14 +252,20 @@ order by ats;
 And this time we have a French localized output for the time value:
 
 ~~~ psql
-        time         │   hash   │                  subject                  
-═════════════════════╪══════════╪═══════════════════════════════════════════
- Jeudi 01 Juin, 01am │ 3d79013b │ Make ALTER SEQUENCE, including RESTART, …
- Jeudi 01 Juin, 02am │ 66510455 │ Modify sequence catalog tuple before inv…
- Jeudi 01 Juin, 04am │ de492c17 │ doc: Add note that DROP SUBSCRIPTION dro…
- Jeudi 01 Juin, 07pm │ e9a3c047 │ Always use -fPIC, not -fpic, when buildi…
- Jeudi 01 Juin, 11pm │ f112f175 │ Fix typo…
-(5 rows)
+         time         │   hash   │                  subject                  
+══════════════════════╪══════════╪═══════════════════════════════════════════
+ Jeudi 12 Avril, 12am │ d1e90792 │ Ignore nextOid when replaying an ONLINE …
+ Jeudi 12 Avril, 02am │ 9e9befac │ Set relispartition correctly for index p…
+ Jeudi 12 Avril, 12pm │ c9c875a2 │ Rename IndexInfo.ii_KeyAttrNumbers array…
+ Jeudi 12 Avril, 12pm │ 08ea7a22 │ Revert MERGE patch…
+ Jeudi 12 Avril, 03pm │ c266ed31 │ Cleanup covering infrastructure…
+ Jeudi 12 Avril, 04pm │ 52405459 │ Fix interference between covering indexe…
+ Jeudi 12 Avril, 04pm │ 3e110a37 │ Fix YA parallel-make hazard, this one in…
+ Jeudi 12 Avril, 08pm │ a4d56f58 │ Use the right memory context for partkey…
+ Jeudi 12 Avril, 09pm │ 2fe97771 │ YA attempt to stabilize the results of t…
+ Jeudi 12 Avril, 09pm │ 181ccbb5 │ Add comment about default partition in c…
+ Jeudi 12 Avril, 09pm │ b8ca984b │ Revert lowering of lock level for ATTACH…
+(11 rows)
 ~~~
 
 # Conclusion
