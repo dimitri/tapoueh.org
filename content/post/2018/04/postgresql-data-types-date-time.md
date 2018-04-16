@@ -1,309 +1,187 @@
 +++
-title = "PostgreSQL Data Types: Date, Timestamp, and Time Zones"
-date = "2018-04-13T00:15:44+02:00"
-tags = ["PostgreSQL","YeSQL","Data Types","Date","Time","Timestamp","Time Zone"]
+title = "PostgreSQL Data Types: Network Addresses"
+date = "2018-04-16T12:32:53+02:00"
+tags = ["PostgreSQL","YeSQL","Data Types","Network Address","CIDR","INET"]
 categories = ["PostgreSQL","YeSQL"]
-coverImage = "/img/World_Time_Zones_Map.png"
+coverImage = "/img/optic-fibre.jpg"
 coverMeta = "in"
 coverSize = "partial"
-thumbnailImage = "/img/world-clock-logo.png"
+thumbnailImage = "/img/Network-Ip-Address-icon.png"
 thumbnailImagePosition = "left"
 
 +++
 
 Continuing our series of [PostgreSQL Data Types](/tags/data-types/) today
-we're going to introduce date, timestamp, and interval data types.
+we're going to introduce network address types.
 
-PostgreSQL implementation of the calendar is very good, and we're going to
-show some mice example about how confusing this matter is. The time zone
-notion in particular is mainly a political tool these days, and it makes no
-sense on an engineering principle: there's no way to solve time zone
-problems from first hand principles!
+PostgreSQL includes support for both *cidr*, *inet*, and *macaddr* data
+types. Again, those types are bundled with indexing support and advanced
+functions and operator support.
 
 <!--more-->
 <!--toc-->
 
-# Date/Time and Time Zones
+# Network Address Types
 
-Handling dates and time and time zones is a very complex matter, and on this
-topic, you can read Erik Naggum's piece [The Long, Painful History of
-Time](http://naggum.no/lugm-time.html).
+The PostgreSQL documentation chapters entitled [Network Address
+Types](https://www.postgresql.org/docs/current/static/datatype-net-types.html)
+and [Network Address Functions and
+Operators](https://www.postgresql.org/docs/current/static/functions-net.html)
+cover network address types.
 
-The PostgreSQL documentation chapters with the titles [Date/Time
-Types](https://www.postgresql.org/docs/current/static/datatype-datetime.html),
-[Data Type Formatting
-Functions](https://www.postgresql.org/docs/current/static/functions-formatting.html),
-and [Date/Time Functions and
-Operators](https://www.postgresql.org/docs/current/static/functions-datetime.html)
-cover all you need to know about date, time, timestamps, and time zones with
-PostgreSQL.
-
-The first question we need to answer here is about using timestamps with or
-without *time zones* from our applications. The answer is simple: always use
-*timestamps WITH time zones*. 
-
-A common myth is that storing time zones will certainly add to your storage
-and memory footprint. It's actually not the case:
-
-~~~ sql
-select pg_column_size(timestamp without time zone 'now'),
-       pg_column_size(timestamp with time zone 'now');
-~~~
-~~~ psql
- pg_column_size │ pg_column_size 
-════════════════╪════════════════
-              8 │              8
-(1 row)
-~~~
-
-PostgreSQL defaults to using *bigint* internally to store timestamps, and
-the on-disk and in-memory format are the same with or without time zone
-support. Here's their whole type definition in the PostgreSQL source code
-(in `src/include/datatype/timestamp.h`):
-
-~~~ c
-typedef int64 Timestamp;
-typedef int64 TimestampTz;
-~~~
-
-From the PostgreSQL documentation for timestamps, here's how it works:
-
-> For timestamp with time zone, the internally stored value is always in UTC
-> (Universal Coordinated Time, traditionally known as Greenwich Mean Time,
-> GMT). An input value that has an explicit time zone specified is converted
-> to UTC using the appropriate offset for that time zone. If no time zone is
-> stated in the input string, then it is assumed to be in the time zone
-> indicated by the system's TimeZone parameter, and is converted to UTC
-> using the offset for the timezone zone.
-
-PostgreSQL doesn't store the time zone they come from with your timestamp.
-Instead it converts to and from the input and output timezone much like
-we've seen for text with *client_encoding*.
+Web servers logs are a classic source of data to process where we find
+network address types and [The Honeynet
+Project](http://old.honeynet.org/scans/scan34/) has some free samples for us
+to play with. This time we're using the *Scan 34* entry. Here's how to load
+the sample data set, once cleaned into a proper CSV file:
 
 ~~~ sql
 begin;
 
-drop table if exists tstz;
+drop table if exists access_log;
 
-create table tstz(ts timestamp, tstz timestamptz);
+create table access_log
+ (
+  ip      inet,
+  ts      timestamptz,
+  request text,
+  status  integer
+ );
 
-set timezone to 'Europe/Paris';
-select now();
-insert into tstz values(now(), now());
-
-set timezone to 'Pacific/Tahiti';
-select now();
-insert into tstz values(now(), now());
-
-set timezone to 'Europe/Paris';
-table tstz;
-
-set timezone to 'Pacific/Tahiti';
-table tstz;
+\copy access_log from 'access.csv' with csv delimiter ';'
 
 commit;
 ~~~
 
-In this script, we play with the client's setting *timezone* and change from
-a French value to another French value, as Tahiti is an island in the
-Pacific that is part of France. Here's the full output as seen when running
-this script, when launched with `psql -a -f tz.sql`:
+The script used to cleanse the original data into a CSV that PostgreSQL is
+happy about implements a pretty simple transformation from
 
-~~~ psql
-BEGIN
-...
-set timezone to 'Europe/Paris';
-SET
-select now();
-              now              
-═══════════════════════════════
- 2017-08-19 14:22:11.802755+02
-(1 row)
-
-insert into tstz values(now(), now());
-INSERT 0 1
-set timezone to 'Pacific/Tahiti';
-SET
-select now();
-              now              
-═══════════════════════════════
- 2017-08-19 02:22:11.802755-10
-(1 row)
-
-insert into tstz values(now(), now());
-INSERT 0 1
-set timezone to 'Europe/Paris';
-SET
-table tstz;
-             ts             │             tstz              
-════════════════════════════╪═══════════════════════════════
- 2017-08-19 14:22:11.802755 │ 2017-08-19 14:22:11.802755+02
- 2017-08-19 02:22:11.802755 │ 2017-08-19 14:22:11.802755+02
-(2 rows)
-
-set timezone to 'Pacific/Tahiti';
-SET
-table tstz;
-             ts             │             tstz              
-════════════════════════════╪═══════════════════════════════
- 2017-08-19 14:22:11.802755 │ 2017-08-19 02:22:11.802755-10
- 2017-08-19 02:22:11.802755 │ 2017-08-19 02:22:11.802755-10
-(2 rows)
-
-commit;
-COMMIT
+~~~
+211.141.115.145 - - [13/Mar/2005:04:10:18 -0500] "GET / HTTP/1.1" 403 2898 "-" "Mozilla/4.0 (compatible; MSIE 5.5; Windows 98)"
 ~~~
 
-First, we see that the *now()* function always returns the same timestamp
-within a single transaction. If you want to see the clock running while in a
-transaction, use the *clock_timestamp()* function instead.
+into 
 
-Then, we see that when we change the *timezone* client setting, PostgreSQL
-outputs timestamps as expected, in the selected timezone. If you manage an
-application with users in different time zones and you want to display time
-in their own local preferred time zone, then you can *set timezone* in your
-application code before doing any timestamp related processing, and have
-PostgreSQL do all the hard work for you.
+~~~ csv
+"211.141.115.145";"2005-05-13 04:10:18 -0500";"GET / HTTP/1.1";"403"
+~~~
 
-Finally, when selecting back from the *tstz* table, we see that the column
-*tstz* realizes that both the inserted values actually are the same point in
-time, but seen from different places in the world, whereas the *ts* column
-makes it impossible to compare the entries and realize they actually
-happened at exactly the same time.
+Being mostly interested into network address types, the transformation from
+the Apache access log format to CSV is lossy here, we keep only some of the
+fields we might be interested into.
 
-As said before, even when using timestamps *with* time zone, PostgreSQL will
-not store the time zone in use at input time, so there's no way from our
-*tstz* table to know that the entries are at the same time but just from
-different places.
+One of the things that's possible to implement thanks to the PostgreSQL
+*inet* data type is an analysis of */24* networks that are to be found in
+the logs.
 
-The opening of this section links to [The Long, Painful History of
-Time](http://naggum.no/lugm-time.html), and if you didn't read it yet, maybe
-now is a good time. Allow me to quote a relevant part of the article here:
+# Network Address Masks, CIDR
 
-> _The basic problem with time is that we need to express both time and
-> place whenever we want to place some event in time and space, yet we tend
-> to assume spatial coordinates even more than we assume temporal
-> coordinates, and in the case of time in ordinary communication, it is
-> simply left out entirely. Despite the existence of time zones and strange
-> daylight saving time regimes around the world, most people are blithely
-> unaware of their own time zone and certainly of how it relates to standard
-> references. Most people are equally unaware that by choosing a notation
-> that is close to the spoken or written expression of dates, they make it
-> meaningless to people who may not share the culture, but can still read
-> the language. It is unlikely that people will change enough to put these
-> issues to rest, so responsible computer people need to address the issues
-> and resist the otherwise overpowering urge to abbreviate and drop
-> context._
-
-Several options are available to input timestamp values in PostgreSQL. The
-easiest is to use the ISO format, so if your application's code allows that
-you're all set. In the following example we leave the time zone out, as
-usually, it's handled by the *timezone* session parameter, as seen above. If
-you need to, of course, you can input the time zone in the timestamp values
-directly:
+To enable that analysis, we can use the *set_masklen()* function which
+allows us to transforms an IP address into an arbitrary CIDR network
+address:
 
 ~~~ sql
-select timestamptz '2017-01-08 04:05:06',
-       timestamptz '2017-01-08 04:05:06+02';
+select distinct on (ip)
+       ip,
+       set_masklen(ip, 24) as inet_24,
+       set_masklen(ip::cidr, 24) as cidr_24
+  from access_log
+ limit 10;
 ~~~
 
-At insert or update time, use the same literal strings without the type
-decoration: PostgreSQL already knows the type of the target column, and it
-uses that to parse the values literal in the DML statement.
+And we can see that if we keep the data type as *inet*, we still get the
+full IP address with the */24* network notation added. To have the *.0/24*
+notation we need to be using *cidr*:
 
-Some application use-cases only need the date. Then use the *date* data type
-in PostgreSQL. It is of course then possible to compare a *date* and a
-*timestamp with time zone* in your SQL queries, and even to append a time
-offset on top of your date to construct a *timestamp*.
+~~~ pqsl
+      ip       │     inet_24      │     cidr_24     
+═══════════════╪══════════════════╪═════════════════
+ 4.35.221.243  │ 4.35.221.243/24  │ 4.35.221.0/24
+ 4.152.207.126 │ 4.152.207.126/24 │ 4.152.207.0/24
+ 4.152.207.238 │ 4.152.207.238/24 │ 4.152.207.0/24
+ 4.249.111.162 │ 4.249.111.162/24 │ 4.249.111.0/24
+ 12.1.223.132  │ 12.1.223.132/24  │ 12.1.223.0/24
+ 12.8.192.60   │ 12.8.192.60/24   │ 12.8.192.0/24
+ 12.33.114.7   │ 12.33.114.7/24   │ 12.33.114.0/24
+ 12.47.120.130 │ 12.47.120.130/24 │ 12.47.120.0/24
+ 12.172.137.4  │ 12.172.137.4/24  │ 12.172.137.0/24
+ 18.194.1.122  │ 18.194.1.122/24  │ 18.194.1.0/24
+(10 rows)
+~~~
 
-# Time Intervals
-
-PostgreSQL implements an *interval* data type along with the *time*, *date*
-and *timestamptz* data types. An *interval* describes a duration, like a
-month or two weeks, or even a millisecond:
+Of course, note that you could be analyzing other networks than */24*:
 
 ~~~ sql
-set intervalstyle to postgres;
-
-select interval '1 month',
-       interval '2 weeks',
-       2 * interval '1 week',
-       78389 * interval '1 ms';
+select distinct on (ip)
+       ip,
+       set_masklen(ip::cidr, 27) as cidr_27,
+       set_masklen(ip::cidr, 28) as cidr_28
+  from access_log
+ limit 10;
 ~~~
 
-The default PostgreSQL output looks like this:
+This computes for us the proper starting ip addresses for our CIDR notation
+for us, of course. After all, what's the point of using proper data types if
+not for advanced processing?
 
 ~~~ psql
- interval │ interval │ ?column? │   ?column?   
-══════════╪══════════╪══════════╪══════════════
- 1 mon    │ 14 days  │ 14 days  │ 00:01:18.389
-(1 row)
+      ip       │     cidr_27      │     cidr_28      
+═══════════════╪══════════════════╪══════════════════
+ 4.35.221.243  │ 4.35.221.224/27  │ 4.35.221.240/28
+ 4.152.207.126 │ 4.152.207.96/27  │ 4.152.207.112/28
+ 4.152.207.238 │ 4.152.207.224/27 │ 4.152.207.224/28
+ 4.249.111.162 │ 4.249.111.160/27 │ 4.249.111.160/28
+ 12.1.223.132  │ 12.1.223.128/27  │ 12.1.223.128/28
+ 12.8.192.60   │ 12.8.192.32/27   │ 12.8.192.48/28
+ 12.33.114.7   │ 12.33.114.0/27   │ 12.33.114.0/28
+ 12.47.120.130 │ 12.47.120.128/27 │ 12.47.120.128/28
+ 12.172.137.4  │ 12.172.137.0/27  │ 12.172.137.0/28
+ 18.194.1.122  │ 18.194.1.96/27   │ 18.194.1.112/28
+(10 rows)
 ~~~
 
-Several *intervalstyle* values are possible, and the setting
-*postgres_verbose* is quite nice for interactive *psql* sessions:
+# Network Mask Based Reporting
+
+Equipped with this *set_masklen()* function, it's now easy to analyze our
+access logs using arbitrary CIDR network definitions.
 
 ~~~ sql
-set intervalstyle to postgres_verbose;
-
-select interval '1 month',
-       interval '2 weeks',
-       2 * interval '1 week',
-       78389 * interval '1 ms';
+  select set_masklen(ip::cidr, 24) as network,
+         count(*) as requests,
+         array_length(array_agg(distinct ip), 1) as ipcount
+    from access_log
+group by network
+  having array_length(array_agg(distinct ip), 1) > 1
+order by requests desc, ipcount desc;
 ~~~
 
-This time we get a user-friendly output:
+In our case, we get the following result:
 
 ~~~ psql
- interval │ interval  │ ?column?  │      ?column?       
-══════════╪═══════════╪═══════════╪═════════════════════
- @ 1 mon  │ @ 14 days │ @ 14 days │ @ 1 min 18.389 secs
-(1 row)
-~~~
-
-How long is a month? Well, it depends on which month, and PostgreSQL knows
-that:
-
-~~~ sql
-select d::date as month,
-       (d + interval '1 month' - interval '1 day')::date as month_end,
-       (d + interval '1 month')::date as next_month,
-       (d + interval '1 month')::date - d::date as days
-
-  from generate_series(
-                       date '2017-01-01',
-                       date '2017-12-01',
-                       interval '1 month'
-                      )
-       as t(d);
-~~~
-
-When you attach an *interval* to a date or timestamp in PostgreSQL then the
-number of days in that interval adjusts to the specific calendar entry
-you've picked. Otherwise, an interval of a month is considered to be 30
-days. Here we see that computing the last day of February is very easy:
-
-~~~ psql
-   month    │ month_end  │ next_month │ days 
-════════════╪════════════╪════════════╪══════
- 2017-01-01 │ 2017-01-31 │ 2017-02-01 │   31
- 2017-02-01 │ 2017-02-28 │ 2017-03-01 │   28
- 2017-03-01 │ 2017-03-31 │ 2017-04-01 │   31
- 2017-04-01 │ 2017-04-30 │ 2017-05-01 │   30
- 2017-05-01 │ 2017-05-31 │ 2017-06-01 │   31
- 2017-06-01 │ 2017-06-30 │ 2017-07-01 │   30
- 2017-07-01 │ 2017-07-31 │ 2017-08-01 │   31
- 2017-08-01 │ 2017-08-31 │ 2017-09-01 │   31
- 2017-09-01 │ 2017-09-30 │ 2017-10-01 │   30
- 2017-10-01 │ 2017-10-31 │ 2017-11-01 │   31
- 2017-11-01 │ 2017-11-30 │ 2017-12-01 │   30
- 2017-12-01 │ 2017-12-31 │ 2018-01-01 │   31
+     network      │ requests │ ipcount 
+══════════════════╪══════════╪═════════
+ 4.152.207.0/24   │      140 │       2
+ 222.95.35.0/24   │       59 │       2
+ 211.59.0.0/24    │       32 │       2
+ 61.10.7.0/24     │       25 │      25
+ 222.166.160.0/24 │       25 │      24
+ 219.153.10.0/24  │        7 │       3
+ 218.78.209.0/24  │        6 │       4
+ 193.109.122.0/24 │        5 │       5
+ 204.102.106.0/24 │        3 │       3
+ 66.134.74.0/24   │        2 │       2
+ 219.133.137.0/24 │        2 │       2
+ 61.180.25.0/24   │        2 │       2
 (12 rows)
 ~~~
 
 # Conclusion
 
-PostgreSQL's implementation of the calendar is very good, so use it!
+When analyzing logs containing IP addresses in ipv4 and ipv6 formats is
+something you need to do, then PostgreSQL has you covered here with its CIDR
+and INET datatypes. Not only will PostgreSQL make sure that the values
+managed actually are IP addresses, it knows how to do basic processing of
+the network addresses.
 
 {{< figure class="right"
              src="/img/MasteringPostgreSQLinAppDev-Cover-th.png"
