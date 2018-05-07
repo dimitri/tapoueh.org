@@ -1,0 +1,1779 @@
+
+
+  
+    
+  
+
+
+  
+
+
+
+
+  
+
+
+  
+
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Hugo 0.31.1">
+    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
+    <title>PostgreSQL Data Types: Point</title>
+    <meta name="author" content="Dimitri Fontaine">
+    <meta name="keywords" content="">
+
+    <link rel="icon" href="/favicon.ico">
+    
+
+    
+    <meta name="description" content="Continuing our series of PostgreSQL Data Types today
+we&rsquo;re going to introduce the PostgreSQL Point type.
+
+In order to put the Point datatype in a context where it makes sense, we&rsquo;re
+going to download a complete geolocation data set and normalize it, thus
+making good use of both the normalization good practice and those other
+PostgreSQL data types we&rsquo;ve been learning about in the previous articles of
+this series.
+
+Buckle-up, this is a long article with a lot of SQL inside.">
+    <meta property="og:description" content="Continuing our series of PostgreSQL Data Types today
+we&rsquo;re going to introduce the PostgreSQL Point type.
+
+In order to put the Point datatype in a context where it makes sense, we&rsquo;re
+going to download a complete geolocation data set and normalize it, thus
+making good use of both the normalization good practice and those other
+PostgreSQL data types we&rsquo;ve been learning about in the previous articles of
+this series.
+
+Buckle-up, this is a long article with a lot of SQL inside.">
+    <meta property="og:type" content="blog">
+    <meta property="og:title" content="PostgreSQL Data Types: Point">
+    <meta property="og:url" content="/blog/2018/05/postgresql-data-types-point/">
+    <meta property="og:site_name" content="Dimitri Fontaine, PostgreSQL Expert">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="PostgreSQL Data Types: Point">
+    <meta name="twitter:description" content="Continuing our series of PostgreSQL Data Types today
+we&rsquo;re going to introduce the PostgreSQL Point type.
+
+In order to put the Point datatype in a context where it makes sense, we&rsquo;re
+going to download a complete geolocation data set and normalize it, thus
+making good use of both the normalization good practice and those other
+PostgreSQL data types we&rsquo;ve been learning about in the previous articles of
+this series.
+
+Buckle-up, this is a long article with a lot of SQL inside.">
+    
+      <meta name="twitter:creator" content="@tapoueh">
+    
+    
+
+    
+    
+
+    
+      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
+    
+
+    
+      <meta property="og:image" content="https://tapoueh.org/img/earth-tz-logo.jpg">
+    
+    
+      <meta property="og:image" content="https://tapoueh.org/img/earth.jpg">
+    
+    
+
+    
+
+    
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
+    
+    
+    <link rel="stylesheet" href="/css/style-jsjn0006wyhpyzivf6yceb31gvpjatbcs3qzjvlumobfnugccvobqwxnnaj8.min.css" />
+    
+    
+      <link rel="stylesheet" href="https://tapoueh.org/css/dim.css">
+    
+      <link rel="stylesheet" href="https://tapoueh.org/css/nav.css">
+    
+
+    
+      
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-47059482-1', 'auto');
+ga('send', 'pageview');
+</script>
+
+    
+    
+  </head>
+
+  <body>
+    <div id="blog">
+      <header id="header" data-behavior="5">
+  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+  <div class="navbar-collapse collapse header-title" id="navigation">
+    <ul class="nav navbar-nav navbar-right">
+      
+      <li class="dropdown">
+        
+        <a href="/">blog</a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a href="/conf/">talks</a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a href="http://pgloader.io/">pgloader</a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a href="http://masteringpostgresql.com/">Mastering PostgreSQL</a>
+        
+      </li>
+      
+    </ul>
+  </div>
+
+  
+    
+      <a class="header-right-icon "
+         href="http://masteringpostgresql.com" target="_blank">
+    
+    
+      <i class="fa fa-lg fa-book"></i>
+    
+    
+    </a>
+  
+</header>
+
+      <nav id="sidebar" data-behavior="5">
+  <div class="sidebar-container">
+    
+      <div class="sidebar-profile">
+        <a href="/#about">
+          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+        </a>
+        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
+        
+          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
+        
+      </div>
+    
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
+      
+      <span class="sidebar-button-desc">Blog</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/about/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
+      
+      <span class="sidebar-button-desc">About</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories/yesql/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-database"></i>
+      
+      <span class="sidebar-button-desc">YeSQL</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="http://masteringpostgresql.com" target="_blank" rel="noopener">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
+      
+      <span class="sidebar-button-desc">Mastering PostgreSQL</span>
+    </a>
+  </li>
+
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+      
+      <span class="sidebar-button-desc">GitHub</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+      
+      <span class="sidebar-button-desc">Twitter</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+      
+      <span class="sidebar-button-desc">Categories</span>
+    </a>
+  </li>
+
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/index.xml">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+      
+      <span class="sidebar-button-desc">RSS</span>
+    </a>
+  </li>
+
+
+    </ul>
+  </div>
+</nav>
+
+      
+  <div class="post-header-cover
+              text-left
+              post-header-cover--partial"
+       style="background-image:url('/img/earth.jpg')"
+       data-behavior="5">
+    
+      <div class="post-header main-content-wrap text-left">
+  
+    <h1 class="post-title" itemprop="headline">
+      PostgreSQL Data Types: Point
+    </h1>
+  
+  
+  <div class="postShorten-meta post-meta">
+    
+      <time itemprop="datePublished" datetime="2018-05-07T10:46:17&#43;02:00">
+        
+  
+  
+  
+  
+    Monday 07  2018
+  
+
+      </time>
+    
+    
+  
+  
+    <span></span>
+    
+      <a class="category-link" href="/categories/postgresql">PostgreSQL</a>, 
+    
+      <a class="category-link" href="/categories/yesql">YeSQL</a>
+    
+  
+
+  </div>
+
+</div>
+    
+  </div>
+
+
+      <div id="main" data-behavior="5"
+        class="hasCover
+               hasCoverMetaIn
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
+          
+          <div class="post-content markdown" itemprop="articleBody">
+            <div class="main-content-wrap">
+              <p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL Point type.</p>
+
+<p>In order to put the Point datatype in a context where it makes sense, we&rsquo;re
+going to download a complete geolocation data set and normalize it, thus
+making good use of both the normalization good practice and those other
+PostgreSQL data types we&rsquo;ve been learning about in the previous articles of
+this series.</p>
+
+<p>Buckle-up, this is a long article with a lot of SQL inside.</p>
+
+<p>
+<h1 id="table-of-contents"></h1><nav id="TableOfContents">
+<ul>
+<li><a href="#geonames">Geonames</a></li>
+<li><a href="#normalizing-our-geonames-data-model">Normalizing our Geonames data model</a>
+<ul>
+<li><a href="#features">Features</a></li>
+<li><a href="#countries">Countries</a></li>
+<li><a href="#administrative-zoning">Administrative Zoning</a></li>
+</ul></li>
+<li><a href="#geolocation-data">Geolocation Data</a></li>
+<li><a href="#geolocation-gist-indexing">Geolocation GiST Indexing</a></li>
+<li><a href="#a-sampling-of-countries">A Sampling of Countries</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+</nav></p>
+
+<h1 id="geonames">Geonames</h1>
+
+<blockquote>
+<p><em>The <a href="http://www.geonames.org">GeoNames</a> geographical database covers all
+countries and contains over eleven million place names that are available
+for download free of charge.</em></p>
+</blockquote>
+
+<p>The website offers online querying and all the data is made available to
+download and use. As is often the case, it comes in an ad-hoc format and
+requires some processing and normalization before it&rsquo;s usable in a
+PostgreSQL database.</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
+
+<span style="color:#00a">create</span> <span style="color:#00a">schema</span> <span style="color:#00a">if</span> <span style="color:#00a">not</span> <span style="color:#00a">exists</span> raw;
+
+<span style="color:#00a">create</span> <span style="color:#00a">table</span> raw.geonames
+ (
+   geonameid         <span style="color:#0aa">bigint</span>,
+   name              <span style="color:#0aa">text</span>,
+   asciiname         <span style="color:#0aa">text</span>,
+   alternatenames    <span style="color:#0aa">text</span>,
+   latitude          double <span style="color:#00a">precision</span>,
+   longitude         double <span style="color:#00a">precision</span>,
+   feature_class     <span style="color:#0aa">text</span>,
+   feature_code      <span style="color:#0aa">text</span>,
+   country_code      <span style="color:#0aa">text</span>,
+   cc2               <span style="color:#0aa">text</span>,
+   admin1_code       <span style="color:#0aa">text</span>,
+   admin2_code       <span style="color:#0aa">text</span>,
+   admin3_code       <span style="color:#0aa">text</span>,
+   admin4_code       <span style="color:#0aa">text</span>,
+   population        <span style="color:#0aa">bigint</span>,
+   elevation         <span style="color:#0aa">bigint</span>,
+   dem               <span style="color:#0aa">bigint</span>,
+   timezone          <span style="color:#0aa">text</span>,
+   modification      <span style="color:#0aa">date</span>
+ );
+
+<span style="color:#00a">create</span> <span style="color:#00a">table</span> raw.country
+ (
+  iso                 <span style="color:#0aa">text</span>,
+  iso3                <span style="color:#0aa">text</span>,
+  isocode             <span style="color:#0aa">integer</span>,
+  fips                <span style="color:#0aa">text</span>,
+  name                <span style="color:#0aa">text</span>,
+  capital             <span style="color:#0aa">text</span>,
+  area                double <span style="color:#00a">precision</span>,
+  population          <span style="color:#0aa">bigint</span>,
+  continent           <span style="color:#0aa">text</span>,
+  tld                 <span style="color:#0aa">text</span>,
+  currency_code       <span style="color:#0aa">text</span>,
+  currency_name       <span style="color:#0aa">text</span>,
+  phone               <span style="color:#0aa">text</span>,
+  postal_code_format  <span style="color:#0aa">text</span>,
+  postal_code_regex   <span style="color:#0aa">text</span>,
+  languages           <span style="color:#0aa">text</span>,
+  geonameid           <span style="color:#0aa">bigint</span>,
+  neighbours          <span style="color:#0aa">text</span>,
+  fips_equiv          <span style="color:#0aa">text</span>
+ );
+
+<span style="color:#f00;background-color:#faa">\</span><span style="color:#00a">copy</span> raw.country <span style="color:#00a">from</span> <span style="color:#a50">&#39;countryInfoData.txt&#39;</span> <span style="color:#00a">with</span> csv <span style="color:#00a">delimiter</span> E<span style="color:#a50">&#39;\t&#39;</span>
+
+<span style="color:#00a">create</span> <span style="color:#00a">table</span> raw.feature
+ (
+  code        <span style="color:#0aa">text</span>,
+  description <span style="color:#0aa">text</span>,
+  <span style="color:#00a">comment</span>     <span style="color:#0aa">text</span>
+ );
+
+<span style="color:#f00;background-color:#faa">\</span><span style="color:#00a">copy</span> raw.feature <span style="color:#00a">from</span> <span style="color:#a50">&#39;featureCodes_en.txt&#39;</span> <span style="color:#00a">with</span> csv <span style="color:#00a">delimiter</span> E<span style="color:#a50">&#39;\t&#39;</span>
+
+<span style="color:#00a">create</span> <span style="color:#00a">table</span> raw.admin1
+ (
+  code       <span style="color:#0aa">text</span>,
+  name       <span style="color:#0aa">text</span>,
+  ascii_name <span style="color:#0aa">text</span>,
+  geonameid  <span style="color:#0aa">bigint</span>
+ );
+
+<span style="color:#f00;background-color:#faa">\</span><span style="color:#00a">copy</span> raw.admin1 <span style="color:#00a">from</span> <span style="color:#a50">&#39;admin1CodesASCII.txt&#39;</span> <span style="color:#00a">with</span> csv <span style="color:#00a">delimiter</span> E<span style="color:#a50">&#39;\t&#39;</span>
+
+<span style="color:#00a">create</span> <span style="color:#00a">table</span> raw.admin2
+ (
+  code       <span style="color:#0aa">text</span>,
+  name       <span style="color:#0aa">text</span>,
+  ascii_name <span style="color:#0aa">text</span>,
+  geonameid  <span style="color:#0aa">bigint</span>
+ );
+
+<span style="color:#f00;background-color:#faa">\</span><span style="color:#00a">copy</span> raw.admin2 <span style="color:#00a">from</span> <span style="color:#a50">&#39;admin2Codes.txt&#39;</span> <span style="color:#00a">with</span> csv <span style="color:#00a">delimiter</span> E<span style="color:#a50">&#39;\t&#39;</span>
+
+<span style="color:#00a">commit</span>;</code></pre></div>
+<p>Once we have loaded the raw data from the published files at
+<a href="http://download.geonames.org/export/dump/">http://download.geonames.org/export/dump/</a>, we can normalize the content
+and begin to use the data.</p>
+
+<p>You might notice that the SQL file above is missing the <code>\copy</code> command for
+the <em>raw.geonames</em> table. That&rsquo;s because <em>copy</em> failed to load the file
+properly: some location names include single and double quotes, and those
+are not properly quoted… and not properly escaped. So we resorted to
+pgloader to load the file, with the following command:</p>
+
+<pre><code>load csv
+  from /tmp/geonames/allCountries.txt
+  into pgsql://appdev@/appdev
+  target table raw.geonames
+
+  with fields terminated by '\t',
+       fields optionally enclosed by '§',
+       fields escaped by '%',
+       truncate;
+</code></pre>
+
+<p>Here&rsquo;s the summary obtained when loading the dataset on the laptop used to
+prepare this book:</p>
+
+<pre><code>             table name     errors       rows      bytes      total time
+-----------------------  ---------  ---------  ---------  --------------
+                  fetch          0          0                     0.009s
+-----------------------  ---------  ---------  ---------  --------------
+           raw.geonames          0   11540466     1.5 GB       6m43.218s
+-----------------------  ---------  ---------  ---------  --------------
+        Files Processed          0          1                     0.026s
+COPY Threads Completion          0          2                  6m43.319s
+-----------------------  ---------  ---------  ---------  --------------
+      Total import time          ✓          3     1.5 GB       6m43.345s
+</code></pre>
+
+<h1 id="normalizing-our-geonames-data-model">Normalizing our Geonames data model</h1>
+
+<p>To normalize the schema, we apply the rules from the definition of the
+<em>normal forms</em>. Basically, we want to avoid any dependency in between the
+attributes of our models. Any dependency means that we need to create a
+separate table where to manage a set of data that makes sense in isolation
+is managed.</p>
+
+<div class="alert info ">
+  <p>I did a full talk on the topic of <a href="https://www.postgresql.eu/events/nordicpgday2018/schedule/session/1896-data-modeling-normalization-and-denormalization/">Data Modeling, Normalization and
+Denormalization</a>
+at <a href="https://2018.nordicpgday.org">pgday Nordic</a> this year in Oslo, and the
+slides are of course available in the <a href="/conf/">Talks</a> section here. Check-it
+out!</p>
+</div>
+
+<p>The <em>raw.geonames</em> table uses several reference data that <em>GeoNames</em> provide
+as separate downloads. We then need to begin with fixing the reference data
+used in the model.</p>
+
+<h2 id="features">Features</h2>
+
+<p>The <em>GeoNames</em> model tags all of its geolocation data with a <em>feature</em> class
+and a feature. The description for those codes are detailed on the <a href="http://www.geonames.org/export/codes.html">GeoNames
+codes</a> page and available for
+download in the <em>featureCodes_en.txt</em> file. Some of the information we need
+is only available in a text form and has to be reported manually.</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
+
+<span style="color:#00a">create</span> <span style="color:#00a">schema</span> <span style="color:#00a">if</span> <span style="color:#00a">not</span> <span style="color:#00a">exists</span> geoname;
+
+<span style="color:#00a">create</span> <span style="color:#00a">table</span> geoname.<span style="color:#00a">class</span>
+ (
+  <span style="color:#00a">class</span>        <span style="color:#0aa">char</span>(<span style="color:#099">1</span>) <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
+  description  <span style="color:#0aa">text</span>
+ );
+
+<span style="color:#00a">insert</span> <span style="color:#00a">into</span> geoname.<span style="color:#00a">class</span> (<span style="color:#00a">class</span>, description)
+     <span style="color:#00a">values</span> (<span style="color:#a50">&#39;A&#39;</span>, <span style="color:#a50">&#39;country, state, region,...&#39;</span>),
+            (<span style="color:#a50">&#39;H&#39;</span>, <span style="color:#a50">&#39;stream, lake, ...&#39;</span>),
+            (<span style="color:#a50">&#39;L&#39;</span>, <span style="color:#a50">&#39;parks,area, ...&#39;</span>),
+            (<span style="color:#a50">&#39;P&#39;</span>, <span style="color:#a50">&#39;city, village,...&#39;</span>),
+            (<span style="color:#a50">&#39;R&#39;</span>, <span style="color:#a50">&#39;road, railroad &#39;</span>),
+            (<span style="color:#a50">&#39;S&#39;</span>, <span style="color:#a50">&#39;spot, building, farm&#39;</span>),
+            (<span style="color:#a50">&#39;T&#39;</span>, <span style="color:#a50">&#39;mountain,hill,rock,... &#39;</span>),
+            (<span style="color:#a50">&#39;U&#39;</span>, <span style="color:#a50">&#39;undersea&#39;</span>),
+            (<span style="color:#a50">&#39;V&#39;</span>, <span style="color:#a50">&#39;forest,heath,...&#39;</span>);
+
+<span style="color:#00a">create</span> <span style="color:#00a">table</span> geoname.feature
+ (
+  <span style="color:#00a">class</span>       <span style="color:#0aa">char</span>(<span style="color:#099">1</span>) <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">references</span> geoname.<span style="color:#00a">class</span>(<span style="color:#00a">class</span>),
+  feature     <span style="color:#0aa">text</span>    <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
+  description <span style="color:#0aa">text</span>,
+  <span style="color:#00a">comment</span>     <span style="color:#0aa">text</span>,
+
+  <span style="color:#00a">primary</span> <span style="color:#00a">key</span>(<span style="color:#00a">class</span>, feature)
+ );
+
+<span style="color:#00a">insert</span> <span style="color:#00a">into</span> geoname.feature
+     <span style="color:#00a">select</span> <span style="color:#00a">substring</span>(code <span style="color:#00a">from</span> <span style="color:#099">1</span> <span style="color:#00a">for</span> <span style="color:#099">1</span>) <span style="color:#00a">as</span> <span style="color:#00a">class</span>,
+            <span style="color:#00a">substring</span>(code <span style="color:#00a">from</span> <span style="color:#099">3</span>) <span style="color:#00a">as</span> feature,
+            description,
+            <span style="color:#00a">comment</span>
+       <span style="color:#00a">from</span> raw.feature
+      <span style="color:#00a">where</span> feature.code &lt;&gt; <span style="color:#a50">&#39;null&#39;</span>;
+
+<span style="color:#00a">commit</span>;</code></pre></div>
+<p>As we see in this file we have to deal with an explicit <em>&lsquo;null&rsquo;</em> entry:
+there&rsquo;s a text that is four letters long in the last line (and reads <code>null</code>)
+and that we don&rsquo;t want to load.</p>
+
+<p>Also, the provided file uses the notation <em>A.ADM1</em> for an entry of class <em>A</em>
+and feature <em>ADM1</em>, which we split into proper attributes in our
+normalization process. The natural key for the <em>geoname.feature</em> table is
+the combination of the <em>class</em> and the <em>feature</em>.</p>
+
+<p>Once all the data is loaded and normalized, we can get some nice statistics:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span> <span style="color:#00a">class</span>, feature, description, <span style="color:#00a">count</span>(*)
+    <span style="color:#00a">from</span> feature
+         <span style="color:#00a">left</span> <span style="color:#00a">join</span> geoname <span style="color:#00a">using</span>(<span style="color:#00a">class</span>,feature)
+<span style="color:#00a">group</span> <span style="color:#00a">by</span> <span style="color:#00a">class</span>, feature
+<span style="color:#00a">order</span> <span style="color:#00a">by</span> <span style="color:#00a">count</span> <span style="color:#00a">desc</span>
+   <span style="color:#00a">limit</span> <span style="color:#099">10</span>;</code></pre></div>
+<p>This is a very simple top-10 query, per feature:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql"> class │ feature │   description   │  count  
+═══════╪═════════╪═════════════════╪═════════
+ P     │ PPL     │ populated place │ 1711458
+ H     │ STM     │ stream          │  300283
+ S     │ CH      │ church          │  236394
+ S     │ FRM     │ farm            │  234536
+ S     │ SCH     │ school          │  223402
+ T     │ HLL     │ hill            │  212659
+ T     │ MT      │ mountain        │  192454
+ S     │ HTL     │ hotel           │  170896
+ H     │ LK      │ lake            │  162922
+ S     │ BLDG    │ building(s)     │  143742
+(10 rows)</code></pre></div>
+<h2 id="countries">Countries</h2>
+
+<p>The <em>raw.country</em> table has several normalization issues. Before we list
+them, having a look at some data will help us:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql">─[ RECORD 1 ]──────┬─────────────────────────
+iso                │ FR
+iso3               │ FRA
+isocode            │ 250
+fips               │ FR
+name               │ France
+capital            │ Paris
+area               │ 547030
+population         │ 64768389
+continent          │ EU
+tld                │ .fr
+currency_code      │ EUR
+currency_name      │ Euro
+phone              │ 33
+postal_code_format │ #####
+postal_code_regex  │ ^(\d{5})$
+languages          │ fr-FR,frp,br,co,ca,eu,oc
+geonameid          │ 3017382
+neighbours         │ CH,DE,BE,LU,IT,AD,MC,ES
+fips_equiv         │ ¤</code></pre></div>
+<p>The main normalization failures we see are:</p>
+
+<ul>
+<li><p>Nothing guarantees the absence of duplicate rows in the table, so we
+need to add a <em>primary key</em> constraint.</p>
+
+<p>Here the <em>isocode</em> attribute looks like the best choice, as it&rsquo;s both
+unique and an integer.</p></li>
+
+<li><p>The <em>languages</em> and <em>neighbours</em> attributes both contain multiple-valued
+content, a comma-separated list of either languages or country codes.</p></li>
+
+<li><p>To reach <em>2NF</em> then, all non-key attributes should be dependent on the
+entire of the key, and the currencies and postal code formats are not
+dependent on the country.</p></li>
+</ul>
+
+<p>A good way to check for dependencies on the key attributes is with the
+following type of query:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span> currency_code, currency_name, <span style="color:#00a">count</span>(*)
+    <span style="color:#00a">from</span> raw.country
+<span style="color:#00a">group</span> <span style="color:#00a">by</span> currency_code, currency_name
+<span style="color:#00a">order</span> <span style="color:#00a">by</span> <span style="color:#00a">count</span> <span style="color:#00a">desc</span>
+   <span style="color:#00a">limit</span> <span style="color:#099">5</span>;</code></pre></div>
+<p>In our dataset, we have the following result, showing 34 countries using the
+Euro currency:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql"> currency_code │ currency_name │ count 
+═══════════════╪═══════════════╪═══════
+ EUR           │ Euro          │    34
+ USD           │ Dollar        │    16
+ AUD           │ Dollar        │     8
+ XOF           │ Franc         │     8
+ XCD           │ Dollar        │     8
+(5 rows)</code></pre></div>
+<p>In the context of this article, we&rsquo;re going to pass on the currency,
+language, and postal code formats of countries and focus on some information
+only. That gives us the following normalization process:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
+
+<span style="color:#00a">create</span> <span style="color:#00a">schema</span> <span style="color:#00a">if</span> <span style="color:#00a">not</span> <span style="color:#00a">exists</span> geoname;
+
+<span style="color:#00a">create</span> <span style="color:#00a">table</span> geoname.continent
+ (
+  code    <span style="color:#0aa">char</span>(<span style="color:#099">2</span>) <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
+  name    <span style="color:#0aa">text</span>
+ );
+
+<span style="color:#00a">insert</span> <span style="color:#00a">into</span> geoname.continent(code, name)
+     <span style="color:#00a">values</span> (<span style="color:#a50">&#39;AF&#39;</span>, <span style="color:#a50">&#39;Africa&#39;</span>),
+            (<span style="color:#a50">&#39;NA&#39;</span>, <span style="color:#a50">&#39;North America&#39;</span>),
+            (<span style="color:#a50">&#39;OC&#39;</span>, <span style="color:#a50">&#39;Oceania&#39;</span>),
+            (<span style="color:#a50">&#39;AN&#39;</span>, <span style="color:#a50">&#39;Antarctica&#39;</span>),
+            (<span style="color:#a50">&#39;AS&#39;</span>, <span style="color:#a50">&#39;Asia&#39;</span>),
+            (<span style="color:#a50">&#39;EU&#39;</span>, <span style="color:#a50">&#39;Europe&#39;</span>),
+            (<span style="color:#a50">&#39;SA&#39;</span>, <span style="color:#a50">&#39;South America&#39;</span>);
+
+<span style="color:#00a">create</span> <span style="color:#00a">table</span> geoname.country
+ (
+  isocode   <span style="color:#0aa">integer</span> <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
+  iso       <span style="color:#0aa">char</span>(<span style="color:#099">2</span>) <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
+  iso3      <span style="color:#0aa">char</span>(<span style="color:#099">3</span>) <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
+  fips      <span style="color:#0aa">text</span>,
+  name      <span style="color:#0aa">text</span>,
+  capital   <span style="color:#0aa">text</span>,
+  continent <span style="color:#0aa">char</span>(<span style="color:#099">2</span>) <span style="color:#00a">references</span> geoname.continent(code),
+  tld       <span style="color:#0aa">text</span>,
+  geonameid <span style="color:#0aa">bigint</span>
+ );
+
+<span style="color:#00a">insert</span> <span style="color:#00a">into</span> geoname.country
+     <span style="color:#00a">select</span> isocode, iso, iso3, fips, name,
+            capital, continent, tld, geonameid
+       <span style="color:#00a">from</span> raw.country;
+
+<span style="color:#00a">create</span> <span style="color:#00a">table</span> geoname.neighbour
+ (
+  isocode   <span style="color:#0aa">integer</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">references</span> geoname.country(isocode),
+  neighbour <span style="color:#0aa">integer</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">references</span> geoname.country(isocode),
+
+  <span style="color:#00a">primary</span> <span style="color:#00a">key</span>(isocode, neighbour)
+ );
+
+<span style="color:#00a">insert</span> <span style="color:#00a">into</span> geoname.neighbour
+   <span style="color:#00a">with</span> n <span style="color:#00a">as</span>(
+     <span style="color:#00a">select</span> isocode,
+            regexp_split_to_table(neighbours, <span style="color:#a50">&#39;,&#39;</span>) <span style="color:#00a">as</span> neighbour
+       <span style="color:#00a">from</span> raw.country
+   )
+   <span style="color:#00a">select</span> n.isocode,
+          country.isocode
+     <span style="color:#00a">from</span> n
+          <span style="color:#00a">join</span> geoname.country
+            <span style="color:#00a">on</span> country.iso = n.neighbour;
+
+<span style="color:#00a">commit</span>;</code></pre></div>
+<p>Note that we add the continent list (for completeness in the region drill
+down) and then introduce the <em>geoname.neighbour</em> part of the model. Having
+an association table that <em>links</em> every country with its neighbours on the
+map (a neighbour has a common border) allows us to easily query for the
+information:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> neighbour.iso,
+       neighbour.name,
+       neighbour.capital,
+       neighbour.tld
+
+  <span style="color:#00a">from</span> geoname.neighbour <span style="color:#00a">as</span> border
+       
+       <span style="color:#00a">join</span> geoname.country <span style="color:#00a">as</span> country
+         <span style="color:#00a">on</span> border.isocode = country.isocode
+       
+       <span style="color:#00a">join</span> geoname.country <span style="color:#00a">as</span> neighbour
+         <span style="color:#00a">on</span> border.neighbour = neighbour.isocode
+
+ <span style="color:#00a">where</span> country.iso = <span style="color:#a50">&#39;FR&#39;</span>;</code></pre></div>
+<p>So we get the following list of neighbor countries for France:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql"> iso │    name     │     capital      │ tld 
+═════╪═════════════╪══════════════════╪═════
+ CH  │ Switzerland │ Bern             │ .ch
+ DE  │ Germany     │ Berlin           │ .de
+ BE  │ Belgium     │ Brussels         │ .be
+ LU  │ Luxembourg  │ Luxembourg       │ .lu
+ IT  │ Italy       │ Rome             │ .it
+ AD  │ Andorra     │ Andorra la Vella │ .ad
+ MC  │ Monaco      │ Monaco           │ .mc
+ ES  │ Spain       │ Madrid           │ .es
+(8 rows)</code></pre></div>
+<h2 id="administrative-zoning">Administrative Zoning</h2>
+
+<p>The raw data from the <em>GeoNames</em> website then offers an interesting
+geographical breakdown in the <em>country_code</em>, <em>admin1_code</em> and
+<em>admin2_code</em>.</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> geonameid, name, admin1_code, admin2_code
+  <span style="color:#00a">from</span> raw.geonames
+ <span style="color:#00a">where</span> country_code = <span style="color:#a50">&#39;FR&#39;</span>
+ <span style="color:#00a">limit</span> <span style="color:#099">5</span>
+<span style="color:#00a">offset</span> <span style="color:#099">50</span>;</code></pre></div>
+<p>To get an interesting result set, we select randomly from the data for
+France, where the code has to be expanded to be meaningful. With a USA based
+data set, we get states codes as <em>admin1_code</em> (e.g. <em>IL</em> for Illinois), and
+the necessity for normalized data might then be less visible.</p>
+
+<p>Of course, never use <em>offset</em> in your application queries, as seen on <a href="https://use-the-index-luke.com/no-offset">No
+Offset</a>. Here, we are doing
+interactive discovery of the data, so it is found acceptable, to some
+extent, to play with the <em>offset</em> facility.</p>
+
+<p>Here&rsquo;s the data set we get:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql"> geonameid │        name         │ admin1_code │ admin2_code 
+═══════════╪═════════════════════╪═════════════╪═════════════
+   2967132 │ Zintzel du Nord     │ 44          │ 67
+   2967133 │ Zinswiller          │ 44          │ 67
+   2967134 │ Ruisseau de Zingajo │ 94          │ 2B
+   2967135 │ Zincourt            │ 44          │ 88
+   2967136 │ Zimming             │ 44          │ 57
+(5 rows)</code></pre></div>
+<p>The <em>GeoNames</em> website provides files <em>admin1CodesASCII.txt</em> and
+<em>admin2Codes.txt</em> for us to use to normalize our data. Those files again use
+admin codes spelled as <em>AD.06</em> and <em>AF.01.1125426</em> where the <em>raw.geonames</em>
+table uses them as separate fields. That&rsquo;s a good reason to split them now.</p>
+
+<p>Here&rsquo;s the SQL to normalize the admin breakdowns, splitting the codes and
+adding necessary constraints, to ensure data quality:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
+
+<span style="color:#00a">create</span> <span style="color:#00a">schema</span> <span style="color:#00a">if</span> <span style="color:#00a">not</span> <span style="color:#00a">exists</span> geoname;
+
+<span style="color:#00a">create</span> <span style="color:#00a">table</span> geoname.region
+ (
+  isocode   <span style="color:#0aa">integer</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">references</span> geoname.country(isocode),
+  regcode   <span style="color:#0aa">text</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
+  name      <span style="color:#0aa">text</span>,
+  geonameid <span style="color:#0aa">bigint</span>,
+
+  <span style="color:#00a">primary</span> <span style="color:#00a">key</span>(isocode, regcode)
+ );
+
+<span style="color:#00a">insert</span> <span style="color:#00a">into</span> geoname.region
+   <span style="color:#00a">with</span> <span style="color:#00a">admin</span> <span style="color:#00a">as</span>
+   (
+     <span style="color:#00a">select</span> regexp_split_to_array(code, <span style="color:#a50">&#39;[.]&#39;</span>) <span style="color:#00a">as</span> code,
+            name,
+            geonameid
+       <span style="color:#00a">from</span> raw.admin1
+   )
+   <span style="color:#00a">select</span> country.isocode <span style="color:#00a">as</span> isocode,
+          code[<span style="color:#099">2</span>] <span style="color:#00a">as</span> regcode,
+          <span style="color:#00a">admin</span>.name,
+          <span style="color:#00a">admin</span>.geonameid
+     <span style="color:#00a">from</span> <span style="color:#00a">admin</span>
+          <span style="color:#00a">join</span> geoname.country
+            <span style="color:#00a">on</span> country.iso = code[<span style="color:#099">1</span>];
+
+<span style="color:#00a">create</span> <span style="color:#00a">table</span> geoname.district
+ (
+  isocode   <span style="color:#0aa">integer</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
+  regcode   <span style="color:#0aa">text</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
+  discode   <span style="color:#0aa">text</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
+  name      <span style="color:#0aa">text</span>,
+  geonameid <span style="color:#0aa">bigint</span>,
+
+  <span style="color:#00a">primary</span> <span style="color:#00a">key</span>(isocode, regcode, discode),
+  <span style="color:#00a">foreign</span> <span style="color:#00a">key</span>(isocode, regcode)
+   <span style="color:#00a">references</span> geoname.region(isocode, regcode)
+ );
+
+<span style="color:#00a">insert</span> <span style="color:#00a">into</span> geoname.district
+   <span style="color:#00a">with</span> <span style="color:#00a">admin</span> <span style="color:#00a">as</span>
+   (
+     <span style="color:#00a">select</span> regexp_split_to_array(code, <span style="color:#a50">&#39;[.]&#39;</span>) <span style="color:#00a">as</span> code,
+            name,
+            geonameid
+       <span style="color:#00a">from</span> raw.admin2
+   )
+     <span style="color:#00a">select</span> region.isocode,
+            region.regcode,
+            code[<span style="color:#099">3</span>],
+            <span style="color:#00a">admin</span>.name,
+            <span style="color:#00a">admin</span>.geonameid
+       <span style="color:#00a">from</span> <span style="color:#00a">admin</span>
+            
+            <span style="color:#00a">join</span> geoname.country
+              <span style="color:#00a">on</span> country.iso = code[<span style="color:#099">1</span>]
+            
+            <span style="color:#00a">join</span> geoname.region
+              <span style="color:#00a">on</span> region.isocode = country.isocode
+             <span style="color:#00a">and</span> region.regcode = code[<span style="color:#099">2</span>];
+
+<span style="color:#00a">commit</span>;</code></pre></div>
+<p>The previous query can now be rewritten, showing region and <em>district</em> names
+rather than <em>admin1_code</em> and <em>admin2_code</em>, which we still have internally
+in case we need them of course.</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> r.name, reg.name <span style="color:#00a">as</span> region, d.name <span style="color:#00a">as</span> district
+  <span style="color:#00a">from</span> raw.geonames r
+       
+       <span style="color:#00a">left</span> <span style="color:#00a">join</span> geoname.country
+              <span style="color:#00a">on</span> country.iso = r.country_code
+       
+       <span style="color:#00a">left</span> <span style="color:#00a">join</span> geoname.region reg
+              <span style="color:#00a">on</span> reg.isocode = country.isocode
+             <span style="color:#00a">and</span> reg.regcode = r.admin1_code
+       
+       <span style="color:#00a">left</span> <span style="color:#00a">join</span> geoname.district d
+              <span style="color:#00a">on</span> d.isocode = country.isocode
+             <span style="color:#00a">and</span> d.regcode = r.admin1_code
+             <span style="color:#00a">and</span> d.discode = r.admin2_code
+ <span style="color:#00a">where</span> country_code = <span style="color:#a50">&#39;FR&#39;</span>
+ <span style="color:#00a">limit</span> <span style="color:#099">5</span>
+<span style="color:#00a">offset</span> <span style="color:#099">50</span>;</code></pre></div>
+<p>The query uses <em>left join</em> operations because we have geo-location data
+without the <em>admin1</em> or <em>admin2</em> levels of details — more on that later.
+Here&rsquo;s the same list of French areas, this time with proper names:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql">        name         │  region   │           district            
+═════════════════════╪═══════════╪═══════════════════════════════
+ Zintzel du Nord     │ Grand Est │ Département du Bas-Rhin
+ Zinswiller          │ Grand Est │ Département du Bas-Rhin
+ Ruisseau de Zingajo │ Corsica   │ Département de la Haute-Corse
+ Zincourt            │ Grand Est │ Département des Vosges
+ Zimming             │ Grand Est │ Département de la Moselle
+(5 rows)</code></pre></div>
+<h1 id="geolocation-data">Geolocation Data</h1>
+
+<p>Now that we have loaded the reference data, we can load the main geolocation
+data with the following script. Note that we skip parts of the data we don&rsquo;t
+need for this book, but that you might want to load in your application&rsquo;s
+background data.</p>
+
+<p>Before loading the raw data into a normalized version of the table, which
+will make heavy use of the references we normalized before, we have to study
+and understand how the breakdown works:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> <span style="color:#00a">count</span>(*) <span style="color:#00a">as</span> <span style="color:#00a">all</span>,
+       <span style="color:#00a">count</span>(*) filter(<span style="color:#00a">where</span> country_code <span style="color:#00a">is</span> <span style="color:#00a">null</span>) <span style="color:#00a">as</span> no_country,
+       <span style="color:#00a">count</span>(*) filter(<span style="color:#00a">where</span> admin1_code <span style="color:#00a">is</span> <span style="color:#00a">null</span>) <span style="color:#00a">as</span> no_region,
+       <span style="color:#00a">count</span>(*) filter(<span style="color:#00a">where</span> admin2_code <span style="color:#00a">is</span> <span style="color:#00a">null</span>) <span style="color:#00a">as</span> no_district,
+       <span style="color:#00a">count</span>(*) filter(<span style="color:#00a">where</span> feature_class <span style="color:#00a">is</span> <span style="color:#00a">null</span>) <span style="color:#00a">as</span> no_class,
+       <span style="color:#00a">count</span>(*) filter(<span style="color:#00a">where</span> feature_code <span style="color:#00a">is</span> <span style="color:#00a">null</span>) <span style="color:#00a">as</span> no_feat
+  <span style="color:#00a">from</span> raw.geonames ;</code></pre></div>
+<p>We have lots of entries without reference for a <em>country</em>, and even more
+without detailed breakdown (<em>admin1_code</em> and <em>admin2_code</em> are not always
+part of the data). Moreover we also have points without any reference
+feature and class, some of them in the Artic.</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql">   all    │ no_country │ no_region │ no_district │ no_class │ no_feat 
+══════════╪════════════╪═══════════╪═════════════╪══════════╪═════════
+ 11540466 │       5821 │     45819 │     5528455 │     5074 │   95368
+(1 row)</code></pre></div>
+<p>Given that, our normalization query must be careful to use <em>left join</em>
+operations, so as to allow for fields to be <em>null</em> when the foreign key
+reference doesn&rsquo;t exist. Be careful to drill down properly to the country,
+then the region, and only then the district, as the data set contains points
+of several layers of precision as seen in the query above.</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
+
+<span style="color:#00a">create</span> <span style="color:#00a">table</span> geoname.geoname
+ (
+   geonameid         <span style="color:#0aa">bigint</span> <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
+   name              <span style="color:#0aa">text</span>,
+   <span style="color:#00a">location</span>          point,
+   isocode           <span style="color:#0aa">integer</span>,
+   regcode           <span style="color:#0aa">text</span>,
+   discode           <span style="color:#0aa">text</span>,
+   <span style="color:#00a">class</span>             <span style="color:#0aa">char</span>(<span style="color:#099">1</span>),
+   feature           <span style="color:#0aa">text</span>,
+   population        <span style="color:#0aa">bigint</span>,
+   elevation         <span style="color:#0aa">bigint</span>,
+   timezone          <span style="color:#0aa">text</span>,
+
+   <span style="color:#00a">foreign</span> <span style="color:#00a">key</span>(isocode)
+    <span style="color:#00a">references</span> geoname.country(isocode),
+   
+   <span style="color:#00a">foreign</span> <span style="color:#00a">key</span>(isocode, regcode)
+    <span style="color:#00a">references</span> geoname.region(isocode, regcode),
+    
+   <span style="color:#00a">foreign</span> <span style="color:#00a">key</span>(isocode, regcode, discode)
+    <span style="color:#00a">references</span> geoname.district(isocode, regcode, discode),
+
+   <span style="color:#00a">foreign</span> <span style="color:#00a">key</span>(<span style="color:#00a">class</span>)
+    <span style="color:#00a">references</span> geoname.<span style="color:#00a">class</span>(<span style="color:#00a">class</span>),
+
+   <span style="color:#00a">foreign</span> <span style="color:#00a">key</span>(<span style="color:#00a">class</span>, feature)
+    <span style="color:#00a">references</span> geoname.feature(<span style="color:#00a">class</span>, feature)
+ );
+
+<span style="color:#00a">insert</span> <span style="color:#00a">into</span> geoname.geoname
+  <span style="color:#00a">with</span> geo <span style="color:#00a">as</span>
+  (
+     <span style="color:#00a">select</span> geonameid,
+            name,
+            point(longitude, latitude) <span style="color:#00a">as</span> <span style="color:#00a">location</span>,
+            country_code,
+            admin1_code,
+            admin2_code,
+            feature_class,
+            feature_code,
+            population,
+            elevation,
+            timezone
+       <span style="color:#00a">from</span> raw.geonames
+   )
+     <span style="color:#00a">select</span> geo.geonameid,
+            geo.name,
+            geo.<span style="color:#00a">location</span>,
+            country.isocode,
+            region.regcode,
+            district.discode,
+            feature.<span style="color:#00a">class</span>,
+            feature.feature,
+            population,
+            elevation,
+            timezone
+       <span style="color:#00a">from</span> geo
+            <span style="color:#00a">left</span> <span style="color:#00a">join</span> geoname.country
+              <span style="color:#00a">on</span> country.iso = geo.country_code
+
+            <span style="color:#00a">left</span> <span style="color:#00a">join</span> geoname.region
+              <span style="color:#00a">on</span> region.isocode = country.isocode
+             <span style="color:#00a">and</span> region.regcode = geo.admin1_code
+
+            <span style="color:#00a">left</span> <span style="color:#00a">join</span> geoname.district
+              <span style="color:#00a">on</span> district.isocode = country.isocode
+             <span style="color:#00a">and</span> district.regcode = geo.admin1_code
+             <span style="color:#00a">and</span> district.discode = geo.admin2_code
+
+           <span style="color:#00a">left</span> <span style="color:#00a">join</span> geoname.feature
+             <span style="color:#00a">on</span> feature.<span style="color:#00a">class</span> = geo.feature_class
+            <span style="color:#00a">and</span> feature.feature = geo.feature_code;
+
+<span style="color:#00a">create</span> <span style="color:#00a">index</span> <span style="color:#00a">on</span> geoname.geoname <span style="color:#00a">using</span> gist(<span style="color:#00a">location</span>);
+
+<span style="color:#00a">commit</span>;</code></pre></div>
+<p>Now that we have a proper data set loaded, it&rsquo;s easier to make sense of the
+administrative breakdowns and the geo-location data.</p>
+
+<p>The real use case for this data comes later: thanks to the <em>GiST</em> index over
+the <em>geoname.location</em> column we are now fully equipped to do a names lookup
+from the geo-localized information.</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span> continent.name,
+         <span style="color:#00a">count</span>(*),
+         round(<span style="color:#099">100</span>.<span style="color:#099">0</span> * <span style="color:#00a">count</span>(*) / <span style="color:#00a">sum</span>(<span style="color:#00a">count</span>(*)) over(), <span style="color:#099">2</span>) <span style="color:#00a">as</span> pct,
+         repeat(<span style="color:#a50">&#39;■&#39;</span>, (<span style="color:#099">100</span> * <span style="color:#00a">count</span>(*) / <span style="color:#00a">sum</span>(<span style="color:#00a">count</span>(*)) over())::<span style="color:#0aa">int</span>) <span style="color:#00a">as</span> hist
+    <span style="color:#00a">from</span> geoname.geoname
+         <span style="color:#00a">join</span> geoname.country <span style="color:#00a">using</span>(isocode)
+         <span style="color:#00a">join</span> geoname.continent
+           <span style="color:#00a">on</span> continent.code = country.continent
+<span style="color:#00a">group</span> <span style="color:#00a">by</span> continent.name <span style="color:#00a">order</span> <span style="color:#00a">by</span> continent.name;</code></pre></div>
+<p>We can see that the <em>GeoNames</em> data is highly skewed towards Asia, North
+America, and then Europe. Of course, the Antartica data is not very dense.</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql">     name      │  count  │  pct  │               hist                
+═══════════════╪═════════╪═══════╪═══════════════════════════════════
+ Africa        │ 1170043 │ 10.14 │ ■■■■■■■■■■
+ Antarctica    │   21125 │  0.18 │ 
+ Asia          │ 3772195 │ 32.70 │ ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+ Europe        │ 2488807 │ 21.58 │ ■■■■■■■■■■■■■■■■■■■■■■
+ North America │ 3210802 │ 27.84 │ ■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+ Oceania       │  354325 │  3.07 │ ■■■
+ South America │  517347 │  4.49 │ ■■■■
+(7 rows)</code></pre></div>
+<h1 id="geolocation-gist-indexing">Geolocation GiST Indexing</h1>
+
+<p>The previous <em>geoname</em> table creation script contains the following index
+definition:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span> <span style="color:#00a">index</span> <span style="color:#00a">on</span> geoname.geoname <span style="color:#00a">using</span> gist(<span style="color:#00a">location</span>);</code></pre></div>
+<p>Such an index is useful when searching for a specific location within our
+table, which contains about 11.5 million entries. PostgreSQL supports <em>index
+scan</em> based lookups in several situations, including the <em>kNN</em> lookup, also
+known as the <em>nearest neighbor</em> lookup.</p>
+
+<p>In the <a href="/blog/2018/04/postgresql-data-types-arrays/">arrays</a> non-relational
+data type example we loaded a data set of 200,000 geo-localized tweets in
+the <em>hashtag</em> table. Here&rsquo;s an extract of this table&rsquo;s content:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql">─[ RECORD 1 ]────────────────────────────────────────────────
+id       │ 720553458596757504
+date     │ 2016-04-14 10:05:00+02
+uname    │ Police Calls 32801
+message  │ #DrugViolation at 335 N Magnolia Ave. #orlpol #opd
+location │ (-81.3769794,28.5469591)
+hashtags │ {#DrugViolation,#opd,#orlpol}</code></pre></div>
+<p>It&rsquo;s possible to retrieve more information from the <em>GeoNames</em> data thanks
+to the following <em>lateral left join</em> lookup in which we implement a <em>kNN</em>
+search with <code>order by ... &lt;-&gt; ... limit k</code> clause:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span> id,
+         round((hashtag.<span style="color:#00a">location</span> &lt;-&gt; geoname.<span style="color:#00a">location</span>)::<span style="color:#0aa">numeric</span>, <span style="color:#099">3</span>) <span style="color:#00a">as</span> dist,
+         country.iso,
+         region.name <span style="color:#00a">as</span> region,
+         district.name <span style="color:#00a">as</span> district
+    <span style="color:#00a">from</span> hashtag
+         <span style="color:#00a">left</span> <span style="color:#00a">join</span> <span style="color:#00a">lateral</span>
+         (
+            <span style="color:#00a">select</span> geonameid, isocode, regcode, discode, <span style="color:#00a">location</span>
+              <span style="color:#00a">from</span> geoname.geoname
+          <span style="color:#00a">order</span> <span style="color:#00a">by</span> <span style="color:#00a">location</span> &lt;-&gt; hashtag.<span style="color:#00a">location</span>
+             <span style="color:#00a">limit</span> <span style="color:#099">1</span>
+         )
+         <span style="color:#00a">as</span> geoname
+         <span style="color:#00a">on</span> <span style="color:#00a">true</span>
+         <span style="color:#00a">left</span> <span style="color:#00a">join</span> geoname.country <span style="color:#00a">using</span>(isocode)
+         <span style="color:#00a">left</span> <span style="color:#00a">join</span> geoname.region <span style="color:#00a">using</span>(isocode, regcode)
+         <span style="color:#00a">left</span> <span style="color:#00a">join</span> geoname.district <span style="color:#00a">using</span>(isocode, regcode, discode)
+<span style="color:#00a">order</span> <span style="color:#00a">by</span> id
+   <span style="color:#00a">limit</span> <span style="color:#099">5</span>;</code></pre></div>
+<p>The <code>&lt;-&gt;</code> operator computes the distance in between its argument, and by
+using the <em>limit 1</em> clause we select the nearest known entry in the
+<em>geoname.geoname</em> table for each entry in the <em>hashtag</em> table.</p>
+
+<p>Then it&rsquo;s easy to add our normalized <em>GeoNames</em> information from the
+<em>country</em>, <em>region</em> and <em>district</em> tables. Here&rsquo;s the result we get here:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql">         id         │ dist  │ iso │    region    │      district       
+════════════════════╪═══════╪═════╪══════════════╪═════════════════════
+ 720553447402160128 │ 0.004 │ US  │ Florida      │ Orange County
+ 720553457015324672 │ 0.004 │ US  │ Texas        │ Smith County
+ 720553458596757504 │ 0.001 │ US  │ Florida      │ Orange County
+ 720553466804989952 │ 0.001 │ US  │ Pennsylvania │ Philadelphia County
+ 720553475923271680 │ 0.000 │ US  │ New York     │ Nassau County
+(5 rows)</code></pre></div>
+<p>To check that our <em>GiST</em> index is actually used, we use the <em>explain</em>
+command of PostgreSQL, with the spelling <code>explain (costs off)</code> followed by
+the whole query as above, and we get the following query plan:</p>
+
+<pre><code>\pset format wrapped
+\pset columns 70
+
+                              QUERY PLAN                              
+══════════════════════════════════════════════════════════════════════
+ Limit
+   -&gt;  Nested Loop Left Join
+         -&gt;  Nested Loop Left Join
+               -&gt;  Nested Loop Left Join
+                     Join Filter: (geoname.isocode = country.isocode)
+                     -&gt;  Nested Loop Left Join
+                           -&gt;  Index Scan using hashtag_pkey on hasht…
+…ag
+                           -&gt;  Limit
+                                 -&gt;  Index Scan using geoname_locatio…
+…n_idx on geoname
+                                       Order By: (location &lt;-&gt; hashta…
+…g.location)
+                     -&gt;  Materialize
+                           -&gt;  Seq Scan on country
+               -&gt;  Index Scan using region_pkey on region
+                     Index Cond: ((geoname.isocode = isocode) AND (ge…
+…oname.regcode = regcode))
+         -&gt;  Index Scan using district_pkey on district
+               Index Cond: ((geoname.isocode = isocode) AND (geoname.…
+…regcode = regcode) AND (geoname.discode = discode))
+(16 rows)
+</code></pre>
+
+<p>The <em>index scan using geoname_location_idx on geoname</em> is clear: the index
+has been used. On the laptop on which this book has been written, we get the
+result in about 13 milliseconds.</p>
+
+<h1 id="a-sampling-of-countries">A Sampling of Countries</h1>
+
+<p>This dataset of more than 11 million rows is not practical to include in the
+book&rsquo;s material for the <em>Full Edition</em> and <em>Enterprise Edition</em>, where you
+have a database dump or Docker image to play with. We instead take a random
+sample of 1% of the table&rsquo;s content, and here&rsquo;s how the magic is done:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
+
+<span style="color:#00a">create</span> <span style="color:#00a">schema</span> <span style="color:#00a">if</span> <span style="color:#00a">not</span> <span style="color:#00a">exists</span> sample;
+
+<span style="color:#00a">drop</span> <span style="color:#00a">table</span> <span style="color:#00a">if</span> <span style="color:#00a">exists</span> sample.geonames;
+
+<span style="color:#00a">create</span> <span style="color:#00a">table</span> sample.geonames
+   <span style="color:#00a">as</span> <span style="color:#00a">select</span> <span style="color:#aaa;font-style:italic">/*
+</span><span style="color:#aaa;font-style:italic">              * We restrict the “export” to some columns only, so as to
+</span><span style="color:#aaa;font-style:italic">              * further reduce the size of the exported file available to
+</span><span style="color:#aaa;font-style:italic">              * download with the book.
+</span><span style="color:#aaa;font-style:italic">              */</span>
+             geonameid,
+             name,
+             longitude,
+             latitude,
+             feature_class,
+             feature_code,
+             country_code,
+             admin1_code,
+             admin2_code,
+             population,
+             elevation,
+             timezone
+             <span style="color:#aaa;font-style:italic">/*
+</span><span style="color:#aaa;font-style:italic">              * We only keep 1% of the 11 millions rows here.
+</span><span style="color:#aaa;font-style:italic">              */</span>
+        <span style="color:#00a">from</span> raw.geonames TABLESAMPLE bernoulli(<span style="color:#099">1</span>);
+
+<span style="color:#f00;background-color:#faa">\</span><span style="color:#00a">copy</span> sample.geonames <span style="color:#00a">to</span> <span style="color:#a50">&#39;allCountries.sample.copy&#39;</span>
+
+<span style="color:#00a">commit</span>;</code></pre></div>
+<p>In this script, we use the <em>tablesample</em> feature of PostgreSQL to only keep
+a random selection of 1% of the rows in the table. The <em>tablesample</em> accepts
+several methods, and you can see the PostgreSQL documentation entitled
+<a href="https://www.postgresql.org/docs/current/static/tablesample-method.html">Writing A Table Sampling
+Method</a>
+yourself if you need to.</p>
+
+<p>Here&rsquo;s what the <a href="https://www.postgresql.org/docs/current/static/sql-select.html#SQL-FROM">from
+clause</a>
+documentation of the <em>select</em> statement has to say about the choice of
+<em>bernouilli</em> and <em>system</em>, included by default in PostgreSQL:</p>
+
+<blockquote>
+<p>The BERNOULLI and SYSTEM sampling methods each accept a single argument
+which is the fraction of the table to sample, expressed as a percentage
+between 0 and 100. This argument can be any real-valued expression. (Other
+sampling methods might accept more or different arguments.) These two
+methods each return a randomly-chosen sample of the table that will
+contain approximately the specified percentage of the table&rsquo;s rows. The
+BERNOULLI method scans the whole table and selects or ignores individual
+rows independently with the specified probability. The SYSTEM method does
+block-level sampling with each block having the specified chance of being
+selected; all rows in each selected block are returned. The SYSTEM method
+is significantly faster than the BERNOULLI method when small sampling
+percentages are specified, but it may return a less-random sample of the
+table as a result of clustering effects.</p>
+</blockquote>
+
+<p>Running the script, here&rsquo;s what we get:</p>
+
+<pre><code>yesql# \i geonames.sample.sql
+BEGIN
+CREATE SCHEMA
+DROP TABLE
+SELECT 115904
+COPY 115904
+COMMIT
+</code></pre>
+
+<p>Our <em>sample.geonames</em> table only contains 115,904 rows. Another run of the
+same query yielded 115,071 instead. After all the sampling is made following
+a random-based algorithm.</p>
+
+<h1 id="conclusion">Conclusion</h1>
+
+<p>When dealing with geolocation data, it&rsquo;s possible to put the PostgreSQL data
+type POINT to good use. The PostgreSQL support for GiST indexes makes it
+easy to then query the data, including for kNN searches and in complex
+queries.</p>
+
+<p>While it&rsquo;s possible to just use a flat table with a point column, it might
+be best to normalize your geolocation database schema. This helps with data
+quality!</p>
+
+
+<figure class="right">
+    <a href="https://masteringpostgresql.com">
+        <img src="/img/MasteringPostgreSQLinAppDev-Cover-th.png" />
+    </a>
+    
+</figure>
+
+
+<p>This article is an extract from my book <a href="https://masteringpostgresql.com">Mastering PostgreSQL in Application
+Development</a>, which teaches SQL to
+developers so that they may replace thousands of lines of code with very
+simple queries. The book has a full chapter about data types in PostgreSQL,
+check it out!</p>
+              
+            </div>
+          </div>
+          <div id="post-footer" class="post-footer main-content-wrap">
+            
+              
+                
+                
+                  <div class="post-footer-tags">
+                    <span class="text-color-light text-small"></span><br/>
+                    
+  <a class="tag tag--primary tag--small" href="/tags/postgresql/">PostgreSQL</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/yesql/">YeSQL</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/data-types/">Data Types</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/point/">Point</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/geometry/">Geometry</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/geolocation/">Geolocation</a>
+
+                  </div>
+                
+              
+            
+            <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    
+    <script async id="_ck_252762" src="https://forms.convertkit.com/252762?v=6"></script>
+    
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/05/postgresql-data-types-enum/" data-tooltip="PostgreSQL Data Types: ENUM">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f05%2fpostgresql-data-types-point%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f05%2fpostgresql-data-types-point%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=PostgreSQL%20Data%20Types%3a%20Point with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f05%2fpostgresql-data-types-point%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+            
+              
+                <div id="disqus_thread">
+  <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+              
+            
+          </div>
+        </article>
+        <footer id="footer" class="main-content-wrap">
+  <span class="copyrights">
+    &copy; 2018 Dimitri Fontaine. 
+  </span>
+</footer>
+
+      </div>
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="5">
+        <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    
+    <script async id="_ck_252762" src="https://forms.convertkit.com/252762?v=6"></script>
+    
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/05/postgresql-data-types-enum/" data-tooltip="PostgreSQL Data Types: ENUM">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f05%2fpostgresql-data-types-point%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f05%2fpostgresql-data-types-point%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=PostgreSQL%20Data%20Types%3a%20Point with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f05%2fpostgresql-data-types-point%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+      </div>
+      <div id="share-options-bar" class="share-options-bar" data-behavior="5">
+  <ul class="share-options">
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f05%2fpostgresql-data-types-point%2f">
+        <i class="fa fa-google-plus"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f05%2fpostgresql-data-types-point%2f">
+        <i class="fa fa-facebook-official"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=PostgreSQL%20Data%20Types%3a%20Point with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f05%2fpostgresql-data-types-point%2f">
+        <i class="fa fa-twitter"></i><span></span>
+      </a>
+    </li>
+  </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
+    </div>
+    
+    <div id="about">
+  <div id="about-card">
+    <div id="about-btn-close">
+      <i class="fa fa-remove"></i>
+    </div>
+    
+      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+    
+    <h4 id="about-card-name">Dimitri Fontaine</h4>
+    
+      <div id="about-card-bio">PostgreSQL Major Contributor</div>
+    
+    
+      <div id="about-card-job">
+        <i class="fa fa-briefcase"></i>
+        <br/>
+        Open Source Software Engineer
+      </div>
+    
+    
+      <div id="about-card-location">
+        <i class="fa fa-map-marker"></i>
+        <br/>
+        France
+      </div>
+    
+  </div>
+</div>
+
+    <div id="algolia-search-modal" class="modal-container">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="close-button"><i class="fa fa-close"></i></span>
+      <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
+        <span class="searchby-algolia-text text-color-light text-small">by</span>
+        <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+      </a>
+      <i class="search-icon fa fa-search"></i>
+      <form id="algolia-search-form">
+        <input type="text" id="algolia-search-input" name="search"
+          class="form-control input--large search-input" placeholder="" />
+      </form>
+    </div>
+    <div class="modal-body">
+      <div class="no-result text-color-light text-center"></div>
+      <div class="results">
+        
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/05/postgresql-data-types-point/">
+                <h3 class="media-heading">PostgreSQL Data Types: Point</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL Point type.</p>
+
+<p>In order to put the Point datatype in a context where it makes sense, we&rsquo;re
+going to download a complete geolocation data set and normalize it, thus
+making good use of both the normalization good practice and those other
+PostgreSQL data types we&rsquo;ve been learning about in the previous articles of
+this series.</p>
+
+<p>Buckle-up, this is a long article with a lot of SQL inside.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/05/postgresql-data-types-enum/">
+                <h3 class="media-heading">PostgreSQL Data Types: ENUM</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL ENUM type.</p>
+
+<p>This data type has been added to PostgreSQL in order to make it easier to
+support migrations from MySQL. Proper relational design would use a
+reference table and a foreign key instead.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/04/postgresql-data-types-json/">
+                <h3 class="media-heading">PostgreSQL Data Types: JSON</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL JSON type.</p>
+
+<p>PostgreSQL has built-in support for JSON with a great range of processing
+functions and operators, and complete indexing support. The documentation
+covers all the details in the chapters entitled <a href="https://www.postgresql.org/docs/current/static/datatype-json.html">JSON
+Types</a>
+and <a href="https://www.postgresql.org/docs/current/static/functions-json.html">JSON Functions and
+Operators</a>.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/04/postgresql-data-types-xml/">
+                <h3 class="media-heading">PostgreSQL Data Types: XML</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL XML type.</p>
+
+<p>The SQL standard includes a <a href="https://en.wikipedia.org/wiki/SQL/XML">SQL/XML</a>
+which <em>introduces the predefined data type XML together with constructors,
+several routines, functions, and XML-to-SQL data type mappings to support
+manipulation and storage of XML in a SQL database</em>, as per the Wikipedia
+page.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/04/postgresql-data-types-arrays/">
+                <h3 class="media-heading">PostgreSQL Data Types: Arrays</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL array data types.</p>
+
+<p>Arrays can be used to denormalize data and avoid lookup tables. A good rule
+of thumb for using them that way is that you mostly use the array as a
+whole, even if you might at times search for elements in the array. Heavier
+processing is going to be more complex than a lookup table.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/04/postgresql-data-types-ranges/">
+                <h3 class="media-heading">PostgreSQL Data Types: Ranges</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL ranges data type.</p>
+
+<p>Range types are a unique feature of PostgreSQL, managing two dimensions of
+data in a single column, and allowing advanced processing. The main example
+is the <em>daterange</em> data type, which stores as a single value a lower and an
+upper bound of the range as a single value. This allows PostgreSQL to
+implement a concurrent safe check against <em>overlapping</em> ranges, as we&rsquo;re
+going to see in this article.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/04/postgresql-data-types-network-addresses/">
+                <h3 class="media-heading">PostgreSQL Data Types: Network Addresses</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce network address types.</p>
+
+<p>PostgreSQL includes support for both <em>cidr</em>, <em>inet</em>, and <em>macaddr</em> data
+types. Again, those types are bundled with indexing support and advanced
+functions and operator support.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/04/postgresql-data-types-date-and-time-processing/">
+                <h3 class="media-heading">PostgreSQL Data Types: Date and Time Processing</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce date and time based processing functions.</p>
+
+<p>Once the application&rsquo;s data, or rather the user data is properly stored as
+timestamp with time zone, PostgreSQL allows implementing all the processing
+you need to. In this article we dive into a set of examples to help you get
+started with time based processing in your database. Can we boost your
+reporting skills?</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/04/postgresql-data-types-text-processing/">
+                <h3 class="media-heading">PostgreSQL Data Types: Text Processing</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce some of the PostgreSQL text processing functions.</p>
+
+<p>There&rsquo;s a very rich set of PostgreSQL functions to process text — you can
+find them all in the <a href="https://www.postgresql.org/docs/current/static/functions-string.html">string functions and
+operators</a>
+documentation chapter — with functions such as <em>overlay()</em>, <em>substring()</em>,
+<em>position()</em> or <em>trim()</em>. Or aggregates such as <em>string_agg()</em>. There are
+also <em>regular expression</em> functions, including the very powerful
+<em>regexp_split_to_table()</em>. In this article we see practical example putting
+them in practice.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/04/postgresql-data-types-text-encoding/">
+                <h3 class="media-heading">PostgreSQL Data Types: Text Encoding</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL text data type. The first notion to
+understand when processing text in any program is of course the notion of
+encoding.</p>
+
+<p>So when addressing the text datatype we must mention encoding settings, and
+possibly also issues. An encoding is a particular representation of
+characters in bits and bytes. In the ASCII encoding the letter <code>A</code> is
+encoded as the 7-bits byte <code>1000001</code>, or 65 in decimal, or 41 in
+hexadecimal. All those numbers are going to be written the same way on-disk,
+and the letter <code>A</code> too.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+      </div>
+    </div>
+    <div class="modal-footer">
+      <p class="results-count text-medium"
+         data-message-zero=""
+         data-message-one=""
+         data-message-other="">
+         272 posts found
+      </p>
+    </div>
+  </div>
+</div>
+    
+  
+    
+    <div id="cover" style="background-image:url('https://tapoueh.org/images/mayan-calendar.jpg');"></div>
+  
+
+
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
+
+
+<script src="/js/script-qi9wbxp2ya2j6p7wx1i6tgavftewndznf4v0hy2gvivk1rxgc3lm7njqb6bz.min.js"></script>
+
+
+
+<script>
+$(document).ready(function() {
+  hljs.configure({ classPrefix: '', useBR: false });
+  $('pre.code-highlight > code, pre > code').each(function(i, block) {
+    if (!$(this).hasClass('codeblock')) {
+      $(this).addClass('codeblock');
+    }
+    hljs.highlightBlock(block);
+  });
+});
+</script>
+
+
+  
+    
+      <script>
+        var disqus_config = function () {
+          this.page.url = 'https:\/\/tapoueh.org\/blog\/2018\/05\/postgresql-data-types-point\/';
+          
+            this.page.identifier = '\/blog\/2018\/05\/postgresql-data-types-point\/'
+          
+        };
+        (function() {
+          
+          
+          if (window.location.hostname == "localhost") {
+            return;
+          }
+          var d = document, s = d.createElement('script');
+          var disqus_shortname = 'tapoueh';
+          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+          s.setAttribute('data-timestamp', +new Date());
+          (d.head || d.body).appendChild(s);
+        })();
+      </script>
+    
+  
+
+
+
+    
+  </body>
+</html>
+
