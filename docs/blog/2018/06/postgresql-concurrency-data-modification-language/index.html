@@ -1,0 +1,1452 @@
+
+
+  
+    
+  
+
+
+  
+
+
+
+
+  
+
+
+  
+
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Hugo 0.31.1">
+    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
+    <title>PostgreSQL Concurrency: Data Modification Language</title>
+    <meta name="author" content="Dimitri Fontaine">
+    <meta name="keywords" content="">
+
+    <link rel="icon" href="/favicon.ico">
+    
+
+    
+    <meta name="description" content="PostgreSQL is a relational database management system. It&rsquo;s even the world&rsquo;s most advanced open source one of them. As such, as its core, Postgres solves concurrent access to a set of data and maintains consistency while allowing concurrent operations.
+Postgres exposes its concurrency APIs in the SQL language, in particular in the DML parts of it: you can read the Data Manipulation Language chapter of the PostgreSQL docs for all the details.">
+    <meta property="og:description" content="PostgreSQL is a relational database management system. It&rsquo;s even the world&rsquo;s most advanced open source one of them. As such, as its core, Postgres solves concurrent access to a set of data and maintains consistency while allowing concurrent operations.
+Postgres exposes its concurrency APIs in the SQL language, in particular in the DML parts of it: you can read the Data Manipulation Language chapter of the PostgreSQL docs for all the details.">
+    <meta property="og:type" content="blog">
+    <meta property="og:title" content="PostgreSQL Concurrency: Data Modification Language">
+    <meta property="og:url" content="/blog/2018/06/postgresql-concurrency-data-modification-language/">
+    <meta property="og:site_name" content="Dimitri Fontaine, PostgreSQL Expert">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="PostgreSQL Concurrency: Data Modification Language">
+    <meta name="twitter:description" content="PostgreSQL is a relational database management system. It&rsquo;s even the world&rsquo;s most advanced open source one of them. As such, as its core, Postgres solves concurrent access to a set of data and maintains consistency while allowing concurrent operations.
+Postgres exposes its concurrency APIs in the SQL language, in particular in the DML parts of it: you can read the Data Manipulation Language chapter of the PostgreSQL docs for all the details.">
+    
+      <meta name="twitter:creator" content="@tapoueh">
+    
+    
+
+    
+    
+
+    
+      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
+    
+
+    
+      <meta property="og:image" content="https://tapoueh.org/img/sql-dml.png">
+    
+    
+      <meta property="og:image" content="https://tapoueh.org/img/crud.png">
+    
+    
+
+    
+
+    
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
+    
+    
+    <link rel="stylesheet" href="/css/style-jsjn0006wyhpyzivf6yceb31gvpjatbcs3qzjvlumobfnugccvobqwxnnaj8.min.css" />
+    
+    
+      <link rel="stylesheet" href="https://tapoueh.org/css/dim.css">
+    
+      <link rel="stylesheet" href="https://tapoueh.org/css/nav.css">
+    
+
+    
+      
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-47059482-1', 'auto');
+ga('send', 'pageview');
+</script>
+
+    
+    
+  </head>
+
+  <body>
+    <div id="blog">
+      <header id="header" data-behavior="5">
+  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+  <div class="navbar-collapse collapse header-title" id="navigation">
+    <ul class="nav navbar-nav navbar-right">
+      
+      <li class="dropdown">
+        
+        <a href="/">blog</a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a href="/conf/">talks</a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a href="http://pgloader.io/">pgloader</a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a href="http://masteringpostgresql.com/">Mastering PostgreSQL</a>
+        
+      </li>
+      
+    </ul>
+  </div>
+
+  
+    
+      <a class="header-right-icon "
+         href="http://masteringpostgresql.com" target="_blank">
+    
+    
+      <i class="fa fa-lg fa-book"></i>
+    
+    
+    </a>
+  
+</header>
+
+      <nav id="sidebar" data-behavior="5">
+  <div class="sidebar-container">
+    
+      <div class="sidebar-profile">
+        <a href="/#about">
+          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+        </a>
+        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
+        
+          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
+        
+      </div>
+    
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
+      
+      <span class="sidebar-button-desc">Blog</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/about/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
+      
+      <span class="sidebar-button-desc">About</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories/yesql/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-database"></i>
+      
+      <span class="sidebar-button-desc">YeSQL</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="http://masteringpostgresql.com" target="_blank" rel="noopener">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
+      
+      <span class="sidebar-button-desc">Mastering PostgreSQL</span>
+    </a>
+  </li>
+
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+      
+      <span class="sidebar-button-desc">GitHub</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+      
+      <span class="sidebar-button-desc">Twitter</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+      
+      <span class="sidebar-button-desc">Categories</span>
+    </a>
+  </li>
+
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/index.xml">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+      
+      <span class="sidebar-button-desc">RSS</span>
+    </a>
+  </li>
+
+
+    </ul>
+  </div>
+</nav>
+
+      
+  <div class="post-header-cover
+              text-left
+              post-header-cover--partial"
+       style="background-image:url('/img/crud.png')"
+       data-behavior="5">
+    
+  </div>
+
+
+      <div id="main" data-behavior="5"
+        class="hasCover
+               hasCoverMetaOut
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
+          
+            <div class="post-header main-content-wrap text-left">
+  
+    <h1 class="post-title" itemprop="headline">
+      PostgreSQL Concurrency: Data Modification Language
+    </h1>
+  
+  
+  <div class="postShorten-meta post-meta">
+    
+      <time itemprop="datePublished" datetime="2018-06-25T09:58:53&#43;02:00">
+        
+  
+  
+  
+  
+    Monday 25 Jun 2018
+  
+
+      </time>
+    
+    
+  
+  
+    <span></span>
+    
+      <a class="category-link" href="/categories/postgresql">PostgreSQL</a>, 
+    
+      <a class="category-link" href="/categories/yesql">YeSQL</a>
+    
+  
+
+  </div>
+
+</div>
+          
+          <div class="post-content markdown" itemprop="articleBody">
+            <div class="main-content-wrap">
+              
+
+<p><a href="https://www.postgresql.org">PostgreSQL</a> is a relational database management
+system. It&rsquo;s even the world&rsquo;s most advanced open source one of them. As
+such, as its core, Postgres solves concurrent access to a set of data and
+maintains consistency while allowing concurrent operations.</p>
+
+<p>Postgres exposes its concurrency APIs in the SQL language, in particular in
+the <a href="https://en.wikipedia.org/wiki/Data_manipulation_language">DML</a> parts of
+it: you can read the <a href="https://www.postgresql.org/docs/current/static/dml.html">Data Manipulation
+Language</a> chapter
+of the PostgreSQL docs for all the details.</p>
+
+<p>In this article we&rsquo;re going to create a set of data and use several of the
+basic DML forms available in PostgreSQL to do so. This data will then be
+used through a series of follow-up articles about concurrency in PostgreSQL.
+In this first article, we approach the basics: SQL commands and how to make
+them safe to concurrent behavior in your application.</p>
+
+<h1 id="a-database-model">A database model</h1>
+
+<p>The application we&rsquo;re going to model is a Twitter like application, where we
+have users and they can send short messages to the void. They can also
+follow other users, and then will see what those other users sent to the
+void.</p>
+
+<p>We&rsquo;ll begin with something simple:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span> <span style="color:#00a">schema</span> <span style="color:#00a">if</span> <span style="color:#00a">not</span> <span style="color:#00a">exists</span> tweet;
+
+<span style="color:#00a">create</span> <span style="color:#00a">table</span> tweet.users
+ (
+   userid     bigserial <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
+   uname      <span style="color:#0aa">text</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
+   nickname   <span style="color:#0aa">text</span>,
+   bio        <span style="color:#0aa">text</span>,
+   picture    <span style="color:#0aa">text</span>,
+
+   <span style="color:#00a">unique</span>(uname)
+ );
+
+<span style="color:#00a">create</span> <span style="color:#00a">table</span> tweet.follower
+ (
+   follower   <span style="color:#0aa">bigint</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">references</span> tweet.users(userid),
+   following  <span style="color:#0aa">bigint</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">references</span> tweet.users(userid),
+
+   <span style="color:#00a">primary</span> <span style="color:#00a">key</span>(follower, following)
+ );
+
+<span style="color:#00a">create</span> <span style="color:#00a">table</span> tweet.message
+ (
+   messageid  bigserial <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
+   userid     <span style="color:#0aa">bigint</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">references</span> tweet.users(userid),
+   datetime   timestamptz <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">default</span> now(),
+   message    <span style="color:#0aa">text</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
+   favs       <span style="color:#0aa">bigint</span>,
+   rts        <span style="color:#0aa">bigint</span>,
+   <span style="color:#00a">location</span>   point,
+   lang       <span style="color:#0aa">text</span>,
+   url        <span style="color:#0aa">text</span>
+ );</code></pre></div>
+<h1 id="insert-into">Insert Into</h1>
+
+<p>Given our model of tweets, the first thing we need are users. Here&rsquo;s how to
+create our first users:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span> <span style="color:#00a">into</span> tweet.users (userid, uname, nickname, bio)
+     <span style="color:#00a">values</span> (<span style="color:#00a">default</span>, <span style="color:#a50">&#39;Theseus&#39;</span>, <span style="color:#a50">&#39;Duke Theseus&#39;</span>, <span style="color:#a50">&#39;Duke of Athens.&#39;</span>);</code></pre></div>
+<p>The SQL standard <em>values</em> clause is usable anywhere <em>select</em> is expected, as
+we saw already in our truth tables in the <a href="/blog/2018/04/postgresql-data-types-an-intro/">introduction to PostgreSQL Data
+Types</a> article. Also,
+<a href="https://www.postgresql.org/docs/current/static/sql-values.html">values</a>
+accepts several rows at a time.</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span> <span style="color:#00a">into</span> tweet.users (uname, bio)
+     <span style="color:#00a">values</span> (<span style="color:#a50">&#39;Egeus&#39;</span>, <span style="color:#a50">&#39;father to #Hermia.&#39;</span>),
+            (<span style="color:#a50">&#39;Lysander&#39;</span>, <span style="color:#a50">&#39;in love with #Hermia.&#39;</span>),
+            (<span style="color:#a50">&#39;Demetrius&#39;</span>, <span style="color:#a50">&#39;in love with #Hermia.&#39;</span>),
+            (<span style="color:#a50">&#39;Philostrate&#39;</span>, <span style="color:#a50">&#39;master of the revels to Theseus.&#39;</span>),
+            (<span style="color:#a50">&#39;Peter Quince&#39;</span>, <span style="color:#a50">&#39;a carpenter.&#39;</span>),
+            (<span style="color:#a50">&#39;Snug&#39;</span>, <span style="color:#a50">&#39;a joiner.&#39;</span>),
+            (<span style="color:#a50">&#39;Nick Bottom&#39;</span>, <span style="color:#a50">&#39;a weaver.&#39;</span>),
+            (<span style="color:#a50">&#39;Francis Flute&#39;</span>, <span style="color:#a50">&#39;a bellows-mender.&#39;</span>),
+            (<span style="color:#a50">&#39;Tom Snout&#39;</span>, <span style="color:#a50">&#39;a tinker.&#39;</span>),
+            (<span style="color:#a50">&#39;Robin Starveling&#39;</span>, <span style="color:#a50">&#39;a tailor.&#39;</span>),
+            (<span style="color:#a50">&#39;Hippolyta&#39;</span>, <span style="color:#a50">&#39;queen of the Amazons, betrothed to Theseus.&#39;</span>),
+            (<span style="color:#a50">&#39;Hermia&#39;</span>, <span style="color:#a50">&#39;daughter to Egeus, in love with Lysander.&#39;</span>),
+            (<span style="color:#a50">&#39;Helena&#39;</span>, <span style="color:#a50">&#39;in love with Demetrius.&#39;</span>),
+            (<span style="color:#a50">&#39;Oberon&#39;</span>, <span style="color:#a50">&#39;king of the fairies.&#39;</span>),
+            (<span style="color:#a50">&#39;Titania&#39;</span>, <span style="color:#a50">&#39;queen of the fairies.&#39;</span>),
+            (<span style="color:#a50">&#39;Puck&#39;</span>, <span style="color:#a50">&#39;or Robin Goodfellow.&#39;</span>),
+            (<span style="color:#a50">&#39;Peaseblossom&#39;</span>, <span style="color:#a50">&#39;Team #Fairies&#39;</span>),
+            (<span style="color:#a50">&#39;Cobweb&#39;</span>, <span style="color:#a50">&#39;Team #Fairies&#39;</span>),
+            (<span style="color:#a50">&#39;Moth&#39;</span>, <span style="color:#a50">&#39;Team #Fairies&#39;</span>),
+            (<span style="color:#a50">&#39;Mustardseed&#39;</span>, <span style="color:#a50">&#39;Team #Fairies&#39;</span>),
+            (<span style="color:#a50">&#39;All&#39;</span>, <span style="color:#a50">&#39;Everyone speaking at the same time&#39;</span>),
+            (<span style="color:#a50">&#39;Fairy&#39;</span>, <span style="color:#a50">&#39;One of them #Fairies&#39;</span>),
+            (<span style="color:#a50">&#39;Prologue&#39;</span>, <span style="color:#a50">&#39;a play within a play&#39;</span>),
+            (<span style="color:#a50">&#39;Wall&#39;</span>, <span style="color:#a50">&#39;a play within a play&#39;</span>),
+            (<span style="color:#a50">&#39;Pyramus&#39;</span>, <span style="color:#a50">&#39;a play within a play&#39;</span>),
+            (<span style="color:#a50">&#39;Thisbe&#39;</span>, <span style="color:#a50">&#39;a play within a play&#39;</span>),
+            (<span style="color:#a50">&#39;Lion&#39;</span>, <span style="color:#a50">&#39;a play within a play&#39;</span>),
+            (<span style="color:#a50">&#39;Moonshine&#39;</span>, <span style="color:#a50">&#39;a play within a play&#39;</span>);</code></pre></div>
+<p>If you have lots of rows to insert into your database, consider using the
+<a href="https://www.postgresql.org/docs/current/static/sql-copy.html">copy</a> command
+instead of doing a series of <em>inserts</em>. If for some reason you can&rsquo;t use
+<em>copy</em>, for performance reasons, consider using a single transaction doing
+several <em>insert</em> statements each with many <em>values</em>.</p>
+
+<hr />
+
+
+<figure class="right">
+    <a href="https://masteringpostgresql.com">
+        <img src="/img/MasteringPostgreSQLinAppDev-Cover-th.png" />
+    </a>
+    
+</figure>
+
+
+<p>This article is extracted from my book <a href="https://masteringpostgresql.com">Mastering PostgreSQL in Application
+Development</a>, which teaches SQL to
+developers so that they may replace thousands of lines of code with very
+simple queries. The book has a full chapter about <em>Data Manipulation and
+Concurrency Control</em> in PostgreSQL, including caching with materialized
+views, check it out!</p>
+
+<hr />
+
+<h1 id="insert-into-select">Insert Into &hellip; Select</h1>
+
+<p>The <em>insert</em> statement can also use a query as a data source. We could, for
+instance, fill in our <em>tweet.follower</em> table with people that are known to
+love each other from their <em>bio</em> field; and also we should have the fairies
+follow their queen and king, maybe.</p>
+
+<p>First, we need to take this data apart from the previously inserted fields,
+which is our data source here.</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> users.userid <span style="color:#00a">as</span> follower,
+       users.uname,
+       f.userid <span style="color:#00a">as</span> following,
+       f.uname
+  <span style="color:#00a">from</span>      tweet.users
+       <span style="color:#00a">join</span> tweet.users f
+         <span style="color:#00a">on</span> f.uname = <span style="color:#00a">substring</span>(users.bio <span style="color:#00a">from</span> <span style="color:#a50">&#39;in love with #?(.*).&#39;</span>)
+ <span style="color:#00a">where</span> users.bio ~ <span style="color:#a50">&#39;in love with&#39;</span>;</code></pre></div>
+<p>The <em>substring</em> expression here returns only the regular expression matching
+group, which happens to be the name of who our user loves. The query then
+gives us the following result, which looks about right:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql"> follower │   uname   │ following │   uname   
+══════════╪═══════════╪═══════════╪═══════════
+        3 │ Lysander  │        13 │ Hermia
+        4 │ Demetrius │        13 │ Hermia
+       13 │ Hermia    │         3 │ Lysander
+       14 │ Helena    │         4 │ Demetrius
+(4 rows)</code></pre></div>
+<p>Now, we want to insert the <em>follower</em> and <em>following</em> data into the
+<em>tweet.follower</em> table of course. As the <em>insert into</em> command knows how to
+read its input from the result of a <em>select</em> statement, it&rsquo;s pretty easy to
+do:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span> <span style="color:#00a">into</span> tweet.follower
+     <span style="color:#00a">select</span> users.userid <span style="color:#00a">as</span> follower,
+            f.userid <span style="color:#00a">as</span> following
+       <span style="color:#00a">from</span>      tweet.users
+            <span style="color:#00a">join</span> tweet.users f
+              <span style="color:#00a">on</span> f.uname = <span style="color:#00a">substring</span>(users.bio <span style="color:#00a">from</span> <span style="color:#a50">&#39;in love with #?(.*).&#39;</span>)
+      <span style="color:#00a">where</span> users.bio ~ <span style="color:#a50">&#39;in love with&#39;</span>;</code></pre></div>
+<p>Now about those fairies following their queen and king:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span> fairies <span style="color:#00a">as</span>
+(
+  <span style="color:#00a">select</span> userid
+    <span style="color:#00a">from</span> tweet.users
+   <span style="color:#00a">where</span> bio ~ <span style="color:#a50">&#39;#Fairies&#39;</span>
+)
+<span style="color:#00a">insert</span> <span style="color:#00a">into</span> tweet.follower(follower, following)
+     <span style="color:#00a">select</span> fairies.userid <span style="color:#00a">as</span> follower,
+            users.userid <span style="color:#00a">as</span> following
+       <span style="color:#00a">from</span> fairies <span style="color:#00a">cross</span> <span style="color:#00a">join</span> tweet.users
+      <span style="color:#00a">where</span> users.bio ~ <span style="color:#a50">&#39;of the fairies&#39;</span>;</code></pre></div>
+<p>This time we even have the opportunity to use a <em>cross join</em> as we want to
+produce all the different combinations of a <em>fairy</em> with their royal
+subjects.</p>
+
+<p>Here&rsquo;s what we have set-up in terms of followers now:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> follower.uname <span style="color:#00a">as</span> follower,
+       follower.bio <span style="color:#00a">as</span> <span style="color:#00a">&#34;follower&#39;s bio&#34;</span>,
+       following.uname <span style="color:#00a">as</span> following
+       
+  <span style="color:#00a">from</span> tweet.follower <span style="color:#00a">as</span> follows
+  
+       <span style="color:#00a">join</span> tweet.users <span style="color:#00a">as</span> follower
+         <span style="color:#00a">on</span> follows.follower = follower.userid
+         
+       <span style="color:#00a">join</span> tweet.users <span style="color:#00a">as</span> following
+         <span style="color:#00a">on</span> follows.following = following.userid;</code></pre></div>
+<p>And here&rsquo;s what we&rsquo;ve setup:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql">   follower   │              follower&#39;s bio               │ following 
+══════════════╪═══════════════════════════════════════════╪═══════════
+ Hermia       │ daughter to Egeus, in love with Lysander. │ Lysander
+ Helena       │ in love with Demetrius.                   │ Demetrius
+ Demetrius    │ in love with #Hermia.                     │ Hermia
+ Lysander     │ in love with #Hermia.                     │ Hermia
+ Peaseblossom │ Team #Fairies                             │ Oberon
+ Cobweb       │ Team #Fairies                             │ Oberon
+ Moth         │ Team #Fairies                             │ Oberon
+ Mustardseed  │ Team #Fairies                             │ Oberon
+ Peaseblossom │ Team #Fairies                             │ Titania
+ Cobweb       │ Team #Fairies                             │ Titania
+ Moth         │ Team #Fairies                             │ Titania
+ Mustardseed  │ Team #Fairies                             │ Titania
+(12 rows)</code></pre></div>
+<p>The support for <em>select</em> as a source of data for the <em>insert</em> statement is
+the way to implement <em>joins</em> for this command.</p>
+
+<p>The <em>insert into</em> clause also accepts a conflict resolution clause with the
+<em>on conflict</em> syntax, which is very powerful, and that we address later in
+our <a href="/tags/concurrency/">PostgreSQL Concurrency</a> series of articles.</p>
+
+<h1 id="update">Update</h1>
+
+<p>The SQL <em>update</em> statement is used to replace existing values in the
+database. Its most important aspect lies in its concurrency behavior, as it
+allows replacing existing values while other users are concurrently working
+with the database.</p>
+
+<p>In PostgreSQL, all the concurrency feature are based on
+<a href="https://www.postgresql.org/docs/current/static/mvcc.html">MVCC</a>, and in the
+case of the <em>update</em> statement it means that internally PostgreSQL is doing
+both an <em>insert</em> of the new data and a <em>delete</em> of the old one. PostgreSQL
+system columns <em>xmin</em> and <em>xmax</em> allow visibility tracking of the rows so
+that concurrent statement have a consistent snapshot of the server&rsquo;s data
+set at all times.</p>
+
+<p>As row locking is done per-tuple in PostgreSQL, an <em>update</em> statement only
+ever blocks another <em>update</em>, <em>delete</em> or <em>select for update</em> statement that
+targets the same row(s).</p>
+
+<p>We created some users without a <em>nickname</em> before, and maybe it&rsquo;s time to
+remedy that, by assigning them their <em>uname</em> as a <em>nickname</em> for now.</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
+
+   <span style="color:#00a">update</span> tweet.users
+      <span style="color:#00a">set</span> nickname = <span style="color:#a50">&#39;Robin Goodfellow&#39;</span>
+    <span style="color:#00a">where</span> userid = <span style="color:#099">17</span> <span style="color:#00a">and</span> uname = <span style="color:#a50">&#39;Puck&#39;</span>
+returning users.*;
+
+<span style="color:#00a">commit</span>;</code></pre></div>
+<p>Here we pick the id 17 from the table after a manual lookup. The idea is to
+show how to update fields in a single tuple from a <em>primary key</em> lookup. In
+a lot of cases, our application&rsquo;s code has fetched the <em>id</em> previously and
+injects it in the update query in much the same way as this.</p>
+
+<p>And thanks to the <em>returning</em> clause, we get to see what we&rsquo;ve done:</p>
+
+<pre><code> userid │ uname │     nickname     │         bio          │ picture 
+════════╪═══════╪══════════════════╪══════════════════════╪═════════
+     17 │ Puck  │ Robin Goodfellow │ or Robin Goodfellow. │ ¤
+(1 row)
+</code></pre>
+
+<p>As you can see in the previous query not only we used the <em>primary key</em>
+field, but as it is a synthetic key, we also added the real value we are
+interested into. Should we have pasted the information wrong, the <em>update</em>
+would find no matching rows and affect zero tuples.</p>
+
+<p>Now there&rsquo;s another use case for that double check: concurrency. We know
+that the <em>Robin Goodfellow</em> nickname applies to <em>Puck</em>. What if someone did
+<em>update</em> the <em>uname</em> of <em>Puck</em> while we were running our update statement?
+With that double check, we know exactly one of the following is true:</p>
+
+<ul>
+<li><p>Either the other statement came in first and the name is no longear
+<em>Puck</em> and we updated no rows.</p></li>
+
+<li><p>The other statement will come later and we did update a row that we know
+is userid 17 and named <em>Puck</em>.</p></li>
+</ul>
+
+<p>Think about that trick when dealing with concurrency in your application&rsquo;s
+code, and even more when you&rsquo;re fixing up some data from the console for a
+one-off fix. Then always use an explicit transaction block so that you can
+check what happened and issue a <em>rollback;</em> when it&rsquo;s not what you thought.</p>
+
+<p>We can also <em>update</em> several rows at the same time. Say we want to add a
+default nickname to all those characters:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">   <span style="color:#00a">update</span> tweet.users
+      <span style="color:#00a">set</span> nickname = <span style="color:#00a">case</span> <span style="color:#00a">when</span> uname ~ <span style="color:#a50">&#39; &#39;</span>
+                          <span style="color:#00a">then</span> <span style="color:#00a">substring</span>(uname <span style="color:#00a">from</span> <span style="color:#a50">&#39;[^ ]* (.*)&#39;</span>)
+                          <span style="color:#00a">else</span> uname
+                      <span style="color:#00a">end</span>
+    <span style="color:#00a">where</span> nickname <span style="color:#00a">is</span> <span style="color:#00a">null</span>
+returning users.*;</code></pre></div>
+<p>And now everyone is assigned a proper nickname, computed from their username
+with the easy and practical trick you can see in the query. The main thing
+to remember in that query is that you can use existing data in your <em>UPDATE</em>
+statement.</p>
+
+<p>Now, who are our Twitter users?</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span> uname, nickname, bio
+    <span style="color:#00a">from</span> tweet.users
+<span style="color:#00a">order</span> <span style="color:#00a">by</span> userid;</code></pre></div>
+<p>It&rsquo;s a bunch of folks you might have heard about before. I&rsquo;ve taken the
+names and biographies from the <a href="https://en.wikipedia.org/wiki/A_Midsummer_Night%27s_Dream#Characters">A Midsummer Night&rsquo;s
+Dream</a>
+play from Shakespeare, for which there&rsquo;s a full XML transcript available at
+<a href="http://research.cs.wisc.edu/niagara/data/shakes/shaksper.htm">Shakespeare
+2.00</a> thanks
+to <strong><em>Jon Bosak</em></strong>.</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql">      uname       │     nickname     │                     bio                     
+══════════════════╪══════════════════╪═════════════════════════════════════════════
+ Theseus          │ Duke Theseus     │ Duke of Athens.
+ Egeus            │ Egeus            │ father to #Hermia.
+ Lysander         │ Lysander         │ in love with #Hermia.
+ Demetrius        │ Demetrius        │ in love with #Hermia.
+ Philostrate      │ Philostrate      │ master of the revels to Theseus.
+ Peter Quince     │ Quince           │ a carpenter.
+ Snug             │ Snug             │ a joiner.
+ Nick Bottom      │ Bottom           │ a weaver.
+ Francis Flute    │ Flute            │ a bellows-mender.
+ Tom Snout        │ Snout            │ a tinker.
+ Robin Starveling │ Starveling       │ a tailor.
+ Hippolyta        │ Hippolyta        │ queen of the Amazons, betrothed to Theseus.
+ Hermia           │ Hermia           │ daughter to Egeus, in love with Lysander.
+ Helena           │ Helena           │ in love with Demetrius.
+ Oberon           │ Oberon           │ king of the fairies.
+ Titania          │ Titania          │ queen of the fairies.
+ Puck             │ Robin Goodfellow │ or Robin Goodfellow.
+ Peaseblossom     │ Peaseblossom     │ Team #Fairies
+ Cobweb           │ Cobweb           │ Team #Fairies
+ Moth             │ Moth             │ Team #Fairies
+ Mustardseed      │ Mustardseed      │ Team #Fairies
+ All              │ All              │ Everyone speaking at the same time
+ Fairy            │ Fairy            │ One of them #Fairies
+ Prologue         │ Prologue         │ a play within a play
+ Wall             │ Wall             │ a play within a play
+ Pyramus          │ Pyramus          │ a play within a play
+ Thisbe           │ Thisbe           │ a play within a play
+ Lion             │ Lion             │ a play within a play
+ Moonshine        │ Moonshine        │ a play within a play
+(29 rows)</code></pre></div>
+<h1 id="inserting-some-tweets">Inserting Some Tweets</h1>
+
+<p>Now that we have created a bunch of users from <em>A Midsummer Night&rsquo;s Dream</em>,
+it is time to have them tweet. The full XML transcript available at
+<a href="http://research.cs.wisc.edu/niagara/data/shakes/shaksper.htm">Shakespeare
+2.00</a> contains
+not only the list of persona but also the full text of the play. They are
+all speakers and they all have lines. That&rsquo;s a good content for tweets!</p>
+
+<p>Here&rsquo;s what the transcript looks like:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#1e90ff;font-weight:bold">&lt;PLAYSUBT&gt;</span>A MIDSUMMER NIGHT&#39;S DREAM<span style="color:#1e90ff;font-weight:bold">&lt;/PLAYSUBT&gt;</span>
+
+<span style="color:#1e90ff;font-weight:bold">&lt;ACT&gt;&lt;TITLE&gt;</span>ACT I<span style="color:#1e90ff;font-weight:bold">&lt;/TITLE&gt;</span>
+
+<span style="color:#1e90ff;font-weight:bold">&lt;SCENE&gt;&lt;TITLE&gt;</span>SCENE I.  Athens. The palace of THESEUS.<span style="color:#1e90ff;font-weight:bold">&lt;/TITLE&gt;</span>
+<span style="color:#1e90ff;font-weight:bold">&lt;STAGEDIR&gt;</span>Enter THESEUS, HIPPOLYTA, PHILOSTRATE, and
+Attendants<span style="color:#1e90ff;font-weight:bold">&lt;/STAGEDIR&gt;</span>
+
+<span style="color:#1e90ff;font-weight:bold">&lt;SPEECH&gt;</span>
+<span style="color:#1e90ff;font-weight:bold">&lt;SPEAKER&gt;</span>THESEUS<span style="color:#1e90ff;font-weight:bold">&lt;/SPEAKER&gt;</span>
+<span style="color:#1e90ff;font-weight:bold">&lt;LINE&gt;</span>Now, fair Hippolyta, our nuptial hour<span style="color:#1e90ff;font-weight:bold">&lt;/LINE&gt;</span>
+<span style="color:#1e90ff;font-weight:bold">&lt;LINE&gt;</span>Draws on apace; four happy days bring in<span style="color:#1e90ff;font-weight:bold">&lt;/LINE&gt;</span>
+<span style="color:#1e90ff;font-weight:bold">&lt;LINE&gt;</span>Another moon: but, O, methinks, how slow<span style="color:#1e90ff;font-weight:bold">&lt;/LINE&gt;</span>
+<span style="color:#1e90ff;font-weight:bold">&lt;LINE&gt;</span>This old moon wanes! she lingers my desires,<span style="color:#1e90ff;font-weight:bold">&lt;/LINE&gt;</span>
+<span style="color:#1e90ff;font-weight:bold">&lt;LINE&gt;</span>Like to a step-dame or a dowager<span style="color:#1e90ff;font-weight:bold">&lt;/LINE&gt;</span>
+<span style="color:#1e90ff;font-weight:bold">&lt;LINE&gt;</span>Long withering out a young man revenue.<span style="color:#1e90ff;font-weight:bold">&lt;/LINE&gt;</span>
+<span style="color:#1e90ff;font-weight:bold">&lt;/SPEECH&gt;</span>
+
+<span style="color:#1e90ff;font-weight:bold">&lt;SPEECH&gt;</span>
+<span style="color:#1e90ff;font-weight:bold">&lt;SPEAKER&gt;</span>HIPPOLYTA<span style="color:#1e90ff;font-weight:bold">&lt;/SPEAKER&gt;</span>
+<span style="color:#1e90ff;font-weight:bold">&lt;LINE&gt;</span>Four days will quickly steep themselves in night;<span style="color:#1e90ff;font-weight:bold">&lt;/LINE&gt;</span>
+<span style="color:#1e90ff;font-weight:bold">&lt;LINE&gt;</span>Four nights will quickly dream away the time;<span style="color:#1e90ff;font-weight:bold">&lt;/LINE&gt;</span>
+<span style="color:#1e90ff;font-weight:bold">&lt;LINE&gt;</span>And then the moon, like to a silver bow<span style="color:#1e90ff;font-weight:bold">&lt;/LINE&gt;</span>
+<span style="color:#1e90ff;font-weight:bold">&lt;LINE&gt;</span>New-bent in heaven, shall behold the night<span style="color:#1e90ff;font-weight:bold">&lt;/LINE&gt;</span>
+<span style="color:#1e90ff;font-weight:bold">&lt;LINE&gt;</span>Of our solemnities.<span style="color:#1e90ff;font-weight:bold">&lt;/LINE&gt;</span>
+<span style="color:#1e90ff;font-weight:bold">&lt;/SPEECH&gt;</span></code></pre></div>
+<p>To have the characters of the play tweet their lines, we write a simple XML
+parser for the format and use the <em>insert</em> SQL command. Extracted from the
+code used to insert the data, here&rsquo;s the <em>insert</em> query:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span> <span style="color:#00a">into</span> tweet.message(userid, message)
+     <span style="color:#00a">select</span> userid, <span style="color:#f00;background-color:#faa">$</span><span style="color:#099">2</span>
+       <span style="color:#00a">from</span> tweet.users
+      <span style="color:#00a">where</span> users.uname = <span style="color:#f00;background-color:#faa">$</span><span style="color:#099">1</span> <span style="color:#00a">or</span> users.nickname = <span style="color:#f00;background-color:#faa">$</span><span style="color:#099">1</span></code></pre></div>
+<p>As the play&rsquo;s text uses names such as <code>&lt;SPEAKER&gt;QUINCE&lt;/SPEAKER&gt;</code> and we
+inserted the real name into our database, we match the play&rsquo;s XML content
+against either the <em>uname</em> or the <em>nickname</em> field.</p>
+
+<p>Now that the data is loaded, we can have a look at the beginning of the play
+in SQL.</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span> uname, message
+    <span style="color:#00a">from</span> tweet.message
+         <span style="color:#00a">left</span> <span style="color:#00a">join</span> tweet.users <span style="color:#00a">using</span>(userid)
+<span style="color:#00a">order</span> <span style="color:#00a">by</span> messageid <span style="color:#00a">limit</span> <span style="color:#099">4</span>;</code></pre></div>
+<p>And yes, we can now see Shakespeare tweeting:</p>
+
+<pre><code>   uname   │                      message                      
+═══════════╪═══════════════════════════════════════════════════
+ Theseus   │ Now, fair Hippolyta, our nuptial hour            ↵
+           │ Draws on apace; four happy days bring in         ↵
+           │ Another moon: but, O, methinks, how slow         ↵
+           │ This old moon wanes! she lingers my desires,     ↵
+           │ Like to a step-dame or a dowager                 ↵
+           │ Long withering out a young man revenue.
+ Hippolyta │ Four days will quickly steep themselves in night;↵
+           │ Four nights will quickly dream away the time;    ↵
+           │ And then the moon, like to a silver bow          ↵
+           │ New-bent in heaven, shall behold the night       ↵
+           │ Of our solemnities.
+ Theseus   │ Go, Philostrate,                                 ↵
+           │ Stir up the Athenian youth to merriments;        ↵
+           │ Awake the pert and nimble spirit of mirth;       ↵
+           │ Turn melancholy forth to funerals;               ↵
+           │ The pale companion is not for our pomp.          ↵
+           │ Hippolyta, I woo'd thee with my sword,           ↵
+           │ And won thy love, doing thee injuries;           ↵
+           │ But I will wed thee in another key,              ↵
+           │ With pomp, with triumph and with revelling.
+ Egeus     │ Happy be Theseus, our renowned duke!
+(4 rows)
+</code></pre>
+
+<h1 id="delete">Delete</h1>
+
+<p>The <em>delete</em> statement allows marking tuples for removal. Given PostgreSQL&rsquo;s
+implementation of
+<a href="https://www.postgresql.org/docs/current/static/mvcc.html">MVCC</a>, it would
+not be wise to remove the tuple from disk at the time of the <em>delete</em>:</p>
+
+<ul>
+<li><p>First, the transaction might <em>rollback</em> and we don&rsquo;t know that yet.</p></li>
+
+<li><p>Second, other concurrent transactions only get to see the <em>delete</em> after
+<em>commit</em>, not as soon as the statement is done.</p></li>
+</ul>
+
+<p>As with the <em>update</em> statement the most important part of the <em>delete</em>
+statement has to do with concurrency. Again, the main reason why we use a
+RDBMS is so that we don&rsquo;t have to solve the concurrency problems in our
+application&rsquo;s code, where instead we can focus on delivering an improved
+user experience.</p>
+
+<p>The actual removal of on-disk tuples happens with <em>vacuum</em>, which the system
+runs in the background for you automatically thanks to its <a href="https://www.postgresql.org/docs/current/static/routine-vacuuming.html#AUTOVACUUM">autovacuum
+daemon</a>.
+PostgreSQL might also re-use the on-disk space for an <em>insert</em> statement as
+soon as the tuple isn&rsquo;t visible for any transaction anymore.</p>
+
+<p>Say we mistakenly added characters from another play, and we don&rsquo;t want to
+have to deal with them. First, inserting them:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span> <span style="color:#00a">into</span> tweet.users (uname, bio)
+     <span style="color:#00a">values</span> (<span style="color:#a50">&#39;CLAUDIUS&#39;</span>, <span style="color:#a50">&#39;king of Denmark.&#39;</span>),
+            (<span style="color:#a50">&#39;HAMLET&#39;</span>, <span style="color:#a50">&#39;son to the late, and nephew to the present king&#39;</span>),
+            (<span style="color:#a50">&#39;POLONIUS&#39;</span>, <span style="color:#a50">&#39;lord chamberlain.&#39;</span>),
+            (<span style="color:#a50">&#39;HORATIO&#39;</span>, <span style="color:#a50">&#39;friend to Hamlet&#39;</span>),
+            (<span style="color:#a50">&#39;LAERTES&#39;</span>, <span style="color:#a50">&#39;son to Polonius&#39;</span>),
+            (<span style="color:#a50">&#39;LUCIANUS&#39;</span>, <span style="color:#a50">&#39;nephew to the king&#39;</span>);</code></pre></div>
+<p>The <em>delete</em> syntax is quite simple:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
+
+   <span style="color:#00a">delete</span>
+     <span style="color:#00a">from</span> tweet.users
+    <span style="color:#00a">where</span> userid = <span style="color:#099">22</span> <span style="color:#00a">and</span> uname = <span style="color:#a50">&#39;CLAUDIUS&#39;</span>
+returning *;
+
+<span style="color:#00a">commit</span>;</code></pre></div>
+<p>And as usual thanks to the <em>returning</em> clause, we know exactly what we just
+marked for deletion:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql"> userid │  uname   │ nickname │       bio        │ picture 
+════════╪══════════╪══════════╪══════════════════╪═════════
+     22 │ CLAUDIUS │ ¤        │ king of Denmark. │ ¤
+(1 row)</code></pre></div>
+<p>Now we can also <em>delete</em> more than one row with the same command — it all
+depends on what we match. As the new characters inserted by mistake didn&rsquo;t
+have a part in the play we inserted our messages from, then we can use an
+<em>anti-join</em> to delete them based on that information:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
+
+<span style="color:#00a">with</span> deleted_rows <span style="color:#00a">as</span>
+(
+    <span style="color:#00a">delete</span>
+      <span style="color:#00a">from</span> tweet.users
+     <span style="color:#00a">where</span> <span style="color:#00a">not</span> <span style="color:#00a">exists</span>
+           (
+             <span style="color:#00a">select</span> <span style="color:#099">1</span>
+               <span style="color:#00a">from</span> tweet.message
+              <span style="color:#00a">where</span> userid = users.userid
+           )
+ returning *
+)
+<span style="color:#00a">select</span> <span style="color:#00a">min</span>(userid), <span style="color:#00a">max</span>(userid),
+       <span style="color:#00a">count</span>(*),
+       array_agg(uname)
+  <span style="color:#00a">from</span> deleted_rows;
+
+<span style="color:#00a">commit</span>;</code></pre></div>
+<p>And as expected we get a nice summary output of exactly what we did. This
+should now be your default syntax for any <em>delete</em> you have to run
+interactively in any database, right?</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql"> min │ max │ count │                 array_agg                  
+═════╪═════╪═══════╪════════════════════════════════════════════
+  41 │  45 │     5 │ {HAMLET,POLONIUS,HORATIO,LAERTES,LUCIANUS}
+(1 row)</code></pre></div>
+<p>It is also possible to use a <em>join condition</em> when deleting rows. It is
+written <em>using</em> and covered in the PostgreSQL documentation about the
+<a href="https://www.postgresql.org/docs/9.6/static/sql-delete.html">delete</a>
+command.</p>
+
+<h1 id="tuples-and-rows">Tuples and Rows</h1>
+
+<p>In this chapter, we&rsquo;ve been mentioning <em>tuples</em> and <em>rows</em> at different
+times. There&rsquo;s a difference between the two: a single <em>row</em> might exist
+on-disk as more than one <em>tuple</em> at any time, with only one of them visible
+to any single transaction.</p>
+
+<p>The transaction doing an <em>update</em> now sees the new version of the <em>row</em>, the
+new <em>tuple</em> just inserted on-disk. As long as this transaction has yet to
+<em>commit</em> then the rest of the world still sees the previous version of the
+<em>row</em>, which is another <em>tuple</em> on-disk.</p>
+
+<p>While in some contexts <em>tuples</em> and <em>rows</em> are equivalent, in this chapter
+about DML we must be careful to use them in the right context.</p>
+
+<h1 id="deleting-all-the-rows-truncate">Deleting All the Rows: Truncate</h1>
+
+<p>PostgreSQL adds to the <em>DML</em> statements the <em>truncate</em> command. Internally,
+it is considered to be a <em>DDL</em> rather than a <em>DML</em>. It is a very efficient
+way to purge a table of all of its content at once, as it doesn&rsquo;t follow the
+per-tuple MVCC system and will simply remove the data files on disk.</p>
+
+<p>Note that the <em>truncate</em> command is still MVCC compliant:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> <span style="color:#00a">count</span>(*) <span style="color:#00a">from</span> foo;
+
+<span style="color:#00a">begin</span>;
+<span style="color:#00a">truncate</span> foo;
+<span style="color:#00a">rollback</span>;
+
+<span style="color:#00a">select</span> <span style="color:#00a">count</span>(*) <span style="color:#00a">from</span> foo;</code></pre></div>
+<p>Assuming there&rsquo;s no concurrent activity on your system when running the
+commands, both the counting queries naturally return the same number.</p>
+
+<h1 id="delete-but-keep-a-few-rows">Delete but Keep a Few Rows</h1>
+
+<p>When cleaning up a data set, it may happen that you want to remove most of
+the content of a table. It could be a logs table, an audit trail that has
+expired or something like that. As we saw earlier when using PostgreSQL,
+<em>delete</em> marks the tuples as not being visible anymore and then <em>vacuum</em>
+does the heavy lifting in the background. It is then more efficient to
+create a table containing only the new rows and swap it with the old table:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
+
+<span style="color:#00a">create</span> <span style="color:#00a">table</span> new_name (<span style="color:#00a">like</span> name <span style="color:#00a">including</span> <span style="color:#00a">all</span>);
+
+<span style="color:#00a">insert</span> <span style="color:#00a">into</span> new_name
+     <span style="color:#00a">select</span> &lt;<span style="color:#00a">column</span> list&gt;
+       <span style="color:#00a">from</span> name
+      <span style="color:#00a">where</span> &lt;restrictions&gt;;
+      
+ <span style="color:#00a">drop</span> <span style="color:#00a">table</span> name;
+<span style="color:#00a">alter</span> <span style="color:#00a">table</span> new_name <span style="color:#00a">rename</span> <span style="color:#00a">to</span> name;
+
+<span style="color:#00a">commit</span>;</code></pre></div>
+<p>In the general case, as soon as you remove <em>most</em> entries from your table,
+this method is going to be more efficient. The trouble with that method is
+the level of locking required to run the <em>drop table</em> and the <em>alter table</em>
+statements.</p>
+
+<p>Those <em>DDL</em> require an <em>access exclusive lock</em> and will block any read and
+write traffic to both tables while they run. If you don&rsquo;t have slow hours or
+even off-hours, then it might not be feasible for you to use this trick.</p>
+
+<p>The good thing about <em>delete</em> and <em>vacuum</em> is that they can run in the
+middle of about any concurrent traffic of course.</p>
+
+<h1 id="conclusion">Conclusion</h1>
+
+<p>PostgreSQL is and advanced RDBMS which provides plenty fancy data processing
+options. Its core service is handling concurrent editing of the data, and as
+a user the way to edit data is by using <a href="https://www.postgresql.org/docs/current/static/dml.html">Data Manipulation
+Language</a>. In
+follow-up articles we&rsquo;ll get into more details about how to deal with
+concurrency.</p>
+
+              
+            </div>
+          </div>
+          <div id="post-footer" class="post-footer main-content-wrap">
+            
+              
+                
+                
+                  <div class="post-footer-tags">
+                    <span class="text-color-light text-small"></span><br/>
+                    
+  <a class="tag tag--primary tag--small" href="/tags/postgresql/">PostgreSQL</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/yesql/">YeSQL</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/concurrency/">Concurrency</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/insert/">INSERT</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/update/">UPDATE</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/delete/">DELETE</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/crud/">CRUD</a>
+
+                  </div>
+                
+              
+            
+            <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    
+    <script async id="_ck_252762" src="https://forms.convertkit.com/252762?v=6"></script>
+    
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/05/postgresql-data-types/" data-tooltip="PostgreSQL Data Types">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f06%2fpostgresql-concurrency-data-modification-language%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f06%2fpostgresql-concurrency-data-modification-language%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=PostgreSQL%20Concurrency%3a%20Data%20Modification%20Language with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f06%2fpostgresql-concurrency-data-modification-language%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+            
+              
+                <div id="disqus_thread">
+  <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+              
+            
+          </div>
+        </article>
+        <footer id="footer" class="main-content-wrap">
+  <span class="copyrights">
+    &copy; 2018 Dimitri Fontaine. 
+  </span>
+</footer>
+
+      </div>
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="5">
+        <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    
+    <script async id="_ck_252762" src="https://forms.convertkit.com/252762?v=6"></script>
+    
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/05/postgresql-data-types/" data-tooltip="PostgreSQL Data Types">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f06%2fpostgresql-concurrency-data-modification-language%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f06%2fpostgresql-concurrency-data-modification-language%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=PostgreSQL%20Concurrency%3a%20Data%20Modification%20Language with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f06%2fpostgresql-concurrency-data-modification-language%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+      </div>
+      <div id="share-options-bar" class="share-options-bar" data-behavior="5">
+  <ul class="share-options">
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f06%2fpostgresql-concurrency-data-modification-language%2f">
+        <i class="fa fa-google-plus"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f06%2fpostgresql-concurrency-data-modification-language%2f">
+        <i class="fa fa-facebook-official"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=PostgreSQL%20Concurrency%3a%20Data%20Modification%20Language with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f06%2fpostgresql-concurrency-data-modification-language%2f">
+        <i class="fa fa-twitter"></i><span></span>
+      </a>
+    </li>
+  </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
+    </div>
+    
+    <div id="about">
+  <div id="about-card">
+    <div id="about-btn-close">
+      <i class="fa fa-remove"></i>
+    </div>
+    
+      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+    
+    <h4 id="about-card-name">Dimitri Fontaine</h4>
+    
+      <div id="about-card-bio">PostgreSQL Major Contributor</div>
+    
+    
+      <div id="about-card-job">
+        <i class="fa fa-briefcase"></i>
+        <br/>
+        Open Source Software Engineer
+      </div>
+    
+    
+      <div id="about-card-location">
+        <i class="fa fa-map-marker"></i>
+        <br/>
+        France
+      </div>
+    
+  </div>
+</div>
+
+    <div id="algolia-search-modal" class="modal-container">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="close-button"><i class="fa fa-close"></i></span>
+      <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
+        <span class="searchby-algolia-text text-color-light text-small">by</span>
+        <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+      </a>
+      <i class="search-icon fa fa-search"></i>
+      <form id="algolia-search-form">
+        <input type="text" id="algolia-search-input" name="search"
+          class="form-control input--large search-input" placeholder="" />
+      </form>
+    </div>
+    <div class="modal-body">
+      <div class="no-result text-color-light text-center"></div>
+      <div class="results">
+        
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/06/postgresql-concurrency-data-modification-language/">
+                <h3 class="media-heading">PostgreSQL Concurrency: Data Modification Language</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">PostgreSQL is a relational database management system. It&rsquo;s even the world&rsquo;s most advanced open source one of them. As such, as its core, Postgres solves concurrent access to a set of data and maintains consistency while allowing concurrent operations.
+Postgres exposes its concurrency APIs in the SQL language, in particular in the DML parts of it: you can read the Data Manipulation Language chapter of the PostgreSQL docs for all the details.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/05/postgresql-data-types/">
+                <h3 class="media-heading">PostgreSQL Data Types</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Today it&rsquo;s time to conclude our series of <a href="/tags/data-types/">PostgreSQL Data
+Types</a> articles with a recap. The series cover lots of
+core PostgreSQL data types and shows how to benefit from the PostgreSQL
+concept of a data type: more than input validation, a PostgreSQL data type
+also implements expected behaviors and processing functions.</p>
+
+<p>This allows an application developer to rely on PostgreSQL for more complex
+queries, having the processing happen where the data is, for instance when
+implementing advanced JOIN operations, then retrieving only the data set
+that is interesting for the application.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/05/postgresql-data-types-point/">
+                <h3 class="media-heading">PostgreSQL Data Types: Point</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL Point type.</p>
+
+<p>In order to put the Point datatype in a context where it makes sense, we&rsquo;re
+going to download a complete geolocation data set and normalize it, thus
+making good use of both the normalization good practice and those other
+PostgreSQL data types we&rsquo;ve been learning about in the previous articles of
+this series.</p>
+
+<p>Buckle-up, this is a long article with a lot of SQL inside.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/05/postgresql-data-types-enum/">
+                <h3 class="media-heading">PostgreSQL Data Types: ENUM</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL ENUM type.</p>
+
+<p>This data type has been added to PostgreSQL in order to make it easier to
+support migrations from MySQL. Proper relational design would use a
+reference table and a foreign key instead.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/04/postgresql-data-types-json/">
+                <h3 class="media-heading">PostgreSQL Data Types: JSON</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL JSON type.</p>
+
+<p>PostgreSQL has built-in support for JSON with a great range of processing
+functions and operators, and complete indexing support. The documentation
+covers all the details in the chapters entitled <a href="https://www.postgresql.org/docs/current/static/datatype-json.html">JSON
+Types</a>
+and <a href="https://www.postgresql.org/docs/current/static/functions-json.html">JSON Functions and
+Operators</a>.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/04/postgresql-data-types-xml/">
+                <h3 class="media-heading">PostgreSQL Data Types: XML</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL XML type.</p>
+
+<p>The SQL standard includes a <a href="https://en.wikipedia.org/wiki/SQL/XML">SQL/XML</a>
+which <em>introduces the predefined data type XML together with constructors,
+several routines, functions, and XML-to-SQL data type mappings to support
+manipulation and storage of XML in a SQL database</em>, as per the Wikipedia
+page.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/04/postgresql-data-types-arrays/">
+                <h3 class="media-heading">PostgreSQL Data Types: Arrays</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL array data types.</p>
+
+<p>Arrays can be used to denormalize data and avoid lookup tables. A good rule
+of thumb for using them that way is that you mostly use the array as a
+whole, even if you might at times search for elements in the array. Heavier
+processing is going to be more complex than a lookup table.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/04/postgresql-data-types-ranges/">
+                <h3 class="media-heading">PostgreSQL Data Types: Ranges</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL ranges data type.</p>
+
+<p>Range types are a unique feature of PostgreSQL, managing two dimensions of
+data in a single column, and allowing advanced processing. The main example
+is the <em>daterange</em> data type, which stores as a single value a lower and an
+upper bound of the range as a single value. This allows PostgreSQL to
+implement a concurrent safe check against <em>overlapping</em> ranges, as we&rsquo;re
+going to see in this article.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/04/postgresql-data-types-network-addresses/">
+                <h3 class="media-heading">PostgreSQL Data Types: Network Addresses</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce network address types.</p>
+
+<p>PostgreSQL includes support for both <em>cidr</em>, <em>inet</em>, and <em>macaddr</em> data
+types. Again, those types are bundled with indexing support and advanced
+functions and operator support.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/04/postgresql-data-types-date-and-time-processing/">
+                <h3 class="media-heading">PostgreSQL Data Types: Date and Time Processing</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce date and time based processing functions.</p>
+
+<p>Once the application&rsquo;s data, or rather the user data is properly stored as
+timestamp with time zone, PostgreSQL allows implementing all the processing
+you need to. In this article we dive into a set of examples to help you get
+started with time based processing in your database. Can we boost your
+reporting skills?</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+      </div>
+    </div>
+    <div class="modal-footer">
+      <p class="results-count text-medium"
+         data-message-zero=""
+         data-message-one=""
+         data-message-other="">
+         274 posts found
+      </p>
+    </div>
+  </div>
+</div>
+    
+  
+    
+    <div id="cover" style="background-image:url('https://tapoueh.org/images/mayan-calendar.jpg');"></div>
+  
+
+
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
+
+
+<script src="/js/script-qi9wbxp2ya2j6p7wx1i6tgavftewndznf4v0hy2gvivk1rxgc3lm7njqb6bz.min.js"></script>
+
+
+
+<script>
+$(document).ready(function() {
+  hljs.configure({ classPrefix: '', useBR: false });
+  $('pre.code-highlight > code, pre > code').each(function(i, block) {
+    if (!$(this).hasClass('codeblock')) {
+      $(this).addClass('codeblock');
+    }
+    hljs.highlightBlock(block);
+  });
+});
+</script>
+
+
+  
+    
+      <script>
+        var disqus_config = function () {
+          this.page.url = 'https:\/\/tapoueh.org\/blog\/2018\/06\/postgresql-concurrency-data-modification-language\/';
+          
+            this.page.identifier = '\/blog\/2018\/06\/postgresql-concurrency-data-modification-language\/'
+          
+        };
+        (function() {
+          
+          
+          if (window.location.hostname == "localhost") {
+            return;
+          }
+          var d = document, s = d.createElement('script');
+          var disqus_shortname = 'tapoueh';
+          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+          s.setAttribute('data-timestamp', +new Date());
+          (d.head || d.body).appendChild(s);
+        })();
+      </script>
+    
+  
+
+
+
+    
+  </body>
+</html>
+
