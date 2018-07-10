@@ -1,0 +1,1168 @@
+
+
+  
+    
+  
+
+
+  
+
+
+
+
+  
+
+
+  
+
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Hugo 0.31.1">
+    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
+    <title>Modeling for Concurrency</title>
+    <meta name="author" content="Dimitri Fontaine">
+    <meta name="keywords" content="">
+
+    <link rel="icon" href="/favicon.ico">
+    
+
+    
+    <meta name="description" content="Let&rsquo;s continue to dive in PostgreSQL Concurrency. Last week&rsquo;s article
+PostgreSQL Concurrency: Isolation and
+Locking was a
+primer on PostgreSQL isolation and locking properties and behaviors.
+
+Today&rsquo;s article takes us a step further and builds on what we did last week,
+in particular the database modeling for a tweet like application. After
+having had all the characters from Shakespeare&rsquo;s A Midsummer Night&rsquo;s Dream
+tweet their own lines in our database in PostgreSQL Concurrency: Data
+Modification Language, it&rsquo;s time for them
+to do some actions on the tweets: likes and retweet.
+
+Of course, we&rsquo;re going to put concurrency to the test, so we&rsquo;re going to
+have to handle very very popular tweets from the play!">
+    <meta property="og:description" content="Let&rsquo;s continue to dive in PostgreSQL Concurrency. Last week&rsquo;s article
+PostgreSQL Concurrency: Isolation and
+Locking was a
+primer on PostgreSQL isolation and locking properties and behaviors.
+
+Today&rsquo;s article takes us a step further and builds on what we did last week,
+in particular the database modeling for a tweet like application. After
+having had all the characters from Shakespeare&rsquo;s A Midsummer Night&rsquo;s Dream
+tweet their own lines in our database in PostgreSQL Concurrency: Data
+Modification Language, it&rsquo;s time for them
+to do some actions on the tweets: likes and retweet.
+
+Of course, we&rsquo;re going to put concurrency to the test, so we&rsquo;re going to
+have to handle very very popular tweets from the play!">
+    <meta property="og:type" content="blog">
+    <meta property="og:title" content="Modeling for Concurrency">
+    <meta property="og:url" content="/blog/2018/07/modeling-for-concurrency/">
+    <meta property="og:site_name" content="Dimitri Fontaine, PostgreSQL Expert">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Modeling for Concurrency">
+    <meta name="twitter:description" content="Let&rsquo;s continue to dive in PostgreSQL Concurrency. Last week&rsquo;s article
+PostgreSQL Concurrency: Isolation and
+Locking was a
+primer on PostgreSQL isolation and locking properties and behaviors.
+
+Today&rsquo;s article takes us a step further and builds on what we did last week,
+in particular the database modeling for a tweet like application. After
+having had all the characters from Shakespeare&rsquo;s A Midsummer Night&rsquo;s Dream
+tweet their own lines in our database in PostgreSQL Concurrency: Data
+Modification Language, it&rsquo;s time for them
+to do some actions on the tweets: likes and retweet.
+
+Of course, we&rsquo;re going to put concurrency to the test, so we&rsquo;re going to
+have to handle very very popular tweets from the play!">
+    
+      <meta name="twitter:creator" content="@tapoueh">
+    
+    
+
+    
+    
+
+    
+      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
+    
+
+    
+      <meta property="og:image" content="https://tapoueh.org/img/concurrency-logo.png">
+    
+    
+      <meta property="og:image" content="https://tapoueh.org/img/concurrency-dogs.jpg">
+    
+    
+
+    
+
+    
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
+    
+    
+    <link rel="stylesheet" href="/css/style-jsjn0006wyhpyzivf6yceb31gvpjatbcs3qzjvlumobfnugccvobqwxnnaj8.min.css" />
+    
+    
+      <link rel="stylesheet" href="https://tapoueh.org/css/dim.css">
+    
+      <link rel="stylesheet" href="https://tapoueh.org/css/nav.css">
+    
+
+    
+      
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-47059482-1', 'auto');
+ga('send', 'pageview');
+</script>
+
+    
+    
+  </head>
+
+  <body>
+    <div id="blog">
+      <header id="header" data-behavior="5">
+  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+  <div class="navbar-collapse collapse header-title" id="navigation">
+    <ul class="nav navbar-nav navbar-right">
+      
+      <li class="dropdown">
+        
+        <a href="/">blog</a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a href="/conf/">talks</a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a href="http://pgloader.io/">pgloader</a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a href="http://masteringpostgresql.com/">Mastering PostgreSQL</a>
+        
+      </li>
+      
+    </ul>
+  </div>
+
+  
+    
+      <a class="header-right-icon "
+         href="http://masteringpostgresql.com" target="_blank">
+    
+    
+      <i class="fa fa-lg fa-book"></i>
+    
+    
+    </a>
+  
+</header>
+
+      <nav id="sidebar" data-behavior="5">
+  <div class="sidebar-container">
+    
+      <div class="sidebar-profile">
+        <a href="/#about">
+          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+        </a>
+        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
+        
+          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
+        
+      </div>
+    
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
+      
+      <span class="sidebar-button-desc">Blog</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/about/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
+      
+      <span class="sidebar-button-desc">About</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories/yesql/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-database"></i>
+      
+      <span class="sidebar-button-desc">YeSQL</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="http://masteringpostgresql.com" target="_blank" rel="noopener">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
+      
+      <span class="sidebar-button-desc">Mastering PostgreSQL</span>
+    </a>
+  </li>
+
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+      
+      <span class="sidebar-button-desc">GitHub</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+      
+      <span class="sidebar-button-desc">Twitter</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+      
+      <span class="sidebar-button-desc">Categories</span>
+    </a>
+  </li>
+
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/index.xml">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+      
+      <span class="sidebar-button-desc">RSS</span>
+    </a>
+  </li>
+
+
+    </ul>
+  </div>
+</nav>
+
+      
+  <div class="post-header-cover
+              text-left
+              post-header-cover--partial"
+       style="background-image:url('/img/concurrency-dogs.jpg')"
+       data-behavior="5">
+    
+      <div class="post-header main-content-wrap text-left">
+  
+    <h1 class="post-title" itemprop="headline">
+      Modeling for Concurrency
+    </h1>
+  
+  
+  <div class="postShorten-meta post-meta">
+    
+      <time itemprop="datePublished" datetime="2018-07-10T10:26:47&#43;02:00">
+        
+  
+  
+  
+  
+    Tuesday 10 Jul 2018
+  
+
+      </time>
+    
+    
+  
+  
+    <span></span>
+    
+      <a class="category-link" href="/categories/postgresql">PostgreSQL</a>, 
+    
+      <a class="category-link" href="/categories/yesql">YeSQL</a>
+    
+  
+
+  </div>
+
+</div>
+    
+  </div>
+
+
+      <div id="main" data-behavior="5"
+        class="hasCover
+               hasCoverMetaIn
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
+          
+          <div class="post-content markdown" itemprop="articleBody">
+            <div class="main-content-wrap">
+              <p>Let&rsquo;s continue to dive in PostgreSQL Concurrency. Last week&rsquo;s article
+<a href="/blog/2018/07/postgresql-concurrency-isolation-and-locking/">PostgreSQL Concurrency: Isolation and
+Locking</a> was a
+primer on PostgreSQL isolation and locking properties and behaviors.</p>
+
+<p>Today&rsquo;s article takes us a step further and builds on what we did last week,
+in particular the database modeling for a <em>tweet</em> like application. After
+having had all the characters from Shakespeare&rsquo;s <em>A Midsummer Night&rsquo;s Dream</em>
+tweet their own lines in our database in <a href="/blog/2018/06/PostgreSQL-DML.md">PostgreSQL Concurrency: Data
+Modification Language</a>, it&rsquo;s time for them
+to do some actions on the tweets: likes and retweet.</p>
+
+<p>Of course, we&rsquo;re going to put concurrency to the test, so we&rsquo;re going to
+have to handle very very popular tweets from the play!</p>
+
+<p>
+<h1 id="table-of-contents"></h1><nav id="TableOfContents">
+<ul>
+<li><a href="#modeling-for-concurrency">Modeling for Concurrency</a></li>
+<li><a href="#putting-concurrency-to-the-test">Putting Concurrency to the Test</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+</nav></p>
+
+<h1 id="modeling-for-concurrency">Modeling for Concurrency</h1>
+
+<p>We should have another modeling pass on the <em>tweet.message</em> table now. With
+what we learned about concurrency in PostgreSQL, it&rsquo;s easy to see that we
+won&rsquo;t get anywhere with the current model. Remember when <a href="https://en.wikipedia.org/wiki/Donald_Knuth">Donald
+Knuth</a> said</p>
+
+<blockquote>
+<p><em>We should forget about small efficiencies, say about 97% of the time:
+premature optimization is the root of all evil. Yet we should not pass up
+our opportunities in that critical 3%.</em></p>
+</blockquote>
+
+<p>Database systems have been designed to handle concurrency so that your
+application&rsquo;s code doesn&rsquo;t have to. One part for the critical 3% is then
+related to concurrent operations, and the one that is impossible to
+implement in a both fast and correct way is a concurrent <em>update</em> on the
+same target row.</p>
+
+<p>In our model here, given how the application works, we know that messages
+will get concurrent <em>update</em> activity for the <em>favs</em> and <em>rts</em> counters. So
+while the previous model looks correct with respect to <em>normal forms</em> — the
+counters are dependent on the message&rsquo;s key — we know that concurrent
+activity is going to be hard to handle in production.</p>
+
+<p>So here&rsquo;s a smarter version of the <em>activity</em> parts of the database model:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
+
+<span style="color:#00a">create</span> <span style="color:#00a">type</span> tweet.action_t
+    <span style="color:#00a">as</span> enum(<span style="color:#a50">&#39;rt&#39;</span>, <span style="color:#a50">&#39;fav&#39;</span>, <span style="color:#a50">&#39;de-rt&#39;</span>, <span style="color:#a50">&#39;de-fav&#39;</span>);
+
+<span style="color:#00a">create</span> <span style="color:#00a">table</span> tweet.activity
+ (
+  id          bigserial <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
+  messageid   <span style="color:#0aa">bigint</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">references</span> tweet.message(messageid),
+  datetime    timestamptz <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">default</span> now(),
+  action      tweet.action_t <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
+
+  <span style="color:#00a">unique</span>(messageid, datetime, action)
+ );
+
+<span style="color:#00a">commit</span>;</code></pre></div>
+<p>In this version, the counters have disappeared, replaced by a full record of
+the base information needed to compute them. We now have an <em>activity</em> list
+with a denormalized <em>ENUM</em> for possible actions.</p>
+
+<p>To get the <em>rts</em> and <em>favs</em> counters back from this schema, we count lines
+in the <em>activity</em> records associated with a given <em>messageid</em>:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span>   <span style="color:#00a">count</span>(*) filter(<span style="color:#00a">where</span> action = <span style="color:#a50">&#39;rt&#39;</span>)
+         - <span style="color:#00a">count</span>(*) filter(<span style="color:#00a">where</span> action = <span style="color:#a50">&#39;de-rt&#39;</span>)
+         <span style="color:#00a">as</span> rts,
+           <span style="color:#00a">count</span>(*) filter(<span style="color:#00a">where</span> action = <span style="color:#a50">&#39;fav&#39;</span>)
+         - <span style="color:#00a">count</span>(*) filter(<span style="color:#00a">where</span> action = <span style="color:#a50">&#39;de-fav&#39;</span>)
+         <span style="color:#00a">as</span> favs
+    <span style="color:#00a">from</span> tweet.activity
+         <span style="color:#00a">join</span> tweet.message <span style="color:#00a">using</span>(messageid)
+   <span style="color:#00a">where</span> messageid = :id;</code></pre></div>
+<p>Reading the current counter value has become quite complex when compared to
+just adding a column to your query output list. On the other hand, when
+adding a <em>rt</em> or a <em>fav</em> action to a message, we transform the SQL:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">update</span> tweet.message <span style="color:#00a">set</span> rts = rts +<span style="color:#099">1</span> <span style="color:#00a">where</span> messageid = :id;</code></pre></div>
+<p>This is what we use instead:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span> <span style="color:#00a">into</span> tweet.activity(messageid, action) <span style="color:#00a">values</span>(:id, <span style="color:#a50">&#39;rt&#39;</span>);</code></pre></div>
+<p>The reason why replacing an <em>update</em> with an <em>insert</em> is interesting is
+concurrency behavior and locking. In the first version, retweeting has to
+wait until all concurrent retweets are done, and the business model wants to
+sustain as many concurrent activities on the same small set of messages as
+possible (read about <em>influencer</em> accounts).</p>
+
+<p>The <em>insert</em> has no concurrency because it targets a row that doesn&rsquo;t exist
+yet. We register each action into its own tuple and require no locking to do
+that, allowing our production setup of PostgreSQL to sustain a much larger
+load.</p>
+
+<p>Now, computing the counters each time we want to display them is costly. And
+the counters are displayed on every tweet message. We need a way to <em>cache</em>
+that information, and we&rsquo;ll see about that in a follow-up article about
+<em>Computing and Caching in SQL</em>.</p>
+
+<h1 id="putting-concurrency-to-the-test">Putting Concurrency to the Test</h1>
+
+<p>When we <em>benchmark</em> the concurrency properties of the two statements above,
+we quickly realize that the <em>activity</em> table is badly designed. The unique
+constraint includes a <em>timestamptz</em> field, which in PostgreSQL is only
+precise down to the microsecond.</p>
+
+<p>This kind of made-up <em>unique</em> constraint means we now have these errors to
+deal with:</p>
+
+<pre><code>Error: Database error 23505: duplicate key value violates unique     ⏎
+  constraint &quot;activity_messageid_datetime_action_key&quot;
+DETAIL: Key (messageid, datetime, action)                            ⏎
+           =(2, 2017-09-19 18:00:03.831818+02, rt) already exists.
+</code></pre>
+
+<p>The best course of action here is to do this:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">    <span style="color:#00a">alter</span> <span style="color:#00a">table</span> tweet.activity
+<span style="color:#00a">drop</span> <span style="color:#00a">constraint</span> activity_messageid_datetime_action_key;</code></pre></div>
+<p>Now we can properly compare the concurrency scaling of the <em>insert</em> and the
+<em>update</em> based version. In case you might be curious about it, here&rsquo;s the
+testing code that&rsquo;s been used:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp">(<span style="color:#a00">defpackage</span> <span style="color:#00a">#:concurrency</span>
+  (<span style="color:#00a">:use</span> <span style="color:#00a">#:cl</span> <span style="color:#00a">#:appdev</span>)
+  (<span style="color:#00a">:import-from</span> <span style="color:#00a">#:lparallel</span>
+                <span style="color:#00a">#:*kernel*</span>
+                <span style="color:#00a">#:make-kernel</span> <span style="color:#00a">#:make-channel</span>
+                <span style="color:#00a">#:submit-task</span> <span style="color:#00a">#:receive-result</span>
+                <span style="color:#00a">#:kernel-worker-index</span>)
+  (<span style="color:#00a">:import-from</span> <span style="color:#00a">#:cl-postgres-error</span>
+                <span style="color:#00a">#:database-error</span>)
+  (<span style="color:#00a">:export</span>      <span style="color:#00a">#:*connspec*</span>
+                <span style="color:#00a">#:concurrency-test</span>))
+
+(<span style="color:#a00">in-package</span> <span style="color:#00a">#:concurrency</span>)
+
+(<span style="color:#a00">defparameter</span> *connspec* &#39;(<span style="color:#a50">&#34;appdev&#34;</span> <span style="color:#a50">&#34;dim&#34;</span> <span style="color:#a00">nil</span> <span style="color:#a50">&#34;localhost&#34;</span>))
+
+(<span style="color:#a00">defparameter</span> *insert-rt*
+  <span style="color:#a50">&#34;insert into tweet.activity(messageid, action) values($1, &#39;rt&#39;)&#34;</span>)
+
+(<span style="color:#a00">defparameter</span> *update-rt*
+  <span style="color:#a50">&#34;update tweet.message set rts = coalesce(rts, 0) + 1 where messageid = $1&#34;</span>)
+
+(<span style="color:#a00">defun</span> <span style="color:#a00">concurrency-test</span> (<span style="color:#a00">workers</span> <span style="color:#a00">retweets</span> <span style="color:#a00">messageid</span>
+                         <span style="color:#a00">&amp;optional</span> (<span style="color:#a00">connspec</span> *connspec*))
+  (<span style="color:#a00">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;Starting benchmark for updates~%&#34;</span>)
+  (<span style="color:#a00">with-timing</span> (<span style="color:#a00">rts</span> <span style="color:#a00">seconds</span>)
+      (<span style="color:#a00">run-workers</span> <span style="color:#a00">workers</span> <span style="color:#a00">retweets</span> <span style="color:#a00">messageid</span> *update-rt* <span style="color:#a00">connspec</span>)
+    (<span style="color:#a00">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;Updating took ~f seconds, did ~d rts~%&#34;</span> <span style="color:#a00">seconds</span> <span style="color:#a00">rts</span>))
+
+  (<span style="color:#a00">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;~%&#34;</span>)
+
+  (<span style="color:#a00">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;Starting benchmark for inserts~%&#34;</span>)
+  (<span style="color:#a00">with-timing</span> (<span style="color:#a00">rts</span> <span style="color:#a00">seconds</span>)
+      (<span style="color:#a00">run-workers</span> <span style="color:#a00">workers</span> <span style="color:#a00">retweets</span> <span style="color:#a00">messageid</span> *insert-rt* <span style="color:#a00">connspec</span>)
+    (<span style="color:#a00">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;Inserting took ~f seconds, did ~d rts~%&#34;</span> <span style="color:#a00">seconds</span> <span style="color:#a00">rts</span>)))
+
+(<span style="color:#a00">defun</span> <span style="color:#a00">run-workers</span> (<span style="color:#a00">workers</span> <span style="color:#a00">retweets</span> <span style="color:#a00">messageid</span> <span style="color:#a00">sql</span>
+                    <span style="color:#a00">&amp;optional</span> (<span style="color:#a00">connspec</span> *connspec*))
+  (<span style="color:#a00">let*</span> ((*kernel* (<span style="color:#a00">lparallel:make-kernel</span> <span style="color:#a00">workers</span>))
+         (<span style="color:#a00">channel</span>  (<span style="color:#a00">lparallel:make-channel</span>)))
+    (<span style="color:#a00">loop</span> <span style="color:#a00">repeat</span> <span style="color:#a00">workers</span>
+       <span style="color:#a00">do</span> (<span style="color:#a00">lparallel:submit-task</span> <span style="color:#a00">channel</span> <span style="color:#0a0">#&#39;</span><span style="color:#a00">retweet-many-times</span>
+                                 <span style="color:#a00">retweets</span> <span style="color:#a00">messageid</span> <span style="color:#a00">sql</span> <span style="color:#a00">connspec</span>))
+
+    (<span style="color:#a00">loop</span> <span style="color:#a00">repeat</span> <span style="color:#a00">workers</span> <span style="color:#a00">sum</span> (<span style="color:#a00">lparallel:receive-result</span> <span style="color:#a00">channel</span>))))
+
+(<span style="color:#a00">defun</span> <span style="color:#a00">retweet-many-times</span> (<span style="color:#a00">times</span> <span style="color:#a00">messageid</span> <span style="color:#a00">sql</span>
+                           <span style="color:#a00">&amp;optional</span> (<span style="color:#a00">connspec</span> *connspec*))
+  (<span style="color:#a00">pomo:with-connection</span> <span style="color:#a00">connspec</span>
+    (<span style="color:#a00">pomo:query</span>
+     (<span style="color:#a00">format</span> <span style="color:#a00">nil</span> <span style="color:#a50">&#34;set application_name to &#39;worker ~a&#39;&#34;</span>
+             (<span style="color:#a00">lparallel:kernel-worker-index</span>)))
+    (<span style="color:#a00">loop</span> <span style="color:#a00">repeat</span> <span style="color:#a00">times</span> <span style="color:#a00">sum</span> (<span style="color:#a00">retweet</span> <span style="color:#a00">messageid</span> <span style="color:#a00">sql</span>))))
+
+(<span style="color:#a00">defun</span> <span style="color:#a00">retweet</span> (<span style="color:#a00">messageid</span> <span style="color:#a00">sql</span>)
+  (<span style="color:#a00">handler-case</span>
+      (<span style="color:#a00">progn</span>
+        (<span style="color:#a00">pomo:query</span> <span style="color:#a00">sql</span> <span style="color:#a00">messageid</span>)
+        <span style="color:#099">1</span>)
+    (<span style="color:#a00">database-error</span> (<span style="color:#a00">c</span>)
+      (<span style="color:#a00">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;Error: ~a~%&#34;</span> <span style="color:#a00">c</span>)
+      <span style="color:#099">0</span>)))</code></pre></div>
+<p>Here&rsquo;s a typical result with a concurrency of 100 workers all wanting to do
+10 retweet in a loop using a <em>messageid</em>, here message 3. While it&rsquo;s not
+representative to have them loop 10 times to retweet the same message, it
+should help create the concurrency effect we want to produce, which is
+having several concurrent transactions waiting in turn in order to have a
+lock access to the same row.</p>
+
+<p>The theory says that those concurrent users will have to wait in line, and
+thus spend time waiting for a lock on the PostgreSQL server. We should see
+that in the timing reports as a time difference:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp"><span style="color:#a00">CL-USER&gt;</span> (<span style="color:#a00">concurrency::concurrency-test</span> <span style="color:#099">100</span> <span style="color:#099">10</span> <span style="color:#099">3</span>)
+<span style="color:#a00">Starting</span> <span style="color:#a00">benchmark</span> <span style="color:#a00">for</span> <span style="color:#a00">updates</span>
+<span style="color:#a00">Updating</span> <span style="color:#a00">took</span> <span style="color:#099">3.099873</span> <span style="color:#a00">seconds,</span> <span style="color:#a00">did</span> <span style="color:#099">1000</span> <span style="color:#a00">rts</span>
+
+<span style="color:#a00">Starting</span> <span style="color:#a00">benchmark</span> <span style="color:#a00">for</span> <span style="color:#a00">inserts</span>
+<span style="color:#a00">Inserting</span> <span style="color:#a00">took</span> <span style="color:#099">2.132164</span> <span style="color:#a00">seconds,</span> <span style="color:#a00">did</span> <span style="color:#099">1000</span> <span style="color:#a00">rts</span></code></pre></div>
+<p>The <em>update</em> variant of the test took almost 50% as much time to complete
+than the <em>insert</em> variant, with this level of concurrency. Given that we
+have really simple SQL statements, we can attribute the timing difference to
+having had to wait in line. Basically, the <em>update</em> version spent almost 1
+second out of 3 seconds waiting for a free slot.</p>
+
+<p>In another test with even more concurrency pressure at 50 retweets per
+worker, we can show that the results are repeatable:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp"><span style="color:#a00">CL-USER&gt;</span> (<span style="color:#a00">concurrency::concurrency-test</span> <span style="color:#099">100</span> <span style="color:#099">50</span> <span style="color:#099">6</span>)
+<span style="color:#a00">Starting</span> <span style="color:#a00">benchmark</span> <span style="color:#a00">for</span> <span style="color:#a00">updates</span>
+<span style="color:#a00">Updating</span> <span style="color:#a00">took</span> <span style="color:#099">5.070135</span> <span style="color:#a00">seconds,</span> <span style="color:#a00">did</span> <span style="color:#099">5000</span> <span style="color:#a00">rts</span>
+
+<span style="color:#a00">Starting</span> <span style="color:#a00">benchmark</span> <span style="color:#a00">for</span> <span style="color:#a00">inserts</span>
+<span style="color:#a00">Inserting</span> <span style="color:#a00">took</span> <span style="color:#099">3.739505</span> <span style="color:#a00">seconds,</span> <span style="color:#a00">did</span> <span style="color:#099">5000</span> <span style="color:#a00">rts</span></code></pre></div>
+<hr />
+
+
+<figure class="right">
+    <a href="https://masteringpostgresql.com">
+        <img src="/img/MasteringPostgreSQLinAppDev-Cover-th.png" />
+    </a>
+    
+</figure>
+
+
+<p>This article is extracted from my book <a href="https://masteringpostgresql.com">Mastering PostgreSQL in Application
+Development</a>, which teaches SQL to
+developers so that they may replace thousands of lines of code with very
+simple queries. The book has a full chapter about <em>Data Manipulation and
+Concurrency Control</em> in PostgreSQL, including caching with materialized
+views, check it out!</p>
+
+<hr />
+
+<h1 id="conclusion">Conclusion</h1>
+
+<p>If you know that your application has to scale, think about how to avoid
+concurrent activity that competes against a single shared resource. Here,
+this shared resource is the <em>rts</em> field of the <em>tweet.message</em> row that you
+target, and the concurrency behavior is going to be fine if the retweet
+activity is well distributed. As soon as many users want to retweet the same
+message, then the <em>update</em> solution has a non-trivial scalability impact.</p>
+
+<p>Now, we&rsquo;re going to implement the <em>tweet.activity</em> based model. In this
+model, the number of <em>retweets</em> needs to be computed each time we display
+it, and it&rsquo;s part of the visible data.</p>
+
+<p>Also, in the general case, it&rsquo;s impossible for our users to know for sure
+how many retweets have been made so that we can implement a cache with
+<em>eventual consistency</em> properties in the next article of our series about
+concurrency in PostgreSQL.</p>
+              
+            </div>
+          </div>
+          <div id="post-footer" class="post-footer main-content-wrap">
+            
+              
+                
+                
+                  <div class="post-footer-tags">
+                    <span class="text-color-light text-small"></span><br/>
+                    
+  <a class="tag tag--primary tag--small" href="/tags/postgresql/">PostgreSQL</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/yesql/">YeSQL</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/concurrency/">Concurrency</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/isolation/">Isolation</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/locking/">Locking</a>
+
+                  </div>
+                
+              
+            
+            <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    
+    <script async id="_ck_252762" src="https://forms.convertkit.com/252762?v=6"></script>
+    
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/07/postgresql-concurrency-isolation-and-locking/" data-tooltip="PostgreSQL Concurrency: Isolation and Locking">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f07%2fmodeling-for-concurrency%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f07%2fmodeling-for-concurrency%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=Modeling%20for%20Concurrency with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f07%2fmodeling-for-concurrency%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+            
+              
+                <div id="disqus_thread">
+  <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+              
+            
+          </div>
+        </article>
+        <footer id="footer" class="main-content-wrap">
+  <span class="copyrights">
+    &copy; 2018 Dimitri Fontaine. 
+  </span>
+</footer>
+
+      </div>
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="5">
+        <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    
+    <script async id="_ck_252762" src="https://forms.convertkit.com/252762?v=6"></script>
+    
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/07/postgresql-concurrency-isolation-and-locking/" data-tooltip="PostgreSQL Concurrency: Isolation and Locking">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f07%2fmodeling-for-concurrency%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f07%2fmodeling-for-concurrency%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=Modeling%20for%20Concurrency with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f07%2fmodeling-for-concurrency%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+      </div>
+      <div id="share-options-bar" class="share-options-bar" data-behavior="5">
+  <ul class="share-options">
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f07%2fmodeling-for-concurrency%2f">
+        <i class="fa fa-google-plus"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f07%2fmodeling-for-concurrency%2f">
+        <i class="fa fa-facebook-official"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=Modeling%20for%20Concurrency with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f07%2fmodeling-for-concurrency%2f">
+        <i class="fa fa-twitter"></i><span></span>
+      </a>
+    </li>
+  </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
+    </div>
+    
+    <div id="about">
+  <div id="about-card">
+    <div id="about-btn-close">
+      <i class="fa fa-remove"></i>
+    </div>
+    
+      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+    
+    <h4 id="about-card-name">Dimitri Fontaine</h4>
+    
+      <div id="about-card-bio">PostgreSQL Major Contributor</div>
+    
+    
+      <div id="about-card-job">
+        <i class="fa fa-briefcase"></i>
+        <br/>
+        Open Source Software Engineer
+      </div>
+    
+    
+      <div id="about-card-location">
+        <i class="fa fa-map-marker"></i>
+        <br/>
+        France
+      </div>
+    
+  </div>
+</div>
+
+    <div id="algolia-search-modal" class="modal-container">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="close-button"><i class="fa fa-close"></i></span>
+      <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
+        <span class="searchby-algolia-text text-color-light text-small">by</span>
+        <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+      </a>
+      <i class="search-icon fa fa-search"></i>
+      <form id="algolia-search-form">
+        <input type="text" id="algolia-search-input" name="search"
+          class="form-control input--large search-input" placeholder="" />
+      </form>
+    </div>
+    <div class="modal-body">
+      <div class="no-result text-color-light text-center"></div>
+      <div class="results">
+        
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/07/modeling-for-concurrency/">
+                <h3 class="media-heading">Modeling for Concurrency</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jul 7, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Let&rsquo;s continue to dive in PostgreSQL Concurrency. Last week&rsquo;s article
+<a href="/blog/2018/07/postgresql-concurrency-isolation-and-locking/">PostgreSQL Concurrency: Isolation and
+Locking</a> was a
+primer on PostgreSQL isolation and locking properties and behaviors.</p>
+
+<p>Today&rsquo;s article takes us a step further and builds on what we did last week,
+in particular the database modeling for a <em>tweet</em> like application. After
+having had all the characters from Shakespeare&rsquo;s <em>A Midsummer Night&rsquo;s Dream</em>
+tweet their own lines in our database in <a href="/blog/2018/06/PostgreSQL-DML.md">PostgreSQL Concurrency: Data
+Modification Language</a>, it&rsquo;s time for them
+to do some actions on the tweets: likes and retweet.</p>
+
+<p>Of course, we&rsquo;re going to put concurrency to the test, so we&rsquo;re going to
+have to handle very very popular tweets from the play!</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/07/postgresql-concurrency-isolation-and-locking/">
+                <h3 class="media-heading">PostgreSQL Concurrency: Isolation and Locking</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jul 7, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p><a href="https://www.postgresql.org">PostgreSQL</a> is a relational database management
+system. It&rsquo;s even the world&rsquo;s most advanced open source one of them. As
+such, as its core, Postgres solves concurrent access to a set of data and
+maintains consistency while allowing concurrent operations.</p>
+
+<p>This article is a primer on PostgreSQL Isolation and Locking properties and
+behaviors. You might be interested into the previous article in the series:
+<a href="/blog/2018/06/PostgreSQL-DML.md">PostgreSQL Concurrency: Data Modification
+Language</a>.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/06/postgresql-concurrency-data-modification-language/">
+                <h3 class="media-heading">PostgreSQL Concurrency: Data Modification Language</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">PostgreSQL is a relational database management system. It&rsquo;s even the world&rsquo;s most advanced open source one of them. As such, as its core, Postgres solves concurrent access to a set of data and maintains consistency while allowing concurrent operations.
+Postgres exposes its concurrency APIs in the SQL language, in particular in the DML parts of it: you can read the Data Manipulation Language chapter of the PostgreSQL docs for all the details.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/05/postgresql-data-types/">
+                <h3 class="media-heading">PostgreSQL Data Types</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Today it&rsquo;s time to conclude our series of <a href="/tags/data-types/">PostgreSQL Data
+Types</a> articles with a recap. The series cover lots of
+core PostgreSQL data types and shows how to benefit from the PostgreSQL
+concept of a data type: more than input validation, a PostgreSQL data type
+also implements expected behaviors and processing functions.</p>
+
+<p>This allows an application developer to rely on PostgreSQL for more complex
+queries, having the processing happen where the data is, for instance when
+implementing advanced JOIN operations, then retrieving only the data set
+that is interesting for the application.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/05/postgresql-data-types-point/">
+                <h3 class="media-heading">PostgreSQL Data Types: Point</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL Point type.</p>
+
+<p>In order to put the Point datatype in a context where it makes sense, we&rsquo;re
+going to download a complete geolocation data set and normalize it, thus
+making good use of both the normalization good practice and those other
+PostgreSQL data types we&rsquo;ve been learning about in the previous articles of
+this series.</p>
+
+<p>Buckle-up, this is a long article with a lot of SQL inside.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/05/postgresql-data-types-enum/">
+                <h3 class="media-heading">PostgreSQL Data Types: ENUM</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL ENUM type.</p>
+
+<p>This data type has been added to PostgreSQL in order to make it easier to
+support migrations from MySQL. Proper relational design would use a
+reference table and a foreign key instead.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/04/postgresql-data-types-json/">
+                <h3 class="media-heading">PostgreSQL Data Types: JSON</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL JSON type.</p>
+
+<p>PostgreSQL has built-in support for JSON with a great range of processing
+functions and operators, and complete indexing support. The documentation
+covers all the details in the chapters entitled <a href="https://www.postgresql.org/docs/current/static/datatype-json.html">JSON
+Types</a>
+and <a href="https://www.postgresql.org/docs/current/static/functions-json.html">JSON Functions and
+Operators</a>.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/04/postgresql-data-types-xml/">
+                <h3 class="media-heading">PostgreSQL Data Types: XML</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL XML type.</p>
+
+<p>The SQL standard includes a <a href="https://en.wikipedia.org/wiki/SQL/XML">SQL/XML</a>
+which <em>introduces the predefined data type XML together with constructors,
+several routines, functions, and XML-to-SQL data type mappings to support
+manipulation and storage of XML in a SQL database</em>, as per the Wikipedia
+page.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/04/postgresql-data-types-arrays/">
+                <h3 class="media-heading">PostgreSQL Data Types: Arrays</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL array data types.</p>
+
+<p>Arrays can be used to denormalize data and avoid lookup tables. A good rule
+of thumb for using them that way is that you mostly use the array as a
+whole, even if you might at times search for elements in the array. Heavier
+processing is going to be more complex than a lookup table.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/04/postgresql-data-types-ranges/">
+                <h3 class="media-heading">PostgreSQL Data Types: Ranges</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL ranges data type.</p>
+
+<p>Range types are a unique feature of PostgreSQL, managing two dimensions of
+data in a single column, and allowing advanced processing. The main example
+is the <em>daterange</em> data type, which stores as a single value a lower and an
+upper bound of the range as a single value. This allows PostgreSQL to
+implement a concurrent safe check against <em>overlapping</em> ranges, as we&rsquo;re
+going to see in this article.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+      </div>
+    </div>
+    <div class="modal-footer">
+      <p class="results-count text-medium"
+         data-message-zero=""
+         data-message-one=""
+         data-message-other="">
+         276 posts found
+      </p>
+    </div>
+  </div>
+</div>
+    
+  
+    
+    <div id="cover" style="background-image:url('https://tapoueh.org/images/mayan-calendar.jpg');"></div>
+  
+
+
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
+
+
+<script src="/js/script-qi9wbxp2ya2j6p7wx1i6tgavftewndznf4v0hy2gvivk1rxgc3lm7njqb6bz.min.js"></script>
+
+
+
+<script>
+$(document).ready(function() {
+  hljs.configure({ classPrefix: '', useBR: false });
+  $('pre.code-highlight > code, pre > code').each(function(i, block) {
+    if (!$(this).hasClass('codeblock')) {
+      $(this).addClass('codeblock');
+    }
+    hljs.highlightBlock(block);
+  });
+});
+</script>
+
+
+  
+    
+      <script>
+        var disqus_config = function () {
+          this.page.url = 'https:\/\/tapoueh.org\/blog\/2018\/07\/modeling-for-concurrency\/';
+          
+            this.page.identifier = '\/blog\/2018\/07\/modeling-for-concurrency\/'
+          
+        };
+        (function() {
+          
+          
+          if (window.location.hostname == "localhost") {
+            return;
+          }
+          var d = document, s = d.createElement('script');
+          var disqus_shortname = 'tapoueh';
+          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+          s.setAttribute('data-timestamp', +new Date());
+          (d.head || d.body).appendChild(s);
+        })();
+      </script>
+    
+  
+
+
+
+    
+  </body>
+</html>
+
