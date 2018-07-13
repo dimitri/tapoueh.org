@@ -1,7 +1,7 @@
 +++
 title = "Modeling for Concurrency"
 date = "2018-07-10T10:26:47+02:00"
-tags = ["PostgreSQL","YeSQL","Concurrency","Isolation","Locking"]
+tags = ["PostgreSQL","YeSQL","Concurrency","Modelisation","UPDATE","INSERT"]
 categories = ["PostgreSQL","YeSQL"]
 coverImage = "/img/concurrency-dogs.jpg"
 coverMeta = "in"
