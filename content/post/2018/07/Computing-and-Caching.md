@@ -12,7 +12,7 @@ thumbnailImagePosition = "left"
 +++
 
 Let's continue to dive in PostgreSQL Concurrency. In the previous article of
-the seies, [Modeling for
+the series, [Modeling for
 Concurrency](/blog/2018/07/modeling-for-concurrency/), we saw how to model
 your application for highly concurrent activity. It was a follow-up to the
 article entitled [PostgreSQL Concurrency: Isolation and
