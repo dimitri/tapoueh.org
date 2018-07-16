@@ -19,7 +19,7 @@ maintains consistency while allowing concurrent operations.
 This article is a primer on PostgreSQL Isolation and Locking properties and
 behaviors. You might be interested into the previous article in the series:
 [PostgreSQL Concurrency: Data Modification
-Language](/blog/2018/06/PostgreSQL-DML.md).
+Language](/blog/2018/06/postgresql-concurrency-data-modification-language/).
 
 <!--more-->
 <!--toc-->
