@@ -19,7 +19,7 @@ maintains consistency while allowing concurrent operations.
 This article is a primer on PostgreSQL Isolation and Locking properties and
 behaviors. You might be interested into the previous article in the series:
 [PostgreSQL Concurrency: Data Modification
-Language](/blog/2018/06/PostgreSQL-DML.md).
+Language](/blog/2018/06/postgresql-concurrency-data-modification-language/).
 
 <!--more-->
 <!--toc-->
@@ -155,13 +155,13 @@ progress to be included in PostgreSQL!
 # Concurrent Updates and Isolation
 
 In our *tweet* model of an application, we can have a look at handling
-*retweets*, which is a *counter* field in the *tweet.message* table. 
+*retweets*, which is a *counter* field in the *tweet.message* table.
 
 {{< alert success >}}
 
 The application model for Tweeting is introduced in the first article of
 this series:[PostgreSQL Concurrency: Data Modification
-Language](/blog/2018/06/PostgreSQL-DML.md).
+Language](/blog/2018/06/postgresql-concurrency-data-modification-language/).
 
 {{< /alert  >}}
 

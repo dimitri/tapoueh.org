@@ -22,7 +22,7 @@ Today's article takes us a step further and builds on what we did in the
 previous articles in our series. After having had all the characters from
 Shakespeare's *A Midsummer Night's Dream* tweet their own lines in our
 database in [PostgreSQL Concurrency: Data Modification
-Language](/blog/2018/06/PostgreSQL-DML.md), and having had them like and
+Language](/blog/2018/06/postgresql-concurrency-data-modification-language/), and having had them like and
 retweet a lot in [PostgreSQL Concurrency: Isolation and
 Locking](/blog/2018/07/postgresql-concurrency-isolation-and-locking/), we
 saw how to manage concurrent retweets in an efficient way in [Computing and
