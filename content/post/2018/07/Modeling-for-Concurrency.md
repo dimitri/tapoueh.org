@@ -20,7 +20,7 @@ Today's article takes us a step further and builds on what we did last week,
 in particular the database modeling for a *tweet* like application. After
 having had all the characters from Shakespeare's *A Midsummer Night's Dream*
 tweet their own lines in our database in [PostgreSQL Concurrency: Data
-Modification Language](/blog/2018/06/PostgreSQL-DML.md), it's time for them
+Modification Language](/blog/2018/06/postgresql-concurrency-data-modification-language/), it's time for them
 to do some actions on the tweets: likes and retweet.
 
 Of course, we're going to put concurrency to the test, so we're going to
