@@ -1,0 +1,1449 @@
+
+
+  
+    
+  
+
+
+  
+
+
+
+
+  
+
+
+  
+
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Hugo 0.31.1">
+    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
+    <title>PostgreSQL Event Based Processing</title>
+    <meta name="author" content="Dimitri Fontaine">
+    <meta name="keywords" content="">
+
+    <link rel="icon" href="/favicon.ico">
+    
+
+    
+    <meta name="description" content="In the previous article of the series Modeling for
+Concurrency, we saw how to model
+your application for highly concurrent activity. It was a follow-up to the
+article entitled PostgreSQL Concurrency: Isolation and
+Locking, which
+was a primer on PostgreSQL isolation and locking properties and behaviors.
+
+Today&rsquo;s article takes us a step further and builds on what we did in the
+previous articles in our series. After having had all the characters from
+Shakespeare&rsquo;s A Midsummer Night&rsquo;s Dream tweet their own lines in our
+database in PostgreSQL Concurrency: Data Modification
+Language, and having had them like and
+retweet a lot in PostgreSQL Concurrency: Isolation and
+Locking, we
+saw how to manage concurrent retweets in an efficient way in Computing and
+Caching.
+
+What we did implement in the previous article is a cache system, all with
+its necessary cache invalidation policy. Sometimes though, the
+processing of an event needs to happen within the same transaction where
+the event is registered in your system. PostgreSQL makes it possible to
+maintain a summary table transactionally thanks to its
+trigger
+support. Today, we&rsquo;re going to dive in how to maintain a summary table with
+triggers, and its impact on concurrency.
+
+
+
+
+
+    
+        
+    
+    
+
+
+
+This article is extracted from my book Mastering PostgreSQL in Application
+Development, which teaches SQL to
+developers so that they may replace thousands of lines of code with very
+simple queries. The book has a full chapter about Data Manipulation and
+Concurrency Control in PostgreSQL, including caching with materialized
+views, check it out!
+
+">
+    <meta property="og:description" content="In the previous article of the series Modeling for
+Concurrency, we saw how to model
+your application for highly concurrent activity. It was a follow-up to the
+article entitled PostgreSQL Concurrency: Isolation and
+Locking, which
+was a primer on PostgreSQL isolation and locking properties and behaviors.
+
+Today&rsquo;s article takes us a step further and builds on what we did in the
+previous articles in our series. After having had all the characters from
+Shakespeare&rsquo;s A Midsummer Night&rsquo;s Dream tweet their own lines in our
+database in PostgreSQL Concurrency: Data Modification
+Language, and having had them like and
+retweet a lot in PostgreSQL Concurrency: Isolation and
+Locking, we
+saw how to manage concurrent retweets in an efficient way in Computing and
+Caching.
+
+What we did implement in the previous article is a cache system, all with
+its necessary cache invalidation policy. Sometimes though, the
+processing of an event needs to happen within the same transaction where
+the event is registered in your system. PostgreSQL makes it possible to
+maintain a summary table transactionally thanks to its
+trigger
+support. Today, we&rsquo;re going to dive in how to maintain a summary table with
+triggers, and its impact on concurrency.
+
+
+
+
+
+    
+        
+    
+    
+
+
+
+This article is extracted from my book Mastering PostgreSQL in Application
+Development, which teaches SQL to
+developers so that they may replace thousands of lines of code with very
+simple queries. The book has a full chapter about Data Manipulation and
+Concurrency Control in PostgreSQL, including caching with materialized
+views, check it out!
+
+">
+    <meta property="og:type" content="blog">
+    <meta property="og:title" content="PostgreSQL Event Based Processing">
+    <meta property="og:url" content="/blog/2018/07/postgresql-event-based-processing/">
+    <meta property="og:site_name" content="Dimitri Fontaine, PostgreSQL Expert">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="PostgreSQL Event Based Processing">
+    <meta name="twitter:description" content="In the previous article of the series Modeling for
+Concurrency, we saw how to model
+your application for highly concurrent activity. It was a follow-up to the
+article entitled PostgreSQL Concurrency: Isolation and
+Locking, which
+was a primer on PostgreSQL isolation and locking properties and behaviors.
+
+Today&rsquo;s article takes us a step further and builds on what we did in the
+previous articles in our series. After having had all the characters from
+Shakespeare&rsquo;s A Midsummer Night&rsquo;s Dream tweet their own lines in our
+database in PostgreSQL Concurrency: Data Modification
+Language, and having had them like and
+retweet a lot in PostgreSQL Concurrency: Isolation and
+Locking, we
+saw how to manage concurrent retweets in an efficient way in Computing and
+Caching.
+
+What we did implement in the previous article is a cache system, all with
+its necessary cache invalidation policy. Sometimes though, the
+processing of an event needs to happen within the same transaction where
+the event is registered in your system. PostgreSQL makes it possible to
+maintain a summary table transactionally thanks to its
+trigger
+support. Today, we&rsquo;re going to dive in how to maintain a summary table with
+triggers, and its impact on concurrency.
+
+
+
+
+
+    
+        
+    
+    
+
+
+
+This article is extracted from my book Mastering PostgreSQL in Application
+Development, which teaches SQL to
+developers so that they may replace thousands of lines of code with very
+simple queries. The book has a full chapter about Data Manipulation and
+Concurrency Control in PostgreSQL, including caching with materialized
+views, check it out!
+
+">
+    
+      <meta name="twitter:creator" content="@tapoueh">
+    
+    
+
+    
+    
+
+    
+      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
+    
+
+    
+      <meta property="og:image" content="https://tapoueh.org/img/c09-iis-event-processing.png">
+    
+    
+      <meta property="og:image" content="https://tapoueh.org/img/event_processing.png">
+    
+    
+
+    
+
+    
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
+    
+    
+    <link rel="stylesheet" href="/css/style-jsjn0006wyhpyzivf6yceb31gvpjatbcs3qzjvlumobfnugccvobqwxnnaj8.min.css" />
+    
+    
+      <link rel="stylesheet" href="https://tapoueh.org/css/dim.css">
+    
+      <link rel="stylesheet" href="https://tapoueh.org/css/nav.css">
+    
+
+    
+      
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-47059482-1', 'auto');
+ga('send', 'pageview');
+</script>
+
+    
+    
+  </head>
+
+  <body>
+    <div id="blog">
+      <header id="header" data-behavior="5">
+  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+  <div class="navbar-collapse collapse header-title" id="navigation">
+    <ul class="nav navbar-nav navbar-right">
+      
+      <li class="dropdown">
+        
+        <a href="/">blog</a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a href="/conf/">talks</a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a href="http://pgloader.io/">pgloader</a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a href="http://masteringpostgresql.com/">Mastering PostgreSQL</a>
+        
+      </li>
+      
+    </ul>
+  </div>
+
+  
+    
+      <a class="header-right-icon "
+         href="http://masteringpostgresql.com" target="_blank">
+    
+    
+      <i class="fa fa-lg fa-book"></i>
+    
+    
+    </a>
+  
+</header>
+
+      <nav id="sidebar" data-behavior="5">
+  <div class="sidebar-container">
+    
+      <div class="sidebar-profile">
+        <a href="/#about">
+          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+        </a>
+        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
+        
+          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
+        
+      </div>
+    
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
+      
+      <span class="sidebar-button-desc">Blog</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/about/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
+      
+      <span class="sidebar-button-desc">About</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories/yesql/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-database"></i>
+      
+      <span class="sidebar-button-desc">YeSQL</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="http://masteringpostgresql.com" target="_blank" rel="noopener">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
+      
+      <span class="sidebar-button-desc">Mastering PostgreSQL</span>
+    </a>
+  </li>
+
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+      
+      <span class="sidebar-button-desc">GitHub</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+      
+      <span class="sidebar-button-desc">Twitter</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+      
+      <span class="sidebar-button-desc">Categories</span>
+    </a>
+  </li>
+
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/index.xml">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+      
+      <span class="sidebar-button-desc">RSS</span>
+    </a>
+  </li>
+
+
+    </ul>
+  </div>
+</nav>
+
+      
+  <div class="post-header-cover
+              text-left
+              post-header-cover--partial"
+       style="background-image:url('/img/event_processing.png')"
+       data-behavior="5">
+    
+  </div>
+
+
+      <div id="main" data-behavior="5"
+        class="hasCover
+               hasCoverMetaOut
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
+          
+            <div class="post-header main-content-wrap text-left">
+  
+    <h1 class="post-title" itemprop="headline">
+      PostgreSQL Event Based Processing
+    </h1>
+  
+  
+  <div class="postShorten-meta post-meta">
+    
+      <time itemprop="datePublished" datetime="2018-07-16T09:27:54&#43;02:00">
+        
+  
+  
+  
+  
+    Monday 16 Jul 2018
+  
+
+      </time>
+    
+    
+  
+  
+    <span></span>
+    
+      <a class="category-link" href="/categories/postgresql">PostgreSQL</a>, 
+    
+      <a class="category-link" href="/categories/yesql">YeSQL</a>
+    
+  
+
+  </div>
+
+</div>
+          
+          <div class="post-content markdown" itemprop="articleBody">
+            <div class="main-content-wrap">
+              <p>In the previous article of the series <a href="/blog/2018/07/modeling-for-concurrency/">Modeling for
+Concurrency</a>, we saw how to model
+your application for highly concurrent activity. It was a follow-up to the
+article entitled <a href="/blog/2018/07/postgresql-concurrency-isolation-and-locking/">PostgreSQL Concurrency: Isolation and
+Locking</a>, which
+was a primer on PostgreSQL isolation and locking properties and behaviors.</p>
+
+<p>Today&rsquo;s article takes us a step further and builds on what we did in the
+previous articles in our series. After having had all the characters from
+Shakespeare&rsquo;s <em>A Midsummer Night&rsquo;s Dream</em> tweet their own lines in our
+database in <a href="/blog/2018/06/PostgreSQL-DML.md">PostgreSQL Concurrency: Data Modification
+Language</a>, and having had them like and
+retweet a lot in <a href="/blog/2018/07/postgresql-concurrency-isolation-and-locking/">PostgreSQL Concurrency: Isolation and
+Locking</a>, we
+saw how to manage concurrent retweets in an efficient way in <a href="/blog/2018/07/computing-and-caching/">Computing and
+Caching</a>.</p>
+
+<p>What we did implement in the previous article is a <em>cache</em> system, all with
+its necessary <strong>cache invalidation policy</strong>. Sometimes though, the
+processing of an <em>event</em> needs to happen within the same transaction where
+the event is registered in your system. PostgreSQL makes it possible to
+maintain a summary table transactionally thanks to its
+<a href="https://www.postgresql.org/docs/current/static/sql-createtrigger.html">trigger</a>
+support. Today, we&rsquo;re going to dive in how to maintain a summary table with
+triggers, and its impact on concurrency.</p>
+
+<hr />
+
+
+<figure class="right">
+    <a href="https://masteringpostgresql.com">
+        <img src="/img/MasteringPostgreSQLinAppDev-Cover-th.png" />
+    </a>
+    
+</figure>
+
+
+<p>This article is extracted from my book <a href="https://masteringpostgresql.com">Mastering PostgreSQL in Application
+Development</a>, which teaches SQL to
+developers so that they may replace thousands of lines of code with very
+simple queries. The book has a full chapter about <em>Data Manipulation and
+Concurrency Control</em> in PostgreSQL, including caching with materialized
+views, check it out!</p>
+
+<hr />
+
+<p>
+<h1 id="table-of-contents"></h1><nav id="TableOfContents">
+<ul>
+<li><a href="#triggers">Triggers</a></li>
+<li><a href="#transactional-event-driven-processing">Transactional Event Driven Processing</a></li>
+<li><a href="#trigger-and-counters-anti-pattern">Trigger and Counters Anti-Pattern</a></li>
+<li><a href="#fixing-the-behavior">Fixing the Behavior</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+</nav></p>
+
+<h1 id="triggers">Triggers</h1>
+
+<p>When a cache refresh policy of minutes isn&rsquo;t advisable, a common approach is
+to implement event-based processing. Most SQL systems, including PostgreSQL,
+implement an event-based facility called a <em>trigger</em>.</p>
+
+<p>A <em>trigger</em> allows registering a procedure to be executed at a specified
+timing when an event is produced. The timing can be <em>before</em>, <em>after</em> or
+<em>instead of</em>, and the event can be <em>insert</em>, <em>update</em>, <em>delete</em> or
+<em>truncate</em>. As usual, the PostgreSQL documentation covers the topic in full
+details and is available online, in our case now at the manual page for the
+command <a href="https://www.postgresql.org/docs/current/static/sql-createtrigger.html">CREATE
+TRIGGER</a>.</p>
+
+<p>Many triggers in PostgreSQL are written in the <a href="https://www.postgresql.org/docs/current/static/plpgsql.html">PL/pgSQL — SQL Procedural
+Language</a>, so
+we also need to read the <a href="https://www.postgresql.org/docs/current/static/plpgsql-trigger.html">PLpgSQL trigger
+procedures</a>
+documentation for completeness.</p>
+
+<p>Note that with PostgreSQL, it is possible to write procedures and triggers
+in other programming languages. Default PostgreSQL builds include support
+for <a href="https://www.postgresql.org/docs/current/static/pltcl.html">PL/Tcl</a>,
+<a href="https://www.postgresql.org/docs/current/static/plperl.html">PL/Perl</a>,
+<a href="https://www.postgresql.org/docs/current/static/plpython.html">PL/Python</a>
+and of course <a href="https://www.postgresql.org/docs/current/static/xfunc-c.html">C-language
+functions</a>.</p>
+
+<p>PostgreSQL extensions for other programming languages are available too,
+maintained separately from the PostgreSQL core. You can find
+<a href="https://github.com/tada/pljava/wiki">PL/Java</a>,
+<a href="https://github.com/plv8/plv8">PL/v8</a> for Javascript powered by the V8
+engine, or <a href="https://github.com/petere/plxslt">PL/XSLT</a> as we saw in
+<a href="/blog/2018/04/postgresql-data-types-xml/">PostgreSQL Data Types: XML</a>. For
+even more programming language support, see the <a href="https://wiki.postgresql.org/wiki/PL_Matrix">PL
+Matrix</a> in the PostgreSQL wiki.</p>
+
+<p>Unfortunately, it is not possible to write triggers in plain SQL language,
+so we have to write stored procedures to benefit from the PostgreSQL trigger
+capabilities.</p>
+
+<h1 id="transactional-event-driven-processing">Transactional Event Driven Processing</h1>
+
+<p>PostgreSQL triggers call a registered procedure each time one of the
+supported events is committed. The execution of the procedure is always
+taken as a part of the transaction, so if your procedure fails at runtime
+then the transaction is aborted.</p>
+
+<p>A classic example of an event driven processing with a trigger in our
+context is to update the counters of <em>rts</em> and <em>favs</em> each time there&rsquo;s a
+related insert in the <em>tweet.activity</em> table.</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
+
+<span style="color:#00a">create</span> <span style="color:#00a">table</span> twcache.daily_counters
+ (
+   <span style="color:#00a">day</span>     <span style="color:#0aa">date</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
+   rts     <span style="color:#0aa">bigint</span>,
+   de_rts  <span style="color:#0aa">bigint</span>,
+   favs    <span style="color:#0aa">bigint</span>,
+   de_favs <span style="color:#0aa">bigint</span>
+ );
+
+<span style="color:#00a">create</span> <span style="color:#00a">or</span> <span style="color:#00a">replace</span> <span style="color:#00a">function</span> twcache.tg_update_daily_counters ()
+ <span style="color:#00a">returns</span> <span style="color:#00a">trigger</span>
+ <span style="color:#00a">language</span> plpgsql
+<span style="color:#00a">as</span> <span style="color:#f00;background-color:#faa">$$</span>
+<span style="color:#00a">declare</span>
+<span style="color:#00a">begin</span>
+      <span style="color:#00a">update</span> twcache.daily_counters
+         <span style="color:#00a">set</span> rts = <span style="color:#00a">case</span> <span style="color:#00a">when</span> <span style="color:#00a">NEW</span>.action = <span style="color:#a50">&#39;rt&#39;</span>
+                        <span style="color:#00a">then</span> rts + <span style="color:#099">1</span>
+                        <span style="color:#00a">else</span> rts
+                    <span style="color:#00a">end</span>,
+             de_rts = <span style="color:#00a">case</span> <span style="color:#00a">when</span> <span style="color:#00a">NEW</span>.action = <span style="color:#a50">&#39;de-rt&#39;</span>
+                        <span style="color:#00a">then</span> de_rts + <span style="color:#099">1</span>
+                        <span style="color:#00a">else</span> de_rts
+                    <span style="color:#00a">end</span>,
+             favs = <span style="color:#00a">case</span> <span style="color:#00a">when</span> <span style="color:#00a">NEW</span>.action = <span style="color:#a50">&#39;fav&#39;</span>
+                         <span style="color:#00a">then</span> favs + <span style="color:#099">1</span>
+                         <span style="color:#00a">else</span> favs
+                     <span style="color:#00a">end</span>,
+             de_favs = <span style="color:#00a">case</span> <span style="color:#00a">when</span> <span style="color:#00a">NEW</span>.action = <span style="color:#a50">&#39;de-fav&#39;</span>
+                         <span style="color:#00a">then</span> de_favs + <span style="color:#099">1</span>
+                         <span style="color:#00a">else</span> de_favs
+                     <span style="color:#00a">end</span>
+       <span style="color:#00a">where</span> daily_counters.<span style="color:#00a">day</span> = <span style="color:#00a">current_date</span>;
+
+  <span style="color:#00a">if</span> <span style="color:#00a">NOT</span> <span style="color:#00a">FOUND</span>
+  <span style="color:#00a">then</span>
+      <span style="color:#00a">insert</span> <span style="color:#00a">into</span> twcache.daily_counters(<span style="color:#00a">day</span>, rts, de_rts, favs, de_favs)
+           <span style="color:#00a">select</span> <span style="color:#00a">current_date</span>,
+                  <span style="color:#00a">case</span> <span style="color:#00a">when</span> <span style="color:#00a">NEW</span>.action = <span style="color:#a50">&#39;rt&#39;</span>
+                       <span style="color:#00a">then</span> <span style="color:#099">1</span> <span style="color:#00a">else</span> <span style="color:#099">0</span>
+                    <span style="color:#00a">end</span>,
+                  <span style="color:#00a">case</span> <span style="color:#00a">when</span> <span style="color:#00a">NEW</span>.action = <span style="color:#a50">&#39;de-rt&#39;</span>
+                       <span style="color:#00a">then</span> <span style="color:#099">1</span> <span style="color:#00a">else</span> <span style="color:#099">0</span>
+                   <span style="color:#00a">end</span>,
+                  <span style="color:#00a">case</span> <span style="color:#00a">when</span> <span style="color:#00a">NEW</span>.action = <span style="color:#a50">&#39;fav&#39;</span>
+                       <span style="color:#00a">then</span> <span style="color:#099">1</span> <span style="color:#00a">else</span> <span style="color:#099">0</span>
+                   <span style="color:#00a">end</span>,
+                  <span style="color:#00a">case</span> <span style="color:#00a">when</span> <span style="color:#00a">NEW</span>.action = <span style="color:#a50">&#39;de-fav&#39;</span>
+                       <span style="color:#00a">then</span> <span style="color:#099">1</span> <span style="color:#00a">else</span> <span style="color:#099">0</span>
+                   <span style="color:#00a">end</span>;
+  <span style="color:#00a">end</span> <span style="color:#00a">if</span>;
+
+  <span style="color:#00a">RETURN</span> <span style="color:#00a">NULL</span>;
+<span style="color:#00a">end</span>;
+<span style="color:#f00;background-color:#faa">$$</span>;
+
+<span style="color:#00a">CREATE</span> <span style="color:#00a">TRIGGER</span> update_daily_counters
+         <span style="color:#00a">AFTER</span> <span style="color:#00a">INSERT</span>
+            <span style="color:#00a">ON</span> tweet.activity
+      <span style="color:#00a">FOR</span> <span style="color:#00a">EACH</span> <span style="color:#00a">ROW</span>
+       <span style="color:#00a">EXECUTE</span> <span style="color:#00a">PROCEDURE</span> twcache.tg_update_daily_counters();
+
+<span style="color:#00a">insert</span> <span style="color:#00a">into</span> tweet.activity(messageid, action)
+     <span style="color:#00a">values</span> (<span style="color:#099">7</span>, <span style="color:#a50">&#39;rt&#39;</span>),
+            (<span style="color:#099">7</span>, <span style="color:#a50">&#39;fav&#39;</span>),
+            (<span style="color:#099">7</span>, <span style="color:#a50">&#39;de-fav&#39;</span>),
+            (<span style="color:#099">8</span>, <span style="color:#a50">&#39;rt&#39;</span>),
+            (<span style="color:#099">8</span>, <span style="color:#a50">&#39;rt&#39;</span>),
+            (<span style="color:#099">8</span>, <span style="color:#a50">&#39;rt&#39;</span>),
+            (<span style="color:#099">8</span>, <span style="color:#a50">&#39;de-rt&#39;</span>),
+            (<span style="color:#099">8</span>, <span style="color:#a50">&#39;rt&#39;</span>);
+
+<span style="color:#00a">select</span> <span style="color:#00a">day</span>, rts, de_rts, favs, de_favs
+  <span style="color:#00a">from</span> twcache.daily_counters;
+
+<span style="color:#00a">rollback</span>;</code></pre></div>
+<p>Again, we don&rsquo;t really want to have that trigger in our setup, so the
+transaction ends with a <em>ROLLBACK</em>. It&rsquo;s also a good way to try in-progress
+development in <em>psql</em> in an interactive fashion, and fix all the bugs and
+syntax errors until it all works.</p>
+
+<p>Without this trick, then parts of the script pass and others fail, and you
+then have to copy and paste your way around until it&rsquo;s all okay, but then
+you&rsquo;re never sure that the whole script will pass from the start again,
+because the conditions in which you want to apply have been altered on the
+partially successful runs.</p>
+
+<p>Here&rsquo;s the result of running our trigger test script:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql">BEGIN
+CREATE TABLE
+CREATE FUNCTION
+CREATE TRIGGER
+INSERT 0 8
+    day     │ rts │ de_rts │ favs │ de_favs 
+════════════╪═════╪════════╪══════╪═════════
+ 2017-09-21 │   5 │      1 │    1 │       1
+(1 row)
+
+ROLLBACK</code></pre></div>
+<p>The thing is, each time there&rsquo;s a <em>tweet.activity</em> inserted this trigger
+will transform the <em>insert</em> into an <em>update</em> against a single row, and the
+same target row for a whole day.</p>
+
+<p>This implementation is totally killing any ambitions we might have had about
+concurrency and scalability properties of our model, in a single trigger.
+Yet it&rsquo;s easy to write such a trigger, so it&rsquo;s seen a lot in the wild.</p>
+
+<h1 id="trigger-and-counters-anti-pattern">Trigger and Counters Anti-Pattern</h1>
+
+<p>You might also notice that this triggers is very wrong in its behavior, as
+coded. The implementation of the <em>insert or update</em> — a.k.a. <em>upsert</em> — is
+coded in a way to leave the door open to concurrency issues. To understand
+those issues, we need to consider what happens when we start a new day:</p>
+
+<ol>
+<li><p>The first transaction of the day attempts to <em>update</em> the daily
+ counters table for this day, but finds no records because it&rsquo;s the
+ first one.</p></li>
+
+<li><p>The first transaction of the day then <em>inserts</em> the first value for the
+ day with ones and zeroes for the counters.</p></li>
+
+<li><p>The second transaction of the day then executes the <em>update</em> to the
+ daily counter, finds the existing row, and skips the <em>insert</em> part of
+ the trigger.</p></li>
+</ol>
+
+<p>That&rsquo;s the happy scenario where no problem occurs. Now, in the real life,
+here&rsquo;s what will sometimes happen. It&rsquo;s not always, mind you, but not never
+either. Concurrency bugs — they like to hide in plain sight.</p>
+
+<ol>
+<li><p>The first transaction of the day attempts to <em>update</em> the daily
+ counters table for this day but finds no records because it&rsquo;s the first
+ one.</p></li>
+
+<li><p>The second transaction of the day attempts to <em>update</em> the daily
+ counters table for this day, but finds no records, because the first
+ one isn&rsquo;t there yet.</p></li>
+
+<li><p>The second transaction of the day now proceeds to <em>insert</em> the first
+ value for the day, because the job wasn&rsquo;t done yet.</p></li>
+
+<li><p>The first transaction of the day then <em>inserts</em> the first value&hellip; and
+ fails with a <em>primary key</em> conflict error because that <em>insert</em> has
+ already been done. Sorry about that!</p></li>
+</ol>
+
+<p>There are several ways to address this issue, and the classic one is
+documented at <a href="https://www.postgresql.org/docs/current/static/plpgsql-trigger.html#PLPGSQL-TRIGGER-SUMMARY-EXAMPLE">A PL/pgSQL Trigger Procedure For Maintaining A Summary
+Table</a>
+example in the PostgreSQL documentation.</p>
+
+<p>The solution there is to <em>loop</em> over attempts at <em>update</em> then <em>insert</em>
+until one of those works, ignoring the <code>UNIQUE_VIOLATION</code> exceptions in the
+process. That allows implementing a fall back when another transaction did
+insert a value concurrently, i.e. in the middle of the <code>NOT FOUND</code> test and
+the consequent <em>insert</em>.</p>
+
+<p>Starting in PostgreSQL 9.5 with support for the <em>on conflict</em> clause of the
+<em>insert into</em> command, there&rsquo;s a much better way to address this problem.</p>
+
+<h1 id="fixing-the-behavior">Fixing the Behavior</h1>
+
+<p>While it&rsquo;s easy to maintain a <em>cache</em> in an event driven fashion thanks to
+PostgreSQL and its trigger support, turning an <em>insert</em> into an <em>update</em>
+with contention on a single row is never a good idea. It&rsquo;s even a classic
+anti-pattern.</p>
+
+<p>Here&rsquo;s a modern way to fix the problem with the previous trigger
+implementation, this time applied to a per-message counter of <em>retweet</em> and
+<em>favorite</em> actions:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
+
+<span style="color:#00a">create</span> <span style="color:#00a">table</span> twcache.counters
+ (
+   messageid  <span style="color:#0aa">bigint</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">references</span> tweet.message(messageid),
+   rts        <span style="color:#0aa">bigint</span>,
+   favs       <span style="color:#0aa">bigint</span>,
+
+   <span style="color:#00a">unique</span>(messageid)
+ );
+
+<span style="color:#00a">create</span> <span style="color:#00a">or</span> <span style="color:#00a">replace</span> <span style="color:#00a">function</span> twcache.tg_update_counters ()
+ <span style="color:#00a">returns</span> <span style="color:#00a">trigger</span>
+ <span style="color:#00a">language</span> plpgsql
+<span style="color:#00a">as</span> <span style="color:#f00;background-color:#faa">$$</span>
+<span style="color:#00a">declare</span>
+<span style="color:#00a">begin</span>
+   <span style="color:#00a">insert</span> <span style="color:#00a">into</span> twcache.counters(messageid, rts, favs)
+        <span style="color:#00a">select</span> <span style="color:#00a">NEW</span>.messageid,
+               <span style="color:#00a">case</span> <span style="color:#00a">when</span> <span style="color:#00a">NEW</span>.action = <span style="color:#a50">&#39;rt&#39;</span> <span style="color:#00a">then</span> <span style="color:#099">1</span> <span style="color:#00a">else</span> <span style="color:#099">0</span> <span style="color:#00a">end</span>,
+               <span style="color:#00a">case</span> <span style="color:#00a">when</span> <span style="color:#00a">NEW</span>.action = <span style="color:#a50">&#39;fav&#39;</span> <span style="color:#00a">then</span> <span style="color:#099">1</span> <span style="color:#00a">else</span> <span style="color:#099">0</span> <span style="color:#00a">end</span>
+   <span style="color:#00a">on</span> conflict (messageid)
+     <span style="color:#00a">do</span> <span style="color:#00a">update</span>
+           <span style="color:#00a">set</span> rts = <span style="color:#00a">case</span> <span style="color:#00a">when</span> <span style="color:#00a">NEW</span>.action = <span style="color:#a50">&#39;rt&#39;</span>
+                          <span style="color:#00a">then</span> counters.rts + <span style="color:#099">1</span>
+
+                          <span style="color:#00a">when</span> <span style="color:#00a">NEW</span>.action = <span style="color:#a50">&#39;de-rt&#39;</span>
+                          <span style="color:#00a">then</span> counters.rts - <span style="color:#099">1</span>
+
+                          <span style="color:#00a">else</span> counters.rts
+                      <span style="color:#00a">end</span>,
+
+               favs = <span style="color:#00a">case</span> <span style="color:#00a">when</span> <span style="color:#00a">NEW</span>.action = <span style="color:#a50">&#39;fav&#39;</span>
+                           <span style="color:#00a">then</span> counters.favs + <span style="color:#099">1</span>
+
+                           <span style="color:#00a">when</span> <span style="color:#00a">NEW</span>.action = <span style="color:#a50">&#39;de-fav&#39;</span>
+                           <span style="color:#00a">then</span> counters.favs - <span style="color:#099">1</span>
+
+                           <span style="color:#00a">else</span> counters.favs
+                       <span style="color:#00a">end</span>
+         <span style="color:#00a">where</span> counters.messageid = <span style="color:#00a">NEW</span>.messageid;
+
+  <span style="color:#00a">RETURN</span> <span style="color:#00a">NULL</span>;
+<span style="color:#00a">end</span>;
+<span style="color:#f00;background-color:#faa">$$</span>;
+
+<span style="color:#00a">CREATE</span> <span style="color:#00a">TRIGGER</span> update_counters
+         <span style="color:#00a">AFTER</span> <span style="color:#00a">INSERT</span>
+            <span style="color:#00a">ON</span> tweet.activity
+      <span style="color:#00a">FOR</span> <span style="color:#00a">EACH</span> <span style="color:#00a">ROW</span>
+       <span style="color:#00a">EXECUTE</span> <span style="color:#00a">PROCEDURE</span> twcache.tg_update_counters();
+
+<span style="color:#00a">insert</span> <span style="color:#00a">into</span> tweet.activity(messageid, action)
+     <span style="color:#00a">values</span> (<span style="color:#099">7</span>, <span style="color:#a50">&#39;rt&#39;</span>),
+            (<span style="color:#099">7</span>, <span style="color:#a50">&#39;fav&#39;</span>),
+            (<span style="color:#099">7</span>, <span style="color:#a50">&#39;de-fav&#39;</span>),
+            (<span style="color:#099">8</span>, <span style="color:#a50">&#39;rt&#39;</span>),
+            (<span style="color:#099">8</span>, <span style="color:#a50">&#39;rt&#39;</span>),
+            (<span style="color:#099">8</span>, <span style="color:#a50">&#39;rt&#39;</span>),
+            (<span style="color:#099">8</span>, <span style="color:#a50">&#39;de-rt&#39;</span>),
+            (<span style="color:#099">8</span>, <span style="color:#a50">&#39;rt&#39;</span>);
+
+<span style="color:#00a">select</span> messageid, rts, favs
+  <span style="color:#00a">from</span> twcache.counters;
+
+<span style="color:#00a">rollback</span>;</code></pre></div>
+<p>And here&rsquo;s the result of running that file in <em>psql</em>, either from the
+command line with <em>psql -f</em> or with the interactive <code>\i &lt;path/to/file.sql</code>
+command:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql">BEGIN
+CREATE TABLE
+CREATE FUNCTION
+CREATE TRIGGER
+INSERT 0 8
+ messageid │ rts │ favs 
+═══════════╪═════╪══════
+         7 │   1 │    0
+         8 │   3 │    0
+(2 rows)
+
+ROLLBACK</code></pre></div>
+<p>You might have noticed that the file ends with a <em>ROLLBACK</em> statement.
+That&rsquo;s because we don&rsquo;t really want to install such a trigger, it&rsquo;s meant as
+an example only.</p>
+
+<p>The reason why we don&rsquo;t actually want to install it is that it would cancel
+all our previous efforts to model for tweet activity scalability by
+transforming every <em>insert into tweet.activity</em> into an <em>update
+twcache.counters</em> on the same <em>messageid</em>. We looked into that exact thing
+in the previous article <a href="/blog/2018/07/computing-and-caching/">Computing and
+Caching</a> and we saw that it would
+never scale to our requirements.</p>
+
+<h1 id="conclusion">Conclusion</h1>
+
+<p>PostgreSQL triggers are a powerful tool that allows extra business logic to
+happen right in the transaction that registers events in your system. Deeper
+thoughts about this complex topic are available in my article <a href="https://tapoueh.org/blog/2017/06/sql-and-business-logic/">SQL and
+Business Logic</a>.</p>
+
+<p>When using PostgreSQL triggers, concurrency behavior of your implementation
+must be analyzed. It&rsquo;s quite easy to deploy a trigger to your production
+system and implement simple and complex processing in a transactional way,
+and it&rsquo;s incredibly easy to kill your concurrency scaling while doing that,
+as seen here.</p>
+
+<p>In our next article in the series, we will learn how to implement Event
+Processing in PostgreSQL with
+<a href="https://www.postgresql.org/docs/current/static/sql-listen.html">LISTEN</a> and
+<a href="https://www.postgresql.org/docs/current/static/sql-notify.html">NOTIFY</a> and
+a complete client example, in Go.</p>
+              
+            </div>
+          </div>
+          <div id="post-footer" class="post-footer main-content-wrap">
+            
+              
+                
+                
+                  <div class="post-footer-tags">
+                    <span class="text-color-light text-small"></span><br/>
+                    
+  <a class="tag tag--primary tag--small" href="/tags/postgresql/">PostgreSQL</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/yesql/">YeSQL</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/concurrency/">Concurrency</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/triggers/">Triggers</a>
+
+                  </div>
+                
+              
+            
+            <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    
+    <script async id="_ck_252762" src="https://forms.convertkit.com/252762?v=6"></script>
+    
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/07/computing-and-caching/" data-tooltip="Computing and Caching">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f07%2fpostgresql-event-based-processing%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f07%2fpostgresql-event-based-processing%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=PostgreSQL%20Event%20Based%20Processing with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f07%2fpostgresql-event-based-processing%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+            
+              
+                <div id="disqus_thread">
+  <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+              
+            
+          </div>
+        </article>
+        <footer id="footer" class="main-content-wrap">
+  <span class="copyrights">
+    &copy; 2018 Dimitri Fontaine. 
+  </span>
+</footer>
+
+      </div>
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="5">
+        <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    
+    <script async id="_ck_252762" src="https://forms.convertkit.com/252762?v=6"></script>
+    
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/07/computing-and-caching/" data-tooltip="Computing and Caching">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f07%2fpostgresql-event-based-processing%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f07%2fpostgresql-event-based-processing%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=PostgreSQL%20Event%20Based%20Processing with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f07%2fpostgresql-event-based-processing%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+      </div>
+      <div id="share-options-bar" class="share-options-bar" data-behavior="5">
+  <ul class="share-options">
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f07%2fpostgresql-event-based-processing%2f">
+        <i class="fa fa-google-plus"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f07%2fpostgresql-event-based-processing%2f">
+        <i class="fa fa-facebook-official"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=PostgreSQL%20Event%20Based%20Processing with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f07%2fpostgresql-event-based-processing%2f">
+        <i class="fa fa-twitter"></i><span></span>
+      </a>
+    </li>
+  </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
+    </div>
+    
+    <div id="about">
+  <div id="about-card">
+    <div id="about-btn-close">
+      <i class="fa fa-remove"></i>
+    </div>
+    
+      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+    
+    <h4 id="about-card-name">Dimitri Fontaine</h4>
+    
+      <div id="about-card-bio">PostgreSQL Major Contributor</div>
+    
+    
+      <div id="about-card-job">
+        <i class="fa fa-briefcase"></i>
+        <br/>
+        Open Source Software Engineer
+      </div>
+    
+    
+      <div id="about-card-location">
+        <i class="fa fa-map-marker"></i>
+        <br/>
+        France
+      </div>
+    
+  </div>
+</div>
+
+    <div id="algolia-search-modal" class="modal-container">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="close-button"><i class="fa fa-close"></i></span>
+      <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
+        <span class="searchby-algolia-text text-color-light text-small">by</span>
+        <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+      </a>
+      <i class="search-icon fa fa-search"></i>
+      <form id="algolia-search-form">
+        <input type="text" id="algolia-search-input" name="search"
+          class="form-control input--large search-input" placeholder="" />
+      </form>
+    </div>
+    <div class="modal-body">
+      <div class="no-result text-color-light text-center"></div>
+      <div class="results">
+        
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/07/postgresql-event-based-processing/">
+                <h3 class="media-heading">PostgreSQL Event Based Processing</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jul 7, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>In the previous article of the series <a href="/blog/2018/07/modeling-for-concurrency/">Modeling for
+Concurrency</a>, we saw how to model
+your application for highly concurrent activity. It was a follow-up to the
+article entitled <a href="/blog/2018/07/postgresql-concurrency-isolation-and-locking/">PostgreSQL Concurrency: Isolation and
+Locking</a>, which
+was a primer on PostgreSQL isolation and locking properties and behaviors.</p>
+
+<p>Today&rsquo;s article takes us a step further and builds on what we did in the
+previous articles in our series. After having had all the characters from
+Shakespeare&rsquo;s <em>A Midsummer Night&rsquo;s Dream</em> tweet their own lines in our
+database in <a href="/blog/2018/06/PostgreSQL-DML.md">PostgreSQL Concurrency: Data Modification
+Language</a>, and having had them like and
+retweet a lot in <a href="/blog/2018/07/postgresql-concurrency-isolation-and-locking/">PostgreSQL Concurrency: Isolation and
+Locking</a>, we
+saw how to manage concurrent retweets in an efficient way in <a href="/blog/2018/07/computing-and-caching/">Computing and
+Caching</a>.</p>
+
+<p>What we did implement in the previous article is a <em>cache</em> system, all with
+its necessary <strong>cache invalidation policy</strong>. Sometimes though, the
+processing of an <em>event</em> needs to happen within the same transaction where
+the event is registered in your system. PostgreSQL makes it possible to
+maintain a summary table transactionally thanks to its
+<a href="https://www.postgresql.org/docs/current/static/sql-createtrigger.html">trigger</a>
+support. Today, we&rsquo;re going to dive in how to maintain a summary table with
+triggers, and its impact on concurrency.</p>
+
+<hr />
+
+
+<figure class="right">
+    <a href="https://masteringpostgresql.com">
+        <img src="/img/MasteringPostgreSQLinAppDev-Cover-th.png" />
+    </a>
+    
+</figure>
+
+
+<p>This article is extracted from my book <a href="https://masteringpostgresql.com">Mastering PostgreSQL in Application
+Development</a>, which teaches SQL to
+developers so that they may replace thousands of lines of code with very
+simple queries. The book has a full chapter about <em>Data Manipulation and
+Concurrency Control</em> in PostgreSQL, including caching with materialized
+views, check it out!</p>
+
+<hr /></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/07/computing-and-caching/">
+                <h3 class="media-heading">Computing and Caching</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jul 7, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Let&rsquo;s continue to dive in PostgreSQL Concurrency. In the previous article of
+the series, <a href="/blog/2018/07/modeling-for-concurrency/">Modeling for
+Concurrency</a>, we saw how to model
+your application for highly concurrent activity. It was a follow-up to the
+article entitled <a href="/blog/2018/07/postgresql-concurrency-isolation-and-locking/">PostgreSQL Concurrency: Isolation and
+Locking</a>, which
+was a primer on PostgreSQL isolation and locking properties and behaviors.</p>
+
+<p>Today&rsquo;s article takes us a step further and builds on what we did in the
+previous articles in our series. After having had all the characters from
+Shakespeare&rsquo;s <em>A Midsummer Night&rsquo;s Dream</em> tweet their own lines in our
+database in <a href="/blog/2018/06/PostgreSQL-DML.md">PostgreSQL Concurrency: Data Modification
+Language</a>, and having had them like a
+retweet a lot in <a href="/blog/2018/07/postgresql-concurrency-isolation-and-locking/">PostgreSQL Concurrency: Isolation and
+Locking</a>, it&rsquo;s
+time to think about how to display our counters in an efficient way.</p>
+
+<p>In this article, we&rsquo;re going to think about when we should compute results
+and when we should cache them for instant retrieval, all within the SQL
+tooling. The SQL tooling for handling cache is a <a href="https://www.postgresql.org/docs/current/static/sql-creatematerializedview.html">MATERIALIZED
+VIEW</a>,
+and it comes with <strong>cache invalidation</strong> routines, of course.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/07/modeling-for-concurrency/">
+                <h3 class="media-heading">Modeling for Concurrency</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jul 7, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Let&rsquo;s continue to dive in PostgreSQL Concurrency. Last week&rsquo;s article
+<a href="/blog/2018/07/postgresql-concurrency-isolation-and-locking/">PostgreSQL Concurrency: Isolation and
+Locking</a> was a
+primer on PostgreSQL isolation and locking properties and behaviors.</p>
+
+<p>Today&rsquo;s article takes us a step further and builds on what we did last week,
+in particular the database modeling for a <em>tweet</em> like application. After
+having had all the characters from Shakespeare&rsquo;s <em>A Midsummer Night&rsquo;s Dream</em>
+tweet their own lines in our database in <a href="/blog/2018/06/PostgreSQL-DML.md">PostgreSQL Concurrency: Data
+Modification Language</a>, it&rsquo;s time for them
+to do some actions on the tweets: likes and retweet.</p>
+
+<p>Of course, we&rsquo;re going to put concurrency to the test, so we&rsquo;re going to
+have to handle very very popular tweets from the play!</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/07/postgresql-concurrency-isolation-and-locking/">
+                <h3 class="media-heading">PostgreSQL Concurrency: Isolation and Locking</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jul 7, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p><a href="https://www.postgresql.org">PostgreSQL</a> is a relational database management
+system. It&rsquo;s even the world&rsquo;s most advanced open source one of them. As
+such, as its core, Postgres solves concurrent access to a set of data and
+maintains consistency while allowing concurrent operations.</p>
+
+<p>This article is a primer on PostgreSQL Isolation and Locking properties and
+behaviors. You might be interested into the previous article in the series:
+<a href="/blog/2018/06/PostgreSQL-DML.md">PostgreSQL Concurrency: Data Modification
+Language</a>.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/06/postgresql-concurrency-data-modification-language/">
+                <h3 class="media-heading">PostgreSQL Concurrency: Data Modification Language</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">PostgreSQL is a relational database management system. It&rsquo;s even the world&rsquo;s most advanced open source one of them. As such, as its core, Postgres solves concurrent access to a set of data and maintains consistency while allowing concurrent operations.
+Postgres exposes its concurrency APIs in the SQL language, in particular in the DML parts of it: you can read the Data Manipulation Language chapter of the PostgreSQL docs for all the details.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/05/postgresql-data-types/">
+                <h3 class="media-heading">PostgreSQL Data Types</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Today it&rsquo;s time to conclude our series of <a href="/tags/data-types/">PostgreSQL Data
+Types</a> articles with a recap. The series cover lots of
+core PostgreSQL data types and shows how to benefit from the PostgreSQL
+concept of a data type: more than input validation, a PostgreSQL data type
+also implements expected behaviors and processing functions.</p>
+
+<p>This allows an application developer to rely on PostgreSQL for more complex
+queries, having the processing happen where the data is, for instance when
+implementing advanced JOIN operations, then retrieving only the data set
+that is interesting for the application.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/05/postgresql-data-types-point/">
+                <h3 class="media-heading">PostgreSQL Data Types: Point</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL Point type.</p>
+
+<p>In order to put the Point datatype in a context where it makes sense, we&rsquo;re
+going to download a complete geolocation data set and normalize it, thus
+making good use of both the normalization good practice and those other
+PostgreSQL data types we&rsquo;ve been learning about in the previous articles of
+this series.</p>
+
+<p>Buckle-up, this is a long article with a lot of SQL inside.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/05/postgresql-data-types-enum/">
+                <h3 class="media-heading">PostgreSQL Data Types: ENUM</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL ENUM type.</p>
+
+<p>This data type has been added to PostgreSQL in order to make it easier to
+support migrations from MySQL. Proper relational design would use a
+reference table and a foreign key instead.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/04/postgresql-data-types-json/">
+                <h3 class="media-heading">PostgreSQL Data Types: JSON</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL JSON type.</p>
+
+<p>PostgreSQL has built-in support for JSON with a great range of processing
+functions and operators, and complete indexing support. The documentation
+covers all the details in the chapters entitled <a href="https://www.postgresql.org/docs/current/static/datatype-json.html">JSON
+Types</a>
+and <a href="https://www.postgresql.org/docs/current/static/functions-json.html">JSON Functions and
+Operators</a>.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/04/postgresql-data-types-xml/">
+                <h3 class="media-heading">PostgreSQL Data Types: XML</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Apr 4, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL XML type.</p>
+
+<p>The SQL standard includes a <a href="https://en.wikipedia.org/wiki/SQL/XML">SQL/XML</a>
+which <em>introduces the predefined data type XML together with constructors,
+several routines, functions, and XML-to-SQL data type mappings to support
+manipulation and storage of XML in a SQL database</em>, as per the Wikipedia
+page.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+      </div>
+    </div>
+    <div class="modal-footer">
+      <p class="results-count text-medium"
+         data-message-zero=""
+         data-message-one=""
+         data-message-other="">
+         278 posts found
+      </p>
+    </div>
+  </div>
+</div>
+    
+  
+    
+    <div id="cover" style="background-image:url('https://tapoueh.org/images/mayan-calendar.jpg');"></div>
+  
+
+
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
+
+
+<script src="/js/script-qi9wbxp2ya2j6p7wx1i6tgavftewndznf4v0hy2gvivk1rxgc3lm7njqb6bz.min.js"></script>
+
+
+
+<script>
+$(document).ready(function() {
+  hljs.configure({ classPrefix: '', useBR: false });
+  $('pre.code-highlight > code, pre > code').each(function(i, block) {
+    if (!$(this).hasClass('codeblock')) {
+      $(this).addClass('codeblock');
+    }
+    hljs.highlightBlock(block);
+  });
+});
+</script>
+
+
+  
+    
+      <script>
+        var disqus_config = function () {
+          this.page.url = 'https:\/\/tapoueh.org\/blog\/2018\/07\/postgresql-event-based-processing\/';
+          
+            this.page.identifier = '\/blog\/2018\/07\/postgresql-event-based-processing\/'
+          
+        };
+        (function() {
+          
+          
+          if (window.location.hostname == "localhost") {
+            return;
+          }
+          var d = document, s = d.createElement('script');
+          var disqus_shortname = 'tapoueh';
+          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+          s.setAttribute('data-timestamp', +new Date());
+          (d.head || d.body).appendChild(s);
+        })();
+      </script>
+    
+  
+
+
+
+    
+  </body>
+</html>
+
