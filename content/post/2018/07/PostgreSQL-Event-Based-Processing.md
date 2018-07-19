@@ -37,21 +37,6 @@ maintain a summary table transactionally thanks to its
 support. Today, we're going to dive in how to maintain a summary table with
 triggers, and its impact on concurrency.
 
-<hr />
-
-{{< figure class="right"
-             src="/img/MasteringPostgreSQLinAppDev-Cover-th.png"
-            link="https://masteringpostgresql.com" >}}
-            
-This article is extracted from my book [Mastering PostgreSQL in Application
-Development](https://masteringpostgresql.com), which teaches SQL to
-developers so that they may replace thousands of lines of code with very
-simple queries. The book has a full chapter about *Data Manipulation and
-Concurrency Control* in PostgreSQL, including caching with materialized
-views, check it out!
-
-<hr />
-
 <!--more-->
 <!--toc-->
 
@@ -96,6 +81,22 @@ Matrix](https://wiki.postgresql.org/wiki/PL_Matrix) in the PostgreSQL wiki.
 Unfortunately, it is not possible to write triggers in plain SQL language,
 so we have to write stored procedures to benefit from the PostgreSQL trigger
 capabilities.
+
+
+<hr />
+
+{{< figure class="right"
+             src="/img/MasteringPostgreSQLinAppDev-Cover-th.png"
+            link="https://masteringpostgresql.com" >}}
+            
+This article is extracted from my book [Mastering PostgreSQL in Application
+Development](https://masteringpostgresql.com), which teaches SQL to
+developers so that they may replace thousands of lines of code with very
+simple queries. The book has a full chapter about *Data Manipulation and
+Concurrency Control* in PostgreSQL, including caching with materialized
+views, check it out!
+
+<hr />
 
 # Transactional Event Driven Processing
 
