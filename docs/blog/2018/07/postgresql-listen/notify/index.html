@@ -31,87 +31,66 @@
     
 
     
-    <meta name="description" content="In the previous article of the series Modeling for
-Concurrency, we saw how to model
-your application for highly concurrent activity. It was a follow-up to the
-article entitled PostgreSQL Concurrency: Isolation and
-Locking, which
-was a primer on PostgreSQL isolation and locking properties and behaviors.
+    <meta name="description" content="This article fits in the PostgreSQL Concurrency series,
+where we installed a tweeter like application schema and had all the
+characters from Shakespeare&rsquo;s A Midsummer Night&rsquo;s Dream tweet their own
+lines in our database in PostgreSQL Concurrency: Data Modification
+Language.
 
-Today&rsquo;s article takes us a step further and builds on what we did in the
-previous articles in our series. After having had all the characters from
-Shakespeare&rsquo;s A Midsummer Night&rsquo;s Dream tweet their own lines in our
-database in PostgreSQL Concurrency: Data Modification
-Language, and having had them like and
-retweet a lot in PostgreSQL Concurrency: Isolation and
-Locking, we
-saw how to manage concurrent retweets in an efficient way in Computing and
-Caching.
+A previous article in the series covered how to manage concurrent retweets
+in an efficient way: Computing and
+Caching, where we learn how to
+maintain a cache right in your PostgreSQL database, thanks for materialized
+views.
 
-What we did implement in the previous article is a cache system, all with
-its necessary cache invalidation policy. Sometimes though, the
-processing of an event needs to happen within the same transaction where
-the event is registered in your system. PostgreSQL makes it possible to
-maintain a summary table transactionally thanks to its
-trigger
-support. Today, we&rsquo;re going to dive in how to maintain a summary table with
-triggers, and its impact on concurrency.">
-    <meta property="og:description" content="In the previous article of the series Modeling for
-Concurrency, we saw how to model
-your application for highly concurrent activity. It was a follow-up to the
-article entitled PostgreSQL Concurrency: Isolation and
-Locking, which
-was a primer on PostgreSQL isolation and locking properties and behaviors.
+Today&rsquo;s article shows how to maintain an external cache in another
+application layer. In this article we are going to maintain an in-memory
+cache in a Golang service, using PostgreSQL
+LISTEN and
+NOTIFY
+features.">
+    <meta property="og:description" content="This article fits in the PostgreSQL Concurrency series,
+where we installed a tweeter like application schema and had all the
+characters from Shakespeare&rsquo;s A Midsummer Night&rsquo;s Dream tweet their own
+lines in our database in PostgreSQL Concurrency: Data Modification
+Language.
 
-Today&rsquo;s article takes us a step further and builds on what we did in the
-previous articles in our series. After having had all the characters from
-Shakespeare&rsquo;s A Midsummer Night&rsquo;s Dream tweet their own lines in our
-database in PostgreSQL Concurrency: Data Modification
-Language, and having had them like and
-retweet a lot in PostgreSQL Concurrency: Isolation and
-Locking, we
-saw how to manage concurrent retweets in an efficient way in Computing and
-Caching.
+A previous article in the series covered how to manage concurrent retweets
+in an efficient way: Computing and
+Caching, where we learn how to
+maintain a cache right in your PostgreSQL database, thanks for materialized
+views.
 
-What we did implement in the previous article is a cache system, all with
-its necessary cache invalidation policy. Sometimes though, the
-processing of an event needs to happen within the same transaction where
-the event is registered in your system. PostgreSQL makes it possible to
-maintain a summary table transactionally thanks to its
-trigger
-support. Today, we&rsquo;re going to dive in how to maintain a summary table with
-triggers, and its impact on concurrency.">
+Today&rsquo;s article shows how to maintain an external cache in another
+application layer. In this article we are going to maintain an in-memory
+cache in a Golang service, using PostgreSQL
+LISTEN and
+NOTIFY
+features.">
     <meta property="og:type" content="blog">
     <meta property="og:title" content="PostgreSQL LISTEN/NOTIFY">
     <meta property="og:url" content="/blog/2018/07/postgresql-listen/notify/">
     <meta property="og:site_name" content="Dimitri Fontaine, PostgreSQL Expert">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="PostgreSQL LISTEN/NOTIFY">
-    <meta name="twitter:description" content="In the previous article of the series Modeling for
-Concurrency, we saw how to model
-your application for highly concurrent activity. It was a follow-up to the
-article entitled PostgreSQL Concurrency: Isolation and
-Locking, which
-was a primer on PostgreSQL isolation and locking properties and behaviors.
+    <meta name="twitter:description" content="This article fits in the PostgreSQL Concurrency series,
+where we installed a tweeter like application schema and had all the
+characters from Shakespeare&rsquo;s A Midsummer Night&rsquo;s Dream tweet their own
+lines in our database in PostgreSQL Concurrency: Data Modification
+Language.
 
-Today&rsquo;s article takes us a step further and builds on what we did in the
-previous articles in our series. After having had all the characters from
-Shakespeare&rsquo;s A Midsummer Night&rsquo;s Dream tweet their own lines in our
-database in PostgreSQL Concurrency: Data Modification
-Language, and having had them like and
-retweet a lot in PostgreSQL Concurrency: Isolation and
-Locking, we
-saw how to manage concurrent retweets in an efficient way in Computing and
-Caching.
+A previous article in the series covered how to manage concurrent retweets
+in an efficient way: Computing and
+Caching, where we learn how to
+maintain a cache right in your PostgreSQL database, thanks for materialized
+views.
 
-What we did implement in the previous article is a cache system, all with
-its necessary cache invalidation policy. Sometimes though, the
-processing of an event needs to happen within the same transaction where
-the event is registered in your system. PostgreSQL makes it possible to
-maintain a summary table transactionally thanks to its
-trigger
-support. Today, we&rsquo;re going to dive in how to maintain a summary table with
-triggers, and its impact on concurrency.">
+Today&rsquo;s article shows how to maintain an external cache in another
+application layer. In this article we are going to maintain an in-memory
+cache in a Golang service, using PostgreSQL
+LISTEN and
+NOTIFY
+features.">
     
       <meta name="twitter:creator" content="@tapoueh">
     
@@ -125,10 +104,10 @@ triggers, and its impact on concurrency.">
     
 
     
-      <meta property="og:image" content="https://tapoueh.org/img/c09-iis-event-processing.png">
+      <meta property="og:image" content="https://tapoueh.org/img/siren_alarm_bell_signal_alert-512.png">
     
     
-      <meta property="og:image" content="https://tapoueh.org/img/event_processing.png">
+      <meta property="og:image" content="https://tapoueh.org/img/elephant.png">
     
     
 
@@ -323,20 +302,10 @@ ga('send', 'pageview');
   <div class="post-header-cover
               text-left
               post-header-cover--partial"
-       style="background-image:url('/img/event_processing.png')"
+       style="background-image:url('/img/elephant.png')"
        data-behavior="5">
     
-  </div>
-
-
-      <div id="main" data-behavior="5"
-        class="hasCover
-               hasCoverMetaOut
-               ">
-        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
-          
-          
-            <div class="post-header main-content-wrap text-left">
+      <div class="post-header main-content-wrap text-left">
   
     <h1 class="post-title" itemprop="headline">
       PostgreSQL LISTEN/NOTIFY
@@ -370,34 +339,37 @@ ga('send', 'pageview');
   </div>
 
 </div>
+    
+  </div>
+
+
+      <div id="main" data-behavior="5"
+        class="hasCover
+               hasCoverMetaIn
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
           
           <div class="post-content markdown" itemprop="articleBody">
             <div class="main-content-wrap">
-              <p>In the previous article of the series <a href="/blog/2018/07/modeling-for-concurrency/">Modeling for
-Concurrency</a>, we saw how to model
-your application for highly concurrent activity. It was a follow-up to the
-article entitled <a href="/blog/2018/07/postgresql-concurrency-isolation-and-locking/">PostgreSQL Concurrency: Isolation and
-Locking</a>, which
-was a primer on PostgreSQL isolation and locking properties and behaviors.</p>
+              <p>This article fits in the <a href="/tags/concurrency">PostgreSQL Concurrency</a> series,
+where we installed a tweeter like application schema and had all the
+characters from Shakespeare&rsquo;s <em>A Midsummer Night&rsquo;s Dream</em> tweet their own
+lines in our database in <a href="/blog/2018/06/PostgreSQL-DML.md">PostgreSQL Concurrency: Data Modification
+Language</a>.</p>
 
-<p>Today&rsquo;s article takes us a step further and builds on what we did in the
-previous articles in our series. After having had all the characters from
-Shakespeare&rsquo;s <em>A Midsummer Night&rsquo;s Dream</em> tweet their own lines in our
-database in <a href="/blog/2018/06/PostgreSQL-DML.md">PostgreSQL Concurrency: Data Modification
-Language</a>, and having had them like and
-retweet a lot in <a href="/blog/2018/07/postgresql-concurrency-isolation-and-locking/">PostgreSQL Concurrency: Isolation and
-Locking</a>, we
-saw how to manage concurrent retweets in an efficient way in <a href="/blog/2018/07/computing-and-caching/">Computing and
-Caching</a>.</p>
+<p>A previous article in the series covered how to manage concurrent retweets
+in an efficient way: <a href="/blog/2018/07/computing-and-caching/">Computing and
+Caching</a>, where we learn how to
+maintain a cache right in your PostgreSQL database, thanks for materialized
+views.</p>
 
-<p>What we did implement in the previous article is a <em>cache</em> system, all with
-its necessary <strong>cache invalidation policy</strong>. Sometimes though, the
-processing of an <em>event</em> needs to happen within the same transaction where
-the event is registered in your system. PostgreSQL makes it possible to
-maintain a summary table transactionally thanks to its
-<a href="https://www.postgresql.org/docs/current/static/sql-createtrigger.html">trigger</a>
-support. Today, we&rsquo;re going to dive in how to maintain a summary table with
-triggers, and its impact on concurrency.</p>
+<p>Today&rsquo;s article shows how to maintain an <em>external</em> cache in another
+application layer. In this article we are going to maintain an in-memory
+cache in a Golang service, using PostgreSQL
+<a href="https://www.postgresql.org/docs/current/static/sql-listen.html">LISTEN</a> and
+<a href="https://www.postgresql.org/docs/current/static/sql-notify.html">NOTIFY</a>
+features.</p>
 
 <p>
 <h1 id="table-of-contents"></h1><nav id="TableOfContents">
@@ -405,13 +377,8 @@ triggers, and its impact on concurrency.</p>
 <li><a href="#listen-and-notify">Listen and Notify</a></li>
 <li><a href="#postgresql-notifications">PostgreSQL Notifications</a></li>
 <li><a href="#postgresql-event-publication-system">PostgreSQL Event Publication System</a></li>
-<li><a href="#notifications-and-cache-maintenance">Notifications and Cache Maintenance</a>
-<ul>
-<li>
-<ul>
+<li><a href="#notifications-and-cache-maintenance">Notifications and Cache Maintenance</a></li>
 <li><a href="#limitations-of-listen-and-notify">Limitations of Listen and Notify</a></li>
-</ul></li>
-</ul></li>
 <li><a href="#listen-and-notify-support-in-drivers">Listen and Notify Support in Drivers</a></li>
 <li><a href="#conclusion">Conclusion</a></li>
 </ul>
@@ -568,6 +535,26 @@ server process with PID 73216.
 Asynchronous notification &#34;tweet.activity&#34; with payload        ⏎
 &#34;{&#34;messageid&#34;:33,&#34;rts&#34;:-1,&#34;favs&#34;:0}&#34; received from             ⏎
 server process with PID 73216.</code></pre></div>
+<hr />
+
+
+<figure class="right">
+    <a href="https://masteringpostgresql.com">
+        <img src="/img/MasteringPostgreSQLinAppDev-Cover-th.png" />
+    </a>
+    
+</figure>
+
+
+<p>This article is extracted from my book <a href="https://masteringpostgresql.com">Mastering PostgreSQL in Application
+Development</a>, which teaches SQL to
+developers so that they may replace thousands of lines of code with very
+simple queries. The book has a full chapter about <em>Data Manipulation and
+Concurrency Control</em> in PostgreSQL, including caching with materialized
+views, check it out!</p>
+
+<hr />
+
 <h1 id="notifications-and-cache-maintenance">Notifications and Cache Maintenance</h1>
 
 <p>Now that we have the basic server-side infrastructure in place, where
@@ -627,11 +614,10 @@ and we do some testing:</p>
 2017/09/21 22:00:47 Materializing 6 events from memory
 </code></pre>
 
-<p>As it is written in Go, the client code is quite verbose and at 212 lines
-won&rsquo;t fit into these pages. We might have a look at the <em>materialize</em>
-function though, because it&rsquo;s an interesting implementation of pushing the
-in-memory cache data structure down to our PostgreSQL table
-<em>twcache.counters</em>.</p>
+<p>The client code is written in Go, and is included in full in this article.
+One of the main bits of interest is the <em>materialize</em> function, which is an
+interesting implementation of pushing the in-memory cache data structure
+down to our PostgreSQL table <em>twcache.counters</em>.</p>
 
 <p>The in-memory cache structure looks like the following:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00a">type</span> Counter <span style="color:#00a">struct</span> {
@@ -707,10 +693,219 @@ here.</p>
 <p>Then our SQL query uses the <em>insert into &hellip; select &hellip; on conflict do
 update</em> variant that we&rsquo;re used to by now.</p>
 
-<p>Baring JSON tricks, the classic way to serialize a complex data structure
-targetting multiple rows is shown in the <a href="#moma">batch update</a> example that
-follows this section.</p>
+<p>So, here&rsquo;s the full Go script we&rsquo;re using here:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00a">package</span> main
 
+<span style="color:#00a">import</span> (
+	<span style="color:#a50">&#34;database/sql&#34;</span>
+	<span style="color:#a50">&#34;encoding/json&#34;</span>
+	<span style="color:#a50">&#34;flag&#34;</span>
+	<span style="color:#a50">&#34;time&#34;</span>
+	<span style="color:#a50">&#34;log&#34;</span>
+	<span style="color:#a50">&#34;os&#34;</span>
+
+	<span style="color:#a50">&#34;github.com/lib/pq&#34;</span>
+)
+
+<span style="color:#00a">type</span> Config <span style="color:#00a">struct</span> {
+	PGuri   <span style="color:#0aa">string</span>
+	Channel <span style="color:#0aa">string</span>
+	Sync    time.Duration
+	Idle    time.Duration
+}
+
+<span style="color:#00a">type</span> Counter <span style="color:#00a">struct</span> {
+	MessageId <span style="color:#0aa">int</span> <span style="color:#a50">`json:&#34;messageid&#34;`</span>
+	Rts       <span style="color:#0aa">int</span> <span style="color:#a50">`json:&#34;rts&#34;`</span>
+	Favs      <span style="color:#0aa">int</span> <span style="color:#a50">`json:&#34;favs&#34;`</span>
+}
+
+<span style="color:#00a">type</span> Cache <span style="color:#00a">map</span>[<span style="color:#0aa">int</span>]*Counter
+
+<span style="color:#00a">const</span> sync_delay = <span style="color:#099">10</span> * time.Second
+<span style="color:#00a">const</span> idle_delay = <span style="color:#099">30</span> * time.Second
+<span style="color:#00a">const</span> scrn_width = <span style="color:#099">65</span>
+<span style="color:#00a">const</span> min_reconn = <span style="color:#099">10</span> * time.Second
+<span style="color:#00a">const</span> max_reconn = time.Minute
+
+<span style="color:#00a">func</span> main() {
+	conf := processFlags()
+	log.SetOutput(os.Stdout)
+
+	log.Printf(<span style="color:#a50">&#34;Connecting to %s… &#34;</span>, conf.PGuri)
+	db, err := sql.Open(<span style="color:#a50">&#34;postgres&#34;</span>, conf.PGuri)
+	<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
+		log.Printf(<span style="color:#a50">&#34;Failed to connect to &#39;%s&#39;: %s&#34;</span>, conf.PGuri, err)
+		os.Exit(<span style="color:#099">1</span>)
+	}
+	<span style="color:#00a">defer</span> db.Close()
+
+	reportErr := <span style="color:#00a">func</span>(ev pq.ListenerEventType, err <span style="color:#0aa">error</span>) {
+		<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
+			log.Printf(<span style="color:#a50">&#34;Failed to start listener: %s&#34;</span>, err)
+			os.Exit(<span style="color:#099">1</span>)
+		}
+	}
+
+	<span style="color:#aaa;font-style:italic">//
+</span><span style="color:#aaa;font-style:italic"></span>	<span style="color:#aaa;font-style:italic">// First, LISTEN to incoming events
+</span><span style="color:#aaa;font-style:italic"></span>	<span style="color:#aaa;font-style:italic">//
+</span><span style="color:#aaa;font-style:italic"></span>	listener := pq.NewListener(conf.PGuri, min_reconn, max_reconn, reportErr)
+	err = listener.Listen(conf.Channel)
+	<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
+		log.Printf(
+			<span style="color:#a50">&#34;Failed to LISTEN to channel &#39;%s&#39;: %s&#34;</span>,
+			conf.Channel, err)
+		<span style="color:#0aa">panic</span>(err)
+	}
+	log.Printf(
+		<span style="color:#a50">&#34;Listening to notifications on channel \&#34;%s\&#34;&#34;</span>,
+		conf.Channel)
+
+	<span style="color:#aaa;font-style:italic">//
+</span><span style="color:#aaa;font-style:italic"></span>	<span style="color:#aaa;font-style:italic">// Second, initialize the cache with the current values from the
+</span><span style="color:#aaa;font-style:italic"></span>	<span style="color:#aaa;font-style:italic">// base table, only then proceed to process the notifications.
+</span><span style="color:#aaa;font-style:italic"></span>	<span style="color:#aaa;font-style:italic">//
+</span><span style="color:#aaa;font-style:italic"></span>	cache, err := initCache(db)
+
+	<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
+		log.Printf(<span style="color:#a50">&#34;Error initializing cache&#34;</span>)
+		<span style="color:#0aa">panic</span>(err)
+	}
+	log.Printf(
+		<span style="color:#a50">&#34;Cache initialized with %d entries.&#34;</span>,
+		<span style="color:#0aa">len</span>(cache))
+
+	<span style="color:#aaa;font-style:italic">//
+</span><span style="color:#aaa;font-style:italic"></span>	<span style="color:#aaa;font-style:italic">// Third, grab notifications and process them by updating the
+</span><span style="color:#aaa;font-style:italic"></span>	<span style="color:#aaa;font-style:italic">// counters that changed.
+</span><span style="color:#aaa;font-style:italic"></span>	<span style="color:#aaa;font-style:italic">//
+</span><span style="color:#aaa;font-style:italic"></span>	log.Println(<span style="color:#a50">&#34;Start processing notifications, waiting for events…&#34;</span>)
+
+	reset := time.Now()
+	<span style="color:#00a">for</span> {
+		waitForNotification(listener, cache, conf.Idle)
+
+		<span style="color:#00a">if</span> time.Since(reset) &gt;= conf.Sync {
+			err := materialize(db, cache)
+
+			<span style="color:#aaa;font-style:italic">// reset the cache *unless* there was an error!
+</span><span style="color:#aaa;font-style:italic"></span>			<span style="color:#00a">if</span> err == <span style="color:#00a">nil</span> {
+				cache = <span style="color:#0aa">make</span>(Cache)
+				reset = time.Now()
+			}
+		}
+	}
+}
+
+<span style="color:#00a">func</span> processFlags() *Config {
+	<span style="color:#00a">var</span> conninfo <span style="color:#0aa">string</span> = <span style="color:#a50">&#34;postgres:///yesql?sslmode=disable&#34;</span>
+	<span style="color:#00a">var</span> channel <span style="color:#0aa">string</span> = <span style="color:#a50">&#34;tweet.activity&#34;</span>
+
+	syncPtr := flag.Int(<span style="color:#a50">&#34;sync&#34;</span>, <span style="color:#0aa">int</span>(sync_delay.Seconds()),
+		<span style="color:#a50">&#34;Sync cache every SYNC seconds&#34;</span>)
+	flag.StringVar(&amp;conninfo, <span style="color:#a50">&#34;pguri&#34;</span>, conninfo,
+		<span style="color:#a50">&#34;PostgreSQL connection string&#34;</span>)
+	flag.StringVar(&amp;channel, <span style="color:#a50">&#34;channel&#34;</span>, channel,
+		<span style="color:#a50">&#34;LISTEN to this channel&#34;</span>)
+
+	flag.Parse()
+
+	sync := time.Duration(*syncPtr) * time.Second
+	idle := sync / <span style="color:#099">4</span>
+
+	<span style="color:#00a">return</span> &amp;Config{conninfo, channel, sync, idle}
+}
+
+<span style="color:#00a">func</span> waitForNotification(l *pq.Listener, cache Cache, timeout time.Duration) {
+	<span style="color:#00a">select</span> {
+	<span style="color:#00a">case</span> n := &lt;-l.Notify:
+		<span style="color:#00a">var</span> c Counter
+		err := json.Unmarshal([]<span style="color:#0aa">byte</span>(n.Extra), &amp;c)
+
+		<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
+			log.Printf(<span style="color:#a50">&#34;Failed to parse &#39;%s&#39;: %s&#34;</span>, n.Extra, err)
+		} <span style="color:#00a">else</span> {
+			log.Printf(<span style="color:#a50">&#34;Received event: %s&#34;</span>, n.Extra)
+			updateCounter(cache, c)
+		}
+
+	<span style="color:#00a">case</span> &lt;-time.After(timeout):
+		<span style="color:#00a">return</span>
+	}
+}
+
+<span style="color:#00a">func</span> initCache(db *sql.DB) (Cache, <span style="color:#0aa">error</span>) {
+	q := <span style="color:#a50">&#34;select messageid, rts, favs from tweet.message_with_counters;&#34;</span>
+
+	rows, err := db.Query(q)
+	<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
+		<span style="color:#00a">return</span> <span style="color:#00a">nil</span>, err
+	}
+	cache := <span style="color:#0aa">make</span>(Cache)
+
+	<span style="color:#00a">for</span> rows.Next() {
+		c := Counter{}
+		err := rows.Scan(&amp;c.MessageId, &amp;c.Rts, &amp;c.Favs)
+
+		<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
+			<span style="color:#00a">return</span> <span style="color:#00a">nil</span>, err
+		}
+		cache[c.MessageId] = &amp;c
+	}
+	err = rows.Err()
+	<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
+		<span style="color:#00a">return</span> <span style="color:#00a">nil</span>, err
+	}
+	<span style="color:#00a">return</span> cache, <span style="color:#00a">nil</span>
+}
+
+<span style="color:#00a">func</span> materialize(db *sql.DB, cache Cache) <span style="color:#0aa">error</span> {
+	<span style="color:#00a">if</span> <span style="color:#0aa">len</span>(cache) == <span style="color:#099">0</span> {
+		<span style="color:#00a">return</span> <span style="color:#00a">nil</span>
+	}
+	log.Printf(<span style="color:#a50">&#34;Materializing %d events from memory&#34;</span>, <span style="color:#0aa">len</span>(cache))
+
+	q := <span style="color:#a50">`
+</span><span style="color:#a50">with rec as
+</span><span style="color:#a50"> (
+</span><span style="color:#a50">   select rec.*
+</span><span style="color:#a50">     from json_each($1) as t,
+</span><span style="color:#a50">          json_populate_record(null::twcache.counters, value) as rec
+</span><span style="color:#a50"> )
+</span><span style="color:#a50"> insert into twcache.counters(messageid, rts, favs)
+</span><span style="color:#a50">      select messageid, rts, favs
+</span><span style="color:#a50">        from rec
+</span><span style="color:#a50"> on conflict (messageid)
+</span><span style="color:#a50">   do update
+</span><span style="color:#a50">         set rts  = counters.rts + excluded.rts,
+</span><span style="color:#a50">             favs = counters.favs + excluded.favs
+</span><span style="color:#a50">       where counters.messageid = excluded.messageid
+</span><span style="color:#a50">`</span>
+	js, err := json.Marshal(cache)
+	<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
+		log.Printf(<span style="color:#a50">&#34;Error while materializing cache: %s&#34;</span>, err)
+		<span style="color:#00a">return</span> err
+	}
+
+	_, err = db.Query(q, js)
+	<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
+		log.Printf(<span style="color:#a50">&#34;Error materliazing cache: %s&#34;</span>, err)
+		<span style="color:#00a">return</span> err
+	}
+	<span style="color:#00a">return</span> <span style="color:#00a">nil</span>
+}
+
+<span style="color:#00a">func</span> updateCounter(cache Cache, c Counter) {
+	_, found := cache[c.MessageId]
+
+	<span style="color:#00a">if</span> found {
+		cache[c.MessageId].Rts += c.Rts
+		cache[c.MessageId].Favs += c.Favs
+	} <span style="color:#00a">else</span> {
+		cache[c.MessageId] = &amp;c
+	}
+}</code></pre></div>
 <p>It&rsquo;s important to note that coded as such, we can use the function to both
 materialize a full cache as fetched at startup, and to materialize the cache
 we build in-memory while receiving notifications.</p>
@@ -769,7 +964,7 @@ maintenance service is to <em>reset</em> the cache from the real values in the
 database. That&rsquo;s how we got those values in the cache; alter all, the cache
 service wasn&rsquo;t written when we ran our previous series of tests.</p>
 
-<h3 id="limitations-of-listen-and-notify">Limitations of Listen and Notify</h3>
+<h1 id="limitations-of-listen-and-notify">Limitations of Listen and Notify</h1>
 
 <p>It is crucial that an application using the PostgreSQL notification
 capabilities are capable of missing events. Notifications are only sent to
@@ -823,6 +1018,43 @@ example here.</p>
 <p>For other languages, please check the documentation of your driver of choice.</p>
 
 <h1 id="conclusion">Conclusion</h1>
+
+<p>PostgreSQL implements several facilities that we can rely on to maintain an
+application cache for data that changes often:</p>
+
+<ul>
+<li><p>In <a href="/blog/2018/07/computing-and-caching/">Computing and Caching</a>, we saw
+how to use a MATERIALIZED VIEW to get a fixed snapshot of the data, and
+then easily REFRESH it to implement our <strong>cache invalidation policy</strong>.</p>
+
+<p>This technique is well adapted to use cases where you want to rebuild
+your cache every once in a while, maybe every night, or several times a
+day, down to maybe every five minutes if the refreshing of the cache is
+really fast.</p></li>
+
+<li><p>In <a href="/blog/2018/07/postgresql-event-based-processing/">PostgreSQL Event Based
+Processing</a> we saw how
+to use TRIGGERs to maintain a transactionally correct cache, and the
+impact of such a choice on the scalability properties of your database
+backend.</p>
+
+<p>This solution is well suited to use case where the application only
+receives a small amount of UPDATE traffic, and quite far apart, and
+can&rsquo;t tolerate any lag when using the cache.</p></li>
+
+<li><p>In today&rsquo;s article <a href="/blog/2018/07/postgresql-listen/notify/">PostgreSQL
+LISTEN/NOTIFY</a> we saw how to
+build an online cache maintenance service with PostgreSQL&rsquo;s advanced
+notification features.</p>
+
+<p>This solution is well suited to use cases where a small amount of lag
+can be tolerated, up to maybe some seconds, most typically measured in
+the hundreds of milliseconds.</p></li>
+</ul>
+
+<p>Again, we see that core PostgreSQL features allow application developers to
+build exactly the facility they need. PostgreSQL really is
+<a href="/tags/yesql/">YeSQL</a>!</p>
               
             </div>
           </div>
@@ -845,6 +1077,8 @@ example here.</p>
   <a class="tag tag--primary tag--small" href="/tags/notify/">NOTIFY</a>
 
   <a class="tag tag--primary tag--small" href="/tags/golang/">GoLang</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/json/">JSON</a>
 
                   </div>
                 
@@ -1088,31 +1322,24 @@ example here.</p>
                   Jul 7, 2018
                 </span>
               </span>
-              <div class="media-content hide-xs font-merryweather"><p>In the previous article of the series <a href="/blog/2018/07/modeling-for-concurrency/">Modeling for
-Concurrency</a>, we saw how to model
-your application for highly concurrent activity. It was a follow-up to the
-article entitled <a href="/blog/2018/07/postgresql-concurrency-isolation-and-locking/">PostgreSQL Concurrency: Isolation and
-Locking</a>, which
-was a primer on PostgreSQL isolation and locking properties and behaviors.</p>
+              <div class="media-content hide-xs font-merryweather"><p>This article fits in the <a href="/tags/concurrency">PostgreSQL Concurrency</a> series,
+where we installed a tweeter like application schema and had all the
+characters from Shakespeare&rsquo;s <em>A Midsummer Night&rsquo;s Dream</em> tweet their own
+lines in our database in <a href="/blog/2018/06/PostgreSQL-DML.md">PostgreSQL Concurrency: Data Modification
+Language</a>.</p>
 
-<p>Today&rsquo;s article takes us a step further and builds on what we did in the
-previous articles in our series. After having had all the characters from
-Shakespeare&rsquo;s <em>A Midsummer Night&rsquo;s Dream</em> tweet their own lines in our
-database in <a href="/blog/2018/06/PostgreSQL-DML.md">PostgreSQL Concurrency: Data Modification
-Language</a>, and having had them like and
-retweet a lot in <a href="/blog/2018/07/postgresql-concurrency-isolation-and-locking/">PostgreSQL Concurrency: Isolation and
-Locking</a>, we
-saw how to manage concurrent retweets in an efficient way in <a href="/blog/2018/07/computing-and-caching/">Computing and
-Caching</a>.</p>
+<p>A previous article in the series covered how to manage concurrent retweets
+in an efficient way: <a href="/blog/2018/07/computing-and-caching/">Computing and
+Caching</a>, where we learn how to
+maintain a cache right in your PostgreSQL database, thanks for materialized
+views.</p>
 
-<p>What we did implement in the previous article is a <em>cache</em> system, all with
-its necessary <strong>cache invalidation policy</strong>. Sometimes though, the
-processing of an <em>event</em> needs to happen within the same transaction where
-the event is registered in your system. PostgreSQL makes it possible to
-maintain a summary table transactionally thanks to its
-<a href="https://www.postgresql.org/docs/current/static/sql-createtrigger.html">trigger</a>
-support. Today, we&rsquo;re going to dive in how to maintain a summary table with
-triggers, and its impact on concurrency.</p></div>
+<p>Today&rsquo;s article shows how to maintain an <em>external</em> cache in another
+application layer. In this article we are going to maintain an in-memory
+cache in a Golang service, using PostgreSQL
+<a href="https://www.postgresql.org/docs/current/static/sql-listen.html">LISTEN</a> and
+<a href="https://www.postgresql.org/docs/current/static/sql-notify.html">NOTIFY</a>
+features.</p></div>
             </div>
             <div style="clear:both;"></div>
             <hr>
