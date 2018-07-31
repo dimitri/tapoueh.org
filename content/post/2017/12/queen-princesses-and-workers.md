@@ -2,7 +2,7 @@
 title = "Queen, Princesses, and Workers"
 date = "2017-12-11T10:19:24+01:00"
 tags = ["PostgreSQL","YeSQL","Master","Slave",
-        "High-Availability","Load Balancing"]
+        "High-Availability","Load Balancing","Opinion"]
 categories = ["PostgreSQL"]
 coverImage = "/img/bee.jpg"
 coverMeta = "in"

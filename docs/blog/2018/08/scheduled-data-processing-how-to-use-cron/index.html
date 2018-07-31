@@ -1,0 +1,1333 @@
+
+
+  
+    
+  
+
+
+  
+
+
+
+
+  
+
+
+  
+
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Hugo 0.31.1">
+    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
+    <title>Scheduled Data Processing: How to use cron?</title>
+    <meta name="author" content="Dimitri Fontaine">
+    <meta name="keywords" content="">
+
+    <link rel="icon" href="/favicon.ico">
+    
+
+    
+    <meta name="description" content="A previous article in the PostgreSQL Concurrency series
+covered how to manage concurrent retweets in an efficient way: in Computing
+and Caching, we learnt how to
+maintain a cache right in your PostgreSQL database, using MATERIALIZED
+VIEWS. We also had a look at how to take care of Batch Updates and
+Concurrency.
+
+While in the first case we are providing a solution to a technical problem
+where we want to solve performance issues while keeping the same semantics,
+in the second case we are actually implementing a part of the application&rsquo;s
+Business Logic as a scheduled job.
+
+Today&rsquo;s article shows a modern technique to handle the scheduling of those
+business oriented activities that are not tied to any user activity. When
+thinking about it this way, you certainly don&rsquo;t want to implement the
+backbone of your business logic in a shell script that&rsquo;s directly
+maintained in the production environment, do you?">
+    <meta property="og:description" content="A previous article in the PostgreSQL Concurrency series
+covered how to manage concurrent retweets in an efficient way: in Computing
+and Caching, we learnt how to
+maintain a cache right in your PostgreSQL database, using MATERIALIZED
+VIEWS. We also had a look at how to take care of Batch Updates and
+Concurrency.
+
+While in the first case we are providing a solution to a technical problem
+where we want to solve performance issues while keeping the same semantics,
+in the second case we are actually implementing a part of the application&rsquo;s
+Business Logic as a scheduled job.
+
+Today&rsquo;s article shows a modern technique to handle the scheduling of those
+business oriented activities that are not tied to any user activity. When
+thinking about it this way, you certainly don&rsquo;t want to implement the
+backbone of your business logic in a shell script that&rsquo;s directly
+maintained in the production environment, do you?">
+    <meta property="og:type" content="blog">
+    <meta property="og:title" content="Scheduled Data Processing: How to use cron?">
+    <meta property="og:url" content="/blog/2018/08/scheduled-data-processing-how-to-use-cron/">
+    <meta property="og:site_name" content="Dimitri Fontaine, PostgreSQL Expert">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Scheduled Data Processing: How to use cron?">
+    <meta name="twitter:description" content="A previous article in the PostgreSQL Concurrency series
+covered how to manage concurrent retweets in an efficient way: in Computing
+and Caching, we learnt how to
+maintain a cache right in your PostgreSQL database, using MATERIALIZED
+VIEWS. We also had a look at how to take care of Batch Updates and
+Concurrency.
+
+While in the first case we are providing a solution to a technical problem
+where we want to solve performance issues while keeping the same semantics,
+in the second case we are actually implementing a part of the application&rsquo;s
+Business Logic as a scheduled job.
+
+Today&rsquo;s article shows a modern technique to handle the scheduling of those
+business oriented activities that are not tied to any user activity. When
+thinking about it this way, you certainly don&rsquo;t want to implement the
+backbone of your business logic in a shell script that&rsquo;s directly
+maintained in the production environment, do you?">
+    
+      <meta name="twitter:creator" content="@tapoueh">
+    
+    
+
+    
+    
+
+    
+      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
+    
+
+    
+      <meta property="og:image" content="https://tapoueh.org/img/crontab.jpg">
+    
+    
+      <meta property="og:image" content="https://tapoueh.org/img/scheduler.png">
+    
+    
+
+    
+
+    
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
+    
+    
+    <link rel="stylesheet" href="/css/style-jsjn0006wyhpyzivf6yceb31gvpjatbcs3qzjvlumobfnugccvobqwxnnaj8.min.css" />
+    
+    
+      <link rel="stylesheet" href="https://tapoueh.org/css/dim.css">
+    
+      <link rel="stylesheet" href="https://tapoueh.org/css/nav.css">
+    
+
+    
+      
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-47059482-1', 'auto');
+ga('send', 'pageview');
+</script>
+
+    
+    
+  </head>
+
+  <body>
+    <div id="blog">
+      <header id="header" data-behavior="5">
+  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+  <div class="navbar-collapse collapse header-title" id="navigation">
+    <ul class="nav navbar-nav navbar-right">
+      
+      <li class="dropdown">
+        
+        <a href="/">blog</a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a href="/conf/">talks</a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a href="http://pgloader.io/">pgloader</a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a href="http://masteringpostgresql.com/">Mastering PostgreSQL</a>
+        
+      </li>
+      
+    </ul>
+  </div>
+
+  
+    
+      <a class="header-right-icon "
+         href="http://masteringpostgresql.com" target="_blank">
+    
+    
+      <i class="fa fa-lg fa-book"></i>
+    
+    
+    </a>
+  
+</header>
+
+      <nav id="sidebar" data-behavior="5">
+  <div class="sidebar-container">
+    
+      <div class="sidebar-profile">
+        <a href="/#about">
+          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+        </a>
+        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
+        
+          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
+        
+      </div>
+    
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
+      
+      <span class="sidebar-button-desc">Blog</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/about/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
+      
+      <span class="sidebar-button-desc">About</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories/yesql/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-database"></i>
+      
+      <span class="sidebar-button-desc">YeSQL</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="http://masteringpostgresql.com" target="_blank" rel="noopener">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
+      
+      <span class="sidebar-button-desc">Mastering PostgreSQL</span>
+    </a>
+  </li>
+
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+      
+      <span class="sidebar-button-desc">GitHub</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+      
+      <span class="sidebar-button-desc">Twitter</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+      
+      <span class="sidebar-button-desc">Categories</span>
+    </a>
+  </li>
+
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/index.xml">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+      
+      <span class="sidebar-button-desc">RSS</span>
+    </a>
+  </li>
+
+
+    </ul>
+  </div>
+</nav>
+
+      
+  <div class="post-header-cover
+              text-left
+              post-header-cover--partial"
+       style="background-image:url('/img/scheduler.png')"
+       data-behavior="5">
+    
+      <div class="post-header main-content-wrap text-left">
+  
+    <h1 class="post-title" itemprop="headline">
+      Scheduled Data Processing: How to use cron?
+    </h1>
+  
+  
+  <div class="postShorten-meta post-meta">
+    
+      <time itemprop="datePublished" datetime="2018-08-01T11:24:25&#43;02:00">
+        <span style="float: left; width: 35%">
+          <i class="fa fa-calendar"></i> 
+  
+  
+  
+  
+    Wednesday 01 Aug 2018
+  
+
+        </span>
+      </time>
+    
+    <span style="float: right; width: 65%">
+      <i class="fa fa-clock-o"></i> 11 mins read
+      
+    </span>
+    <span style="float: left; width: 35%">
+      <i class="fa fa-bookmark"></i> 
+  
+  
+    <span></span>
+    
+      <a class="category-link" href="/categories/postgresql">PostgreSQL</a>, 
+    
+      <a class="category-link" href="/categories/yesql">YeSQL</a>
+    
+  
+
+    </span>
+    <div>
+      <p>
+        
+        
+        
+        
+        
+        
+        <a href="/tags/concurrency/">
+          <i class="fa fa-tag"></i> Concurrency
+        </a>
+        
+        
+        
+        <a href="/tags/batch/">
+          <i class="fa fa-tag"></i> Batch
+        </a>
+        
+        
+        
+        <a href="/tags/cron/">
+          <i class="fa fa-tag"></i> Cron
+        </a>
+        
+        
+        
+        <a href="/tags/opinion/">
+          <i class="fa fa-tag"></i> Opinion
+        </a>
+        
+        
+      </p>
+    </div>
+  </div>
+
+
+</div>
+    
+  </div>
+
+
+      <div id="main" data-behavior="5"
+        class="hasCover
+               hasCoverMetaIn
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
+          
+          <div class="post-content markdown" itemprop="articleBody">
+            <div class="main-content-wrap">
+              <p>A previous article in the <a href="/tags/concurrency">PostgreSQL Concurrency</a> series
+covered how to manage concurrent retweets in an efficient way: in <a href="/blog/2018/07/computing-and-caching/">Computing
+and Caching</a>, we learnt how to
+maintain a cache right in your PostgreSQL database, using MATERIALIZED
+VIEWS. We also had a look at how to take care of <a href="/blog/2018/07/batch-updates-and-concurrency/">Batch Updates and
+Concurrency</a>.</p>
+
+<p>While in the first case we are providing a solution to a technical problem
+where we want to solve performance issues while keeping the same semantics,
+in the second case we are actually implementing a part of the application&rsquo;s
+<a href="/blog/2017/06/sql-and-business-logic/">Business Logic</a> as a scheduled job.</p>
+
+<p>Today&rsquo;s article shows a modern technique to handle the scheduling of those
+business oriented activities that are not tied to any user activity. When
+thinking about it this way, you certainly don&rsquo;t want to implement the
+backbone of your business logic in a <em>shell script</em> that&rsquo;s directly
+maintained in the production environment, do you?</p>
+
+<p>
+<h1 id="table-of-contents"></h1><nav id="TableOfContents">
+<ul>
+<li><a href="#scheduling-data-processing">Scheduling Data Processing</a></li>
+<li><a href="#how-not-to-use-cron">How NOT to use cron?</a></li>
+<li><a href="#code-management-and-deployment">Code Management and Deployment</a></li>
+<li><a href="#the-real-needs-of-a-scheduled-data-processing-job">The Real Needs of a Scheduled Data Processing Job</a></li>
+<li><a href="#not-all-cron-jobs-are-the-same">Not all cron jobs are the same</a></li>
+<li><a href="#proper-usage-of-cron">Proper Usage of Cron</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+</nav></p>
+
+<h1 id="scheduling-data-processing">Scheduling Data Processing</h1>
+
+<p>Data processing is most often triggered by user actions, either your
+end-user or internal users: back-office, admin superusers, or support users
+maybe. In some cases though, it may happen that some data processing needs
+to happen on its own, following a schedule rather than being triggered by
+direct user activity on your product.</p>
+
+<p>As we saw in <a href="/blog/2018/07/computing-and-caching/">Computing and Caching</a>,
+the use case might be a technical implementation detail. It might also be
+user oriented, like daily dashboard metrics computating, account
+consolidating, user-defined alerting schedule (daily or weekly summaries,
+etc), or many other use cases really.</p>
+
+<p>When the use case for scheduling data processing is business oriented, then
+the usual questions about <a href="/blog/2017/06/sql-and-business-logic/">SQL and Business
+Logic</a> are back in play again. If
+we&rsquo;re implementing daily activity reporting by email to our users, of course
+the email contents are going to be driven by business logic. The numbers
+you&rsquo;re sending are the result of the business rules used to compute them.</p>
+
+<p>So we have to trigger data processing at fixed moments in time rather than
+triggering it with some user activity. The classic way to implement that is
+to use the venerable <a href="https://crontab.guru">crontab</a> facility from Unix
+systems.</p>
+
+<p>In classic Unix phylosophy, <a href="https://en.wikipedia.org/wiki/Cron">Cron</a> is
+great at just one thing: starting a user defined command at a specific time
+specification, which can be… almost anything. Once in a blue moon. Every
+other Thursday at 6pm. Every morning. At boot time. About any point in a
+calendar can be specified as a cron schedule expression, and that includes
+specifications of recurring events.</p>
+
+<h1 id="how-not-to-use-cron">How NOT to use cron?</h1>
+
+<p>The classic approach to cron jobs could be qualified as surprising, if you
+want to be nice. It&rsquo;s actually wrong in that it solves none of the
+interesting problems you have when using cron.</p>
+
+<p>A very classic cron usage looks like the following:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-cron" data-lang="cron">0 22 * * 1-5 /usr/local/bin/my-script.sh</code></pre></div>
+<p>The <em>cron</em> unix service is then going to call <code>/usr/local/bin/my-script.sh</code>
+at 22:00 on every day-of-week from Monday through Friday. All that&rsquo;s left is
+for the bash script to implement the data processing facility we need.</p>
+
+<p>An improvement to the bash script that is often found in production
+environments consists of using a reasonable programming language to write
+your cron command in. By that I mean a programming language that makes it
+<strong>easy</strong> to handle <strong>unforeseen situations</strong>: it usually requires a kind of
+a <a href="http://www.gigamonkeys.com/book/beyond-exception-handling-conditions-and-restarts.html">condition
+system</a>
+or at least the ability to handle errors and exceptions.</p>
+
+<p>Your bash script might being with a call to
+<a href="https://www.shellscript.sh/trap.html">trap</a> if you&rsquo;re an advanced enough
+user, unfortunately that&rsquo;s pretty rare and only gets you so far.</p>
+
+<p>Even when using a reasonable programming language, the needs for a
+processing job that is scheduled in the background are a little more
+involved than that.</p>
+
+<h1 id="code-management-and-deployment">Code Management and Deployment</h1>
+
+<p>Another important aspect in that usage of cron is the code management. Often
+enough cron commands are bash scripts. Sometimes cron commands are properly
+implemented with the same programming language as the rest of the user
+facing application, using the same business rules and code.</p>
+
+<p>In both cases, it&rsquo;s important to note that the code should be managed in a
+proper code repository, versionned, and deployed with the same process and
+quality as applied to the rest of the code.</p>
+
+<p>In many places, even when people are serious about their deployments, I&rsquo;ve
+seen cron jobs falling in between the devs and ops team, noone being the
+owner of them, and thus no clear procedure would be in place for maintaining
+those scripts.</p>
+
+<h1 id="the-real-needs-of-a-scheduled-data-processing-job">The Real Needs of a Scheduled Data Processing Job</h1>
+
+<p>So, why don&rsquo;t I just run my cron jobs in bash, you&rsquo;re asking? Well because
+here&rsquo;s a list of things that I want to be able to <strong>easily</strong> know, verify
+and act on when dealing with a data processing job scheduled in the
+background:</p>
+
+<ul>
+<li><p>When did it run? for how long?</p>
+
+<p>I know when I said it should start, that&rsquo;s the cron specification. Of
+course I might have been wrong when writting that, so I want to be able
+to debug it easily. Also, we might have a system that prevents the same
+processing job to run more than once on the same server, usually that
+would be achieved with a <em>lock file</em>.</p>
+
+<p>A very classic gotcha is to forget about how long the job is taking when
+computing its frequency. Say we want to run a job every 5 minutes, so we
+have a cron entry like the following:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-cron" data-lang="cron">*/5 * * * * /usr/local/bin/my-script.sh</code></pre></div>
+<p>Then if we have a <em>lockfile</em> (we usually should) and the processing runs
+for more than five minutes, we&rsquo;re going to skip scheduled runs. If the
+aim is to guarantee that the data is at least as fresh as 5 minutes ago,
+that&rsquo;s a problem and I want to know about it.</p>
+
+<p>Sure, I can send messages to the logs and have some automated processing
+for that, and most cron/bash users probably use
+<a href="http://man7.org/linux/man-pages/man1/logger.1.html">logger</a> for that
+already, with a complex log processing setup behind it (<em>logstash</em> or
+<em>ELK</em> are some of the popular stacks for handling logs).</p></li>
+
+<li><p>What did the job had to do, what did it do?</p>
+
+<p>Now, as soon as the job is implementing some business logic, I want to
+have some metrics about what the data processing job did, in terms of my
+business logic, and I want those metrics displayed at a place where our
+internal teams (accounting, finance, marketing, etc) can see them, and
+expressed in a way that makes sense for them.</p></li>
+
+<li><p>How to check if the processing was correct?</p>
+
+<p>Depending on what the processing is all about, it might be worthwile to
+have both a summary view of what the job did (how many items it
+processed, to which cumulated amount of <em>value</em>, etc), and sometimes a
+detailed view where you can dive in any of the processed items and see
+what the processing was all about.</p>
+
+<p>If you&rsquo;re using PostgreSQL, then having a generic before/after diff is
+easy enough to implement thanks to the
+<a href="https://www.postgresql.org/docs/current/static/hstore.html">hstore</a>
+extension, as detailed in my article <a href="/blog/2013/08/auditing-changes-with-hstore/">Auditing Changes with
+Hstore</a>.</p></li>
+
+<li><p>Was there any failure? how to review and process the failures?</p>
+
+<p>Now if some items failed to be processed, our job might be smart enough
+to mark them as failed and continue with other tasks. In that case,
+someone has to review the failed items and do something about them.</p>
+
+<p>Or maybe it&rsquo;s better to fail early and just retry that same job over and
+over again, assuming that something will change that allow the
+processing to succeed. An upgrade of the data processing utility, for
+instance.</p>
+
+<p>It might be that your application is now producing new kinds of events
+that you don&rsquo;t know how to handle yet. Or just a plain bug that you&rsquo;re
+lucky enough is failing the processing rather than silently producing
+the wrong results…</p></li>
+
+<li><p>If a job is still running, can I stop it? restart it? cancel it?
+reschedule it?</p>
+
+<p>And that one is pretty important. Say you have a nightly job to run and
+for some reasons it failed to run yesternight. Maybe because you
+scheduled it at 2:30am but thanks to daylight saving this time
+specification didn&rsquo;t happen yesterday. Yes, that&rsquo;s a classic. So what
+now? Can you run the cron job again easily in production?</p>
+
+<p>Another use case here is that famous <em>infinite loop</em> that only happens
+with the exact right setup and data combo, and so you didn&rsquo;t think of
+guarding against the case in your code because it won&rsquo;t happen. Well, it
+did. It&rsquo;s actually happening now. How easy is it for you to take control
+of your background job?</p></li>
+</ul>
+
+<p>Those are some pretty basic questions here, and if the data processing jobs
+that you schedule are important for your business, then I&rsquo;m sure you want to
+be able to answer all of them.</p>
+
+<h1 id="not-all-cron-jobs-are-the-same">Not all cron jobs are the same</h1>
+
+<p>It must also be said that we have two very different cases to think about
+when discussing cron jobs:</p>
+
+<ol>
+<li><p>Technical cron jobs, like archiving, backups and restore, and other
+ commands related to the operational architecture.</p>
+
+<p>In that case, most probably the team that owns the cron commands is an
+ ops team, and the tooling they use day in and day out is going to be
+ well suited for making all the previous requirements <em>easy enough</em> to
+ implement for them.</p>
+
+<p>After all, <em>ssh</em>, <em>ps</em>, <em>kill</em>, <em>rm -f</em> and all are proper tooling if
+ you&rsquo;re an ops guy debugging something unexpected in production, in many
+ cases. And when you prefer more automation around your ops process, I&rsquo;m
+ sure you know how to include cron jobs debugging in your tooling.</p></li>
+
+<li><p>Business Logic that needs to be scheduled at known time specification.</p>
+
+<p>That&rsquo;s what this blog article is all about. Because now, you need to
+ write application code that happens to run when specified by your
+ crontab, or with some other scheduler.</p>
+
+<p>Now debugging the job isn&rsquo;t going to be done by the ops team, because
+ they&rsquo;re not tasked with understanding the fine points of the business
+ rules, and most of the bugs you&rsquo;ll want to address here aren&rsquo;t going to
+ be related to your production&rsquo;s architecture, rather to those business
+ rules.</p>
+
+<p>That&rsquo;s when the tooling used in production should be <em>easy enough</em> for
+ an application developer perspective. And in most places, having to
+ fiddle around interactively on production systems to fix a business
+ rule implementation bug isn&rsquo;t the best way to ensure quality.</p></li>
+</ol>
+
+<p>We need a solution that can enable a developer team to manage the scheduled
+events properly, and without requiring fiddling interactively at a
+production&rsquo;s system shell.</p>
+
+<h1 id="proper-usage-of-cron">Proper Usage of Cron</h1>
+
+<p>The idea that I want to push forward in this article is the following: when
+you need to schedule data processing, write a web service that implements
+your data processing, with full manual controls over it, a dashboard and
+logs. Some of the things your service must implement are:</p>
+
+<ul>
+<li><p>A dashboard to know what&rsquo;s been done when, and what&rsquo;s currently
+happening.</p></li>
+
+<li><p>An easy way to read the logs from your background activities.</p></li>
+
+<li><p>Some ways to see the failed processing.</p></li>
+
+<li><p>Maybe a way to manually handle the failures, or re-inject them into the
+pipeline after having (maybe?) fixed exposed bugs.</p></li>
+
+<li><p>A control to start, stop, resume, and restart current jobs.</p></li>
+
+<li><p>An API that allows to start a new job non-interactively, and that we are
+going to use in our crontab entry.</p></li>
+</ul>
+
+<p>One way to get started is to implement those features on top of a very basic
+data processing function: a function that fails with a <em>Not Yet Implemented</em>
+error. Then you can debug your background job by adding the missing rules
+and processing, and use the interactive controls to restart job processing
+from the application, and see the dashboards getting updated with success
+and failures, and metrics that make sense for whatever it is you are
+implementing.</p>
+
+<p>When you have it working, it&rsquo;s time to deploy the service and implement the
+scheduling parts. As your background data processing jobs are now
+implemented as web services, your organisation probably already knows how to
+deploy it, version it, do maintenance upgrades and bug fixes, etc.</p>
+
+<p>About scheduling the jobs, then use cron to produce events in your system,
+calling a service URL that triggers the processing of the next batch of
+data:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-cron" data-lang="cron">0 22 * * 1-5 curl https://service.internal.url/schedule/daily-reporting/
+*/5 * * * *  curl https://matviews.internal.url/schedule/refresh-mat-views/</code></pre></div>
+<p>You can then browse to your interactive web application and see the
+dashboard with the interesting metrics, a summary of what happened when, how
+many users got a daily reporting, maybe even have a copy of the sent email,
+etc.</p>
+
+<h1 id="conclusion">Conclusion</h1>
+
+<p>Some cron jobs are technical details meant for sysadmins, and then using
+system logs to track the activity is fair enough. Some cron jobs are
+implementing a user visible part of your business logic, and as such they
+need to expose business metrics and allow for direct control of the running
+tasks, their scheduling, and the processing itself.</p>
+
+<p>The best way to achieve proper business logic background jobs scheduling is
+to actually write a fully interactive server-side application (a web app,
+typically), and have it expose an API call that inject a scheduler event in
+the application.</p>
+
+<p>When doing things that way, then cron is used for what it&rsquo;s good at:
+producing an event at known regular timings, controled by the calendar.</p>
+              
+            </div>
+          </div>
+          <div id="post-footer" class="post-footer main-content-wrap">
+            
+              
+                
+                
+                  <div class="post-footer-tags">
+                    <span class="text-color-light text-small"></span><br/>
+                    
+  <a class="tag tag--primary tag--small" href="/tags/postgresql/">PostgreSQL</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/yesql/">YeSQL</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/concurrency/">Concurrency</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/batch/">Batch</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/cron/">Cron</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/opinion/">Opinion</a>
+
+                  </div>
+                
+              
+            
+            <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    
+    <script async id="_ck_252762" src="https://forms.convertkit.com/252762?v=6"></script>
+    
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/07/batch-updates-and-concurrency/" data-tooltip="Batch Updates and Concurrency">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f08%2fscheduled-data-processing-how-to-use-cron%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f08%2fscheduled-data-processing-how-to-use-cron%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=Scheduled%20Data%20Processing%3a%20How%20to%20use%20cron%3f with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f08%2fscheduled-data-processing-how-to-use-cron%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+            
+              
+                <div id="disqus_thread">
+  <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+              
+            
+          </div>
+        </article>
+        <footer id="footer" class="main-content-wrap">
+  <span class="copyrights">
+    &copy; 2018 Dimitri Fontaine. 
+  </span>
+</footer>
+
+      </div>
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="5">
+        <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    
+    <script async id="_ck_252762" src="https://forms.convertkit.com/252762?v=6"></script>
+    
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/07/batch-updates-and-concurrency/" data-tooltip="Batch Updates and Concurrency">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f08%2fscheduled-data-processing-how-to-use-cron%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f08%2fscheduled-data-processing-how-to-use-cron%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=Scheduled%20Data%20Processing%3a%20How%20to%20use%20cron%3f with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f08%2fscheduled-data-processing-how-to-use-cron%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+      </div>
+      <div id="share-options-bar" class="share-options-bar" data-behavior="5">
+  <ul class="share-options">
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f08%2fscheduled-data-processing-how-to-use-cron%2f">
+        <i class="fa fa-google-plus"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f08%2fscheduled-data-processing-how-to-use-cron%2f">
+        <i class="fa fa-facebook-official"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=Scheduled%20Data%20Processing%3a%20How%20to%20use%20cron%3f with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f08%2fscheduled-data-processing-how-to-use-cron%2f">
+        <i class="fa fa-twitter"></i><span></span>
+      </a>
+    </li>
+  </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
+    </div>
+    
+    <div id="about">
+  <div id="about-card">
+    <div id="about-btn-close">
+      <i class="fa fa-remove"></i>
+    </div>
+    
+      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+    
+    <h4 id="about-card-name">Dimitri Fontaine</h4>
+    
+      <div id="about-card-bio">PostgreSQL Major Contributor</div>
+    
+    
+      <div id="about-card-job">
+        <i class="fa fa-briefcase"></i>
+        <br/>
+        Open Source Software Engineer
+      </div>
+    
+    
+      <div id="about-card-location">
+        <i class="fa fa-map-marker"></i>
+        <br/>
+        France
+      </div>
+    
+  </div>
+</div>
+
+    <div id="algolia-search-modal" class="modal-container">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="close-button"><i class="fa fa-close"></i></span>
+      <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
+        <span class="searchby-algolia-text text-color-light text-small">by</span>
+        <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+      </a>
+      <i class="search-icon fa fa-search"></i>
+      <form id="algolia-search-form">
+        <input type="text" id="algolia-search-input" name="search"
+          class="form-control input--large search-input" placeholder="" />
+      </form>
+    </div>
+    <div class="modal-body">
+      <div class="no-result text-color-light text-center"></div>
+      <div class="results">
+        
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/08/scheduled-data-processing-how-to-use-cron/">
+                <h3 class="media-heading">Scheduled Data Processing: How to use cron?</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Aug 8, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>A previous article in the <a href="/tags/concurrency">PostgreSQL Concurrency</a> series
+covered how to manage concurrent retweets in an efficient way: in <a href="/blog/2018/07/computing-and-caching/">Computing
+and Caching</a>, we learnt how to
+maintain a cache right in your PostgreSQL database, using MATERIALIZED
+VIEWS. We also had a look at how to take care of <a href="/blog/2018/07/batch-updates-and-concurrency/">Batch Updates and
+Concurrency</a>.</p>
+
+<p>While in the first case we are providing a solution to a technical problem
+where we want to solve performance issues while keeping the same semantics,
+in the second case we are actually implementing a part of the application&rsquo;s
+<a href="/blog/2017/06/sql-and-business-logic/">Business Logic</a> as a scheduled job.</p>
+
+<p>Today&rsquo;s article shows a modern technique to handle the scheduling of those
+business oriented activities that are not tied to any user activity. When
+thinking about it this way, you certainly don&rsquo;t want to implement the
+backbone of your business logic in a <em>shell script</em> that&rsquo;s directly
+maintained in the production environment, do you?</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/07/batch-updates-and-concurrency/">
+                <h3 class="media-heading">Batch Updates and Concurrency</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jul 7, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>This article fits in the <a href="/tags/concurrency">PostgreSQL Concurrency</a> series,
+where we installed a tweeter like application schema and had all the
+characters from Shakespeare&rsquo;s <em>A Midsummer Night&rsquo;s Dream</em> tweet their own
+lines in our database in <a href="/blog/2018/06/PostgreSQL-DML.md">PostgreSQL Concurrency: Data Modification
+Language</a>.</p>
+
+<p>A previous article in the series covered how to manage concurrent retweets
+in an efficient way: <a href="/blog/2018/07/computing-and-caching/">Computing and
+Caching</a>, where we learn how to
+maintain a cache right in your PostgreSQL database, thanks for materialized
+views. We even went as far as maintaining an <em>external</em> cache in another
+application layer using PostgreSQL
+<a href="https://www.postgresql.org/docs/current/static/sql-listen.html">LISTEN</a> and
+<a href="https://www.postgresql.org/docs/current/static/sql-notify.html">NOTIFY</a>
+features and a Golang application.</p>
+
+<p>Today&rsquo;s article is going to address concurrency in the context of updating
+data in a batch. This activity is quite common, as soon as your system is
+connected to other systems either internally or with external providers.
+While it&rsquo;s pretty easy to ingest new data, and easy enough to update data
+from an external source when nothing happens in your database, doing the
+operation safely with concurrent activity is more complex. Once more though,
+PostgreSQL comes with all the tooling you need to handle that situation.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/07/postgresql-listen/notify/">
+                <h3 class="media-heading">PostgreSQL LISTEN/NOTIFY</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jul 7, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>This article fits in the <a href="/tags/concurrency">PostgreSQL Concurrency</a> series,
+where we installed a tweeter like application schema and had all the
+characters from Shakespeare&rsquo;s <em>A Midsummer Night&rsquo;s Dream</em> tweet their own
+lines in our database in <a href="/blog/2018/06/PostgreSQL-DML.md">PostgreSQL Concurrency: Data Modification
+Language</a>.</p>
+
+<p>A previous article in the series covered how to manage concurrent retweets
+in an efficient way: <a href="/blog/2018/07/computing-and-caching/">Computing and
+Caching</a>, where we learn how to
+maintain a cache right in your PostgreSQL database, thanks for materialized
+views.</p>
+
+<p>Today&rsquo;s article shows how to maintain an <em>external</em> cache in another
+application layer. In this article we are going to maintain an in-memory
+cache in a Golang service, using PostgreSQL
+<a href="https://www.postgresql.org/docs/current/static/sql-listen.html">LISTEN</a> and
+<a href="https://www.postgresql.org/docs/current/static/sql-notify.html">NOTIFY</a>
+features.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/07/postgresql-event-based-processing/">
+                <h3 class="media-heading">PostgreSQL Event Based Processing</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jul 7, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>In the previous article of the series <a href="/blog/2018/07/modeling-for-concurrency/">Modeling for
+Concurrency</a>, we saw how to model
+your application for highly concurrent activity. It was a follow-up to the
+article entitled <a href="/blog/2018/07/postgresql-concurrency-isolation-and-locking/">PostgreSQL Concurrency: Isolation and
+Locking</a>, which
+was a primer on PostgreSQL isolation and locking properties and behaviors.</p>
+
+<p>Today&rsquo;s article takes us a step further and builds on what we did in the
+previous articles in our series. After having had all the characters from
+Shakespeare&rsquo;s <em>A Midsummer Night&rsquo;s Dream</em> tweet their own lines in our
+database in <a href="/blog/2018/06/PostgreSQL-DML.md">PostgreSQL Concurrency: Data Modification
+Language</a>, and having had them like and
+retweet a lot in <a href="/blog/2018/07/postgresql-concurrency-isolation-and-locking/">PostgreSQL Concurrency: Isolation and
+Locking</a>, we
+saw how to manage concurrent retweets in an efficient way in <a href="/blog/2018/07/computing-and-caching/">Computing and
+Caching</a>.</p>
+
+<p>What we did implement in the previous article is a <em>cache</em> system, all with
+its necessary <strong>cache invalidation policy</strong>. Sometimes though, the
+processing of an <em>event</em> needs to happen within the same transaction where
+the event is registered in your system. PostgreSQL makes it possible to
+maintain a summary table transactionally thanks to its
+<a href="https://www.postgresql.org/docs/current/static/sql-createtrigger.html">trigger</a>
+support. Today, we&rsquo;re going to dive in how to maintain a summary table with
+triggers, and its impact on concurrency.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/07/computing-and-caching/">
+                <h3 class="media-heading">Computing and Caching</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jul 7, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Let&rsquo;s continue to dive in PostgreSQL Concurrency. In the previous article of
+the series, <a href="/blog/2018/07/modeling-for-concurrency/">Modeling for
+Concurrency</a>, we saw how to model
+your application for highly concurrent activity. It was a follow-up to the
+article entitled <a href="/blog/2018/07/postgresql-concurrency-isolation-and-locking/">PostgreSQL Concurrency: Isolation and
+Locking</a>, which
+was a primer on PostgreSQL isolation and locking properties and behaviors.</p>
+
+<p>Today&rsquo;s article takes us a step further and builds on what we did in the
+previous articles in our series. After having had all the characters from
+Shakespeare&rsquo;s <em>A Midsummer Night&rsquo;s Dream</em> tweet their own lines in our
+database in <a href="/blog/2018/06/PostgreSQL-DML.md">PostgreSQL Concurrency: Data Modification
+Language</a>, and having had them like a
+retweet a lot in <a href="/blog/2018/07/postgresql-concurrency-isolation-and-locking/">PostgreSQL Concurrency: Isolation and
+Locking</a>, it&rsquo;s
+time to think about how to display our counters in an efficient way.</p>
+
+<p>In this article, we&rsquo;re going to think about when we should compute results
+and when we should cache them for instant retrieval, all within the SQL
+tooling. The SQL tooling for handling cache is a <a href="https://www.postgresql.org/docs/current/static/sql-creatematerializedview.html">MATERIALIZED
+VIEW</a>,
+and it comes with <strong>cache invalidation</strong> routines, of course.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/07/modeling-for-concurrency/">
+                <h3 class="media-heading">Modeling for Concurrency</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jul 7, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Let&rsquo;s continue to dive in PostgreSQL Concurrency. Last week&rsquo;s article
+<a href="/blog/2018/07/postgresql-concurrency-isolation-and-locking/">PostgreSQL Concurrency: Isolation and
+Locking</a> was a
+primer on PostgreSQL isolation and locking properties and behaviors.</p>
+
+<p>Today&rsquo;s article takes us a step further and builds on what we did last week,
+in particular the database modeling for a <em>tweet</em> like application. After
+having had all the characters from Shakespeare&rsquo;s <em>A Midsummer Night&rsquo;s Dream</em>
+tweet their own lines in our database in <a href="/blog/2018/06/PostgreSQL-DML.md">PostgreSQL Concurrency: Data
+Modification Language</a>, it&rsquo;s time for them
+to do some actions on the tweets: likes and retweet.</p>
+
+<p>Of course, we&rsquo;re going to put concurrency to the test, so we&rsquo;re going to
+have to handle very very popular tweets from the play!</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/07/postgresql-concurrency-isolation-and-locking/">
+                <h3 class="media-heading">PostgreSQL Concurrency: Isolation and Locking</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jul 7, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p><a href="https://www.postgresql.org">PostgreSQL</a> is a relational database management
+system. It&rsquo;s even the world&rsquo;s most advanced open source one of them. As
+such, as its core, Postgres solves concurrent access to a set of data and
+maintains consistency while allowing concurrent operations.</p>
+
+<p>This article is a primer on PostgreSQL Isolation and Locking properties and
+behaviors. You might be interested into the previous article in the series:
+<a href="/blog/2018/06/postgresql-concurrency-data-modification-language/">PostgreSQL Concurrency: Data Modification
+Language</a>.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/06/postgresql-concurrency-data-modification-language/">
+                <h3 class="media-heading">PostgreSQL Concurrency: Data Modification Language</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">PostgreSQL is a relational database management system. It&rsquo;s even the world&rsquo;s most advanced open source one of them. As such, as its core, Postgres solves concurrent access to a set of data and maintains consistency while allowing concurrent operations.
+Postgres exposes its concurrency APIs in the SQL language, in particular in the DML parts of it: you can read the Data Manipulation Language chapter of the PostgreSQL docs for all the details.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/05/postgresql-data-types/">
+                <h3 class="media-heading">PostgreSQL Data Types</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Today it&rsquo;s time to conclude our series of <a href="/tags/data-types/">PostgreSQL Data
+Types</a> articles with a recap. The series cover lots of
+core PostgreSQL data types and shows how to benefit from the PostgreSQL
+concept of a data type: more than input validation, a PostgreSQL data type
+also implements expected behaviors and processing functions.</p>
+
+<p>This allows an application developer to rely on PostgreSQL for more complex
+queries, having the processing happen where the data is, for instance when
+implementing advanced JOIN operations, then retrieving only the data set
+that is interesting for the application.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/05/postgresql-data-types-point/">
+                <h3 class="media-heading">PostgreSQL Data Types: Point</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  May 5, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Continuing our series of <a href="/tags/data-types/">PostgreSQL Data Types</a> today
+we&rsquo;re going to introduce the PostgreSQL Point type.</p>
+
+<p>In order to put the Point datatype in a context where it makes sense, we&rsquo;re
+going to download a complete geolocation data set and normalize it, thus
+making good use of both the normalization good practice and those other
+PostgreSQL data types we&rsquo;ve been learning about in the previous articles of
+this series.</p>
+
+<p>Buckle-up, this is a long article with a lot of SQL inside.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+      </div>
+    </div>
+    <div class="modal-footer">
+      <p class="results-count text-medium"
+         data-message-zero=""
+         data-message-one=""
+         data-message-other="">
+         281 posts found
+      </p>
+    </div>
+  </div>
+</div>
+    
+  
+    
+    <div id="cover" style="background-image:url('https://tapoueh.org/images/mayan-calendar.jpg');"></div>
+  
+
+
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
+
+
+<script src="/js/script-qi9wbxp2ya2j6p7wx1i6tgavftewndznf4v0hy2gvivk1rxgc3lm7njqb6bz.min.js"></script>
+
+
+
+<script>
+$(document).ready(function() {
+  hljs.configure({ classPrefix: '', useBR: false });
+  $('pre.code-highlight > code, pre > code').each(function(i, block) {
+    if (!$(this).hasClass('codeblock')) {
+      $(this).addClass('codeblock');
+    }
+    hljs.highlightBlock(block);
+  });
+});
+</script>
+
+
+  
+    
+      <script>
+        var disqus_config = function () {
+          this.page.url = 'https:\/\/tapoueh.org\/blog\/2018\/08\/scheduled-data-processing-how-to-use-cron\/';
+          
+            this.page.identifier = '\/blog\/2018\/08\/scheduled-data-processing-how-to-use-cron\/'
+          
+        };
+        (function() {
+          
+          
+          if (window.location.hostname == "localhost") {
+            return;
+          }
+          var d = document, s = d.createElement('script');
+          var disqus_shortname = 'tapoueh';
+          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+          s.setAttribute('data-timestamp', +new Date());
+          (d.head || d.body).appendChild(s);
+        })();
+      </script>
+    
+  
+
+
+
+    
+  </body>
+</html>
+
