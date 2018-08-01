@@ -34,7 +34,7 @@ script
 [demo_tags_db.py](http://labrosa.ee.columbia.edu/millionsong/sites/default/files/lastfm/demo_tags_db.py) to
 make sense of it.
 
-# The Setup
+## The Setup
 
 First, we need to import this dataset into a PostgreSQL database. To do that
 the easier path I could think of was to hack the capability into 
@@ -114,7 +114,7 @@ and tags), filtering on the
 we can imagine from reading the query execution time, we don't have any
 index to implement the filtering here.
 
-# Advanced tag indexing
+## Advanced tag indexing
 
 PostgreSQL comes with plenty of interesting datatypes, one of them is known
 as the 
@@ -180,7 +180,7 @@ Time: 18645.931 ms
 
 
 
-# Searches
+## Searches
 
 Now 
 [PostgreSQL](http://www.postgresql.org/) is ready for the real magic. Let's find all the tracks we
@@ -298,7 +298,7 @@ Time: 7.630 ms
 
 
 
-# Conclusion
+## Conclusion
 
 {{< image classes="fig25 right dim-margin" src="/img/old/rhythm-blues-final4.320.jpg" >}}
 

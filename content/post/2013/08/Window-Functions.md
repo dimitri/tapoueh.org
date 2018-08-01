@@ -35,7 +35,7 @@ using an *aggregate* function.
 
 <!--toc-->
 
-# It's all about frames
+## It's all about frames
 
 [PostgreSQL](http://www.postgresql.org/) comes with plenty of features, one
 of them will be of great help here to get a better grasp at what's happening
@@ -128,7 +128,7 @@ proportion of the current value against this total within a single SQL
 query? That's the breakthrough we're talking about now with *window
 functions*.
 
-# Partitioning into different frames
+## Partitioning into different frames
 
 Other frames are possible to define when using the clause `PARTITION BY`. To
 understand the *partition by* window it is best to relate to a real world
@@ -243,7 +243,7 @@ and add to that other information from the race as a whole. Remember that
 the *window functions* only happens after the *where* clause, so you only
 get to see rows from the available result set of the query.
 
-# Available window functions
+## Available window functions
 
 Any and all *aggregate* function you already know can be used against a
 *window frame* rather than a *grouping clause*, so you can already go use
@@ -329,7 +329,7 @@ think, as both the two fastest drivers didn't even finish the race. In SQL
 terms we also see that we can have two different orderings returned from the
 same query, and again we can poke at other rows.
 
-# Conclusion
+## Conclusion
 
 {{< image classes="fig25 right dim-margin"
               src="/img/old/sql-logo.png"

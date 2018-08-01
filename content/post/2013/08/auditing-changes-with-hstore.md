@@ -26,7 +26,7 @@ use case for
 <!--more-->
 <!--toc-->
 
-# Comparing hstores
+## Comparing hstores
 
 One of the operators that hstore propose is the 
 `hstore - hstore` operator
@@ -50,7 +50,7 @@ That's what we're going to use in our
 it's pretty useful a format to understand what did change.
 
 
-# Auditing changes with a trigger
+## Auditing changes with a trigger
 
 First we need some setup, a couple of tables to use in our worked out
 example:
@@ -124,7 +124,7 @@ create trigger audit
 
 
 
-# Testing it
+## Testing it
 
 With that in place, let's try it out:
 
@@ -149,6 +149,7 @@ And here's what we can see:
 (2 rows)
 ~~~
 
+## Conclusion
 
 The 
 *hstore* extension is really useful and versatile, and we just saw another

@@ -1,7 +1,7 @@
 +++
 date = "2013-08-02T10:19:00.000000+02:00"
 title = "The Most Popular Pub Names"
-tags = ["PostgreSQL", "KNN", "Extensions", "YeSQL"]
+tags = ["PostgreSQL", "KNN", "Extensions", "YeSQL", "Geolocation","Point"]
 categories = ["PostgreSQL","YeSQL"]
 thumbnailImage = "/img/old/openstreetmap.jpg"
 thumbnailImagePosition = "left"
@@ -40,7 +40,7 @@ At least that's my thinking, and this article is my try at sharing this
 viewpoint with you.
 
 
-# Loading the data
+## Loading the data
 
 The data itself is available in some kind of an XML format where they
 managed to handle the data in
@@ -117,7 +117,7 @@ same queue and filling our
 `COPY` buffer.
 
 
-# Normalizing the data
+## Normalizing the data
 
 The first query of our reference article 
 [The Most Popular Pub Names](http://blog.mongodb.org/post/56876800071/the-most-popular-pub-names?utm_content=buffer4922c&utm_source=buffer&utm_medium=facebook&utm_campaign=Buffer) shows
@@ -165,7 +165,7 @@ consider both `And` and `&` as the same thing too.
 Again, I'm reproducing the same processing as with the *MongoDB* article.
 
 
-# Geolocating nearest pub (KNN search)
+## Geolocating nearest pub (KNN search)
 
 The spelling of
 the [KNN](https://en.wikipedia.org/wiki/K-nearest_neighbors_algorithm)
@@ -213,7 +213,7 @@ with
 of the documentation.
 
 
-# Using a KNN specific index
+## Using a KNN specific index
 
 
 {{< image classes="fig50 right fancybox dim-margin"
@@ -260,7 +260,7 @@ as an exercise for you to find that dataset and test the ***KNN GiST***
 indexes on it!
 
 
-# Conclusion
+## Conclusion
 
 {{< image classes="fig50 right fancybox dim-margin"
               src="/img/fdws.320.png"

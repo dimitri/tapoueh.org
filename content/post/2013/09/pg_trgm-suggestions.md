@@ -65,7 +65,7 @@ CREATE EXTENSION
 
 
 
-# Setting up the use case
+## Setting up the use case
 
 The use case I want to show today is to suggest corrections to some words
 the user did obviously typoed, because your search form is not finding any
@@ -154,7 +154,7 @@ Time: 26.972 ms
 ~~~
 
 
-# Trigram indexing
+## Trigram indexing
 
 {{< image classes="fig25 left dim-margin" src="/img/old/macrex-index.320.gif" >}}
 
@@ -212,7 +212,7 @@ In PostgreSQL 9.3 the trigram extension is able to solve regular expression
 searches. The first production release of 9.3 should happen as soon as next
 week, I hope you're ready for it!
 
-# Auto Completion
+## Auto Completion
 
 What if you want to offer as-you-type completion to the names of the actors
 we know in our catalog? Then maybe you will find the following query useful:
@@ -250,7 +250,7 @@ plan will change depending on the volume of your data set as known by the
 [PostgreSQL planner statistics](http://www.postgresql.org/docs/current/static/routine-vacuuming.html#VACUUM-FOR-STATISTICS).
 
 
-# Conclusion
+## Conclusion
 
 {{< image classes="fig25 right fancybox dim-margin" src="/img/old/logo_man_tool_open_300x_watermark.jpg" >}}
 

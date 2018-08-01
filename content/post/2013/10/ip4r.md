@@ -1,7 +1,7 @@
 +++
 date = "2013-10-09T17:42:00.000000+02:00"
 title = "Geolocation with PostgreSQL"
-tags = ["PostgreSQL", "Extensions", "ip4r", "Catalogs", "YeSQL"]
+tags = ["PostgreSQL", "Extensions", "ip4r", "Catalogs", "YeSQL", "Point", "Geolocation"]
 categories = ["PostgreSQL","YeSQL"]
 thumbnailImage = "/img/old/geolocation.png"
 thumbnailImagePosition = "left"
@@ -38,7 +38,7 @@ adapt to your user's current location for example. Of course we're going to
 do something more exciting than that. Read on!
 
 
-# Geolocation data loading
+## Geolocation data loading
 
 So the first step is to find an 
 *geolocation* database, and several providers
@@ -112,7 +112,7 @@ Indexes:
 </center>
 
 
-# Finding an IP address in our ranges
+## Finding an IP address in our ranges
 
 Here's what the main data look like:
 
@@ -191,7 +191,7 @@ Time: 1.220 ms
 ~~~
 
 
-# Geolocation meta-data
+## Geolocation meta-data
 
 {{< image classes="fig25 left dim-margin" src="/img/old/geolocation-clic.png" >}}
 
@@ -234,7 +234,7 @@ extension in our recent enouth article
 [How far is the nearest pub?](/blog/2013/08/05-earthdistance) Time to
 try something more interesting then!
 
-# Emergency Pub
+## Emergency Pub
 
 {{< image classes="fig25 right dim-margin" src="/img/old/pubstopslondon.320.jpg" >}}
 
@@ -326,7 +326,7 @@ QUERY PLAN
 
 
 
-# Conclusion
+## Conclusion
 
 While some 
 *geolocation* data provider are giving you some libs and code to do

@@ -41,7 +41,7 @@ That said, we now have
 [hstore](http://www.postgresql.org/docs/9.2/static/hstore.html) and it's empowering us a lot here.
 
 
-# The exemple
+## The exemple
 
 Let's start simple, with a table having a 
 `d_start` and a 
@@ -72,7 +72,7 @@ of them of course has the
 `duration` field set. Let's see about that now.
 
 
-# Playing with hstore
+## Playing with hstore
 
 The 
 *hstore* extension is full of goodies, we will only have to discover a
@@ -140,7 +140,7 @@ expand the row type into its full definition.
 We should be ready for the next step now...
 
 
-# The generic trigger, using hstore
+## The generic trigger, using hstore
 
 Now let's code the trigger:
 
@@ -217,7 +217,7 @@ and insert again some rows:
 
 
 
-# Conclusion
+## Conclusion
 
 Thanks to the 
 [hstore](http://www.postgresql.org/docs/current/static/hstore.html) extension we've been able to come up with a dynamic

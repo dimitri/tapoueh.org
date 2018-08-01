@@ -1,7 +1,7 @@
 +++
 date = "2014-02-17T23:40:00.000000+01:00"
 title = "Aggregating NBA data, PostgreSQL vs MongoDB"
-tags = ["PostgreSQL", "MongoDB", "YeSQL"]
+tags = ["PostgreSQL", "MongoDB", "YeSQL","Statistics"]
 categories = ["PostgreSQL","YeSQL"]
 thumbnailImage = "/img/old/postgresql-mongodb.jpg"
 thumbnailImagePosition = "left"
@@ -31,7 +31,7 @@ into PostgreSQL and write the aggregate queries, of course.
 
 <!--toc-->
 
-# Loading the data
+## Loading the data
 
 With the help of a little bit of 
 *Common Lisp* code and using the
@@ -86,7 +86,7 @@ create view winners as
 If you're not doing much SQL, remember that creating such a view is common
 practice in the relational world.
 
-# Running the Aggregates
+## Running the Aggregates
 
 Now that we have the extra useful view, it's possible to implement the first
 [MongoDB](http://www.mongodb.org/) query in SQL. First, let's have a look at the MongoDB query:
@@ -195,7 +195,7 @@ Time: 24.713 ms
 ~~~
 
 
-# Correlating stats with wins
+## Correlating stats with wins
 
 The goal here is to compute how often a team wins when they record more
 defensive rebounds than their opponent across the entire data set.
@@ -235,7 +235,7 @@ client tool, maybe using a
 *spreadsheet* application or something.
 
 
-# Defensive Rebounds and Total Rebounds Versus Win Percentage
+## Defensive Rebounds and Total Rebounds Versus Win Percentage
 
 {{< image classes="fig25 right dim-margin" src="/img/old/DReboundsVandy.320.png" >}}
 
@@ -276,7 +276,7 @@ I only pasted the first few lines of the result because I'm not sure how to
 make sense of it, really.
 
 
-# Interesting factoid
+## Interesting factoid
 
 What I find most interesting in the following 
 *factoid* proposed in the
@@ -342,7 +342,7 @@ article on the topic:
 [Understanding Window Functions](/blog/2013/08/20-Window-Functions).
 
 
-# Total rebounds and wins
+## Total rebounds and wins
 
 The next interesting aside is the following:
 
@@ -397,7 +397,7 @@ Again it's easy enough in SQL to have more details about the
 in our source article, and we get a slightly different story.
 
 
-# Conclusion
+## Conclusion
 
 It's quite hard for me to appreciate the work done in the 
 *MongoDB

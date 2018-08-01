@@ -29,7 +29,7 @@ to be in
 
 <!--toc-->
 
-# Installing postgresql-hll
+## Installing postgresql-hll
 
 It's as simple as 
 `CREATE EXTENSION hll;` really, even if to get there you
@@ -72,7 +72,7 @@ The current value must be initialized using
 `hll_empty()`.
 
 
-# Concurrency
+## Concurrency
 
 The most awake readers among you have already spotted that: using an 
 `UPDATE`
@@ -89,7 +89,7 @@ aggregate that the extension provides, so that you do only one
 batch of values to process.
 
 
-# ∅: Empty Set and NULL
+## ∅: Empty Set and NULL
 
 <center>
 {{< image classes="fig50 fancybox dim-margin" src="/img/old/EmptySet_L.gif" >}}
@@ -142,7 +142,7 @@ set, and I will report that bug (with that very article as the detailed
 explanation of it).
 
 
-# Using postgresql-hll
+## Using postgresql-hll
 
 When using 
 `postgresql-hll` on the production system, we were able to get some
@@ -180,7 +180,7 @@ The data here is showing that we did setup the facility in the middle of the
 first day, and that the morning's activity is quite low.
 
 
-# Conclusion
+## Conclusion
 
 <center>
 {{< image classes="fig50 fancybox dim-margin" src="/img/old/hll-dv-estimator.png" >}}

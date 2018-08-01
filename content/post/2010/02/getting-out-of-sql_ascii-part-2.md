@@ -26,6 +26,8 @@ the
 `UPDATE` facilities of PostgreSQL to tweak the data, and too fix the
 applications so as not to continue inserting badly encoded strings in there.
 
+<!--more-->
+<!--toc-->
 
 ## Finding non UTF-8 data
 

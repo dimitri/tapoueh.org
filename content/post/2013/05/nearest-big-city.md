@@ -1,7 +1,7 @@
 +++
 date = "2013-05-02T11:34:00.000000+02:00"
 title = "Nearest Big City"
-tags = ["PostgreSQL", "KNN", "YeSQL"]
+tags = ["PostgreSQL", "KNN", "YeSQL", "Geolocation", "Point"]
 categories = ["PostgreSQL","YeSQL"]
 thumbnailImage = "/img/old/global_accessibility-640.png"
 thumbnailImagePosition = "left"
@@ -17,7 +17,7 @@ inhabitants near a given location.
 
 <!--toc-->
 
-# A very localized example
+## A very localized example
 
 We first need to find and import some data, and I found at the following
 place a 
@@ -108,7 +108,7 @@ expression such as
 search in your application.
 
 
-# Let's get worldwide
+## Let's get worldwide
 
 The real scope of our exercise is to associate every known town in the world
 with some big city around, so let's first fetch and import some worldwide
@@ -231,7 +231,7 @@ select * from maxmind_neighbours where city_lower = 'chinatown';
 
 
 
-# Big Cities in the big world
+## Big Cities in the big world
 
 <center>
 {{< image classes="fig50 fancybox dim-margin" src="/img/old/Old-Photos-of-Big-Cities-21.jpg" >}}

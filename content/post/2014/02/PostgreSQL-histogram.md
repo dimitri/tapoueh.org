@@ -23,7 +23,7 @@ producing a nice
 <!--more-->
 <!--toc-->
 
-# PostgreSQL and Mathematics
+## PostgreSQL and Mathematics
 
 The other day while giving a 
 [Practical SQL](http://2ndquadrant.com/en/training/course-catalog/practical-sql/) training my attention drifted to
@@ -72,7 +72,7 @@ We asked for 9 separations so we have 10 groups as a result:
 (10 rows)
 ~~~
 
-# Console Histograms
+## Console Histograms
 
 Now, what would it take to actually be able to display the full story right
 into our `psql` console, for preview before actually integrating a new
@@ -144,7 +144,7 @@ a
 of *rebounds* for each *bucket*, hence using the `int4range` range
 constructor function.
 
-# Conclusion
+## Conclusion
 
 {{< image classes="fig25 right dim-margin"
               src="/img/old/220px-Postgresql_elephant.svg.png"

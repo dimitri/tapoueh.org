@@ -1,7 +1,7 @@
 +++
 date = "2013-03-15T10:47:00.000000+01:00"
 title = "Batch Update"
-tags = ["PostgreSQL", "YeSQL"]
+tags = ["PostgreSQL", "YeSQL","Batch","UPDATE"]
 categories = ["PostgreSQL","YeSQL"]
 thumbnailImage = "/img/old/Home-Brewing.jpg"
 thumbnailImagePosition = "left"
@@ -32,7 +32,7 @@ to that in a minute.
 
 <!--toc-->
 
-# Update From
+## Update From
 
 It's all about using that 
 `FROM` clause in an 
@@ -51,7 +51,7 @@ Using that, you can actually update thousands of rows in our
 a single statement, and you can't really get faster than that.
 
 
-# Preparing the Batch
+## Preparing the Batch
 
 Now, if you happen to have the source data in your application process'
 memory, the previous bits is not doing you any good, you think. Well, the
@@ -98,7 +98,7 @@ it certainly includes some higher level facilities to deal with pushing the
 data into the streaming protocol.
 
 
-# Insert or Update
+## Insert or Update
 
 And now sometime some of the rows in the batch have to be 
 *updated* while some
@@ -144,7 +144,7 @@ against the
 *index* on the join key.
 
 
-# Concurrency patterns
+## Concurrency patterns
 
 Now, you will tell me that we just solved the 
 `UPSERT` problem. Well what
@@ -194,7 +194,7 @@ playing the
 *lock*.
 
 
-# Conclusion
+## Conclusion
 
 <center>
 <div class="figure dim-margin">

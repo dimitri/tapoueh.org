@@ -49,7 +49,7 @@ to use for something quite different here.
 
 <!--toc-->
 
-# Remote Procedure Calls
+## Remote Procedure Calls
 
 Now, the main feature 
 *PL/proxy* provides and that we're going to benefit from
@@ -80,7 +80,7 @@ is. If you want the Autonomous Transaction to happen locally, all is needed
 is to connect the proxy back to the current database.
 
 
-# A practical Use Case: auditing trigger
+## A practical Use Case: auditing trigger
 
 ***Autonomous Transactions*** are useful when several units of processing need to
 be done, and we want to be able to 
@@ -294,7 +294,7 @@ diff        | "f1"=>"b"
 The aborted update has been captured in the audit logs!
 
 
-# Conclusion
+## Conclusion
 
 {{< image classes="fig50 right dim-margin" src="/img/old/fdws.320.png" >}}
 

@@ -1,7 +1,7 @@
 +++
 date = "2013-08-05T08:11:00.000000+02:00"
 title = "How far is the nearest pub?"
-tags = ["PostgreSQL", "Extensions", "earthdistance", "YeSQL"]
+tags = ["PostgreSQL", "Extensions", "earthdistance", "geolocation", "Point", "YeSQL"]
 categories = ["PostgreSQL","YeSQL"]
 thumbnailImage = "/img/old/latitude_and_longitude.jpg"
 thumbnailImagePosition = "left"
@@ -26,7 +26,7 @@ to
 <!--toc-->
 
 
-# The earthdistance PostgreSQL contrib
+## The earthdistance PostgreSQL contrib
 
 As the maths are complex enough to easily make mistakes when implementing
 them again, we want to find an existing implementation that's been tested
@@ -78,7 +78,7 @@ So the nearest pub is *All Bar One*, 0.039 miles away, or 68.64 yards
 apparently. And we can see that adding the computation to get the distance
 in *miles* didn't add that much to the query timing.
 
-# Pubs and cities
+## Pubs and cities
 
 Just as easily as we have 
 *nearest* pubs we can also of course query for pubs
@@ -217,7 +217,7 @@ Time: 76.467 ms
 ~~~
 
 
-# The Most Popular Pub Names, per City
+## The Most Popular Pub Names, per City
 
 Let's now find which cities have the highest count of pubs, considering that
 a pub is affiliated to a city if it's within 5 miles of the single point we
@@ -297,7 +297,7 @@ Time: 729.866 ms
 ~~~
 
 
-# Conclusion
+## Conclusion
 
 {{< image classes="fig25 right dim-margin"
               src="/img/sql-logo.png"
