@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.31.1">
+    <meta name="generator" content="Hugo 0.46">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Database Modelization Anti-Patterns</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -106,13 +106,16 @@ schedule and a strong focus on the needs of application developers!
     
       
 <script>
-(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-
-ga('create', 'UA-47059482-1', 'auto');
-ga('send', 'pageview');
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-47059482-1', 'auto');
+	
+	ga('send', 'pageview');
+}
 </script>
 
     
@@ -388,16 +391,112 @@ and how using UUIDs might be an anti-pattern too.</p>
 <p>The content of this article is extracted from my book <a href="https://masteringpostgresql.com">Mastering PostgreSQL
 in Application Development</a>, check it out!</p>
 
-<h1 id="table-of-contents"></h1><nav id="TableOfContents">
-<ul>
-<li><a href="#entity-attribute-values">Entity Attribute Values</a></li>
-<li><a href="#multiple-values-per-column">Multiple Values per Column</a></li>
-<li><a href="#uuids">UUIDs</a></li>
-<li><a href="#conclusion">Conclusion</a></li>
-</ul>
-</nav>
+ 
 
-<h1 id="entity-attribute-values">Entity Attribute Values</h1>
+
+
+
+<div class="table-of-contents toc bd-callout">
+    
+    <h4 class="text-muted">Table of Contents</h4>
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/03/database-modelization-anti-patterns/#entity-attribute-values">
+                    Entity Attribute Values
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/03/database-modelization-anti-patterns/#multiple-values-per-column">
+                    Multiple Values per Column
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/03/database-modelization-anti-patterns/#uuids">
+                    UUIDs
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/03/database-modelization-anti-patterns/#conclusion">
+                    Conclusion
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+</div>
+
+
+
+<h2 id="entity-attribute-values">Entity Attribute Values</h2>
 
 <p>The <a href="https://en.wikipedia.org/wiki/Entity%E2%80%93attribute%E2%80%93value_model">entity attribute
 values</a>
@@ -505,8 +604,8 @@ contract table:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> customer.id,
        customer.name,
        ctype.name,
-       rtime.value::<span style="color:#0aa">interval</span> <span style="color:#00a">as</span> <span style="color:#00a">&#34;resp. time&#34;</span>,
-       etime.value::<span style="color:#0aa">interval</span> <span style="color:#00a">as</span> <span style="color:#00a">&#34;esc. time&#34;</span>
+       rtime.value::<span style="color:#0aa">interval</span> <span style="color:#00a">as</span> <span style="color:#a50">&#34;resp. time&#34;</span>,
+       etime.value::<span style="color:#0aa">interval</span> <span style="color:#00a">as</span> <span style="color:#a50">&#34;esc. time&#34;</span>
   <span style="color:#00a">from</span> eav.customer
        <span style="color:#00a">join</span> eav.support
          <span style="color:#00a">on</span> support.customer = customer.id
@@ -536,7 +635,7 @@ complex than it should for a very small gain at modeling time.</p>
 an <em>attribute volatility</em> problem to solve. In that case, consider having as
 solid a model as possible and use <em>jsonb</em> columns as extension points.</p>
 
-<h1 id="multiple-values-per-column">Multiple Values per Column</h1>
+<h2 id="multiple-values-per-column">Multiple Values per Column</h2>
 
 <p>In database normalization, we say that a table (or a relation) is in <em>first
 normal form</em> (<em>1NF</em>) if:</p>
@@ -637,7 +736,7 @@ attribute rather than two additional tables looks like optimization, but
 actually it will make just about everything worse: debugging, maintenance,
 search, statistics, normalization, and other use cases.</p>
 
-<h1 id="uuids">UUIDs</h1>
+<h2 id="uuids">UUIDs</h2>
 
 <p>The PostgreSQL data type UUID allows for 128 bits synthetic keys rather than
 32 bits with <em>serial</em> or 64 bits with <em>bigserial</em>.</p>
@@ -665,7 +764,7 @@ every concurrent and distributed transaction against a common centralized
 your data, as seen in the <a href="/blog/2018/03/database-normalization-and-primary-keys/">Primary
 Keys</a> section.</p>
 
-<h1 id="conclusion">Conclusion</h1>
+<h2 id="conclusion">Conclusion</h2>
 
 <p>Good database modeling is always a trade-off between normalization theories
 and denormalization techniques. PostgreSQL offers many denormalization

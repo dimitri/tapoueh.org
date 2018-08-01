@@ -25,7 +25,7 @@ going to see in this article.
 <!--toc-->
 
 
-# Ranges
+## Ranges
 
 As usual, read the PostgreSQL documentation chapters with the titles [Range
 Types](https://www.postgresql.org/docs/current/static/rangetypes.html) and
@@ -96,7 +96,7 @@ rate as a *numeric* value. Once the data is loaded into this table, we can
 transform it into something more interesting to work with from an
 application, the *rates* table.
 
-# Ranges Exclusion Constraints
+## Ranges Exclusion Constraints
 
 The *rates* table registers the rate value for a currency and a *validity*
 period, and uses an [exclusion
@@ -123,7 +123,7 @@ importing in the previous step. The query uses the *lead()* window function
 to implement the specification spelled out in English earlier: _an exchange
 rate is relevant from its publication until the next rate is published_.
 
-# Querying Ranges
+## Querying Ranges
 
 Here's how the data looks, with the following query targeting Euro rates:
 
@@ -177,7 +177,7 @@ constraint's index to solve that query efficiently:
 (1 row)
 ~~~
 
-# Conclusion
+## Conclusion
 
 PostgreSQL has support for more than date ranges, ranges of numbers are also
 suppored. While it's possible to manually manage the lower and upper bounds

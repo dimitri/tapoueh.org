@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.31.1">
+    <meta name="generator" content="Hugo 0.46">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>SQL and Business Logic</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -103,13 +103,16 @@ implementation. Or actually, how much of your business logic should be SQL?
     
       
 <script>
-(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-
-ga('create', 'UA-47059482-1', 'auto');
-ga('send', 'pageview');
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-47059482-1', 'auto');
+	
+	ga('send', 'pageview');
+}
 </script>
 
     
@@ -384,18 +387,158 @@ business logic. Even those you didn&rsquo;t write because you&rsquo;re using tha
 awesome ORM tool… but what does your ORM knows exactly about your business
 case, or your user stories?</p>
 
-<h1 id="table-of-contents"></h1><nav id="TableOfContents">
-<ul>
-<li><a href="#a-very-simple-example">A very simple example</a></li>
-<li><a href="#business-logic-in-the-application-code">Business Logic in the Application Code</a></li>
-<li><a href="#correctness">Correctness</a></li>
-<li><a href="#efficiency">Efficiency</a></li>
-<li><a href="#maintenance">Maintenance</a></li>
-<li><a href="#conclusion">Conclusion</a></li>
-</ul>
-</nav>
+ 
 
-<h1 id="a-very-simple-example">A very simple example</h1>
+
+
+
+<div class="table-of-contents toc bd-callout">
+    
+    <h4 class="text-muted">Table of Contents</h4>
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2017/06/sql-and-business-logic/#a-very-simple-example">
+                    A very simple example
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2017/06/sql-and-business-logic/#business-logic-in-the-application-code">
+                    Business Logic in the Application Code
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2017/06/sql-and-business-logic/#correctness">
+                    Correctness
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2017/06/sql-and-business-logic/#efficiency">
+                    Efficiency
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2017/06/sql-and-business-logic/#maintenance">
+                    Maintenance
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2017/06/sql-and-business-logic/#conclusion">
+                    Conclusion
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+</div>
+
+
+
+<h2 id="a-very-simple-example">A very simple example</h2>
 
 <p>In the following example, we are going to first define a business case we
 want to implement, and then have a look at the SQL statement that we would
@@ -444,7 +587,7 @@ story if you prefer that term) into a SQL query. The SQL implementation uses
 joins and computations that are specific to both the data model and the use
 case we are solving.</p>
 
-<h1 id="business-logic-in-the-application-code">Business Logic in the Application Code</h1>
+<h2 id="business-logic-in-the-application-code">Business Logic in the Application Code</h2>
 
 <p>Now, we could decide that the application&rsquo;s code is where to implement our
 business case, because that&rsquo;s easier to maintain in the long run. I wrote a
@@ -463,7 +606,7 @@ ORM librairies. Here goes:</p>
 <span style="color:#00a">from</span> <span style="color:#0aa">datetime</span> <span style="color:#00a">import</span> timedelta
 
 DEBUGSQL = False
-PGCONNSTRING = <span style="color:#a50"></span><span style="color:#a50">&#34;dbname=chinook application_name=cdstore&#34;</span>
+PGCONNSTRING = <span style="color:#a50">&#34;dbname=chinook application_name=cdstore&#34;</span>
 
 
 <span style="color:#00a">class</span> <span style="color:#0a0">Model</span>(<span style="color:#0aa">object</span>):
@@ -481,24 +624,24 @@ PGCONNSTRING = <span style="color:#a50"></span><span style="color:#a50">&#34;dbn
 
 
 <span style="color:#00a">class</span> <span style="color:#0a0">Artist</span>(Model):
-    tablename = <span style="color:#a50"></span><span style="color:#a50">&#34;artist&#34;</span>
-    columns = [<span style="color:#a50"></span><span style="color:#a50">&#34;artistid&#34;</span>, <span style="color:#a50"></span><span style="color:#a50">&#34;name&#34;</span>]
+    tablename = <span style="color:#a50">&#34;artist&#34;</span>
+    columns = [<span style="color:#a50">&#34;artistid&#34;</span>, <span style="color:#a50">&#34;name&#34;</span>]
     ...
 
 
 <span style="color:#00a">class</span> <span style="color:#0a0">Album</span>(Model):
-    tablename = <span style="color:#a50"></span><span style="color:#a50">&#34;album&#34;</span>
-    columns = [<span style="color:#a50"></span><span style="color:#a50">&#34;albumid&#34;</span>, <span style="color:#a50"></span><span style="color:#a50">&#34;title&#34;</span>]
+    tablename = <span style="color:#a50">&#34;album&#34;</span>
+    columns = [<span style="color:#a50">&#34;albumid&#34;</span>, <span style="color:#a50">&#34;title&#34;</span>]
     ...
 
 
 <span style="color:#00a">class</span> <span style="color:#0a0">Track</span>(Model):
-    tablename = <span style="color:#a50"></span><span style="color:#a50">&#34;track&#34;</span>
-    columns = [<span style="color:#a50"></span><span style="color:#a50">&#34;trackid&#34;</span>, <span style="color:#a50"></span><span style="color:#a50">&#34;name&#34;</span>, <span style="color:#a50"></span><span style="color:#a50">&#34;milliseconds&#34;</span>, <span style="color:#a50"></span><span style="color:#a50">&#34;bytes&#34;</span>, <span style="color:#a50"></span><span style="color:#a50">&#34;unitprice&#34;</span>]
+    tablename = <span style="color:#a50">&#34;track&#34;</span>
+    columns = [<span style="color:#a50">&#34;trackid&#34;</span>, <span style="color:#a50">&#34;name&#34;</span>, <span style="color:#a50">&#34;milliseconds&#34;</span>, <span style="color:#a50">&#34;bytes&#34;</span>, <span style="color:#a50">&#34;unitprice&#34;</span>]
     ...
 
 
-<span style="color:#00a">if</span> __name__ == <span style="color:#a50"></span><span style="color:#a50">&#39;__main__&#39;</span>:
+<span style="color:#00a">if</span> __name__ == <span style="color:#a50">&#39;__main__&#39;</span>:
     <span style="color:#00a">if</span> <span style="color:#0aa">len</span>(sys.argv) &gt; <span style="color:#099">1</span>:
         pgconn = psycopg2.connect(PGCONNSTRING)
         artist = Artist.fetchone(pgconn, name=sys.argv[<span style="color:#099">1</span>])
@@ -509,9 +652,9 @@ PGCONNSTRING = <span style="color:#a50"></span><span style="color:#a50">&#34;dbn
                 ms += track.duration
 
             duration = timedelta(milliseconds=ms)
-            <span style="color:#00a">print</span>(<span style="color:#a50"></span><span style="color:#a50">&#34;</span><span style="color:#a50">%25s</span><span style="color:#a50">: </span><span style="color:#a50">%s</span><span style="color:#a50">&#34;</span> % (album.title, duration))
+            <span style="color:#00a">print</span>(<span style="color:#a50">&#34;</span><span style="color:#a50">%25s</span><span style="color:#a50">: </span><span style="color:#a50">%s</span><span style="color:#a50">&#34;</span> % (album.title, duration))
     <span style="color:#00a">else</span>:
-        <span style="color:#00a">print</span>(<span style="color:#a50"></span><span style="color:#a50">&#39;albums.py &lt;artist name&gt;&#39;</span>)</code></pre></div>
+        <span style="color:#00a">print</span>(<span style="color:#a50">&#39;albums.py &lt;artist name&gt;&#39;</span>)</code></pre></div>
 <p>When we run the code we have the same result as before with the query:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ ./albums.py <span style="color:#a50">&#34;Red Hot Chili Peppers&#34;</span>
     Blood Sugar Sex Magik: <span style="color:#099">1</span>:13:57.073000
@@ -519,7 +662,7 @@ PGCONNSTRING = <span style="color:#a50"></span><span style="color:#a50">&#34;dbn
           Californication: <span style="color:#099">0</span>:56:25.461000</code></pre></div>
 <p>What can we learn about those two implementations of the same business case?</p>
 
-<h1 id="correctness">Correctness</h1>
+<h2 id="correctness">Correctness</h2>
 
 <p>In the application&rsquo;s code implementation we are doing 5 queries instead of
 one. What happens if an album had been badly assigned to our artist and is
@@ -539,7 +682,7 @@ proper
 undoubtly open the door of inconsistencies in the information your
 application retrieves. Maybe for billing purposes.</p>
 
-<h1 id="efficiency">Efficiency</h1>
+<h2 id="efficiency">Efficiency</h2>
 
 <p>Another problem with the application&rsquo;s code implementation as written is
 with its very bad efficiency. As this artists has 3 albums in our data set,
@@ -565,7 +708,7 @@ application, running 5 times as many queries might not turn cheap. Maybe you
 don&rsquo;t need this size of a caching layer in front of your API servers after
 all…</p>
 
-<h1 id="maintenance">Maintenance</h1>
+<h2 id="maintenance">Maintenance</h2>
 
 <p>In terms of code maitenance we have to compare the SQL with only those 9
 lines of Python code:</p>
@@ -577,7 +720,7 @@ lines of Python code:</p>
         ms += track.duration
 
     duration = timedelta(milliseconds=ms)
-    <span style="color:#00a">print</span>(<span style="color:#a50"></span><span style="color:#a50">&#34;</span><span style="color:#a50">%25s</span><span style="color:#a50">: </span><span style="color:#a50">%s</span><span style="color:#a50">&#34;</span> % (album.title, duration))</code></pre></div>
+    <span style="color:#00a">print</span>(<span style="color:#a50">&#34;</span><span style="color:#a50">%25s</span><span style="color:#a50">: </span><span style="color:#a50">%s</span><span style="color:#a50">&#34;</span> % (album.title, duration))</code></pre></div>
 <p>With the equivalent query written as:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span> album.title <span style="color:#00a">as</span> album,
          <span style="color:#00a">sum</span>(milliseconds) * <span style="color:#0aa">interval</span> <span style="color:#a50">&#39;1 ms&#39;</span> <span style="color:#00a">as</span> duration
@@ -613,11 +756,12 @@ layer.</p>
 course, and the change is easy for your peers to review before your commit
 makes it to the release branch:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-diff" data-lang="diff"><span style="color:#a00">-order by album;
-</span><span style="color:#a00"></span><span style="color:#f00;background-color:#faa">+order by duration;</span></code></pre></div>
+</span><span style="color:#a00"></span><span style="color:#0a0">+order by duration;
+</span><span style="color:#0a0"></span></code></pre></div>
 <p>Unfortunately we don&rsquo;t have the album&rsquo;s date of release in the Chinook
 database model, that would be the proper ordering here I guess.</p>
 
-<h1 id="conclusion">Conclusion</h1>
+<h2 id="conclusion">Conclusion</h2>
 
 
 

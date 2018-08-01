@@ -36,7 +36,7 @@ complex enough that my friend wants to build some dynamic visualisation of
 the data, as in the excellent tool [Zoomable Circle
 Packing](https://bl.ocks.org/mbostock/7607535) example.
 
-# Dungeons & Dragons Character Classes
+## Dungeons & Dragons Character Classes
 
 So we're going to play in the same domain, in a way, by modeling [Dungeons &
 Dragons Character
@@ -92,7 +92,7 @@ classes and I had to pick a specific edition and extend it with a prestige
 class (the Assassin), so I hope fans of the game that are reading this
 article will accept this classification for its pedagogic interest…
 
-# Exporting a Hierarchy in JSON
+## Exporting a Hierarchy in JSON
 
 Given this data set, our goal is to obtain a single JSON file that we can
 hand over to the [d3js](https://d3js.org) JavaScript library. Ideally, we
@@ -143,7 +143,7 @@ nested under the top-level entry. That's more complex and can't be done in a
 single step, obviously: you can't have seen the bottom of the tree already
 when you start at its top.
 
-# Recursion's First Step
+## Recursion's First Step
 
 The first step begins at the top of the tree, with those classes that don't
 have a parent class, our top-level classes:
@@ -175,7 +175,7 @@ Here's our initial result set:
 (4 rows)
 ~~~
 
-# WITH RECURSIVE
+## WITH RECURSIVE
 
 Now that we have a set of top-level classes, we want to add to the set their
 direct sub-classes, then loop over that extended set to find the next level
@@ -260,7 +260,7 @@ When using PostgreSQL, the concatenation operator works on text values and
 on array values too, so you can append a new item in an existing array using
 the `||` SQL operator. That's how we maintain our `parents` array in the query.
 
-# Graph Cycles and Infinite Recursion
+## Graph Cycles and Infinite Recursion
 
 If the data set is not a [Directed Acyclic
 Graph](https://en.wikipedia.org/wiki/Directed_acyclic_graph), you might have
@@ -273,7 +273,7 @@ WHERE clause to the second part of the _union all_ query:
        where not c.id = any(parents)
 ~~~
 
-# From parents to children node, and back
+## From parents to children node, and back
 
 Now, this result is very nice, but it's not what we've been asked to
 deliver, if you remember correctly. Our quest consists of delivering a
@@ -428,7 +428,7 @@ visual and interactive [Zoomable Circle
 Packing](https://bl.ocks.org/mbostock/7607535) tool and enjoy a browsable
 data set. That's left as an exercize to the reader though!
 
-# Conclusion
+## Conclusion
 
 SQL is a very powerful declarative programming language. Tree traversal is
 covered in SQL thanks to WITH RECURSIVE, a standard feature that appeared in

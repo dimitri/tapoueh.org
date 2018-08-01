@@ -31,7 +31,7 @@ PostgreSQL data types, and we open the journey with `boolean`.
 <!--more-->
 <!--toc-->
 
-# PostgreSQL Data Types
+## PostgreSQL Data Types
 
 PostgreSQL comes with a long list of data types. The following query limits
 the types to the ones directly interesting to someone who is an application
@@ -87,7 +87,7 @@ different result set:
 
 So, let's open our journey with the `boolean` attribute domain.
 
-# SQL Boolean: Three-Valued Logic
+## SQL Boolean: Three-Valued Logic
 
 SQL introduces a NULL value in the boolean attribute domain, adding it to
 the usual TRUE and FALSE values. That gives us ***three-valued logic***.
@@ -183,7 +183,7 @@ With this complete result this time:
 
 You can see that we have not a single NULL in the last two columns.
 
-# Boolean Aggregates
+## Boolean Aggregates
 
 You can have tuple attributes as Booleans too, and PostgreSQL includes
 specific aggregates for them:
@@ -271,7 +271,7 @@ For more about this topic, you can read [What is the deal with
 NULLs?](http://thoughts.davisjeff.com/2009/08/02/what-is-the-deal-with-nulls/)
 from PostgreSQL Contributor [Jeff Davis](http://thoughts.davisjeff.com/).
 
-# Conclusion
+## Conclusion
 
 {{< figure class="right"
              src="/img/MasteringPostgreSQLinAppDev-Cover-th.png"

@@ -38,7 +38,7 @@ PostgreSQL comes with all the tooling you need to handle that situation.
 <!--more-->
 <!--toc-->
 
-# Batch Update, MoMA Collection
+## Batch Update, MoMA Collection
 
 [The Museum of Modern Art (MoMA) Collection](https://github.com/MuseumofModernArt/collection)
 hosts a database of the museum's collection, with monthly updates. The
@@ -102,7 +102,7 @@ Here are some of the artists being presented at the MoMA:
 (6 rows)
 ~~~
 
-# Updating the Data
+## Updating the Data
 
 After having successfully loaded the data from May, let's say that we have
 received an update for June. As usual with updates of this kind, we don't
@@ -221,7 +221,7 @@ views, check it out!
 
 <hr />
 
-# Concurrency Patterns
+## Concurrency Patterns
 
 While in this solution the update or insert happens in a single query, which
 means using a single *snapshot* of the database and a within a transaction,
@@ -256,7 +256,7 @@ playing the *insert or update* dance), you can omit that *lock*.
 Another solution is using the new in PostgreSQL 9.5 *on conflict* clause for
 the *insert* statement.
 
-# On Conflict Do Nothing
+## On Conflict Do Nothing
 
 When using PostgreSQL version 9.5 and later, it is possible to use the *on
 conflict* clause of the *insert* statement to handle concurrency issues, as
@@ -304,7 +304,7 @@ happen because a concurrent query just inserted that row while our query is
 in flight, in between its lookup done in the *update* part of the query and
 the *insert* part of the query.
 
-# Conclusion
+## Conclusion
 
 PostgreSQL implements several facilities that we can rely on to maintain an
 application cache for data that changes often:

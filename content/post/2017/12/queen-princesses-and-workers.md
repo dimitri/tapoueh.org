@@ -24,7 +24,7 @@ than the particular role of a node.
 <!--more-->
 <!--toc-->
 
-# Multi-Nodes Architectures and Roles
+## Multi-Nodes Architectures and Roles
 
 In current Production Architectures we often have to deal with multi-nodes
 systems. It always begins with High-Availability concerns: what if my main
@@ -52,7 +52,7 @@ The second step here might take quite some time, depending on how much
 volume needs to be transfered over the network. While the transfering and
 recovering are happening, the service is unavailable…
 
-# High-Availability
+## High-Availability
 
 In order to reduce the maintenance window at the time when we replace the
 *primary* PostgreSQL server, we might want to have a *secondary* server
@@ -83,7 +83,7 @@ Now, in this setup, every *secondary* server accepts read-only queries.
 
 {{< figure src="/img/sr-hs-2s.png" >}}
 
-# Load-Balancing
+## Load-Balancing
 
 Having several *secondary* servers up-to-date or lagging less than a second
 behind the *primary* server, it's tempting to use them for the *reporting*
@@ -107,7 +107,7 @@ with only the write traffic, or as close as possible to that.
 > to avoid data inconsistencies where the correctness of your processing
 > depends on the lag of the secondary systems.
 
-# Mixed Architectures
+## Mixed Architectures
 
 And our production systems implement a Mixed Architecture, where hopefully
 the role of every part of the system is well known, and clearly labeled.
@@ -131,7 +131,7 @@ or a load-balancing node.
 
 {{< figure src="/img/lb-2dc.png" >}}
 
-# Queen, Princesses, and Workers
+## Queen, Princesses, and Workers
 
 My proposal to clarify the situation is to use a well-known terminology,
 taken from the bees. In a bee hive, we can see different roles that are well
@@ -167,7 +167,7 @@ defined:
     in the hive, except for the role of the Queen, which they assist in
     several ways.
 
-# A Better Terminology
+## Conclusion
 
 As a conclusion, I think that the Bee terminology is a better one in for
 Multi-Nodes Architectures. The goal of a terminology is dual. First, the

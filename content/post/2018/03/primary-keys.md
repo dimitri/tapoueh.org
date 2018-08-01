@@ -31,7 +31,7 @@ Before we can get into the details of Primary Keys themselves, let's do a
 quick review of Normal Forms and why they are interesting to us when we
 design a database model.
 
-# Normal Forms
+## Normal Forms
 
 There are several levels of normalization and the web site
 [dbnormalization.com](http://www.dbnormalization.com/) offers a practical
@@ -88,7 +88,7 @@ structured.
 In practice database models often reach for *BCNF* or *4NF*; going all the
 way to the *DKNF* design is only seen in specific cases.
 
-# Primary Keys
+## Primary Keys
 
 Primary keys are a database constraint allowing us to implement the first
 and second normal forms. The first rule to follow to reach first normal form
@@ -110,7 +110,7 @@ to convince yourself, and rather than argue if the no-duplicate rule applies
 to *null = null* (which is *null*) or to *null is not null* (which is
 false), a *primary key* constraint disallow *null* values entirely.
 
-# Surrogate Keys
+## Surrogate Keys
 
 The reason why we have *primary key* is to avoid duplicate entries in the
 data set. As soon as a *primary key* is defined on an automatically
@@ -253,7 +253,7 @@ them a *primary key*. So we both have a *surrogate* key that's easy to
 reference from other tables in our model, and also a strong *1NF* guarantee
 about our data set.
 
-# Conclusion
+## Conclusion
 
 {{< figure class="right"
              src="/img/MasteringPostgreSQLinAppDev-Cover-th.png"

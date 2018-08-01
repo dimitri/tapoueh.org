@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.31.1">
+    <meta name="generator" content="Hugo 0.46">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>on Json and SQL</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -118,13 +118,16 @@ versions of the database schema.">
     
       
 <script>
-(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-
-ga('create', 'UA-47059482-1', 'auto');
-ga('send', 'pageview');
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-47059482-1', 'auto');
+	
+	ga('send', 'pageview');
+}
 </script>
 
     
@@ -386,33 +389,411 @@ schema. Finally, we compare some non-trivial processing done against both
 versions of the database schema.</p>
 
 <p>
-<h1 id="table-of-contents"></h1><nav id="TableOfContents">
-<ul>
-<li><a href="#loading-the-data-set">Loading the data set</a></li>
-<li><a href="#finding-cards">Finding cards</a></li>
-<li><a href="#cards-sets">Cards sets</a></li>
-<li><a href="#build-a-magic-booster-deck">Build a Magic™ booster deck</a></li>
-<li><a href="#magic-card-type-type-of-card-and-subtype">Magic™ card type, type of card and subtype</a></li>
-<li><a href="#constraints-and-data-quality">Constraints and data quality</a></li>
-<li><a href="#deleting-duplicate-rows">Deleting duplicate rows</a></li>
-<li><a href="#cards-and-sets-rarities">Cards and Sets Rarities</a></li>
-<li><a href="#normalizing-the-data-set">Normalizing the data set</a>
-<ul>
-<li><a href="#sets">Sets</a></li>
-<li><a href="#cards">Cards</a></li>
-</ul></li>
-<li><a href="#dispatching-json-data-into-normalized-tables">Dispatching JSON data into normalized tables</a>
-<ul>
-<li><a href="#sets-1">Sets</a></li>
-<li><a href="#boosters">Boosters</a></li>
-<li><a href="#cards-1">Cards</a></li>
-</ul></li>
-<li><a href="#building-a-magic-booster-against-a-normalized-schema">Building a Magic™ booster against a normalized schema</a></li>
-<li><a href="#conclusion">Conclusion</a></li>
-</ul>
-</nav></p>
+ 
 
-<h1 id="loading-the-data-set">Loading the data set</h1>
+
+
+
+<div class="table-of-contents toc bd-callout">
+    
+    <h4 class="text-muted">Table of Contents</h4>
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2017/09/on-json-and-sql/#loading-the-data-set">
+                    Loading the data set
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2017/09/on-json-and-sql/#finding-cards">
+                    Finding cards
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2017/09/on-json-and-sql/#cards-sets">
+                    Cards sets
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2017/09/on-json-and-sql/#build-a-magic-booster-deck">
+                    Build a Magic™ booster deck
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2017/09/on-json-and-sql/#magic-card-type-type-of-card-and-subtype">
+                    Magic™ card type, type of card and subtype
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2017/09/on-json-and-sql/#constraints-and-data-quality">
+                    Constraints and data quality
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2017/09/on-json-and-sql/#deleting-duplicate-rows">
+                    Deleting duplicate rows
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2017/09/on-json-and-sql/#cards-and-sets-rarities">
+                    Cards and Sets Rarities
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2017/09/on-json-and-sql/#normalizing-the-data-set">
+                    Normalizing the data set
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2017/09/on-json-and-sql/#sets">
+                    Sets
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2017/09/on-json-and-sql/#cards">
+                    Cards
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2017/09/on-json-and-sql/#dispatching-json-data-into-normalized-tables">
+                    Dispatching JSON data into normalized tables
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2017/09/on-json-and-sql/#sets">
+                    Sets
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2017/09/on-json-and-sql/#boosters">
+                    Boosters
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2017/09/on-json-and-sql/#cards">
+                    Cards
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2017/09/on-json-and-sql/#building-a-magic-booster-against-a-normalized-schema">
+                    Building a Magic™ booster against a normalized schema
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2017/09/on-json-and-sql/#conclusion">
+                    Conclusion
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+</div>
+
+</p>
+
+<h2 id="loading-the-data-set">Loading the data set</h2>
 
 <p>First retrieve <a href="https://mtgjson.com/json/AllSets.json.zip">AllSets.json</a> and
 then load it into your local testing PostgreSQL instance as following:</p>
@@ -424,15 +805,15 @@ use COPY this time, so we&rsquo;ll write some Python code:</p>
 
 <span style="color:#00a">import</span> <span style="color:#0aa">psycopg2</span>
 
-PGCONNSTRING = <span style="color:#a50"></span><span style="color:#a50">&#34;dbname=magic&#34;</span>
+PGCONNSTRING = <span style="color:#a50">&#34;dbname=magic&#34;</span>
 
-<span style="color:#00a">if</span> __name__ == <span style="color:#a50"></span><span style="color:#a50">&#39;__main__&#39;</span>:
+<span style="color:#00a">if</span> __name__ == <span style="color:#a50">&#39;__main__&#39;</span>:
     pgconn = psycopg2.connect(PGCONNSTRING)
     curs = pgconn.cursor()
 
-    allset = <span style="color:#0aa">open</span>(<span style="color:#a50"></span><span style="color:#a50">&#39;AllSets.json&#39;</span>).read()
-    allset = allset.replace(<span style="color:#a50"></span><span style="color:#a50">&#34;&#39;&#34;</span>, <span style="color:#a50"></span><span style="color:#a50">&#34;&#39;&#39;&#34;</span>)
-    sql = <span style="color:#a50"></span><span style="color:#a50">&#34;insert into magic.allsets(data) values(</span><span style="color:#a50">%s</span><span style="color:#a50">)&#34;</span>
+    allset = <span style="color:#0aa">open</span>(<span style="color:#a50">&#39;AllSets.json&#39;</span>).read()
+    allset = allset.replace(<span style="color:#a50">&#34;&#39;&#34;</span>, <span style="color:#a50">&#34;&#39;&#39;&#34;</span>)
+    sql = <span style="color:#a50">&#34;insert into magic.allsets(data) values(</span><span style="color:#a50">%s</span><span style="color:#a50">)&#34;</span>
 
     curs.execute(sql, (allset,))
     pgconn.commit()
@@ -454,7 +835,7 @@ entries in the <em>magic.cards</em> table took 603.524 ms, and creating a dedica
 <em>gin</em> index took 3121.274 ms. Of course those numbers aren&rsquo;t repeatable and
 mean nothing…</p>
 
-<h1 id="finding-cards">Finding cards</h1>
+<h2 id="finding-cards">Finding cards</h2>
 
 <p>The home page of the <a href="https://mtgjson.com">https://mtgjson.com</a> website features the card named
 <em>Sen Triplets</em>, how can we find it in our collection? The following query is
@@ -554,7 +935,7 @@ and the count per specific array of colors:</p>
 (5 rows)
 </code></pre>
 
-<h1 id="cards-sets">Cards sets</h1>
+<h2 id="cards-sets">Cards sets</h2>
 
 <p>When creating our <em>magic.cards</em> table, we didn&rsquo;t keep the sets information,
 and for more interesting queries we&rsquo;re going to need that.</p>
@@ -584,7 +965,7 @@ and for more interesting queries we&rsquo;re going to need that.</p>
 JSON object. In our case this allows to register only the collection parts
 of the object, and leave away the cards for the other table.</p>
 
-<h1 id="build-a-magic-booster-deck">Build a Magic™ booster deck</h1>
+<h2 id="build-a-magic-booster-deck">Build a Magic™ booster deck</h2>
 
 <p>With this data we can see about building a booster from any edition of the
 cards collection. First, let&rsquo;s have a look at the <em>Limited Edition Alpha</em>
@@ -705,7 +1086,7 @@ by <a href="http://blog.rhodiumtoad.org.uk">The Rhodium Toad</a>, PostgreSQL com
 return directly <em>cards.data</em>, which is a json document, rather than
 extracting some of the fields only like we&rsquo;ve done here.</p>
 
-<h1 id="magic-card-type-type-of-card-and-subtype">Magic™ card type, type of card and subtype</h1>
+<h2 id="magic-card-type-type-of-card-and-subtype">Magic™ card type, type of card and subtype</h2>
 
 <p>From the <a href="https://mtgjson.com/documentation.html">MTGjson documentation</a> we
 have different kind of types for a single card:</p>
@@ -780,7 +1161,7 @@ resist.</p>
 
 <p>First, to check some basic guarantees, second, to normalize the data.</p>
 
-<h1 id="constraints-and-data-quality">Constraints and data quality</h1>
+<h2 id="constraints-and-data-quality">Constraints and data quality</h2>
 
 <p>The data being available in JSON and easy enough to process could be all we
 need. Sometimes your application or business rules require data quality, and
@@ -838,7 +1219,7 @@ we expect no result:</p>
 <p>Now, to clean up the mess, we need a way to distinguish two rows that are
 entirely the same. No user column differ. Mmm.</p>
 
-<h1 id="deleting-duplicate-rows">Deleting duplicate rows</h1>
+<h2 id="deleting-duplicate-rows">Deleting duplicate rows</h2>
 
 <p>The <em>ctid</em> is one of the <a href="https://www.postgresql.org/docs/current/static/ddl-system-columns.html">PostgreSQL System
 Columns</a>.
@@ -880,7 +1261,7 @@ Application Development</a>.</p>
 
 <script async id="_ck_279686" src="https://forms.convertkit.com/279686?v=6"></script>
 
-<h1 id="cards-and-sets-rarities">Cards and Sets Rarities</h1>
+<h2 id="cards-and-sets-rarities">Cards and Sets Rarities</h2>
 
 <p>As we&rsquo;ve seen in a previous section of this document, cards and set&rsquo;s
 boosters rarities are oddly different. Let&rsquo;s have a closer look now. For the
@@ -1008,7 +1389,7 @@ of <em>rarity_t</em> elements:</p>
 <p>With that data type, we now are able to build arrays of <em>rarity_t</em> elements,
 and check if a card&rsquo;s <em>rarity</em> value is contained into such as array.</p>
 
-<h1 id="normalizing-the-data-set">Normalizing the data set</h1>
+<h2 id="normalizing-the-data-set">Normalizing the data set</h2>
 
 <p>PostgreSQL is very good at mixing SQL and JSON, as we&rsquo;ve seen in the
 previous query, thanks to advanced processing functions such as
@@ -1164,7 +1545,7 @@ index and search into arrays.</p>
 <p>The only problem with those arrays is that we can&rsquo;t implement a <em>foreign
 key</em> to the reference tables type and subtype.</p>
 
-<h1 id="dispatching-json-data-into-normalized-tables">Dispatching JSON data into normalized tables</h1>
+<h2 id="dispatching-json-data-into-normalized-tables">Dispatching JSON data into normalized tables</h2>
 
 <p>Now that we have a table schema that should make our work easier, how do we
 populate it? Well, in SQL of course!</p>
@@ -1526,7 +1907,7 @@ pretty common card type to find around. And here we go:</p>
 
 <p>Looks like a bug in the JSON encoding to me.</p>
 
-<h1 id="building-a-magic-booster-against-a-normalized-schema">Building a Magic™ booster against a normalized schema</h1>
+<h2 id="building-a-magic-booster-against-a-normalized-schema">Building a Magic™ booster against a normalized schema</h2>
 
 <p>For comparing purposes, let&rsquo;s place the previous query against the JSON
 encoded data set first:</p>
@@ -1659,7 +2040,7 @@ result:</p>
 <p>As there&rsquo;s no card of rarities <em>Land</em>, <em>Marketing</em>, or <em>Checklist</em> in our
 set, then those booster&rsquo;s slot requiring them are left empty.</p>
 
-<h1 id="conclusion">Conclusion</h1>
+<h2 id="conclusion">Conclusion</h2>
 
 <p>PostgreSQL is exceptionally good at providing a modern implementation of the
 SQL language. Its extensible design means PostgreSQL is capable of

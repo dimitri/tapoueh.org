@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.31.1">
+    <meta name="generator" content="Hugo 0.46">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Batch Updates and Concurrency</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -145,13 +145,16 @@ PostgreSQL comes with all the tooling you need to handle that situation.">
     
       
 <script>
-(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-
-ga('create', 'UA-47059482-1', 'auto');
-ga('send', 'pageview');
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-47059482-1', 'auto');
+	
+	ga('send', 'pageview');
+}
 </script>
 
     
@@ -434,17 +437,135 @@ operation safely with concurrent activity is more complex. Once more though,
 PostgreSQL comes with all the tooling you need to handle that situation.</p>
 
 <p>
-<h1 id="table-of-contents"></h1><nav id="TableOfContents">
-<ul>
-<li><a href="#batch-update-moma-collection">Batch Update, MoMA Collection</a></li>
-<li><a href="#updating-the-data">Updating the Data</a></li>
-<li><a href="#concurrency-patterns">Concurrency Patterns</a></li>
-<li><a href="#on-conflict-do-nothing">On Conflict Do Nothing</a></li>
-<li><a href="#conclusion">Conclusion</a></li>
-</ul>
-</nav></p>
+ 
 
-<h1 id="batch-update-moma-collection">Batch Update, MoMA Collection</h1>
+
+
+
+<div class="table-of-contents toc bd-callout">
+    
+    <h4 class="text-muted">Table of Contents</h4>
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/07/batch-updates-and-concurrency/#batch-update-moma-collection">
+                    Batch Update, MoMA Collection
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/07/batch-updates-and-concurrency/#updating-the-data">
+                    Updating the Data
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/07/batch-updates-and-concurrency/#concurrency-patterns">
+                    Concurrency Patterns
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/07/batch-updates-and-concurrency/#on-conflict-do-nothing">
+                    On Conflict Do Nothing
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/07/batch-updates-and-concurrency/#conclusion">
+                    Conclusion
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+</div>
+
+</p>
+
+<h2 id="batch-update-moma-collection">Batch Update, MoMA Collection</h2>
 
 <p><a href="https://github.com/MuseumofModernArt/collection">The Museum of Modern Art (MoMA) Collection</a>
 hosts a database of the museum&rsquo;s collection, with monthly updates. The
@@ -476,7 +597,7 @@ of the data remains unchanged, and some is updated.</p>
    nationality     <span style="color:#0aa">text</span>,
    gender          <span style="color:#0aa">text</span>,
    <span style="color:#00a">begin</span>           <span style="color:#0aa">integer</span>,
-   <span style="color:#00a">&#34;end&#34;</span>           <span style="color:#0aa">integer</span>,
+   <span style="color:#a50">&#34;end&#34;</span>           <span style="color:#0aa">integer</span>,
    wiki_qid        <span style="color:#0aa">text</span>,
    ulan            <span style="color:#0aa">text</span>
  );
@@ -498,7 +619,7 @@ of the data remains unchanged, and some is updated.</p>
  Per Arnoldi     │ Danish, born 1941   │ Danish      │ Male
  Danilo Aroldi   │ Italian, born 1925  │ Italian     │ Male
 (6 rows)</code></pre></div>
-<h1 id="updating-the-data">Updating the Data</h1>
+<h2 id="updating-the-data">Updating the Data</h2>
 
 <p>After having successfully loaded the data from May, let&rsquo;s say that we have
 received an update for June. As usual with updates of this kind, we don&rsquo;t
@@ -532,10 +653,10 @@ data from the <em>batch</em> into our target table.</p></li>
 <span style="color:#00a">with</span> upd <span style="color:#00a">as</span>
 (
      <span style="color:#00a">update</span> moma.artist
-        <span style="color:#00a">set</span> (name, bio, nationality, gender, <span style="color:#00a">begin</span>, <span style="color:#00a">&#34;end&#34;</span>, wiki_qid, ulan)
+        <span style="color:#00a">set</span> (name, bio, nationality, gender, <span style="color:#00a">begin</span>, <span style="color:#a50">&#34;end&#34;</span>, wiki_qid, ulan)
         
           = (batch.name, batch.bio, batch.nationality,
-             batch.gender, batch.<span style="color:#00a">begin</span>, batch.<span style="color:#00a">&#34;end&#34;</span>,
+             batch.gender, batch.<span style="color:#00a">begin</span>, batch.<span style="color:#a50">&#34;end&#34;</span>,
              batch.wiki_qid, batch.ulan)
 
        <span style="color:#00a">from</span> batch
@@ -543,10 +664,10 @@ data from the <em>batch</em> into our target table.</p></li>
       <span style="color:#00a">where</span> batch.constituentid = artist.constituentid
 
         <span style="color:#00a">and</span> (artist.name, artist.bio, artist.nationality,
-             artist.gender, artist.<span style="color:#00a">begin</span>, artist.<span style="color:#00a">&#34;end&#34;</span>,
+             artist.gender, artist.<span style="color:#00a">begin</span>, artist.<span style="color:#a50">&#34;end&#34;</span>,
              artist.wiki_qid, artist.ulan)
          &lt;&gt; (batch.name, batch.bio, batch.nationality,
-             batch.gender, batch.<span style="color:#00a">begin</span>, batch.<span style="color:#00a">&#34;end&#34;</span>,
+             batch.gender, batch.<span style="color:#00a">begin</span>, batch.<span style="color:#a50">&#34;end&#34;</span>,
              batch.wiki_qid, batch.ulan)
 
   returning artist.constituentid
@@ -555,7 +676,7 @@ data from the <em>batch</em> into our target table.</p></li>
 (
     <span style="color:#00a">insert</span> <span style="color:#00a">into</span> moma.artist
          <span style="color:#00a">select</span> constituentid, name, bio, nationality,
-                gender, <span style="color:#00a">begin</span>, <span style="color:#00a">&#34;end&#34;</span>, wiki_qid, ulan
+                gender, <span style="color:#00a">begin</span>, <span style="color:#a50">&#34;end&#34;</span>, wiki_qid, ulan
            <span style="color:#00a">from</span> batch
           <span style="color:#00a">where</span> <span style="color:#00a">not</span> <span style="color:#00a">exists</span>
                 (
@@ -616,7 +737,7 @@ views, check it out!</p>
 
 <hr />
 
-<h1 id="concurrency-patterns">Concurrency Patterns</h1>
+<h2 id="concurrency-patterns">Concurrency Patterns</h2>
 
 <p>While in this solution the update or insert happens in a single query, which
 means using a single <em>snapshot</em> of the database and a within a transaction,
@@ -647,7 +768,7 @@ playing the <em>insert or update</em> dance), you can omit that <em>lock</em>.</
 <p>Another solution is using the new in PostgreSQL 9.5 <em>on conflict</em> clause for
 the <em>insert</em> statement.</p>
 
-<h1 id="on-conflict-do-nothing">On Conflict Do Nothing</h1>
+<h2 id="on-conflict-do-nothing">On Conflict Do Nothing</h2>
 
 <p>When using PostgreSQL version 9.5 and later, it is possible to use the <em>on
 conflict</em> clause of the <em>insert</em> statement to handle concurrency issues, as
@@ -680,7 +801,8 @@ conflicts:</p>
  )
  select (select count(*) from upd) as updates,
         (select count(*) from ins) as inserts;
-<span style="color:#f00;background-color:#faa"> </span></code></pre></div>
+ 
+</code></pre></div>
 <p>Notice the new line <em>on conflict (constituentid) do nothing</em>. It basically
 implements what it says: if inserting a new row causes a conflict, then the
 operation for this row is skipped.</p>
@@ -691,7 +813,7 @@ happen because a concurrent query just inserted that row while our query is
 in flight, in between its lookup done in the <em>update</em> part of the query and
 the <em>insert</em> part of the query.</p>
 
-<h1 id="conclusion">Conclusion</h1>
+<h2 id="conclusion">Conclusion</h2>
 
 <p>PostgreSQL implements several facilities that we can rely on to maintain an
 application cache for data that changes often:</p>

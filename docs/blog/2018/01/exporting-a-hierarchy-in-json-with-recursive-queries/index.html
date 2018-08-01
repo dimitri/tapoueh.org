@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.31.1">
+    <meta name="generator" content="Hugo 0.46">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Exporting a Hierarchy in JSON: with recursive queries</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -115,13 +115,16 @@ RECURSIVE.">
     
       
 <script>
-(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-
-ga('create', 'UA-47059482-1', 'auto');
-ga('send', 'pageview');
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-47059482-1', 'auto');
+	
+	ga('send', 'pageview');
+}
 </script>
 
     
@@ -388,17 +391,179 @@ excuse to learn more about the SQL construct <a href="https://www.postgresql.org
 RECURSIVE</a>.</p>
 
 <p>
-<h1 id="table-of-contents"></h1><nav id="TableOfContents">
-<ul>
-<li><a href="#dungeons-dragons-character-classes">Dungeons &amp; Dragons Character Classes</a></li>
-<li><a href="#exporting-a-hierarchy-in-json">Exporting a Hierarchy in JSON</a></li>
-<li><a href="#recursion-s-first-step">Recursion&rsquo;s First Step</a></li>
-<li><a href="#with-recursive">WITH RECURSIVE</a></li>
-<li><a href="#graph-cycles-and-infinite-recursion">Graph Cycles and Infinite Recursion</a></li>
-<li><a href="#from-parents-to-children-node-and-back">From parents to children node, and back</a></li>
-<li><a href="#conclusion">Conclusion</a></li>
-</ul>
-</nav></p>
+ 
+
+
+
+
+<div class="table-of-contents toc bd-callout">
+    
+    <h4 class="text-muted">Table of Contents</h4>
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/01/exporting-a-hierarchy-in-json-with-recursive-queries/#dungeons-dragons-character-classes">
+                    Dungeons &amp; Dragons Character Classes
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/01/exporting-a-hierarchy-in-json-with-recursive-queries/#exporting-a-hierarchy-in-json">
+                    Exporting a Hierarchy in JSON
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/01/exporting-a-hierarchy-in-json-with-recursive-queries/#recursion-s-first-step">
+                    Recursion’s First Step
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/01/exporting-a-hierarchy-in-json-with-recursive-queries/#with-recursive">
+                    WITH RECURSIVE
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/01/exporting-a-hierarchy-in-json-with-recursive-queries/#graph-cycles-and-infinite-recursion">
+                    Graph Cycles and Infinite Recursion
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/01/exporting-a-hierarchy-in-json-with-recursive-queries/#from-parents-to-children-node-and-back">
+                    From parents to children node, and back
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/01/exporting-a-hierarchy-in-json-with-recursive-queries/#conclusion">
+                    Conclusion
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+</div>
+
+</p>
 
 <p>The context in which I&rsquo;ve been asked for help on this topic is unusual. A
 friend of mine is preparing a campaign in his current favorite Role Playing
@@ -407,7 +572,7 @@ complex enough that my friend wants to build some dynamic visualisation of
 the data, as in the excellent tool <a href="https://bl.ocks.org/mbostock/7607535">Zoomable Circle
 Packing</a> example.</p>
 
-<h1 id="dungeons-dragons-character-classes">Dungeons &amp; Dragons Character Classes</h1>
+<h2 id="dungeons-dragons-character-classes">Dungeons &amp; Dragons Character Classes</h2>
 
 <p>So we&rsquo;re going to play in the same domain, in a way, by modeling <a href="https://en.m.wikipedia.org/wiki/Character_class_(Dungeons_%26_Dragons)">Dungeons &amp;
 Dragons Character
@@ -458,7 +623,7 @@ classes and I had to pick a specific edition and extend it with a prestige
 class (the Assassin), so I hope fans of the game that are reading this
 article will accept this classification for its pedagogic interest…</p>
 
-<h1 id="exporting-a-hierarchy-in-json">Exporting a Hierarchy in JSON</h1>
+<h2 id="exporting-a-hierarchy-in-json">Exporting a Hierarchy in JSON</h2>
 
 <p>Given this data set, our goal is to obtain a single JSON file that we can
 hand over to the <a href="https://d3js.org">d3js</a> JavaScript library. Ideally, we
@@ -489,7 +654,8 @@ hand-over to the browser so that the client rendering can now happen.</p>
             <span style="color:#a50">&#34;Name&#34;</span>: <span style="color:#a50">&#34;Thief&#34;</span>, <span style="color:#a50">&#34;Sub Classes&#34;</span>: [<span style="color:#a50">&#34;Assassin&#34;</span>]
         }
     }
-]</code></pre></div>
+]
+</code></pre></div>
 <p>To be able to export our whole data set as a single JSON document, we need
 to recurse over it from the parents classes to their sub-classes. Not only
 that, we also need to accumulate the sub-classes into a single entity.</p>
@@ -505,7 +671,7 @@ nested under the top-level entry. That&rsquo;s more complex and can&rsquo;t be d
 single step, obviously: you can&rsquo;t have seen the bottom of the tree already
 when you start at its top.</p>
 
-<h1 id="recursion-s-first-step">Recursion&rsquo;s First Step</h1>
+<h2 id="recursion-s-first-step">Recursion&rsquo;s First Step</h2>
 
 <p>The first step begins at the top of the tree, with those classes that don&rsquo;t
 have a parent class, our top-level classes:</p>
@@ -532,7 +698,7 @@ section of the documentation.</p>
 (4 rows)
 </code></pre>
 
-<h1 id="with-recursive">WITH RECURSIVE</h1>
+<h2 id="with-recursive">WITH RECURSIVE</h2>
 
 <p>Now that we have a set of top-level classes, we want to add to the set their
 direct sub-classes, then loop over that extended set to find the next level
@@ -614,7 +780,7 @@ table, and we also maintain our local state: the computed columns <em>parents</e
 on array values too, so you can append a new item in an existing array using
 the <code>||</code> SQL operator. That&rsquo;s how we maintain our <code>parents</code> array in the query.</p>
 
-<h1 id="graph-cycles-and-infinite-recursion">Graph Cycles and Infinite Recursion</h1>
+<h2 id="graph-cycles-and-infinite-recursion">Graph Cycles and Infinite Recursion</h2>
 
 <p>If the data set is not a <a href="https://en.wikipedia.org/wiki/Directed_acyclic_graph">Directed Acyclic
 Graph</a>, you might have
@@ -623,7 +789,7 @@ in the above and below another class in the chart, which would likely not be
 intended. The cycle detection and prevention is done thanks to the following
 WHERE clause to the second part of the <em>union all</em> query:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">       <span style="color:#00a">where</span> <span style="color:#00a">not</span> <span style="color:#00a">c</span>.id = <span style="color:#00a">any</span>(parents)</code></pre></div>
-<h1 id="from-parents-to-children-node-and-back">From parents to children node, and back</h1>
+<h2 id="from-parents-to-children-node-and-back">From parents to children node, and back</h2>
 
 <p>Now, this result is very nice, but it&rsquo;s not what we&rsquo;ve been asked to
 deliver, if you remember correctly. Our quest consists of delivering a
@@ -767,13 +933,14 @@ JSON array to group them into a single valid document:</p>
             ]
         }
     }
-]</code></pre></div>
+]
+</code></pre></div>
 <p>Ta-dah! Job done! It&rsquo;s now possible to pass the result over to the very nice
 visual and interactive <a href="https://bl.ocks.org/mbostock/7607535">Zoomable Circle
 Packing</a> tool and enjoy a browsable
 data set. That&rsquo;s left as an exercize to the reader though!</p>
 
-<h1 id="conclusion">Conclusion</h1>
+<h2 id="conclusion">Conclusion</h2>
 
 <p>SQL is a very powerful declarative programming language. Tree traversal is
 covered in SQL thanks to WITH RECURSIVE, a standard feature that appeared in

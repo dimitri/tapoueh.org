@@ -29,7 +29,7 @@ versions of the database schema.
 <!--more-->
 <!--toc-->
 
-# Loading the data set
+## Loading the data set
 
 First retrieve [AllSets.json](https://mtgjson.com/json/AllSets.json.zip) and
 then load it into your local testing PostgreSQL instance as following:
@@ -83,7 +83,7 @@ entries in the *magic.cards* table took 603.524 ms, and creating a dedicated
 *gin* index took 3121.274 ms. Of course those numbers aren't repeatable and
 mean nothing…
 
-# Finding cards
+## Finding cards
 
 The home page of the <https://mtgjson.com> website features the card named
 *Sen Triplets*, how can we find it in our collection? The following query is
@@ -206,7 +206,7 @@ and the count per specific array of colors:
 ~~~
 
 
-# Cards sets
+## Cards sets
 
 When creating our *magic.cards* table, we didn't keep the sets information,
 and for more interesting queries we're going to need that.
@@ -240,7 +240,7 @@ The expression *value - 'cards'* allow to remove the *cards* key from the
 JSON object. In our case this allows to register only the collection parts
 of the object, and leave away the cards for the other table.
 
-# Build a Magic™ booster deck
+## Build a Magic™ booster deck
 
 With this data we can see about building a booster from any edition of the
 cards collection. First, let's have a look at the *Limited Edition Alpha*
@@ -369,7 +369,7 @@ When consuming the data in JSON in your application, you might want to
 return directly *cards.data*, which is a json document, rather than
 extracting some of the fields only like we've done here.
 
-# Magic™ card type, type of card and subtype
+## Magic™ card type, type of card and subtype
 
 From the [MTGjson documentation](https://mtgjson.com/documentation.html) we
 have different kind of types for a single card:
@@ -457,7 +457,7 @@ resist.
 
 First, to check some basic guarantees, second, to normalize the data.
 
-# Constraints and data quality
+## Constraints and data quality
 
 The data being available in JSON and easy enough to process could be all we
 need. Sometimes your application or business rules require data quality, and
@@ -520,7 +520,7 @@ So, real duplicates it seems:
 Now, to clean up the mess, we need a way to distinguish two rows that are
 entirely the same. No user column differ. Mmm.
 
-# Deleting duplicate rows
+## Deleting duplicate rows
 
 The *ctid* is one of the [PostgreSQL System
 Columns](https://www.postgresql.org/docs/current/static/ddl-system-columns.html).
@@ -566,7 +566,7 @@ Application Development](http://masteringpostgresql.com).
 
 <script async id="_ck_279686" src="https://forms.convertkit.com/279686?v=6"></script>
 
-# Cards and Sets Rarities
+## Cards and Sets Rarities
 
 As we've seen in a previous section of this document, cards and set's
 boosters rarities are oddly different. Let's have a closer look now. For the
@@ -708,7 +708,7 @@ create type rarity_t as enum
 With that data type, we now are able to build arrays of *rarity_t* elements,
 and check if a card's *rarity* value is contained into such as array.
 
-# Normalizing the data set
+## Normalizing the data set
 
 PostgreSQL is very good at mixing SQL and JSON, as we've seen in the
 previous query, thanks to advanced processing functions such as
@@ -872,7 +872,7 @@ index and search into arrays.
 The only problem with those arrays is that we can't implement a *foreign
 key* to the reference tables type and subtype.
 
-# Dispatching JSON data into normalized tables
+## Dispatching JSON data into normalized tables
 
 Now that we have a table schema that should make our work easier, how do we
 populate it? Well, in SQL of course!
@@ -1305,7 +1305,7 @@ pretty common card type to find around. And here we go:
 
 Looks like a bug in the JSON encoding to me.
 
-# Building a Magic™ booster against a normalized schema
+## Building a Magic™ booster against a normalized schema
 
 For comparing purposes, let's place the previous query against the JSON
 encoded data set first:
@@ -1448,7 +1448,7 @@ result:
 As there's no card of rarities *Land*, *Marketing*, or *Checklist* in our
 set, then those booster's slot requiring them are left empty.
 
-# Conclusion
+## Conclusion
 
 PostgreSQL is exceptionally good at providing a modern implementation of the
 SQL language. Its extensible design means PostgreSQL is capable of

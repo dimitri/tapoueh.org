@@ -34,7 +34,7 @@ JSON format](https://mtgjson.com).
 
 {{< /alert >}}
 
-# JSON and JSONB
+## JSON and JSONB
 
 PostgreSQL implemented a very simple *JSON* datatype back in the 9.2
 release. At that time the community pushed for providing a solution for
@@ -63,7 +63,7 @@ for *better*:
     single value per key; and also isn't sensible to extra whitespace or
     indentation.
 
-# Introduction to JSON in PostgreSQL
+## Introduction to JSON in PostgreSQL
 
 The data type you probably need and want to use is *jsonb*, not the *json*
 early draft that is still available for backward compatibility reasons only.
@@ -139,7 +139,7 @@ This time a single row is found, as expected:
 (1 row)
 ~~~
 
-# JSON use cases in PostgreSQL
+## JSON use cases in PostgreSQL
 
 Two use cases for JSON in PostgreSQL are very commonly found:
 
@@ -167,7 +167,7 @@ Now, it is possible to use *jsonb* as a flexible way to maintain your data
 model. It is possible to then think of PostgreSQL like a *schemaless*
 service and have a heterogeneous set of documents all in a single relation.
 
-# Conclusion
+## Conclusion
 
 This trade-off sounds interesting from a model design and maintenance
 perspective, but is very costly when it comes to daily queries and

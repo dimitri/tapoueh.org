@@ -21,7 +21,7 @@ functions and operator support.
 <!--more-->
 <!--toc-->
 
-# Network Address Types
+## Network Address Types
 
 The PostgreSQL documentation chapters entitled [Network Address
 Types](https://www.postgresql.org/docs/current/static/datatype-net-types.html)
@@ -74,7 +74,7 @@ One of the things that's possible to implement thanks to the PostgreSQL
 *inet* data type is an analysis of */24* networks that are to be found in
 the logs.
 
-# Network Address Masks, CIDR
+## Network Address Masks, CIDR
 
 To enable that analysis, we can use the *set_masklen()* function which
 allows us to transforms an IP address into an arbitrary CIDR network
@@ -140,7 +140,7 @@ not for advanced processing?
 (10 rows)
 ~~~
 
-# Network Mask Based Reporting
+## Network Mask Based Reporting
 
 Equipped with this *set_masklen()* function, it's now easy to analyze our
 access logs using arbitrary CIDR network definitions.
@@ -175,7 +175,7 @@ In our case, we get the following result:
 (12 rows)
 ~~~
 
-# Conclusion
+## Conclusion
 
 When analyzing logs containing IP addresses in ipv4 and ipv6 formats is
 something you need to do, then PostgreSQL has you covered here with its CIDR

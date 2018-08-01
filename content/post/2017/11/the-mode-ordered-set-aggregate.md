@@ -32,7 +32,7 @@ For more about the *Mode* function name, read the Wikipedia article that
 explain the Mathematics background behind it at [Mode
 (statistics)](https://en.wikipedia.org/wiki/Mode_(statistics)).
 
-# Multi-genres albums
+## Multi-genres albums
 
 In order to dive into the data, let's have a look at it from the genre point
 of view. As we saw in the *Chinook* database model a given album is always
@@ -72,7 +72,7 @@ We have the following list of multi-genre albums in our collection:
 (11 rows)
 ~~~
 
-# Selecting a single genre per album
+## Selecting a single genre per album
 
 In the previous article, we manually counted the number of tracks of each
 genre per album and selected the most frequent genre: the one with the

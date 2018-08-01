@@ -37,7 +37,7 @@ and it comes with **cache invalidation** routines, of course.
 <!--more-->
 <!--toc-->
 
-# Computing and Caching in SQL
+## Computing and Caching in SQL
 
 There's a pretty common saying:
 
@@ -73,7 +73,7 @@ numbers of *rts* or *favs* from a tweet message. How do we update the
 counters? That's the cache invalidation problem quoted above, and we'll come
 to the answer by the end of this article!
 
-# Views
+## Views
 
 Views allow integrating server-side computations in the definition of a
 relation. The computing still happens dynamically at query time and is made
@@ -157,7 +157,7 @@ views, check it out!
 
 <hr />
 
-# Materialized Views
+## Materialized Views
 
 It is easy enough to cache a snapshot of the database into a permanent
 relation for later querying thanks to PostgreSQL implementation of
@@ -261,7 +261,7 @@ in less than five minutes then implementing the policy is a matter of
 scheduling that command to be executed every five minutes, using for example
 the *cron* Unix task scheduler.
 
-# Conclusion
+## Conclusion
 
 {{< figure class="right" src="/img/there-are-two-hard-problems-in-computer-science-0-naming-320.png" >}}
 

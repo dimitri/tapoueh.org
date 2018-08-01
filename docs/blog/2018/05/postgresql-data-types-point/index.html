@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.31.1">
+    <meta name="generator" content="Hugo 0.46">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>PostgreSQL Data Types: Point</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -106,13 +106,16 @@ Buckle-up, this is a long article with a lot of SQL inside.">
     
       
 <script>
-(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-
-ga('create', 'UA-47059482-1', 'auto');
-ga('send', 'pageview');
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-47059482-1', 'auto');
+	
+	ga('send', 'pageview');
+}
 </script>
 
     
@@ -382,23 +385,227 @@ this series.</p>
 <p>Buckle-up, this is a long article with a lot of SQL inside.</p>
 
 <p>
-<h1 id="table-of-contents"></h1><nav id="TableOfContents">
-<ul>
-<li><a href="#geonames">Geonames</a></li>
-<li><a href="#normalizing-our-geonames-data-model">Normalizing our Geonames data model</a>
-<ul>
-<li><a href="#features">Features</a></li>
-<li><a href="#countries">Countries</a></li>
-<li><a href="#administrative-zoning">Administrative Zoning</a></li>
-</ul></li>
-<li><a href="#geolocation-data">Geolocation Data</a></li>
-<li><a href="#geolocation-gist-indexing">Geolocation GiST Indexing</a></li>
-<li><a href="#a-sampling-of-countries">A Sampling of Countries</a></li>
-<li><a href="#conclusion">Conclusion</a></li>
-</ul>
-</nav></p>
+ 
 
-<h1 id="geonames">Geonames</h1>
+
+
+
+<div class="table-of-contents toc bd-callout">
+    
+    <h4 class="text-muted">Table of Contents</h4>
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/05/postgresql-data-types-point/#geonames">
+                    Geonames
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/05/postgresql-data-types-point/#normalizing-our-geonames-data-model">
+                    Normalizing our Geonames data model
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/05/postgresql-data-types-point/#features">
+                    Features
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/05/postgresql-data-types-point/#countries">
+                    Countries
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/05/postgresql-data-types-point/#administrative-zoning">
+                    Administrative Zoning
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/05/postgresql-data-types-point/#geolocation-data">
+                    Geolocation Data
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/05/postgresql-data-types-point/#geolocation-gist-indexing">
+                    Geolocation GiST Indexing
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/05/postgresql-data-types-point/#a-sampling-of-countries">
+                    A Sampling of Countries
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/05/postgresql-data-types-point/#conclusion">
+                    Conclusion
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+</div>
+
+</p>
+
+<h2 id="geonames">Geonames</h2>
 
 <blockquote>
 <p><em>The <a href="http://www.geonames.org">GeoNames</a> geographical database covers all
@@ -528,7 +735,7 @@ COPY Threads Completion          0          2                  6m43.319s
       Total import time          ✓          3     1.5 GB       6m43.345s
 </code></pre>
 
-<h1 id="normalizing-our-geonames-data-model">Normalizing our Geonames data model</h1>
+<h2 id="normalizing-our-geonames-data-model">Normalizing our Geonames data model</h2>
 
 <p>To normalize the schema, we apply the rules from the definition of the
 <em>normal forms</em>. Basically, we want to avoid any dependency in between the
@@ -908,7 +1115,7 @@ Here&rsquo;s the same list of French areas, this time with proper names:</p>
  Zincourt            │ Grand Est │ Département des Vosges
  Zimming             │ Grand Est │ Département de la Moselle
 (5 rows)</code></pre></div>
-<h1 id="geolocation-data">Geolocation Data</h1>
+<h2 id="geolocation-data">Geolocation Data</h2>
 
 <p>Now that we have loaded the reference data, we can load the main geolocation
 data with the following script. Note that we skip parts of the data we don&rsquo;t
@@ -1044,7 +1251,7 @@ America, and then Europe. Of course, the Antartica data is not very dense.</p>
  Oceania       │  354325 │  3.07 │ ■■■
  South America │  517347 │  4.49 │ ■■■■
 (7 rows)</code></pre></div>
-<h1 id="geolocation-gist-indexing">Geolocation GiST Indexing</h1>
+<h2 id="geolocation-gist-indexing">Geolocation GiST Indexing</h2>
 
 <p>The previous <em>geoname</em> table creation script contains the following index
 definition:</p>
@@ -1138,7 +1345,7 @@ the whole query as above, and we get the following query plan:</p>
 has been used. On the laptop on which this book has been written, we get the
 result in about 13 milliseconds.</p>
 
-<h1 id="a-sampling-of-countries">A Sampling of Countries</h1>
+<h2 id="a-sampling-of-countries">A Sampling of Countries</h2>
 
 <p>This dataset of more than 11 million rows is not practical to include in the
 book&rsquo;s material for the <em>Full Edition</em> and <em>Enterprise Edition</em>, where you
@@ -1219,7 +1426,7 @@ COMMIT
 same query yielded 115,071 instead. After all the sampling is made following
 a random-based algorithm.</p>
 
-<h1 id="conclusion">Conclusion</h1>
+<h2 id="conclusion">Conclusion</h2>
 
 <p>When dealing with geolocation data, it&rsquo;s possible to put the PostgreSQL data
 type POINT to good use. The PostgreSQL support for GiST indexes makes it

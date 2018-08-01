@@ -24,7 +24,7 @@ might well be an `ORDER BY` SQL statement.
 <!--more-->
 <!--toc-->
 
-# Why sorting is an interesting topic
+## Why sorting is an interesting topic
 
 Sorting
 is
@@ -41,7 +41,7 @@ sorted for us to be able to make sense of what's in there, or just to find
 our car again.
 
 
-# Sorting Corner Cases
+## Sorting Corner Cases
 
 Back to the 
 
@@ -77,9 +77,9 @@ name
 
 ## Number, Bytes, and Unicode Strings
 
-# Top-N Sorting, and KNN
+## Top-N Sorting, and KNN
 
-# Conclusion
+## Conclusion
 
 If you really want to solve a practical use case for sorting data, then
 the [PostgreSQL](https://www.postgresql.org) `ORDER BY` implementation has

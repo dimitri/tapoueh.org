@@ -21,7 +21,7 @@ of course!
 
 <!--more-->
 
-# An Interview with Julien Danjou
+## An Interview with Julien Danjou
 
   - Julien, this is your second book about write code in Python. Who are the
     target audience of both your books?
@@ -65,7 +65,7 @@ of course!
     > scale is a challenge – so if your development team needs a hand, I'd
     > suggest taking a look at Scaling Python! :)
 
-# Scaling Python, the packages
+## Scaling Python, the packages
 
 The book comes in a set of editions tailored to different needs, so that you
 can pick the one that makes sense for you. Also, Julien is kindly offering

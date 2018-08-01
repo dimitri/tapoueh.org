@@ -38,7 +38,7 @@ in Application Development](https://masteringpostgresql.com), check it out!
 
 <!--toc-->
 
-# Entity Attribute Values
+## Entity Attribute Values
 
 The [entity attribute
 values](https://en.wikipedia.org/wiki/Entity%E2%80%93attribute%E2%80%93value_model)
@@ -191,7 +191,7 @@ It might be that the business case your application is solving actually has
 an *attribute volatility* problem to solve. In that case, consider having as
 solid a model as possible and use *jsonb* columns as extension points.
 
-# Multiple Values per Column
+## Multiple Values per Column
 
 In database normalization, we say that a table (or a relation) is in *first
 normal form* (*1NF*) if:
@@ -294,7 +294,7 @@ attribute rather than two additional tables looks like optimization, but
 actually it will make just about everything worse: debugging, maintenance,
 search, statistics, normalization, and other use cases.
 
-# UUIDs
+## UUIDs
 
 The PostgreSQL data type UUID allows for 128 bits synthetic keys rather than
 32 bits with *serial* or 64 bits with *bigserial*.
@@ -322,7 +322,7 @@ That said, neither sequences nor *UUID* provides a natural primary key for
 your data, as seen in the [Primary
 Keys](/blog/2018/03/database-normalization-and-primary-keys/) section.
 
-# Conclusion
+## Conclusion
 
 Good database modeling is always a trade-off between normalization theories
 and denormalization techniques. PostgreSQL offers many denormalization

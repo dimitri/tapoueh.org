@@ -23,7 +23,7 @@ processing is going to be more complex than a lookup table.
 <!--toc-->
 
 
-# A Data Type to Play With
+## A Data Type to Play With
 
 A classic example of a good use case for PostgreSQL arrays is user-defined
 tags. For the next example, [200,000 USA geolocated
@@ -107,7 +107,7 @@ single *point* entry, allowing much more interesting processing again. We
 can create a simpler relation to manage and process a subset of the data
 we're interested in for this chapter.
 
-# Introduction to Arrays
+## Introduction to Arrays
 
 PostgreSQL has built-in support for arrays, which are documented in the
 [Arrays](https://www.postgresql.org/docs/current/static/arrays.html) and the
@@ -191,7 +191,7 @@ front of the hashtags, making it easier to recognize what this data is:
 (10 rows)
 ~~~
 
-# Indexing PostgreSQL Arrays for Statistics and Profit
+## Indexing PostgreSQL Arrays for Statistics and Profit
 
 Before processing the tags, we create a specialized *GIN* index. This index
 access method allows PostgreSQL to index the *contents* of the arrays, the
@@ -323,7 +323,7 @@ order the data set by most promising opportunities:
 (10 rows)
 ~~~
 
-# Conclusion
+## Conclusion
 
 PostgreSQL arrays are very powerful, and
 [GIN](https://www.postgresql.org/docs/current/static/gin-intro.html)

@@ -28,7 +28,7 @@ organisation of the conference!
 
 <!--more-->
 
-# Submit a Talk Today!
+## Submit a Talk Today!
 
 Talks may be on any topic related to PostgreSQL in some way. Suggested topic
 areas include:
@@ -50,7 +50,7 @@ areas include:
 Of course, we’re happy to receive proposals for talks on other
 PostgreSQL-related topics as well.
 
-# PostgreSQL Europe
+## PostgreSQL Europe
 
 The [pgDay Paris](https://2018.pgday.paris) conference is part of the
 [PostgreSQL Europe](https://www.postgresql.eu/donate/) conferences, a list
@@ -67,7 +67,7 @@ happens on March 15 — and they share quite a lot in between them. It is
 possible for speakers to participate in both conferences and fly over from
 Oslo to Paris with the organisation crew, who sure are present to both!
 
-# Would you speak about PostgreSQL in Paris?
+## Would you speak about PostgreSQL in Paris?
 
 Join the fun, submit your talk to pgday Paris today, we would be delighted
 to have you as a speaker!

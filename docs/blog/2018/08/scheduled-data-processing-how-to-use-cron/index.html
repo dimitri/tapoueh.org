@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.31.1">
+    <meta name="generator" content="Hugo 0.46">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Scheduled Data Processing: How to use cron?</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -127,13 +127,16 @@ maintained in the production environment, do you?">
     
       
 <script>
-(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-
-ga('create', 'UA-47059482-1', 'auto');
-ga('send', 'pageview');
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-47059482-1', 'auto');
+	
+	ga('send', 'pageview');
+}
 </script>
 
     
@@ -410,19 +413,181 @@ backbone of your business logic in a <em>shell script</em> that&rsquo;s directly
 maintained in the production environment, do you?</p>
 
 <p>
-<h1 id="table-of-contents"></h1><nav id="TableOfContents">
-<ul>
-<li><a href="#scheduling-data-processing">Scheduling Data Processing</a></li>
-<li><a href="#how-not-to-use-cron">How NOT to use cron?</a></li>
-<li><a href="#code-management-and-deployment">Code Management and Deployment</a></li>
-<li><a href="#the-real-needs-of-a-scheduled-data-processing-job">The Real Needs of a Scheduled Data Processing Job</a></li>
-<li><a href="#not-all-cron-jobs-are-the-same">Not all cron jobs are the same</a></li>
-<li><a href="#proper-usage-of-cron">Proper Usage of Cron</a></li>
-<li><a href="#conclusion">Conclusion</a></li>
-</ul>
-</nav></p>
+ 
 
-<h1 id="scheduling-data-processing">Scheduling Data Processing</h1>
+
+
+
+<div class="table-of-contents toc bd-callout">
+    
+    <h4 class="text-muted">Table of Contents</h4>
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/08/scheduled-data-processing-how-to-use-cron/#scheduling-data-processing">
+                    Scheduling Data Processing
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/08/scheduled-data-processing-how-to-use-cron/#how-not-to-use-cron">
+                    How NOT to use cron?
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/08/scheduled-data-processing-how-to-use-cron/#code-management-and-deployment">
+                    Code Management and Deployment
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/08/scheduled-data-processing-how-to-use-cron/#the-real-needs-of-a-scheduled-data-processing-job">
+                    The Real Needs of a Scheduled Data Processing Job
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/08/scheduled-data-processing-how-to-use-cron/#not-all-cron-jobs-are-the-same">
+                    Not all cron jobs are the same
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/08/scheduled-data-processing-how-to-use-cron/#proper-usage-of-cron">
+                    Proper Usage of Cron
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/08/scheduled-data-processing-how-to-use-cron/#conclusion">
+                    Conclusion
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+</div>
+
+</p>
+
+<h2 id="scheduling-data-processing">Scheduling Data Processing</h2>
 
 <p>Data processing is most often triggered by user actions, either your
 end-user or internal users: back-office, admin superusers, or support users
@@ -455,7 +620,7 @@ other Thursday at 6pm. Every morning. At boot time. About any point in a
 calendar can be specified as a cron schedule expression, and that includes
 specifications of recurring events.</p>
 
-<h1 id="how-not-to-use-cron">How NOT to use cron?</h1>
+<h2 id="how-not-to-use-cron">How NOT to use cron?</h2>
 
 <p>The classic approach to cron jobs could be qualified as surprising, if you
 want to be nice. It&rsquo;s actually wrong in that it solves none of the
@@ -483,7 +648,7 @@ user, unfortunately that&rsquo;s pretty rare and only gets you so far.</p>
 processing job that is scheduled in the background are a little more
 involved than that.</p>
 
-<h1 id="code-management-and-deployment">Code Management and Deployment</h1>
+<h2 id="code-management-and-deployment">Code Management and Deployment</h2>
 
 <p>Another important aspect in that usage of cron is the code management. Often
 enough cron commands are bash scripts. Sometimes cron commands are properly
@@ -499,7 +664,7 @@ seen cron jobs falling in between the devs and ops team, noone being the
 owner of them, and thus no clear procedure would be in place for maintaining
 those scripts.</p>
 
-<h1 id="the-real-needs-of-a-scheduled-data-processing-job">The Real Needs of a Scheduled Data Processing Job</h1>
+<h2 id="the-real-needs-of-a-scheduled-data-processing-job">The Real Needs of a Scheduled Data Processing Job</h2>
 
 <p>So, why don&rsquo;t I just run my cron jobs in bash, you&rsquo;re asking? Well because
 here&rsquo;s a list of things that I want to be able to <strong>easily</strong> know, verify
@@ -588,7 +753,7 @@ of your background job?</p></li>
 that you schedule are important for your business, then I&rsquo;m sure you want to
 be able to answer all of them.</p>
 
-<h1 id="not-all-cron-jobs-are-the-same">Not all cron jobs are the same</h1>
+<h2 id="not-all-cron-jobs-are-the-same">Not all cron jobs are the same</h2>
 
 <p>It must also be said that we have two very different cases to think about
 when discussing cron jobs:</p>
@@ -629,7 +794,7 @@ when discussing cron jobs:</p>
 events properly, and without requiring fiddling interactively at a
 production&rsquo;s system shell.</p>
 
-<h1 id="proper-usage-of-cron">Proper Usage of Cron</h1>
+<h2 id="proper-usage-of-cron">Proper Usage of Cron</h2>
 
 <p>The idea that I want to push forward in this article is the following: when
 you need to schedule data processing, write a web service that implements
@@ -676,7 +841,7 @@ dashboard with the interesting metrics, a summary of what happened when, how
 many users got a daily reporting, maybe even have a copy of the sent email,
 etc.</p>
 
-<h1 id="conclusion">Conclusion</h1>
+<h2 id="conclusion">Conclusion</h2>
 
 <p>Some cron jobs are technical details meant for sysadmins, and then using
 system logs to track the activity is fair enough. Some cron jobs are

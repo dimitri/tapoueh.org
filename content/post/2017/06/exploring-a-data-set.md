@@ -34,7 +34,7 @@ capabilities. Nowadays a PostgreSQL specific distribution is available tho.
 
 <!--toc-->
 
-# Artists, Albums, Tracks, Genre
+## Artists, Albums, Tracks, Genre
 
 The Chinook database model contains a music collection of tracks, artists,
 albums and genre. Each track has a *genreid* which is a *foreign key* to the
@@ -216,7 +216,7 @@ an all time favorite article of this website.
 
 {{< /alert >}}
 
-# Album genres
+## Album genres
 
 So, what kind of music do we have in this collection of Chinook data:
 
@@ -317,7 +317,7 @@ Now we easily spot that the music collection distribution by genre is skewed
 over Rock, Latin, Metal and Punk music. Also there's a non trivial amount of
 TV Shows in there.
 
-# Multi-genres albums
+## Multi-genres albums
 
 In order to dive into the data, let's have a look at it from the genre point
 of view. As we saw in the *Chinook* database model a given album is always
@@ -419,7 +419,7 @@ only output interesting columns: those we're going to reuse in the main
 query, either for reference in later *joins*, or because we already have it
 at this stage.
 
-# Selecting a single genre per album
+## Selecting a single genre per album
 
 In order to be able to filter by genre at the album level, we need to first
 be able to assign a single genre per album. Let's have some more statistics
@@ -532,7 +532,7 @@ Function](/blog/2017/11/the-mode-ordered-set-aggregate-function/).
 
 {{< /alert >}}
 
-# Statistics per genre
+## Statistics per genre
 
 Now that we are able to actually play with a single genre per album, what
 can we learn about musical genre in that music collection? What about the
@@ -625,7 +625,7 @@ the longest tracks per genre.
 The genre we skipped in the query have duration distribution in between 21
 and 88 minutes, so they would have ruined our quick analysis here.
 
-# Conclusion
+## Conclusion
 
 {{< image classes="fig25 right dim-margin"
               src="/img/old/sql-logo.png"

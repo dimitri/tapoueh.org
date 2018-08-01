@@ -56,7 +56,7 @@ so that you can compare them.
 
 <!--toc-->
 
-# First Simple Example
+## First Simple Example
 
 Here's how the problem is described in the original article we are reacting
 to here:
@@ -513,7 +513,7 @@ problem set is that I chose to keep track of not only the number of days but
 also the date when the rising series starts, and I've been using a
 _namedtuple_ to keep track of that.
 
-# Second Simple Example
+## Second Simple Example
 
 The other simple example provided is to _find the top 10 among one billion
 records_.
@@ -660,7 +660,7 @@ top-n result structure before looping over the result set.
 
 The result is the same as before, of course.
 
-# Is SQL That Bad Really?
+## Is SQL That Bad Really?
 
 To conclude this article, I think that
 [Nicolas](https://twitter.com/ngollperrier) makes a very good point in his
@@ -711,8 +711,10 @@ to SQL rather than Common-Lisp:
 > informally-specified, bug-ridden, slow implementation of half of Common
 > Lisp.
 
-And PostgreSQL implements a very advanced version of SQL, so that's even
-more the case when focusing on PostgreSQL, as I do.
+## Conclusion
+
+PostgreSQL implements a very advanced version of SQL, so that's even more
+the case when focusing on PostgreSQL, as I do.
 
 {{< figure class="right" src="/img/MasteringPostgreSQLinAppDev-Cover-th.png"
              link="https://masteringpostgresql.com" >}}

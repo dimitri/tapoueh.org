@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.31.1">
+    <meta name="generator" content="Hugo 0.46">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>PostgreSQL Concurrency: Data Modification Language</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -82,13 +82,16 @@ Postgres exposes its concurrency APIs in the SQL language, in particular in the 
     
       
 <script>
-(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-
-ga('create', 'UA-47059482-1', 'auto');
-ga('send', 'pageview');
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-47059482-1', 'auto');
+	
+	ga('send', 'pageview');
+}
 </script>
 
     
@@ -371,7 +374,7 @@ used through a series of follow-up articles about concurrency in PostgreSQL.
 In this first article, we approach the basics: SQL commands and how to make
 them safe to concurrent behavior in your application.</p>
 
-<h1 id="a-database-model">A database model</h1>
+<h2 id="a-database-model">A database model</h2>
 
 <p>The application we&rsquo;re going to model is a Twitter like application, where we
 have users and they can send short messages to the void. They can also
@@ -412,7 +415,7 @@ void.</p>
    lang       <span style="color:#0aa">text</span>,
    url        <span style="color:#0aa">text</span>
  );</code></pre></div>
-<h1 id="insert-into">Insert Into</h1>
+<h2 id="insert-into">Insert Into</h2>
 
 <p>Given our model of tweets, the first thing we need are users. Here&rsquo;s how to
 create our first users:</p>
@@ -478,7 +481,7 @@ views, check it out!</p>
 
 <hr />
 
-<h1 id="insert-into-select">Insert Into &hellip; Select</h1>
+<h2 id="insert-into-select">Insert Into &hellip; Select</h2>
 
 <p>The <em>insert</em> statement can also use a query as a data source. We could, for
 instance, fill in our <em>tweet.follower</em> table with people that are known to
@@ -534,7 +537,7 @@ subjects.</p>
 
 <p>Here&rsquo;s what we have set-up in terms of followers now:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> follower.uname <span style="color:#00a">as</span> follower,
-       follower.bio <span style="color:#00a">as</span> <span style="color:#00a">&#34;follower&#39;s bio&#34;</span>,
+       follower.bio <span style="color:#00a">as</span> <span style="color:#a50">&#34;follower&#39;s bio&#34;</span>,
        following.uname <span style="color:#00a">as</span> following
        
   <span style="color:#00a">from</span> tweet.follower <span style="color:#00a">as</span> follows
@@ -567,7 +570,7 @@ the way to implement <em>joins</em> for this command.</p>
 <em>on conflict</em> syntax, which is very powerful, and that we address later in
 our <a href="/tags/concurrency/">PostgreSQL Concurrency</a> series of articles.</p>
 
-<h1 id="update">Update</h1>
+<h2 id="update">Update</h2>
 
 <p>The SQL <em>update</em> statement is used to replace existing values in the
 database. Its most important aspect lies in its concurrency behavior, as it
@@ -689,7 +692,7 @@ to <strong><em>Jon Bosak</em></strong>.</p>
  Lion             │ Lion             │ a play within a play
  Moonshine        │ Moonshine        │ a play within a play
 (29 rows)</code></pre></div>
-<h1 id="inserting-some-tweets">Inserting Some Tweets</h1>
+<h2 id="inserting-some-tweets">Inserting Some Tweets</h2>
 
 <p>Now that we have created a bunch of users from <em>A Midsummer Night&rsquo;s Dream</em>,
 it is time to have them tweet. The full XML transcript available at
@@ -770,7 +773,7 @@ in SQL.</p>
 (4 rows)
 </code></pre>
 
-<h1 id="delete">Delete</h1>
+<h2 id="delete">Delete</h2>
 
 <p>The <em>delete</em> statement allows marking tuples for removal. Given PostgreSQL&rsquo;s
 implementation of
@@ -856,7 +859,7 @@ written <em>using</em> and covered in the PostgreSQL documentation about the
 <a href="https://www.postgresql.org/docs/9.6/static/sql-delete.html">delete</a>
 command.</p>
 
-<h1 id="tuples-and-rows">Tuples and Rows</h1>
+<h2 id="tuples-and-rows">Tuples and Rows</h2>
 
 <p>In this chapter, we&rsquo;ve been mentioning <em>tuples</em> and <em>rows</em> at different
 times. There&rsquo;s a difference between the two: a single <em>row</em> might exist
@@ -871,7 +874,7 @@ new <em>tuple</em> just inserted on-disk. As long as this transaction has yet to
 <p>While in some contexts <em>tuples</em> and <em>rows</em> are equivalent, in this chapter
 about DML we must be careful to use them in the right context.</p>
 
-<h1 id="deleting-all-the-rows-truncate">Deleting All the Rows: Truncate</h1>
+<h2 id="deleting-all-the-rows-truncate">Deleting All the Rows: Truncate</h2>
 
 <p>PostgreSQL adds to the <em>DML</em> statements the <em>truncate</em> command. Internally,
 it is considered to be a <em>DDL</em> rather than a <em>DML</em>. It is a very efficient
@@ -889,7 +892,7 @@ per-tuple MVCC system and will simply remove the data files on disk.</p>
 <p>Assuming there&rsquo;s no concurrent activity on your system when running the
 commands, both the counting queries naturally return the same number.</p>
 
-<h1 id="delete-but-keep-a-few-rows">Delete but Keep a Few Rows</h1>
+<h2 id="delete-but-keep-a-few-rows">Delete but Keep a Few Rows</h2>
 
 <p>When cleaning up a data set, it may happen that you want to remove most of
 the content of a table. It could be a logs table, an audit trail that has
@@ -922,7 +925,7 @@ even off-hours, then it might not be feasible for you to use this trick.</p>
 <p>The good thing about <em>delete</em> and <em>vacuum</em> is that they can run in the
 middle of about any concurrent traffic of course.</p>
 
-<h1 id="conclusion">Conclusion</h1>
+<h2 id="conclusion">Conclusion</h2>
 
 <p>PostgreSQL is and advanced RDBMS which provides plenty fancy data processing
 options. Its core service is handling concurrent editing of the data, and as

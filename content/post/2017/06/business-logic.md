@@ -36,7 +36,7 @@ case, or your user stories?
 
 <!--toc-->
 
-# A very simple example
+## A very simple example
 
 In the following example, we are going to first define a business case we
 want to implement, and then have a look at the SQL statement that we would
@@ -95,7 +95,7 @@ story if you prefer that term) into a SQL query. The SQL implementation uses
 joins and computations that are specific to both the data model and the use
 case we are solving. 
 
-# Business Logic in the Application Code
+## Business Logic in the Application Code
 
 Now, we could decide that the application's code is where to implement our
 business case, because that's easier to maintain in the long run. I wrote a
@@ -178,7 +178,7 @@ $ ./albums.py "Red Hot Chili Peppers"
 
 What can we learn about those two implementations of the same business case?
 
-# Correctness
+## Correctness
 
 In the application's code implementation we are doing 5 queries instead of
 one. What happens if an album had been badly assigned to our artist and is
@@ -198,7 +198,7 @@ proper
 undoubtly open the door of inconsistencies in the information your
 application retrieves. Maybe for billing purposes.
 
-# Efficiency
+## Efficiency
 
 Another problem with the application's code implementation as written is
 with its very bad efficiency. As this artists has 3 albums in our data set,
@@ -224,7 +224,7 @@ application, running 5 times as many queries might not turn cheap. Maybe you
 don't need this size of a caching layer in front of your API servers after
 all…
 
-# Maintenance
+## Maintenance
 
 In terms of code maitenance we have to compare the SQL with only those 9
 lines of Python code:
@@ -289,7 +289,7 @@ makes it to the release branch:
 Unfortunately we don't have the album's date of release in the Chinook
 database model, that would be the proper ordering here I guess.
 
-# Conclusion
+## Conclusion
 
 {{< image classes="fig25 right dim-margin"
               src="/img/old/sql-logo.png"

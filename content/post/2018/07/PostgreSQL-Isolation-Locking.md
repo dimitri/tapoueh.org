@@ -24,7 +24,7 @@ Language](/blog/2018/06/postgresql-concurrency-data-modification-language/).
 <!--more-->
 <!--toc-->
 
-# Isolation and Locking
+## Isolation and Locking
 
 The main feature of any database system is its implementation of concurrency
 and full respect of the system's constraints and properties when multiple
@@ -68,7 +68,7 @@ views, check it out!
 
 <hr />
 
-# Transactions and Isolation
+## Transactions and Isolation
 
 Given the *ACID* properties, a transaction must be *Isolated* from other
 concurrent transactions running in the system. It is possible to choose the
@@ -139,7 +139,7 @@ and *nonrepeatable read*, and *serializable* disallows all anomalies.
 PostgreSQL also disallows *phantom read* from *repeatable read* isolation
 level.
 
-# About SSI
+## About SSI
 
 PostgreSQL's implementation of *serializable* is an amazing work. It is
 described in details at the PostgreSQL wiki page entitled
@@ -152,7 +152,7 @@ satisfying mathematical model for implementing *serializable snapshot
 isolation* in an efficient way, and then a single year for that major
 progress to be included in PostgreSQL!
 
-# Concurrent Updates and Isolation
+## Concurrent Updates and Isolation
 
 In our *tweet* model of an application, we can have a look at handling
 *retweets*, which is a *counter* field in the *tweet.message* table. 
@@ -274,7 +274,7 @@ commit anymore.
 When using the isolation level *serializable*, the same behavior as for
 *repeatable read* is observed, with exactly the same error message exactly.
 
-# Conclusion
+## Conclusion
 
 PostgreSQL is an advanced RDBMS, with a solid foundation. The main service
 PostgreSQL implements to its users is a correct handling of concurrent

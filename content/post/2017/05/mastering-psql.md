@@ -18,7 +18,7 @@ https://www.postgresql.org/docs/current/static/app-psql.html
 
 http://www.craigkerstiens.com/2013/02/21/more-out-of-psql/
 
-# intro / behavior
+## intro / behavior
 
 transactions
 timing
@@ -77,7 +77,7 @@ tuples_only
 --single-step
 --set
 
-# display
+## display
 
 formatted output (asciidoc, html, latex)
 linestyle

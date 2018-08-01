@@ -32,7 +32,7 @@ here, you might enjoy a full book of SQL learning material!
 
 <!--toc-->
 
-# How to Write a Database Model
+## How to Write a Database Model
 
 ~~~ sql
 create database sandbox;
@@ -197,7 +197,7 @@ ROLLBACK
 As the script ends with a *ROLLBACK* command, you can now edit your schema
 and do it again, at will, without having to first clean up the previous run.
 
-# Generating Random Data
+## Generating Random Data
 
 In the previous script, you might have noticed calls to functions that don't
 exist in the distribution of PostgreSQL, such as *random(int, int)* or
@@ -303,7 +303,7 @@ table](http://blog.rhodiumtoad.org.uk/2009/03/08/selecting-random-rows-from-a-ta
 article from [Andrew Gierth](http://blog.rhodiumtoad.org.uk/), now a
 PostgreSQL committer.
 
-# Modeling Example
+## Modeling Example
 
 Now that we have some data to play with, we can test some application
 queries for known user stories in the *MVP*, like maybe listing the most
@@ -426,7 +426,7 @@ as $$
 $$;
 ~~~
 
-# Querying the Schema: our Minimal Viable Product
+## Querying the Schema: our Minimal Viable Product
 
 Now we can have a go at solving the first query of the product's *MVP*, as
 specified before, on this schema draft version. That should provide a taste
@@ -542,6 +542,8 @@ down to about 150ms when the *substring(comment.content from 1 for 25) ||
 '…'* part is replaced with just *comment.content*. It's fair to use it in
 production, with the proper caching strategy in place, i.e. we expect more
 article reads than writes.
+
+## Conclusion
 
 Our schema is a good first version for answering the *MVP*:
 

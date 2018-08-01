@@ -32,7 +32,7 @@ in the docker container.
 
 <!--toc-->
 
-# Running the Docker Container
+## Running the Docker Container
 
 On the ubuntu machine where I start the docker image, I need to be using
 *sudo* all the time. First, we start the docker image with the command given
@@ -42,7 +42,7 @@ in the README.ENTERPRISE.md with the following command:
 $ docker run --rm -it -p 8080:8080 dimitri:appdev
 ~~~
 
-# Additionnal Commands in the Running Container
+## Additionnal Commands in the Running Container
 
 Then it's possible to also run the *psql* from within the container thanks
 to the *docker exec* command. So keep open the shell window where the
@@ -102,7 +102,7 @@ Type "help" for help.
 appdev=> \q
 ~~~
 
-# Using the SQL files from the Book
+## Using the SQL files from the Book
 
 A more complex example, using the SQL files from outside the docker image
 and setting a value to the variable start:
@@ -175,6 +175,8 @@ appdev=> \i 02-intro/02-usecase/05_01.sql
 And you should have the same result as in the previous example.
 
 <hr />
+
+## Conclusion
 
 I hope you will enjoy reading [Mastering PostgreSQL in Application
 Development](https://masteringpostgresql.com) as much as I did writing it!

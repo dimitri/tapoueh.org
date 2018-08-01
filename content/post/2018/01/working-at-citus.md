@@ -28,7 +28,7 @@ and to have the opportunity to solve PostgreSQL related problems at scale!
 <!--more-->
 <!--contents-->
 
-# Contributing to an Open Source project
+## Contributing to an Open Source project
 
 Work done on Citus distributed database is Open Source and public, so you
 can see the GitHub repository for the main Citus extension and its
@@ -51,7 +51,7 @@ of things to learn and information to process, and thanks to a great
 onboarding by [Marco](https://github.com/marcocitus), some patches could be
 written in the meantime.
 
-# Early patches
+## Early patches
 
 So what do we have? My first ever patch to Citus database implements [ALTER
 TABLE ... RENAME TO
@@ -77,7 +77,7 @@ tables](https://github.com/citusdata/citus/commit/c9760fbb64e5c08913b682c9d25822
 In the making of those patches, we covered lots of ground with Marco and the
 team. I'm quite excited about what's next on the plan now ;-)
 
-# Plans 
+## Plans 
 
 Well with some good luck and lots of hard work, we might some day write “and
 the rest is history.” But we're not there yet, are we? So in the following

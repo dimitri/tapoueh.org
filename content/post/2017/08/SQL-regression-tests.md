@@ -40,7 +40,7 @@ change your data set (adding columns, altering data types, etc) or your
 queries. If you run the same query against a different schema or a modified
 data set that should be compatible it might be named *Integrity Testing*.
 
-# Unit Testing SQL
+## Unit Testing SQL
 
 For *Unit Testing* in PostgreSQL the perfect tool
 is [pgTap](http://pgtap.org/): _pgTAP is a suite of database functions that
@@ -81,7 +81,7 @@ your schema integrity directly in SQL, using PostgreSQL catalog functions.
 
 So check out [pgTap](http://pgtap.org/) to implement PostgreSQL Unit Tests.
 
-# RegreSQL
+## RegreSQL
 
 In my article [How to Write SQL](/blog/2017/06/how-to-write-sql/) the main
 take out is that your SQL queries are to be managed in *.sql* files, just
@@ -211,7 +211,7 @@ collection rather than the expected single most prolific artist. If that's
 your new requirements for the query, then *update* the expected result. If
 not, then fix your query!
 
-# Conclusion
+## Conclusion
 
 {{< image classes="fig25 right dim-margin"
               src="/img/sql-filetype.svg"

@@ -23,7 +23,7 @@ reporting skills?
 <!--more-->
 <!--toc-->
 
-# Loading a Data Set: Git History
+## Loading a Data Set: Git History
 
 As an example data set this time we're playing with *git* history. The
 PostgreSQL and pgloader project history have been loaded into the
@@ -59,7 +59,7 @@ cts       │ 2018-04-13 00:39:51+02
 subject   │ Fix bogus affix-merging code.
 ~~~
 
-# Time based statistics
+## Time based statistics
 
 With timestamps, we can compute time-based reporting, such as how many
 commits each project received each year in their whole history:
@@ -139,7 +139,7 @@ team of committers being paid to work on PostgreSQL:
 (7 rows)
 ~~~
 
-# Time Differences and Percentiles
+## Time Differences and Percentiles
 
 Another report we can build compares the author commit timestamp with the
 committer commit timestamp. Those are different, but by how much?
@@ -182,7 +182,7 @@ median  │ @ 2 mins 11 secs
 %99th   │ @ 49 days 22 hours 40 mins 59.84 secs
 ~~~
 
-# Time Based Reporting
+## Time Based Reporting
 
 Reporting is a strong use case for SQL. Application will also send more
 classic queries. We can show the commits for the PostgreSQL project for the
@@ -228,7 +228,7 @@ the query, so that's a single parameter to send from the application.
 (11 rows)
 ~~~
 
-# Date and Time Formatting
+## Date and Time Formatting
 
 Many [data type formatting
 functions](https://www.postgresql.org/docs/current/static/functions-formatting.html)
@@ -268,7 +268,7 @@ And this time we have a French localized output for the time value:
 (11 rows)
 ~~~
 
-# Conclusion
+## Conclusion
 
 Take some time to familiarize yourself with the time and date support that
 PostgreSQL comes with out of the box. Some very useful functions such as

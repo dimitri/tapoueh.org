@@ -1,7 +1,7 @@
 +++
 title = "A Year in Review: Most Read Articles in 2017"
 date = "2018-01-28T22:46:43+01:00"
-tags = ["PostgreSQL","YeSQL"]
+tags = ["PostgreSQL","YeSQL","Review"]
 categories = ["PostgreSQL","YeSQL"]
 coverImage = "/img/2017Wave2018A.jpg"
 coverMeta = "in"
@@ -31,7 +31,7 @@ visits to this website's pages:
 
 <!--toc-->
 
-# Understanding Window Functions
+## Understanding Window Functions
 
 > This seems more like the all-time favorite article on this website really.
 > It's a practical introduction to the matter of window functions, using a
@@ -61,7 +61,7 @@ feature. This article aims at making it crystal clear so that you can begin
 using it today and are able to reason about it and recognize cases where you
 want to be using *window functions*.
 
-# PostgreSQL, Aggregates and Histograms
+## PostgreSQL, Aggregates and Histograms
 
 > Only second to the Window Functions article from 2013 is the Histogram
 > article from 2014, another big classic of this website. The article shows
@@ -103,7 +103,7 @@ producing a nice
 Time: 53.570 ms
 ~~~
 
-# SQL and Business Logic
+## SQL and Business Logic
 
 > This one makes it in second position, which is quite impressive. Well my
 > understanding is that this is a big and complex topic on which many people
@@ -126,7 +126,7 @@ be part of your business logic implementation.
 
 Or actually, how much of your business logic should be SQL?
 
-# How to Write SQL
+## How to Write SQL
 
 > Now that you want to use SQL more in your application, how actually would
 > you do that? It's possible to find tooling that have been designed to
@@ -151,7 +151,7 @@ other languages. Today, we are going to have a look at one of them for
 the [python](https://www.python.org) programming
 language: [anosql](https://github.com/honza/anosql).
 
-# Mastering PostgreSQL in Application Development
+## Mastering PostgreSQL in Application Development
 
 > This summer, I wrote a book! In its pages, I share my knowledge of SQL
 > with application developers, and we study ways to answer simple to
@@ -175,7 +175,7 @@ language. Most developers don't think of SQL as a programming language,
 mainly because they don't have full control of the execution plan of their
 queries.
 
-# Setting up psql, the PostgreSQL CLI
+## Setting up psql, the PostgreSQL CLI
 
 > New users of PostgreSQL are confronted with using `psql`, our beloved
 > Command-Line Application. Some of them don't readily appreciate how
@@ -199,7 +199,7 @@ quite a powerful tool. Interactive features includes *autocompletion*,
 *readline* support (history searches, modern keyboard movements, etc), input
 and output redirection, formatted output, and more.
 
-# Exploring a Data Set in SQL
+## Exploring a Data Set in SQL
 
 > If there's an article full of SQL query text and example on this
 > <http://tapoueh.org> website, this is the one! Well apart from [on JSON
@@ -221,7 +221,7 @@ step is figuring out data organisation, content and quality. Our tool box:
 database*, [PostgreSQL](https://www.postgresql.org), and its *Structured
 Query Language*, SQL.
 
-# PostgreSQL and the calendar
+## PostgreSQL and the calendar
 
 > Dealing with time is a political activity more so than an engineering
 > occupation these days, with time zone handling and tracking being so very

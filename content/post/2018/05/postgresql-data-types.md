@@ -26,7 +26,7 @@ that is interesting for the application.
 <!--more-->
 <!--toc-->
 
-# Boolean
+## Boolean
 
 <figure style="float: right; clear: left; display: block; width: 140px; height: 140px; margin-bottom: 2em;">
     <a href="/blog/2018/04/postgresql-data-types-an-intro/">
@@ -72,7 +72,7 @@ And we get the following result:
 ~~~
 
 
-# Text Encoding
+## Text Encoding
 
 <figure style="float: right; clear: left; display: block; width: 140px; height: 140px; margin-bottom: 2em;">
     <a href="/blog/2018/04/postgresql-data-types-text-encoding/">
@@ -98,7 +98,7 @@ yesql# reset client_encoding ;
 RESET
 ~~~
 
-# Text Processing
+## Text Processing
 
 <figure style="float: right; clear: left; display: block; width: 140px; height: 140px; margin-bottom: 2em;">
     <a href="/blog/2018/04/postgresql-data-types-text-processing/">
@@ -148,7 +148,7 @@ And now we make sense of the open data:
 (4 rows)
 ~~~
 
-# Date and Time Processing
+## Date and Time Processing
 
 <figure style="float: right; clear: left; display: block; width: 140px; height: 140px; margin-bottom: 2em;">
     <a href="/blog/2018/04/postgresql-data-types-date-and-time-processing/">
@@ -195,7 +195,7 @@ have a solid team of committers being paid to work on PostgreSQL:
 (7 rows)
 ~~~
 
-# Network Addresses
+## Network Addresses
 
 <figure style="float: right; clear: left; display: block; width: 140px; height: 140px; margin-bottom: 2em;">
     <a href="/blog/2018/04/postgresql-data-types-network-addresses/">
@@ -240,7 +240,7 @@ And we got the following result:
 (12 rows)
 ~~~
 
-# Ranges
+## Ranges
 
 <figure style="float: right; clear: left; display: block; width: 140px; height: 140px; margin-bottom: 2em;">
     <a href="/blog/2018/04/postgresql-data-types-ranges/">
@@ -276,7 +276,7 @@ constraint's index to solve that query efficiently:
 (1 row)
 ~~~
 
-# Arrays
+## Arrays
 
 <figure style="float: right; clear: left; display: block; width: 140px; height: 140px; margin-bottom: 2em;">
     <a href="/blog/2018/04/postgresql-data-types-arrays/">
@@ -321,7 +321,7 @@ tweets that we used:
 (10 rows)
 ~~~
 
-# XML
+## XML
 
 <figure style="float: right; clear: left; display: block; width: 140px; height: 140px; margin-bottom: 2em;">
     <a href="/blog/2018/04/postgresql-data-types-xml/">
@@ -354,7 +354,7 @@ AS $$<?xml version="1.0"?>
 $$;
 ~~~
 
-# JSON
+## JSON
 
 <figure style="float: right; clear: left; display: block; width: 140px; height: 140px; margin-bottom: 2em;">
     <a href="/blog/2018/04/postgresql-data-types-json/">
@@ -394,7 +394,7 @@ full detailed example using data from [Magic: the Gathering card data in
 JSON format](https://mtgjson.com).
 
 
-# ENUM
+## ENUM
 
 <figure style="float: right; clear: left; display: block; width: 140px; height: 140px; margin-bottom: 2em;">
     <a href="/blog/2018/04/postgresql-data-types-enum/">
@@ -436,7 +436,7 @@ insert into cars(brand, model, color)
            join color on color.name = data.color;
 ~~~
 
-# Geometry and Points
+## Geometry and Points
 
 <figure style="float: right; clear: left; display: block; width: 140px; height: 140px; margin-bottom: 2em;">
     <a href="/blog/2018/04/postgresql-data-types-point/">
@@ -482,7 +482,7 @@ America, and then Europe. Of course, the Antartica data is not very dense.
 ~~~
 
 
-# Object-Relational Database Management System
+## Object-Relational Database Management System
 
 PostgreSQL is an [Object-Relational Database Management
 System](/blog/2018/03/object-relational-database-management-system/): it
@@ -523,7 +523,7 @@ used with:
 (7 rows)
 ~~~
 
-# Conclusion
+## Conclusion
 
 PostgreSQL comes with a rich set of data types, and an extensibility
 framework that allows extension authors to add to the list. Each data type

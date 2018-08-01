@@ -25,7 +25,7 @@ Buckle-up, this is a long article with a lot of SQL inside.
 <!--more-->
 <!--toc-->
 
-# Geonames
+## Geonames
 
 > _The [GeoNames](http://www.geonames.org) geographical database covers all
 > countries and contains over eleven million place names that are available
@@ -159,7 +159,7 @@ COPY Threads Completion          0          2                  6m43.319s
       Total import time          ✓          3     1.5 GB       6m43.345s
 ~~~
 
-# Normalizing our Geonames data model
+## Normalizing our Geonames data model
 
 To normalize the schema, we apply the rules from the definition of the
 *normal forms*. Basically, we want to avoid any dependency in between the
@@ -595,7 +595,7 @@ Here's the same list of French areas, this time with proper names:
 (5 rows)
 ~~~
 
-# Geolocation Data
+## Geolocation Data
 
 Now that we have loaded the reference data, we can load the main geolocation
 data with the following script. Note that we skip parts of the data we don't
@@ -751,7 +751,7 @@ America, and then Europe. Of course, the Antartica data is not very dense.
 (7 rows)
 ~~~
 
-# Geolocation GiST Indexing
+## Geolocation GiST Indexing
 
 The previous *geoname* table creation script contains the following index
 definition:
@@ -862,7 +862,7 @@ The *index scan using geoname_location_idx on geoname* is clear: the index
 has been used. On the laptop on which this book has been written, we get the
 result in about 13 milliseconds.
 
-# A Sampling of Countries
+## A Sampling of Countries
 
 This dataset of more than 11 million rows is not practical to include in the
 book's material for the *Full Edition* and *Enterprise Edition*, where you
@@ -946,7 +946,7 @@ Our *sample.geonames* table only contains 115,904 rows. Another run of the
 same query yielded 115,071 instead. After all the sampling is made following
 a random-based algorithm.
 
-# Conclusion
+## Conclusion
 
 When dealing with geolocation data, it's possible to put the PostgreSQL data
 type POINT to good use. The PostgreSQL support for GiST indexes makes it

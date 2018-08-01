@@ -26,7 +26,7 @@ language: [anosql](https://github.com/honza/anosql).
 <!--more-->
 <!--toc-->
 
-# SQL is code
+## SQL is code
 
 When you have to write SQL code, several options are available. One of them
 is to consider that SQL is nothing more than a static literal string
@@ -93,7 +93,7 @@ And here's the output for `:id = 1`:
 (10 rows)
 ~~~
 
-# psql variables
+## psql variables
 
 So, how did I run the previous query, may you ask?
 Well [psql](https://www.postgresql.org/docs/current/static/app-psql.html) is
@@ -125,7 +125,7 @@ So it is now quite easy to have your SQL query opened in your favorite
 editor and a terminal window with the interactive psql console wherein you
 can easily try your query with different values of your variables.
 
-# Dynamically building SQL queries
+## Dynamically building SQL queries
 
 In some cases, your code will use almost the same query in different places,
 and it's easy to want to reduce duplication. Then what happens is that you
@@ -158,7 +158,7 @@ discover being problematic in your production logs. And it is even dead
 simple to replay and *explain* the query interactively, either on your
 developer environment or even in production if necessary (it is, sometimes).
 
-# Integrating SQL code in python with anosql
+## Integrating SQL code in python with anosql
 
 Kris Jenkin's [yesql](https://github.com/krisajenkins/yesql) makes it easy
 to implement your SQL in a `query.sql` file and then expose your queries as
@@ -235,7 +235,7 @@ production activity with SQL embedded in your application's code. Do it now,
 and be as granular as you can (module names, class names, package names,
 etc).
 
-# Tests
+## Tests
 
 When implement SQL code as *.sql* files, you need to take care about test
 coverage specifically.
@@ -244,7 +244,7 @@ more details about how to test SQL with dedicated tools, introducing
 both [pgTap](http://pgtap.org/)
 and [RegreSQL](https://github.com/dimitri/regresql).
 
-# Conclusion
+## Conclusion
 
 {{< image classes="fig25 right dim-margin"
               src="/img/old/sql-logo.png"

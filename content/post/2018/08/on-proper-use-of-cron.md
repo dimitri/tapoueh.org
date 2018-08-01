@@ -29,11 +29,10 @@ thinking about it this way, you certainly don't want to implement the
 backbone of your business logic in a *shell script* that's directly
 maintained in the production environment, do you?
 
-
 <!--more-->
 <!--toc-->
 
-# Scheduling Data Processing
+## Scheduling Data Processing
 
 Data processing is most often triggered by user actions, either your
 end-user or internal users: back-office, admin superusers, or support users
@@ -66,7 +65,7 @@ other Thursday at 6pm. Every morning. At boot time. About any point in a
 calendar can be specified as a cron schedule expression, and that includes
 specifications of recurring events.
   
-# How NOT to use cron?
+## How NOT to use cron?
 
 The classic approach to cron jobs could be qualified as surprising, if you
 want to be nice. It's actually wrong in that it solves none of the
@@ -98,7 +97,7 @@ Even when using a reasonable programming language, the needs for a
 processing job that is scheduled in the background are a little more
 involved than that.
 
-# Code Management and Deployment
+## Code Management and Deployment
 
 Another important aspect in that usage of cron is the code management. Often
 enough cron commands are bash scripts. Sometimes cron commands are properly
@@ -114,7 +113,7 @@ seen cron jobs falling in between the devs and ops team, noone being the
 owner of them, and thus no clear procedure would be in place for maintaining
 those scripts.
 
-# The Real Needs of a Scheduled Data Processing Job
+## The Real Needs of a Scheduled Data Processing Job
 
 So, why don't I just run my cron jobs in bash, you're asking? Well because
 here's a list of things that I want to be able to **easily** know, verify
@@ -205,7 +204,7 @@ Those are some pretty basic questions here, and if the data processing jobs
 that you schedule are important for your business, then I'm sure you want to
 be able to answer all of them.
 
-# Not all cron jobs are the same
+## Not all cron jobs are the same
 
 It must also be said that we have two very different cases to think about
 when discussing cron jobs:
@@ -244,7 +243,7 @@ We need a solution that can enable a developer team to manage the scheduled
 events properly, and without requiring fiddling interactively at a
 production's system shell.
   
-# Proper Usage of Cron
+## Proper Usage of Cron
 
 The idea that I want to push forward in this article is the following: when
 you need to schedule data processing, write a web service that implements
@@ -293,7 +292,7 @@ dashboard with the interesting metrics, a summary of what happened when, how
 many users got a daily reporting, maybe even have a copy of the sent email,
 etc.
 
-# Conclusion
+## Conclusion
 
 Some cron jobs are technical details meant for sysadmins, and then using
 system logs to track the activity is fair enough. Some cron jobs are

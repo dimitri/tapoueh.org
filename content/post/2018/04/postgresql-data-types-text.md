@@ -26,7 +26,7 @@ and the letter `A` too.
 <!--more-->
 <!--toc-->
 
-# PostgreSQL Server Side Encoding
+## PostgreSQL Server Side Encoding
 
 To know which encoding your database is using, run the *psql* command `\l`:
 
@@ -67,7 +67,7 @@ wrote in 2010 when I had to get out of this tricky situation.
 
 {{< /alert >}}
 
-# PostgreSQL Client Side Encoding
+## PostgreSQL Client Side Encoding
 
 You can also have an UTF8 encoded database and use a legacy application (or
 programming language) that doesn't know how to handle Unicode properly. In
@@ -152,7 +152,7 @@ simpler life. It must be noted that Unicode encoding makes comparing and
 sorting text a rather costly operation. That said being fast and wrong is
 not an option, so we are going to still use unicode text!
 
-# Conclusion
+## Conclusion
 
 {{< figure class="right"
              src="/img/MasteringPostgreSQLinAppDev-Cover-th.png"

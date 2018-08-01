@@ -23,8 +23,9 @@ In this article, we try to understand why would PostgreSQL be named an
 that apply to a database system?
 
 <!--more-->
+<!--toc-->
 
-# Object Orientation in Progamming Languages
+## Object Orientation in Progamming Languages
 
 [Erik Naggum](https://en.wikipedia.org/wiki/Erik_Naggum) was a Norwegian
 computer programmer recognized for his work in the fields of SGML, Emacs and
@@ -102,7 +103,7 @@ Classes](http://www.gigamonkeys.com/book/object-reorientation-classes.html).
 If the only Object Model you've ever worked with looks like the Java, C++,
 PHP, and Python one, prepare for your mind to be blown.
     
-# Object Orientation in PostgreSQL
+## Object Orientation in PostgreSQL
 
 PostgreSQL is the first RDBMS to have put emphasis on extensible data types
 and plugability. As a result, 30 years later, we have many awesome
@@ -244,7 +245,7 @@ overloading mechanism, much like you do when writing Java, C++, Python, PHP,
 or Ruby code, to list just some of the languages having polymorphism
 features.
 
-# Object-Relational Database Management System
+## Object-Relational Database Management System
 
 PostgreSQL is an Object-Relational Database Management System. It's possible
 to relate its object orientation to having implemented [table
@@ -255,6 +256,8 @@ This article shows that object systems also can be defined in terms of
 [generic functions](https://en.wikipedia.org/wiki/Generic_function) that can
 be implemented separately depending on the type of arguments used at run
 time.
+
+## Conclusion
 
 PostgreSQL provides a complete implementation of function overloading and
 operator overloading and uses it a basis for advanced indexing support. A

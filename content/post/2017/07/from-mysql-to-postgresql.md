@@ -39,7 +39,7 @@ PostgreSQL version of choice.
 
 <!--toc-->
 
-# Migrate from MySQL to PostgreSQL
+## Migrate from MySQL to PostgreSQL
 
 An example of pgloader simplicity is that you can migrate a whole MySQL
 database, including its schema definition of tables and indexes, primary key
@@ -182,7 +182,7 @@ In version 3.4.1 of pgloader this feature is limited to single column
 indexes. If you need to support multiple-columns indexes, let me know by
 [opening an issue](https://github.com/dimitri/pgloader/issues).
 
-# Migrate from SQLite to PostgreSQL
+## Migrate from SQLite to PostgreSQL
 
 In much the same vein it is possible to migrate a full SQLite database into
 PostgreSQL in a single command line. This time, as SQLite databases can be
@@ -241,7 +241,7 @@ too sure about the error you see above, complaining that *multiple primary
 keys for table "playlisttrack" are not allowed*. We might still have some
 SQLite catalogs introspection hacking to do to be all good.
 
-# Migrate from MS SQL to PostgreSQL
+## Migrate from MS SQL to PostgreSQL
 
 The new release of pgloader also comes with lots of small improvements to
 the MS SQL support, where it now mostly just works. That's thanks to users
@@ -249,14 +249,14 @@ who did provide me with a test case to reproduce then fix the bugs. That
 really is a life changer, in particular with proprietay software, where I
 can't have a local copy running for my tests.
 
-# Load CSV files
+## Load CSV files
 
 At the beginning, [pgloader](http://pgloader.io/howto/quickstart.html) was
 meant to load data from CSV files into PostgreSQL. For a large and flexible
 definition of CSV. Now we include support for the COPY file format, fixed
 width files, dBase files and IXF files.
 
-# The load command and new options
+## The load command and new options
 
 As mentioned earlier simple things are simple, and sometimes you need to do
 more complex things, and the advanced use cases are handled by the pgloader
@@ -378,7 +378,7 @@ load database
       multiple readers per thread, rows per range = 50000;
 ~~~
 
-# Conclusion
+## Conclusion
 
 {{< image classes="fig25 right dim-margin"
               src="/img/old/sql-logo.png"

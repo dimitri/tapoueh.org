@@ -33,14 +33,14 @@ features.
 <!--more-->
 <!--toc-->
 
-# Listen and Notify
+## Listen and Notify
 
 The PostgreSQL protocol includes a streaming protocol with *COPY* and also
 implements asynchronous messages and notifications. This means that as soon
 as a connection is established with PostgreSQL, the server can send messages
 to the client even when the client is idle.
 
-# PostgreSQL Notifications
+## PostgreSQL Notifications
 
 Messages that flow from the server to the connected client should be
 processed by the client. It could be that the server is being restarted, or
@@ -63,7 +63,7 @@ see with several *psql* instances. The *payload* from the message can be any
 text, up to 8kB in length. This allows for rich messages to flow, such as
 JSON encoded values.
 
-# PostgreSQL Event Publication System
+## PostgreSQL Event Publication System
 
 In the [Triggers](#triggers) section we saw that in order to maintain a
 cache of the action counters either by day or by messageid, we can write a
@@ -222,7 +222,7 @@ views, check it out!
 
 <hr />
 
-# Notifications and Cache Maintenance
+## Notifications and Cache Maintenance
 
 Now that we have the basic server-side infrastructure in place, where
 PostgreSQL is the server and a backend application the client, we can look
@@ -665,7 +665,7 @@ maintenance service is to *reset* the cache from the real values in the
 database. That's how we got those values in the cache; alter all, the cache
 service wasn't written when we ran our previous series of tests.
 
-# Limitations of Listen and Notify
+## Limitations of Listen and Notify
 
 It is crucial that an application using the PostgreSQL notification
 capabilities are capable of missing events. Notifications are only sent to
@@ -680,7 +680,7 @@ A cache maintenance service really is the perfect use case for this
 functionality, because it's easy to reset the cache at service start or
 restart.
 
-# Listen and Notify Support in Drivers
+## Listen and Notify Support in Drivers
 
 Support for listen and notify PostgreSQL functionality depends on the driver
 you're using. For instance, the Java JDBC driver documents the support at
@@ -714,7 +714,7 @@ example here.
 
 For other languages, please check the documentation of your driver of choice.
 
-# Conclusion
+## Conclusion
 
 PostgreSQL implements several facilities that we can rely on to maintain an
 application cache for data that changes often:

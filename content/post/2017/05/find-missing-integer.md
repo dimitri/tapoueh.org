@@ -26,7 +26,7 @@ your math lessons from younger. But is it that much simpler?
 <!--more-->
 <!--toc-->
 
-# Is it math or computer science?
+## Is it math or computer science?
 
 The expected solution was to remember the Gauss trick that the sum of the
 number from 1 to n is 1/2 * (n * n+1), that is 5050 in our case. If you sum
@@ -42,7 +42,7 @@ difference between that sum and 5050, you find the missing element:
 54
 ~~~
 
-# Back to computer science
+## Back to computer science
 
 While I can understand the *smarts* behind that approach, I would argue that
 it's a *cleverer* approach, too smart for its own good.
@@ -54,7 +54,7 @@ Then, what about having not one but two missing numbers in the list, or
 maybe an unknown number of them? What about a list of something else than
 numbers?
 
-# Back to the drawing board
+## Back to the drawing board
 
 Rather than trying to write ourselves all the details of a good generic
 algorithm that would work even with big numbers and then with unicode
@@ -97,7 +97,7 @@ and a `test` function to compare the values, it's not assumed to be `=`, it
 could be something specific to your application. All the advanced list based
 functions allow that in Common Lisp. Back to why that matters later.
 
-# Where the data comes from?
+## Where the data comes from?
 
 If we want to generalize our approach here, we need to consider that maybe
 the data is coming from the database, right? In which case, you might want
@@ -334,7 +334,7 @@ characteristics, and we see two different ways to obtain that.
 This means that in our example, we can reuse the exact same query for any
 datatype we have to deal with.
 
-# Conclusion
+## Conclusion
 
 In conclusion this little interview question got us thinking some more about
 real world use cases and how to solve them with the best tool at hand.

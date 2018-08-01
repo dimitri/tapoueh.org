@@ -28,7 +28,7 @@ used through a series of follow-up articles about concurrency in PostgreSQL.
 In this first article, we approach the basics: SQL commands and how to make
 them safe to concurrent behavior in your application.
 
-# A database model
+## A database model
 
 The application we're going to model is a Twitter like application, where we
 have users and they can send short messages to the void. They can also
@@ -73,7 +73,7 @@ create table tweet.message
  );
 ~~~
 
-# Insert Into
+## Insert Into
 
 Given our model of tweets, the first thing we need are users. Here's how to
 create our first users:
@@ -142,7 +142,7 @@ views, check it out!
 
 <hr />
 
-# Insert Into ... Select
+## Insert Into ... Select
 
 The *insert* statement can also use a query as a data source. We could, for
 instance, fill in our *tweet.follower* table with people that are known to
@@ -255,7 +255,7 @@ The *insert into* clause also accepts a conflict resolution clause with the
 *on conflict* syntax, which is very powerful, and that we address later in
 our [PostgreSQL Concurrency](/tags/concurrency/) series of articles.
 
-# Update
+## Update
 
 The SQL *update* statement is used to replace existing values in the
 database. Its most important aspect lies in its concurrency behavior, as it
@@ -392,7 +392,7 @@ to ***Jon Bosak***.
 (29 rows)
 ~~~
 
-# Inserting Some Tweets
+## Inserting Some Tweets
 
 Now that we have created a bunch of users from *A Midsummer Night's Dream*,
 it is time to have them tweet. The full XML transcript available at
@@ -486,7 +486,7 @@ And yes, we can now see Shakespeare tweeting:
 (4 rows)
 ~~~
 
-# Delete
+## Delete
 
 The *delete* statement allows marking tuples for removal. Given PostgreSQL's
 implementation of
@@ -590,7 +590,7 @@ written *using* and covered in the PostgreSQL documentation about the
 [delete](https://www.postgresql.org/docs/9.6/static/sql-delete.html)
 command.
 
-# Tuples and Rows
+## Tuples and Rows
 
 In this chapter, we've been mentioning *tuples* and *rows* at different
 times. There's a difference between the two: a single *row* might exist
@@ -605,7 +605,7 @@ new *tuple* just inserted on-disk. As long as this transaction has yet to
 While in some contexts *tuples* and *rows* are equivalent, in this chapter
 about DML we must be careful to use them in the right context.
 
-# Deleting All the Rows: Truncate
+## Deleting All the Rows: Truncate
 
 PostgreSQL adds to the *DML* statements the *truncate* command. Internally,
 it is considered to be a *DDL* rather than a *DML*. It is a very efficient
@@ -627,7 +627,7 @@ select count(*) from foo;
 Assuming there's no concurrent activity on your system when running the
 commands, both the counting queries naturally return the same number.
 
-# Delete but Keep a Few Rows
+## Delete but Keep a Few Rows
 
 When cleaning up a data set, it may happen that you want to remove most of
 the content of a table. It could be a logs table, an audit trail that has
@@ -664,7 +664,7 @@ even off-hours, then it might not be feasible for you to use this trick.
 The good thing about *delete* and *vacuum* is that they can run in the
 middle of about any concurrent traffic of course.
 
-# Conclusion
+## Conclusion
 
 PostgreSQL is and advanced RDBMS which provides plenty fancy data processing
 options. Its core service is handling concurrent editing of the data, and as

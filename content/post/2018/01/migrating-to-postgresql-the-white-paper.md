@@ -24,7 +24,7 @@ the licensing model.
 
 <!--more-->
 
-# From MySQL to PostgreSQL over the Week-End!
+## From MySQL to PostgreSQL over the Week-End!
 
 On February the 18th, 2015 I received a pretty interesting mention on
 Twitter:
@@ -63,7 +63,7 @@ White Paper is free to download, just register your email for updates!
 <script async id="_ck_322615" src="https://forms.convertkit.com/322615?v=6">
 </script>
 
-# Continuous Migration
+## Continuous Migration
 
 Migrating from one database technology to PostgreSQL requires solid project
 methodology. In this document we show a simple and effective database
@@ -82,9 +82,12 @@ ensures that your migration process is well understood and handled by your
 team, drastically limiting the number of surprises you may otherwise
 encounter on migration D-day.
 
-The third step isn't always as easy to implement as it should be, and that's
-why the [pgloader](https://pgloader.io) open source project exists: it
-implements fully automated database migrations!
+## Conclusion
+
+The the third step above is the migration of the data, and this isn't always
+as easy to implement as it should be, and that's why the
+[pgloader](https://pgloader.io) open source project exists: it implements
+fully automated database migrations!
 
 {{< figure class="right"
              src="/img/MasteringPostgreSQLinAppDev-Cover-th.png"

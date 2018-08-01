@@ -29,7 +29,7 @@ have to handle very very popular tweets from the play!
 <!--more-->
 <!--toc-->
 
-# Modeling for Concurrency
+## Modeling for Concurrency
 
 We should have another modeling pass on the *tweet.message* table now. With
 what we learned about concurrency in PostgreSQL, it's easy to see that we
@@ -122,7 +122,7 @@ the counters are displayed on every tweet message. We need a way to *cache*
 that information, and we'll see about that in a follow-up article about
 *Computing and Caching in SQL*.
 
-# Putting Concurrency to the Test
+## Putting Concurrency to the Test
 
 When we *benchmark* the concurrency properties of the two statements above,
 we quickly realize that the *activity* table is badly designed. The unique
@@ -268,7 +268,7 @@ views, check it out!
 
 <hr />
 
-# Conclusion
+## Conclusion
 
 If you know that your application has to scale, think about how to avoid
 concurrent activity that competes against a single shared resource. Here,

@@ -73,7 +73,7 @@ community, so that everyone can benefit from your awesome work!
 
 <!--toc-->
 
-# Why is Everybody Using Open Source?
+## Why is Everybody Using Open Source?
 
 Open Source Software has not always been the first choice of enterprise as
 pillars of their production infrastructure. It used to be that company
@@ -105,7 +105,7 @@ Many people are still investing their own _free time_, by the way, and
 that's how we now have those advanced core technologies to rely our products
 on. **Standing on the shoulders of giants**, as they say.
 
-# Sustainable Open Source
+## Sustainable Open Source
 
 More and more Open Source Software contributors are paid to improve Open
 Source Software, and most of them to that in the open and actually
@@ -171,7 +171,7 @@ When it's not, then you have two ways to make the software reliable for you:
     hacker's time — after all time is money, and you're not willing to put
     time on the table, so put money on it, to much the same effect, right?
 
-# Open Source Editors Business Models
+## Open Source Editors Business Models
 
 {{< figure class="right"
              src="/img/Modèles-économiques-200x320.jpg"
@@ -234,7 +234,7 @@ the world's most advanced open source database and continues to strive at a
 very high pace, releasing every year a new major version packed with
 improvements, fixes, and new features.
 
-# Single Person Projects Business Models
+## Single Person Projects Business Models
 
 So with people getting paid to contribute to Open Source Software, we could
 think that the times or yore are over now, and all is good in our world.
@@ -265,7 +265,7 @@ Varnish Moral License_ idea a lot, and another widely adopted solution
 consists of using a _crowd funding_ solution for sponsoring a specific
 feature set.
 
-# The Varnish Moral License
+## The Varnish Moral License
 
 [The Varnish Moral License](http://phk.freebsd.dk/VML/) idea from
 [Poul-Henning Kamp](http://phk.freebsd.dk/) is quite simple. In his own
@@ -292,7 +292,7 @@ words, here's how it works:
 > That rumour is very possibly true. I might even have started it myself.
 > Right here even.
 
-# Let's Talk about pgLoader now
+## Let's Talk about pgLoader now
 
 As you might know already, I am personnaly involved in a Single Person Open
 Source Software Project: [pgloader](https://pgloader.io). This project
@@ -393,7 +393,7 @@ yearly commitment to sustain the project improvements in the long term:
 
 <div class="gumroad-product-embed" data-gumroad-product-id="CjXn"><a href="https://gumroad.com/l/CjXn">Loading...</a></div>
 
-# Conclusion
+## Conclusion
 
 In this very long article we've been talking about how to sustain Open
 Source Software development both at the editor level and at the individual

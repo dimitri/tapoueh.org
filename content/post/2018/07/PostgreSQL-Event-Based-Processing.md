@@ -41,7 +41,7 @@ triggers, and its impact on concurrency.
 <!--toc-->
 
 
-# Triggers
+## Triggers
 
 When a cache refresh policy of minutes isn't advisable, a common approach is
 to implement event-based processing. Most SQL systems, including PostgreSQL,
@@ -98,7 +98,7 @@ views, check it out!
 
 <hr />
 
-# Transactional Event Driven Processing
+## Transactional Event Driven Processing
 
 PostgreSQL triggers call a registered procedure each time one of the
 supported events is committed. The execution of the procedure is always
@@ -225,7 +225,7 @@ This implementation is totally killing any ambitions we might have had about
 concurrency and scalability properties of our model, in a single trigger.
 Yet it's easy to write such a trigger, so it's seen a lot in the wild.
 
-# Trigger and Counters Anti-Pattern
+## Trigger and Counters Anti-Pattern
 
 You might also notice that this triggers is very wrong in its behavior, as
 coded. The implementation of the *insert or update* — a.k.a. *upsert* — is
@@ -276,7 +276,7 @@ the consequent *insert*.
 Starting in PostgreSQL 9.5 with support for the *on conflict* clause of the
 *insert into* command, there's a much better way to address this problem.
 
-# Fixing the Behavior
+## Fixing the Behavior
 
 While it's easy to maintain a *cache* in an event driven fashion thanks to
 PostgreSQL and its trigger support, turning an *insert* into an *update*
@@ -387,7 +387,7 @@ in the previous article [Computing and
 Caching](/blog/2018/07/computing-and-caching/) and we saw that it would
 never scale to our requirements.
 
-# Conclusion
+## Conclusion
 
 PostgreSQL triggers are a powerful tool that allows extra business logic to
 happen right in the transaction that registers events in your system. Deeper

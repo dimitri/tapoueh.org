@@ -26,7 +26,7 @@ them in practice.
 <!--more-->
 <!--toc-->
 
-# Text and varchar
+## Text and varchar
 
 PostgreSQL knows how to deal with characters and text, and it implements
 several data types for that, all documented in the [character
@@ -39,7 +39,7 @@ an alias for *varchar*. When using *varchar(15)* you're basically telling
 PostgreSQL to manage a *text* column with a *check* constraint of 15
 characters.
 
-# Regular Expressions in PostgreSQL
+## Regular Expressions in PostgreSQL
 
 PostgreSQL has support for dealing with regular expressions, read the main
 documentation about them in the [pattern
@@ -61,7 +61,7 @@ particular, they are very helpful when you have to work with a messy schema,
 in which a single column represents several bits of information in a pseudo
 specified way. 
 
-# A Data Set to Play With
+## A Data Set to Play With
 
 An example of such a dataset is available in open data: the [Archives de la
 Planète](https://opendata.hauts-de-seine.fr/explore/dataset/archives-de-la-planete/table/?disjunctive.operateur&sort=identifiant_fakir)
@@ -116,7 +116,7 @@ The question is, how do we get that information? Also, is it possible to
 have an idea of the distribution of the whole data set in relation to the
 categories embedded in the *themes* column?
 
-# Splitting Text in PostgreSQL
+## Splitting Text in PostgreSQL
 
 With PostgreSQL, this is easy enough to achieve. First, we are going to
 split the *themes* column using a regular expression:
@@ -208,7 +208,7 @@ language: SQL.
 
 {{< /alert >}}
 
-# Categories, Subcategories, and Statistics
+## Categories, Subcategories, and Statistics
 
 So, now that we know how to have a clear view of the dataset, let's inquire
 about the categories used in our dataset:
@@ -278,7 +278,7 @@ have several archive entries assigned.
 Here, the topic is about text function processing in PostgreSQL, so we just
 run the query against the base data set.
 
-# Conclusion
+## Conclusion
 
 Finally, when mentioning advanced string matching and the *regular
 expression*, we must also mention PostgreSQL's implementation of a [full

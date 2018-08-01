@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.31.1">
+    <meta name="generator" content="Hugo 0.46">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>PostgreSQL LISTEN/NOTIFY</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -130,13 +130,16 @@ features.">
     
       
 <script>
-(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-
-ga('create', 'UA-47059482-1', 'auto');
-ga('send', 'pageview');
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-47059482-1', 'auto');
+	
+	ga('send', 'pageview');
+}
 </script>
 
     
@@ -420,26 +423,188 @@ cache in a Golang service, using PostgreSQL
 features.</p>
 
 <p>
-<h1 id="table-of-contents"></h1><nav id="TableOfContents">
-<ul>
-<li><a href="#listen-and-notify">Listen and Notify</a></li>
-<li><a href="#postgresql-notifications">PostgreSQL Notifications</a></li>
-<li><a href="#postgresql-event-publication-system">PostgreSQL Event Publication System</a></li>
-<li><a href="#notifications-and-cache-maintenance">Notifications and Cache Maintenance</a></li>
-<li><a href="#limitations-of-listen-and-notify">Limitations of Listen and Notify</a></li>
-<li><a href="#listen-and-notify-support-in-drivers">Listen and Notify Support in Drivers</a></li>
-<li><a href="#conclusion">Conclusion</a></li>
-</ul>
-</nav></p>
+ 
 
-<h1 id="listen-and-notify">Listen and Notify</h1>
+
+
+
+<div class="table-of-contents toc bd-callout">
+    
+    <h4 class="text-muted">Table of Contents</h4>
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/07/postgresql-listen/notify/#listen-and-notify">
+                    Listen and Notify
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/07/postgresql-listen/notify/#postgresql-notifications">
+                    PostgreSQL Notifications
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/07/postgresql-listen/notify/#postgresql-event-publication-system">
+                    PostgreSQL Event Publication System
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/07/postgresql-listen/notify/#notifications-and-cache-maintenance">
+                    Notifications and Cache Maintenance
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/07/postgresql-listen/notify/#limitations-of-listen-and-notify">
+                    Limitations of Listen and Notify
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/07/postgresql-listen/notify/#listen-and-notify-support-in-drivers">
+                    Listen and Notify Support in Drivers
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/07/postgresql-listen/notify/#conclusion">
+                    Conclusion
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+</div>
+
+</p>
+
+<h2 id="listen-and-notify">Listen and Notify</h2>
 
 <p>The PostgreSQL protocol includes a streaming protocol with <em>COPY</em> and also
 implements asynchronous messages and notifications. This means that as soon
 as a connection is established with PostgreSQL, the server can send messages
 to the client even when the client is idle.</p>
 
-<h1 id="postgresql-notifications">PostgreSQL Notifications</h1>
+<h2 id="postgresql-notifications">PostgreSQL Notifications</h2>
 
 <p>Messages that flow from the server to the connected client should be
 processed by the client. It could be that the server is being restarted, or
@@ -451,14 +616,14 @@ an application message is being delivered.</p>
 
 yesql# <span style="color:#00a">notify</span> channel, <span style="color:#a50">&#39;foo&#39;</span>;
 <span style="color:#00a">NOTIFY</span>
-Asynchronous notification <span style="color:#00a">&#34;channel&#34;</span> <span style="color:#00a">with</span> payload <span style="color:#00a">&#34;foo&#34;</span>  <span style="color:#f00;background-color:#faa">⏎</span>
+Asynchronous notification <span style="color:#a50">&#34;channel&#34;</span> <span style="color:#00a">with</span> payload <span style="color:#a50">&#34;foo&#34;</span>  <span style="color:#f00;background-color:#faa">⏎</span>
 received <span style="color:#00a">from</span> server process <span style="color:#00a">with</span> PID <span style="color:#099">40430</span>.</code></pre></div>
 <p>Note that the message could be sent from another connection, so try it and
 see with several <em>psql</em> instances. The <em>payload</em> from the message can be any
 text, up to 8kB in length. This allows for rich messages to flow, such as
 JSON encoded values.</p>
 
-<h1 id="postgresql-event-publication-system">PostgreSQL Event Publication System</h1>
+<h2 id="postgresql-event-publication-system">PostgreSQL Event Publication System</h2>
 
 <p>In the <a href="#triggers">Triggers</a> section we saw that in order to maintain a
 cache of the action counters either by day or by messageid, we can write a
@@ -603,7 +768,7 @@ views, check it out!</p>
 
 <hr />
 
-<h1 id="notifications-and-cache-maintenance">Notifications and Cache Maintenance</h1>
+<h2 id="notifications-and-cache-maintenance">Notifications and Cache Maintenance</h2>
 
 <p>Now that we have the basic server-side infrastructure in place, where
 PostgreSQL is the server and a backend application the client, we can look
@@ -1012,7 +1177,7 @@ maintenance service is to <em>reset</em> the cache from the real values in the
 database. That&rsquo;s how we got those values in the cache; alter all, the cache
 service wasn&rsquo;t written when we ran our previous series of tests.</p>
 
-<h1 id="limitations-of-listen-and-notify">Limitations of Listen and Notify</h1>
+<h2 id="limitations-of-listen-and-notify">Limitations of Listen and Notify</h2>
 
 <p>It is crucial that an application using the PostgreSQL notification
 capabilities are capable of missing events. Notifications are only sent to
@@ -1027,7 +1192,7 @@ queueing correctly with PostgreSQL <em>listen/notify</em> feature.</p>
 functionality, because it&rsquo;s easy to reset the cache at service start or
 restart.</p>
 
-<h1 id="listen-and-notify-support-in-drivers">Listen and Notify Support in Drivers</h1>
+<h2 id="listen-and-notify-support-in-drivers">Listen and Notify Support in Drivers</h2>
 
 <p>Support for listen and notify PostgreSQL functionality depends on the driver
 you&rsquo;re using. For instance, the Java JDBC driver documents the support at
@@ -1065,7 +1230,7 @@ example here.</p>
 
 <p>For other languages, please check the documentation of your driver of choice.</p>
 
-<h1 id="conclusion">Conclusion</h1>
+<h2 id="conclusion">Conclusion</h2>
 
 <p>PostgreSQL implements several facilities that we can rely on to maintain an
 application cache for data that changes often:</p>

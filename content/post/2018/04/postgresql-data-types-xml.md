@@ -23,7 +23,7 @@ page.
 <!--more-->
 <!--toc-->
 
-# The XML Data Type
+## The XML Data Type
 
 PostgreSQL implements the XML data type, which is documented in the chapters
 on [XML
@@ -38,7 +38,7 @@ It should be no surprise that a PostgreSQL extension allows writing *stored
 procedures* in this language. If you have to deal with XML documents in your
 database, check out [PL/XSLT](https://github.com/petere/plxslt).
 
-# Processing XML with PL/XSLT
+## Processing XML with PL/XSLT
 
 An example of a *PL/XSLT* function follows:
 
@@ -93,7 +93,7 @@ As expected, here's the result:
 (1 row)
 ~~~
 
-# Conclusion
+## Conclusion
 
 The XML support in PostgreSQL might be handy in cases. It's mainly been
 added for standard compliance, though, and is not found a lot in the field.

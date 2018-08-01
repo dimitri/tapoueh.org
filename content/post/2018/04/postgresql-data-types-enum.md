@@ -22,7 +22,7 @@ reference table and a foreign key instead.
 <!--toc-->
 
 
-# Reference Table
+## Reference Table
 
 Here's an example of a database model using a reference table for available
 colors available for some cars brands and models:
@@ -99,7 +99,7 @@ Which gives the expected answer:
 (4 rows)
 ~~~
 
-# PostgreSQL ENUM Data Type
+## PostgreSQL ENUM Data Type
 
 It's possible to make an *enum* type instead, using the following database
 model now:
@@ -146,7 +146,7 @@ read in the PostgreSQL documentation:
 
 {{< /alert >}}
 
-# Conclusion
+## Conclusion
 
 Using the *enum* PostgreSQL facility is mostly a matter of taste. After all,
 join operations against small reference tables are well supported by the

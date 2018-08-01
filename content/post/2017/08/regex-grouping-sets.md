@@ -29,7 +29,7 @@ specified way.
 
 <!--toc-->
 
-# Some Open Data to play with
+## Some Open Data to play with
 
 An example of such a data set is available in Open Data:
 the
@@ -65,7 +65,7 @@ themes      │ Habillement > Habillement traditionnel,Etres …
 collection  │ Archives de la Planète
 ~~~
 
-# Regular Expression based Splitting
+## Regular Expression based Splitting
 
 You can see that the *themes* column contains several catagories for a
 single entry, separated with a coma. Within that coma separated list, we
@@ -173,7 +173,7 @@ PostgreSQL makes the difference between the classic *ETL* jobs (Extract,
 Transform, Load) and the powerful *ELT* jobs (Extract, Load, Transform)
 where you can transform your data using a data processing language, SQL.
 
-# Grouping Sets, Cube, Rollup
+## Grouping Sets, Cube, Rollup
 
 So, now that we know how to have a clean view of the data set, let's inquire
 about the categories used in our dataset:
@@ -244,7 +244,7 @@ several archive entries assigned.
 Here, the topic is about text function processing in PostgreSQL, so we just
 run the query against the base data set.
 
-# Conclusion
+## Conclusion
 
 {{< image classes="fig25 right dim-margin"
               src="/img/old/sql-logo.png"

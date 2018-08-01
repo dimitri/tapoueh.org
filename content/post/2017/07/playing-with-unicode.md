@@ -22,7 +22,7 @@ try that from our [PostgreSQL](https://www.postgresql.org/) prompt!
 <!--more-->
 <!--toc-->
 
-# Context and Necessary data
+## Context and Necessary data
 
 In the [historical record of motor racing data](http://ergast.com/mrd/)
 database we have all the data to reproduce the table from
@@ -82,7 +82,7 @@ Which gives the following result:
 
 Can we display directly the champion's country flag in the result set?
 
-# The unicode trick
+## The unicode trick
 
 If we apply what we read before in
 the
@@ -158,7 +158,7 @@ And here's a nice list of flags now:
 (10 rows)
 ~~~
 
-# Country Codes
+## Country Codes
 
 This *country* table comes
 from <http://data.okfn.org/data/core/country-codes>. They have a GitHub
@@ -204,7 +204,7 @@ create table public.country
 commit;
 ~~~
 
-# Nationality and Country Code Mapping
+## Nationality and Country Code Mapping
 
 We said before that our Formula One database only has a *nationality* column
 for our drivers. How can we map that into country codes, so that we can
@@ -314,7 +314,7 @@ select nationality, country.code
 Thanks to the modification we did previously after importing the dataset,
 this query should return an empty result set.
 
-# Formula One drivers and country flags
+## Formula One drivers and country flags
 
 We now have enough data to finally play our unicode trick and display
 driver's country flags directly in our query result set on the console:
@@ -334,6 +334,8 @@ group by drivers.driverid, country.code
 order by victories desc
    limit 10;
 ~~~
+
+## Conclusion
 
 And here's our result with inline colored flags in the terminal:
 

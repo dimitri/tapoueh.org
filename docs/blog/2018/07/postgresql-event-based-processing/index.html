@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.31.1">
+    <meta name="generator" content="Hugo 0.46">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>PostgreSQL Event Based Processing</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -151,13 +151,16 @@ triggers, and its impact on concurrency.">
     
       
 <script>
-(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-
-ga('create', 'UA-47059482-1', 'auto');
-ga('send', 'pageview');
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-47059482-1', 'auto');
+	
+	ga('send', 'pageview');
+}
 </script>
 
     
@@ -430,17 +433,135 @@ support. Today, we&rsquo;re going to dive in how to maintain a summary table wit
 triggers, and its impact on concurrency.</p>
 
 <p>
-<h1 id="table-of-contents"></h1><nav id="TableOfContents">
-<ul>
-<li><a href="#triggers">Triggers</a></li>
-<li><a href="#transactional-event-driven-processing">Transactional Event Driven Processing</a></li>
-<li><a href="#trigger-and-counters-anti-pattern">Trigger and Counters Anti-Pattern</a></li>
-<li><a href="#fixing-the-behavior">Fixing the Behavior</a></li>
-<li><a href="#conclusion">Conclusion</a></li>
-</ul>
-</nav></p>
+ 
 
-<h1 id="triggers">Triggers</h1>
+
+
+
+<div class="table-of-contents toc bd-callout">
+    
+    <h4 class="text-muted">Table of Contents</h4>
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/07/postgresql-event-based-processing/#triggers">
+                    Triggers
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/07/postgresql-event-based-processing/#transactional-event-driven-processing">
+                    Transactional Event Driven Processing
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/07/postgresql-event-based-processing/#trigger-and-counters-anti-pattern">
+                    Trigger and Counters Anti-Pattern
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/07/postgresql-event-based-processing/#fixing-the-behavior">
+                    Fixing the Behavior
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/07/postgresql-event-based-processing/#conclusion">
+                    Conclusion
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+</div>
+
+</p>
+
+<h2 id="triggers">Triggers</h2>
 
 <p>When a cache refresh policy of minutes isn&rsquo;t advisable, a common approach is
 to implement event-based processing. Most SQL systems, including PostgreSQL,
@@ -501,7 +622,7 @@ views, check it out!</p>
 
 <hr />
 
-<h1 id="transactional-event-driven-processing">Transactional Event Driven Processing</h1>
+<h2 id="transactional-event-driven-processing">Transactional Event Driven Processing</h2>
 
 <p>PostgreSQL triggers call a registered procedure each time one of the
 supported events is committed. The execution of the procedure is always
@@ -620,7 +741,7 @@ same target row for a whole day.</p>
 concurrency and scalability properties of our model, in a single trigger.
 Yet it&rsquo;s easy to write such a trigger, so it&rsquo;s seen a lot in the wild.</p>
 
-<h1 id="trigger-and-counters-anti-pattern">Trigger and Counters Anti-Pattern</h1>
+<h2 id="trigger-and-counters-anti-pattern">Trigger and Counters Anti-Pattern</h2>
 
 <p>You might also notice that this triggers is very wrong in its behavior, as
 coded. The implementation of the <em>insert or update</em> — a.k.a. <em>upsert</em> — is
@@ -675,7 +796,7 @@ the consequent <em>insert</em>.</p>
 <p>Starting in PostgreSQL 9.5 with support for the <em>on conflict</em> clause of the
 <em>insert into</em> command, there&rsquo;s a much better way to address this problem.</p>
 
-<h1 id="fixing-the-behavior">Fixing the Behavior</h1>
+<h2 id="fixing-the-behavior">Fixing the Behavior</h2>
 
 <p>While it&rsquo;s easy to maintain a <em>cache</em> in an event driven fashion thanks to
 PostgreSQL and its trigger support, turning an <em>insert</em> into an <em>update</em>
@@ -778,7 +899,7 @@ in the previous article <a href="/blog/2018/07/computing-and-caching/">Computing
 Caching</a> and we saw that it would
 never scale to our requirements.</p>
 
-<h1 id="conclusion">Conclusion</h1>
+<h2 id="conclusion">Conclusion</h2>
 
 <p>PostgreSQL triggers are a powerful tool that allows extra business logic to
 happen right in the transaction that registers events in your system. Deeper
