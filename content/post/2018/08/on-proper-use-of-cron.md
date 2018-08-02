@@ -109,7 +109,7 @@ proper code repository, versionned, and deployed with the same process and
 quality as applied to the rest of the code.
 
 In many places, even when people are serious about their deployments, I've
-seen cron jobs falling in between the devs and ops team, noone being the
+seen cron jobs falling in between the devs and ops team, no one being the
 owner of them, and thus no clear procedure would be in place for maintaining
 those scripts.
 
