@@ -1,0 +1,1527 @@
+
+
+  
+    
+  
+
+
+  
+
+
+
+
+  
+
+
+  
+
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Hugo 0.46">
+    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
+    <title>Geolocation with PostgreSQL</title>
+    <meta name="author" content="Dimitri Fontaine">
+    <meta name="keywords" content="">
+
+    <link rel="icon" href="/favicon.ico">
+    
+
+    
+    <meta name="description" content="We have loaded Open Street Map points of interests in the article The Most
+Popular Pub Names — which
+compares PostgreSQL with MongoDB for simple geographical queries, and is
+part of our PostgreSQL Extensions article series. In
+today&rsquo;s article, look at how to geolocalize an IP address and locate the
+nearest pub, all within a single SQL query!
+
+For that, we are going to use the awesome
+ip4r extension from
+RhodiumToad.">
+    <meta property="og:description" content="We have loaded Open Street Map points of interests in the article The Most
+Popular Pub Names — which
+compares PostgreSQL with MongoDB for simple geographical queries, and is
+part of our PostgreSQL Extensions article series. In
+today&rsquo;s article, look at how to geolocalize an IP address and locate the
+nearest pub, all within a single SQL query!
+
+For that, we are going to use the awesome
+ip4r extension from
+RhodiumToad.">
+    <meta property="og:type" content="blog">
+    <meta property="og:title" content="Geolocation with PostgreSQL">
+    <meta property="og:url" content="/blog/2018/08/geolocation-with-postgresql/">
+    <meta property="og:site_name" content="The Art of PostgreSQL">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Geolocation with PostgreSQL">
+    <meta name="twitter:description" content="We have loaded Open Street Map points of interests in the article The Most
+Popular Pub Names — which
+compares PostgreSQL with MongoDB for simple geographical queries, and is
+part of our PostgreSQL Extensions article series. In
+today&rsquo;s article, look at how to geolocalize an IP address and locate the
+nearest pub, all within a single SQL query!
+
+For that, we are going to use the awesome
+ip4r extension from
+RhodiumToad.">
+    
+      <meta name="twitter:creator" content="@tapoueh">
+    
+    
+
+    
+    
+
+    
+      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
+    
+
+    
+      <meta property="og:image" content="https://tapoueh.org/img/earth-tz-logo.jpg">
+    
+    
+      <meta property="og:image" content="https://tapoueh.org/img/earth.jpg">
+    
+    
+
+    
+
+    
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
+    
+    
+    <link rel="stylesheet" href="/css/style-jsjn0006wyhpyzivf6yceb31gvpjatbcs3qzjvlumobfnugccvobqwxnnaj8.min.css" />
+    
+    
+      <link rel="stylesheet" href="https://tapoueh.org/css/dim.css">
+    
+      <link rel="stylesheet" href="https://tapoueh.org/css/nav.css">
+    
+
+    
+      
+<script>
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-47059482-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+    
+    
+  </head>
+
+  <body>
+    <div id="blog">
+      <header id="header" data-behavior="5">
+  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+  <div class="navbar-collapse collapse header-title" id="navigation">
+    <ul class="nav navbar-nav navbar-right">
+      
+      <li class="dropdown">
+        
+        <a style="color: black;" href="/" alt="blog"><i class="sidebar-button-icon fa fa-lg fa-home"></i></a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a style="color: black;" href="/conf/" alt="talks"><i class="sidebar-button-icon fa fa-lg fa-microphone"></i></a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a style="color: black;" href="https://twitter.com/tapoueh" alt="Twitter"><i class="sidebar-button-icon fa fa-lg fa-twitter"></i></a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a style="color: black;" href="http://masteringpostgresql.com/" alt="Mastering PostgreSQL"><i class="sidebar-button-icon fa fa-lg fa-book"></i></a>
+        
+      </li>
+      
+    </ul>
+  </div>
+
+  
+    
+      <a class="header-right-icon "
+         href="http://masteringpostgresql.com" target="_blank">
+    
+    
+      <i class="fa fa-lg fa-book"></i>
+    
+    
+    </a>
+  
+</header>
+
+      <nav id="sidebar" data-behavior="5">
+  <div class="sidebar-container">
+    
+      <div class="sidebar-profile">
+        <a href="/#about">
+          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+        </a>
+        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
+        
+          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
+        
+      </div>
+    
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
+      
+      <span class="sidebar-button-desc">Blog</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/about/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
+      
+      <span class="sidebar-button-desc">About</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories/yesql/">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-database"></i>
+      
+      <span class="sidebar-button-desc">YeSQL</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="http://masteringpostgresql.com" target="_blank" rel="noopener">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
+      
+      <span class="sidebar-button-desc">Mastering PostgreSQL</span>
+    </a>
+  </li>
+
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+      
+      <span class="sidebar-button-desc">GitHub</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+      
+      <span class="sidebar-button-desc">Twitter</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+      
+      <span class="sidebar-button-desc">Categories</span>
+    </a>
+  </li>
+
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/index.xml">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+      
+      <span class="sidebar-button-desc">RSS</span>
+    </a>
+  </li>
+
+
+    </ul>
+  </div>
+</nav>
+
+      
+  <div class="post-header-cover
+              text-left
+              post-header-cover--partial"
+       style="background-image:url('/img/earth.jpg')"
+       data-behavior="5">
+    
+      <div class="post-header main-content-wrap text-left">
+  
+    <h1 class="post-title" itemprop="headline">
+      Geolocation with PostgreSQL
+    </h1>
+  
+  
+  <div class="postShorten-meta post-meta">
+    
+      <time itemprop="datePublished" datetime="2018-08-24T12:11:33&#43;02:00">
+        <span style="float: left; width: 35%">
+          <i class="fa fa-calendar"></i> 
+  
+  
+  
+  
+    Friday 24 Aug 2018
+  
+
+        </span>
+      </time>
+    
+    <span style="float: right; width: 65%">
+      <i class="fa fa-clock-o"></i> 10 mins read
+      
+    </span>
+    <span style="float: left; width: 35%">
+      <i class="fa fa-bookmark"></i> 
+  
+  
+    <span></span>
+    
+      <a class="category-link" href="/categories/postgresql">PostgreSQL</a>, 
+    
+      <a class="category-link" href="/categories/yesql">YeSQL</a>
+    
+  
+
+    </span>
+    <div>
+      <p>
+        
+        
+        
+        
+        
+        
+        <a href="/tags/point/">
+          <i class="fa fa-tag"></i> Point
+        </a>
+        
+        
+        
+        <a href="/tags/geolocation/">
+          <i class="fa fa-tag"></i> Geolocation
+        </a>
+        
+        
+        
+        <a href="/tags/extensions/">
+          <i class="fa fa-tag"></i> Extensions
+        </a>
+        
+        
+        
+        <a href="/tags/ip4r/">
+          <i class="fa fa-tag"></i> ip4r
+        </a>
+        
+        
+      </p>
+    </div>
+  </div>
+
+
+</div>
+    
+  </div>
+
+
+      <div id="main" data-behavior="5"
+        class="hasCover
+               hasCoverMetaIn
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
+          
+          <div class="post-content markdown" itemprop="articleBody">
+            <div class="main-content-wrap">
+              <p>We have loaded Open Street Map points of interests in the article <a href="/blog/2013/08/the-most-popular-pub-names/">The Most
+Popular Pub Names</a> — which
+compares PostgreSQL with MongoDB for simple geographical queries, and is
+part of our <a href="/tags/extensions/">PostgreSQL Extensions</a> article series. In
+today&rsquo;s article, look at how to geolocalize an IP address and locate the
+nearest pub, all within a single SQL query!</p>
+
+<p>For that, we are going to use the awesome
+<a href="https://github.com/RhodiumToad/ip4r">ip4r</a> extension from
+<a href="http://blog.rhodiumtoad.org.uk/">RhodiumToad</a>.</p>
+
+<p>
+ 
+
+
+
+
+<div class="table-of-contents toc bd-callout">
+    
+    <h4 class="text-muted">Table of Contents</h4>
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/08/geolocation-with-postgresql/#geolocation-data-loading">
+                    Geolocation Data Loading
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/08/geolocation-with-postgresql/#finding-an-ip-address-in-our-ranges">
+                    Finding an IP Address in our Ranges
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/08/geolocation-with-postgresql/#geolocation-meta-data">
+                    Geolocation meta-data
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/08/geolocation-with-postgresql/#emergency-pub">
+                    Emergency Pub
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2018/08/geolocation-with-postgresql/#conclusion">
+                    Conclusion
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+</div>
+
+</p>
+
+<h2 id="geolocation-data-loading">Geolocation Data Loading</h2>
+
+<p>The first step is to find an <em>geolocation</em> database, and several providers
+are offering that. The one I did choose for that example is the
+<a href="http://www.maxmind.com">http://www.maxmind.com</a> free database available at
+<a href="http://dev.maxmind.com/geoip/legacy/geolite/">GeoLite Free Downloadable
+Databases</a>.</p>
+
+<p>After having had a look at the files in there, we define the table schema we
+want and load the archive, using pgloader. So, first, the target schema is
+created using the following script:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span> extension <span style="color:#00a">if</span> <span style="color:#00a">not</span> <span style="color:#00a">exists</span> ip4r;
+<span style="color:#00a">create</span> <span style="color:#00a">schema</span> <span style="color:#00a">if</span> <span style="color:#00a">not</span> <span style="color:#00a">exists</span> geolite;
+
+<span style="color:#00a">create</span> <span style="color:#00a">table</span> <span style="color:#00a">if</span> <span style="color:#00a">not</span> <span style="color:#00a">exists</span> geolite.<span style="color:#00a">location</span>
+(
+   locid      <span style="color:#0aa">integer</span> <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
+   country    <span style="color:#0aa">text</span>,
+   region     <span style="color:#0aa">text</span>,
+   city       <span style="color:#0aa">text</span>,
+   postalcode <span style="color:#0aa">text</span>,
+   <span style="color:#00a">location</span>   point,
+   metrocode  <span style="color:#0aa">text</span>,
+   areacode   <span style="color:#0aa">text</span>
+);
+       
+<span style="color:#00a">create</span> <span style="color:#00a">table</span> <span style="color:#00a">if</span> <span style="color:#00a">not</span> <span style="color:#00a">exists</span> geolite.blocks
+(
+   iprange    ip4r,
+   locid      <span style="color:#0aa">integer</span>
+);
+
+<span style="color:#00a">create</span> <span style="color:#00a">index</span> blocks_ip4r_idx <span style="color:#00a">on</span> geolite.blocks <span style="color:#00a">using</span> gist(iprange);</code></pre></div>
+<p>And the data can now be imported to those target tables thanks to the
+following pgloader command, quite involved:</p>
+
+<pre><code>/*
+ * Loading from a ZIP archive containing CSV files.
+ */
+
+LOAD ARCHIVE
+   FROM http://geolite.maxmind.com/download/geoip/database/GeoLiteCity_CSV/GeoLiteCity-latest.zip
+   INTO postgresql://appdev@/appdev
+
+   BEFORE LOAD EXECUTE 'geolite.sql'
+
+   LOAD CSV
+        FROM FILENAME MATCHING ~/GeoLiteCity-Location.csv/
+             WITH ENCODING iso-8859-1
+             (
+                locId,
+                country,
+                region     [ null if blanks ],
+                city       [ null if blanks ],
+                postalCode [ null if blanks ],
+                latitude,
+                longitude,
+                metroCode  [ null if blanks ],
+                areaCode   [ null if blanks ]
+             )
+        INTO postgresql://appdev@/appdev
+        TARGET TABLE geolite.location
+             (
+                locid,country,region,city,postalCode,
+                location point using (format nil &quot;(~a,~a)&quot; longitude latitude),
+                metroCode,areaCode
+             )
+        WITH skip header = 2,
+             drop indexes,
+             fields optionally enclosed by '&quot;',
+             fields escaped by double-quote,
+             fields terminated by ','
+
+  AND LOAD CSV
+        FROM FILENAME MATCHING ~/GeoLiteCity-Blocks.csv/
+             WITH ENCODING iso-8859-1
+             (
+                startIpNum, endIpNum, locId
+             )
+        INTO postgresql://appdev@/appdev
+        TARGET TABLE geolite.blocks
+             (
+                iprange ip4r using (ip-range startIpNum endIpNum),
+                locId
+             )
+        WITH skip header = 2,
+             drop indexes,
+             fields optionally enclosed by '&quot;',
+             fields escaped by double-quote,
+             fields terminated by ',';
+</code></pre>
+
+<p>The pgloader command describe the file format so that pgloader can parse the
+data from the CSV file and transform it in memory to the format we expect in
+PostgreSQL. The location in the CSV file is given as two separate fields
+<code>latitude</code> and <code>longitude</code>, which we use to form a single <code>point</code> column.</p>
+
+<p>In the same vein, in the pgloader command we also describe how to transform
+a IP address range from a couple of integers to a more classic
+representation of the same data:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp"><span style="color:#a00">CL-USER&gt;</span> (<span style="color:#a00">pgloader.transforms::ip-range</span> <span style="color:#a50">&#34;16777216&#34;</span> <span style="color:#a50">&#34;16777471&#34;</span>)
+<span style="color:#a50">&#34;1.0.0.0-1.0.0.255&#34;</span></code></pre></div>
+<p>The pgloader command also finds the files we want to load independantly of
+the real name of the directory, here <code>GeoLiteCity_20180327</code>. So when there&rsquo;s
+a new release of the <em>Geolite</em> files, you can run the pgloader all over
+again and expect it to load the new data.</p>
+
+<p>And here&rsquo;s what the output of the pgloader command looks like. Note that I
+have stripped the timestamps from the logs output, in order for the line to
+make sense when printed in those pages:</p>
+
+<pre><code>$ pgloader --verbose geolite.load
+NOTICE Starting pgloader, log system is ready.
+LOG Data errors in '/private/tmp/pgloader/'
+LOG Parsing commands from file #P&quot;/Users/dim/dev/yesql/src/1-application-development/data/geolite/geolite.load&quot;
+LOG Fetching 'http://geolite.maxmind.com/download/geoip/database/GeoLiteCity_CSV/GeoLiteCity-latest.zip'
+LOG Extracting files from archive '/var/folders/bh/t1wcr6cx37v4h87yj3qj009r0000gn/T/GeoLiteCity-latest.zip'
+NOTICE unzip -o &quot;/var/folders/bh/t1wcr6cx37v4h87yj3qj009r0000gn/T/GeoLiteCity-latest.zip&quot; -d &quot;/var/folders/bh/t1wcr6cx37v4h87yj3qj009r0000gn/T/GeoLiteCity-latest/&quot;
+NOTICE Executing SQL block for before load
+NOTICE ALTER TABLE &quot;geolite&quot;.&quot;location&quot; DROP CONSTRAINT IF EXISTS &quot;location_pkey&quot;;
+NOTICE COPY &quot;geolite&quot;.&quot;location&quot;
+NOTICE Opening #P&quot;/private/var/folders/bh/t1wcr6cx37v4h87yj3qj009r0000gn/T/GeoLiteCity-latest/GeoLiteCity_20180327/GeoLiteCity-Location.csv&quot;
+NOTICE copy &quot;geolite&quot;.&quot;location&quot;: 234105 rows done,  11.5 MB,   2.1 MBps
+NOTICE copy &quot;geolite&quot;.&quot;location&quot;: 495453 rows done,  24.3 MB,   2.2 MBps
+NOTICE copy &quot;geolite&quot;.&quot;location&quot;: 747550 rows done,  37.1 MB,   2.2 MBps
+NOTICE CREATE UNIQUE INDEX location_pkey ON geolite.location USING btree (locid)
+NOTICE ALTER TABLE &quot;geolite&quot;.&quot;location&quot; ADD PRIMARY KEY USING INDEX &quot;location_pkey&quot;;
+NOTICE DROP INDEX IF EXISTS &quot;geolite&quot;.&quot;blocks_ip4r_idx&quot;;
+NOTICE COPY &quot;geolite&quot;.&quot;blocks&quot;
+NOTICE Opening #P&quot;/private/var/folders/bh/t1wcr6cx37v4h87yj3qj009r0000gn/T/GeoLiteCity-latest/GeoLiteCity_20180327/GeoLiteCity-Blocks.csv&quot;
+NOTICE copy &quot;geolite&quot;.&quot;blocks&quot;: 227502 rows done,   7.0 MB,   1.8 MBps
+NOTICE copy &quot;geolite&quot;.&quot;blocks&quot;: 492894 rows done,  15.2 MB,   1.9 MBps
+NOTICE copy &quot;geolite&quot;.&quot;blocks&quot;: 738483 rows done,  22.9 MB,   2.0 MBps
+NOTICE copy &quot;geolite&quot;.&quot;blocks&quot;: 986719 rows done,  30.7 MB,   2.1 MBps
+NOTICE copy &quot;geolite&quot;.&quot;blocks&quot;: 1246450 rows done,  38.9 MB,   2.2 MBps
+NOTICE copy &quot;geolite&quot;.&quot;blocks&quot;: 1489726 rows done,  47.1 MB,   2.2 MBps
+NOTICE copy &quot;geolite&quot;.&quot;blocks&quot;: 1733633 rows done,  55.1 MB,   2.2 MBps
+NOTICE copy &quot;geolite&quot;.&quot;blocks&quot;: 1985222 rows done,  63.3 MB,   2.2 MBps
+NOTICE CREATE INDEX blocks_ip4r_idx ON geolite.blocks USING gist (iprange)
+LOG report summary reset
+             table name     errors       read   imported      bytes      total time
+-----------------------  ---------  ---------  ---------  ---------  --------------
+               download          0          0          0                     0.793s
+                extract          0          0          0                     0.855s
+            before load          0          5          5                     0.033s
+                  fetch          0          0          0                     0.005s
+-----------------------  ---------  ---------  ---------  ---------  --------------
+   &quot;geolite&quot;.&quot;location&quot;          0     928138     928138    46.4 MB         20.983s
+     &quot;geolite&quot;.&quot;blocks&quot;          0    2108310    2108310    67.4 MB         30.695s
+-----------------------  ---------  ---------  ---------  ---------  --------------
+        Files Processed          0          2          2                     0.024s
+COPY Threads Completion          0          4          4                    51.690s
+ Index Build Completion          0          0          0                    49.363s
+         Create Indexes          0          2          2                    49.265s
+            Constraints          0          1          1                     0.002s
+-----------------------  ---------  ---------  ---------  ---------  --------------
+      Total import time          ✓    3036448    3036448   113.8 MB       2m30.344s
+</code></pre>
+
+<p>We can see that pgloader has dropped the indexes before loading the data,
+and created them again once the data is loaded, in parallel to loading data
+from the next table. This parallel processing can be a huge benefit on beefy
+servers.</p>
+
+<p>So we now have the following tables to play with:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql">                     List of relations
+ Schema  │   Name   │ Type  │ Owner  │ Size  │ Description 
+═════════╪══════════╪═══════╪════════╪═══════╪═════════════
+ geolite │ blocks   │ table │ appdev │ 89 MB │ 
+ geolite │ location │ table │ appdev │ 64 MB │ 
+(2 rows)</code></pre></div>
+<h2 id="finding-an-ip-address-in-our-ranges">Finding an IP Address in our Ranges</h2>
+
+<p>Here&rsquo;s what the main data look like:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">table</span> geolite.blocks <span style="color:#00a">limit</span> <span style="color:#099">10</span>;</code></pre></div>
+<p>The TABLE command is per SQL standard, so we might as well use it:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql">       iprange       │ locid  
+═════════════════════╪════════
+ 1.0.0.0/24          │ 617943
+ 1.0.1.0-1.0.3.255   │ 104084
+ 1.0.4.0/22          │     17
+ 1.0.8.0/21          │  47667
+ 1.0.16.0/20         │ 879228
+ 1.0.32.0/19         │  47667
+ 1.0.64.0-1.0.81.255 │ 885221
+ 1.0.82.0/24         │ 902132
+ 1.0.83.0-1.0.86.255 │ 885221
+ 1.0.87.0/24         │ 873145
+(10 rows)</code></pre></div>
+<p>What we have here is a classic <em>ip range</em> column where we can see that the
+datatype output function is smart enough to display ranges either in their
+<a href="http://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing">CIDR notation</a>
+or in the more general <em>start-end</em> notation when no CIDR applies.</p>
+
+<p>The <em>ip4r</em> extension provides several operators to work with the dataset we
+have, some of those operators are supported by the index we just created.
+And just for the fun of it here&rsquo;s a catalog query to inquire about them:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> amopopr::regoperator
+  <span style="color:#00a">from</span> pg_opclass <span style="color:#00a">c</span>
+       <span style="color:#00a">join</span> pg_am am <span style="color:#00a">on</span> am.oid = <span style="color:#00a">c</span>.opcmethod
+       <span style="color:#00a">join</span> pg_amop amop <span style="color:#00a">on</span> amop.amopfamily = <span style="color:#00a">c</span>.opcfamily
+ <span style="color:#00a">where</span> opcintype = <span style="color:#a50">&#39;ip4r&#39;</span>::regtype <span style="color:#00a">and</span> am.amname = <span style="color:#a50">&#39;gist&#39;</span>;</code></pre></div>
+<p>The catalog query above joins the PostgreSQL catalogs for operator classes,
+index access methods on the notion of an operator family in order to
+retrieve the list of operators associated with the <code>ip4r</code> data type and the
+GiST access method:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql">    amopopr     
+════════════════
+ &gt;&gt;=(ip4r,ip4r)
+ &lt;&lt;=(ip4r,ip4r)
+ &gt;&gt;(ip4r,ip4r)
+ &lt;&lt;(ip4r,ip4r)
+ &amp;&amp;(ip4r,ip4r)
+ =(ip4r,ip4r)
+(6 rows)</code></pre></div>
+<p>Note that we could have been using the psql <code>\dx+ ip4r</code> command instead of
+course, but that query directly list operators that the <em>GiST</em> index knows
+how to solve. The operator <code>&gt;&gt;=</code> reads as <em>contains</em> and is the one we&rsquo;re
+going to use here.</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> iprange, locid
+  <span style="color:#00a">from</span> geolite.blocks
+ <span style="color:#00a">where</span> iprange &gt;&gt;= <span style="color:#a50">&#39;91.121.37.122&#39;</span>;</code></pre></div>
+<p>And here&rsquo;s the range in which we find the IP address 91.121.37.122, and the
+location it&rsquo;s associated with:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql">         iprange          │ locid 
+══════════════════════════╪═══════
+ 91.121.0.0-91.121.71.255 │    75</code></pre></div>
+<p>This lookup is fast, thanks to our specialized GiST index, its timing is
+under a millisecond.</p>
+
+<h2 id="geolocation-meta-data">Geolocation meta-data</h2>
+
+<p>Now with the <em>MaxMind</em> schema that we are using in that example, the
+interesting data actually is to be found in the other table, the
+<code>geolite.location</code> one. Let&rsquo;s use another IP address now, I&rsquo;m told by the
+unix command <code>host</code> that <code>google.us has address 74.125.195.147</code> and we can
+inquire where is that IP from:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> *
+ <span style="color:#00a">from</span>      geolite.blocks
+      <span style="color:#00a">join</span> geolite.<span style="color:#00a">location</span> <span style="color:#00a">using</span>(locid)
+<span style="color:#00a">where</span> iprange &gt;&gt;= <span style="color:#a50">&#39;74.125.195.147&#39;</span>;</code></pre></div>
+<p>Our data locates the Google IP address in Mountain View, which is credible:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql">─[ RECORD 1 ]───────────────────────────
+locid      │ 2703
+iprange    │ 74.125.191.0-74.125.223.255
+country    │ US
+region     │ CA
+city       │ Mountain View
+postalcode │ 94043
+location   │ (-122.0574,37.4192)
+metrocode  │ 807
+areacode   │ 650</code></pre></div>
+<p>Now you can actually draw that on a map as you have the location information
+as a <em>point</em> datatype containing both the <em>longitude</em> and <em>latitude</em>.</p>
+
+<h2 id="emergency-pub">Emergency Pub</h2>
+
+<p>What if you want to make an application to help lost souls find the nearest
+pub from where they are currently? Now that you know their location from the
+<em>IP address</em> they are using in their browser, it should be easy enough
+right?</p>
+
+<p>As we downloaded a list of pubs from the UK, we are going to use an IP
+address that should be in the UK too.</p>
+
+<div class="alert info ">
+  <p>See my project <a href="https://github.com/dimitri/pubnames">https://github.com/dimitri/pubnames</a> for loading the same
+set of data on your local database, or read the article <a href="/blog/2013/08/the-most-popular-pub-names/">The Most Popular
+Pub Names</a> for more about this
+OpenStreetMap data loading.</p>
+</div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ host www.ox.ac.uk
+www.ox.ac.uk has address <span style="color:#099">129</span>.67.242.154
+www.ox.ac.uk has address <span style="color:#099">129</span>.67.242.155</code></pre></div>
+<p>Knowing that, we can search the geolocation of this IP address:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> *
+  <span style="color:#00a">from</span>      geolite.<span style="color:#00a">location</span> l
+       <span style="color:#00a">join</span> geolite.blocks <span style="color:#00a">using</span>(locid)
+ <span style="color:#00a">where</span> iprange &gt;&gt;= <span style="color:#a50">&#39;129.67.242.154&#39;</span>;</code></pre></div>
+<p>And the Oxford University is actually hosted in Oxford, it seems:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql">─[ RECORD 1 ]─────────────
+locid      │ 375290
+country    │ GB
+region     │ K2
+city       │ Oxford
+postalcode │ OX1
+location   │ (-1.25,51.75)
+metrocode  │ ¤
+areacode   │ ¤
+iprange    │ 129.67.0.0/16</code></pre></div>
+<p>What are the ten nearest pubs around if you&rsquo;re just out of the Oxford
+University? Well, let&rsquo;s figure that out before we get thirsty!</p>
+
+<!-- 
+
+    set parallel_setup_cost to 10000;
+
+ -->
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">   <span style="color:#00a">select</span> pubs.name,
+          round((pubs.pos &lt;@&gt; l.<span style="color:#00a">location</span>)::<span style="color:#0aa">numeric</span>, <span style="color:#099">3</span>) <span style="color:#00a">as</span> miles,
+          ceil(<span style="color:#099">1609</span>.<span style="color:#099">34</span> * (pubs.pos &lt;@&gt; l.<span style="color:#00a">location</span>)::<span style="color:#0aa">numeric</span>) <span style="color:#00a">as</span> meters
+   
+     <span style="color:#00a">from</span> geolite.<span style="color:#00a">location</span> l
+          <span style="color:#00a">join</span> geolite.blocks <span style="color:#00a">using</span>(locid)
+          <span style="color:#00a">left</span> <span style="color:#00a">join</span> <span style="color:#00a">lateral</span>
+          (
+              <span style="color:#00a">select</span> name, pos
+                <span style="color:#00a">from</span> pubnames
+            <span style="color:#00a">order</span> <span style="color:#00a">by</span> pos &lt;-&gt; l.<span style="color:#00a">location</span>
+               <span style="color:#00a">limit</span> <span style="color:#099">10</span>
+          ) <span style="color:#00a">as</span> pubs <span style="color:#00a">on</span> <span style="color:#00a">true</span>
+          
+    <span style="color:#00a">where</span> blocks.iprange &gt;&gt;= <span style="color:#a50">&#39;129.67.242.154&#39;</span>
+ <span style="color:#00a">order</span> <span style="color:#00a">by</span> meters;</code></pre></div>
+<p>And here&rsquo;s the list, obtained in around about a millisecond on my laptop:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql">        name        │ miles │ meters 
+════════════════════╪═══════╪════════
+ The Bear           │ 0.268 │    431
+ The Half Moon      │ 0.280 │    451
+ The Wheatsheaf     │ 0.295 │    475
+ The Chequers       │ 0.314 │    506
+ The Old Tom        │ 0.315 │    507
+ Turl Bar           │ 0.321 │    518
+ St Aldate&#39;s Tavern │ 0.329 │    530
+ The Mad Hatter     │ 0.337 │    542
+ King&#39;s Arms        │ 0.397 │    639
+ White Horse        │ 0.402 │    647
+(10 rows)</code></pre></div>
+<div class="alert warning ">
+  <p><p>The first run of this query wasn&rsquo;t very fast, until we realized with friends
+on the IRC channel for PostgreSQL help that the plan was using parallel
+processing. The size of the dataset means that the parallel setup cost is
+going to ruin our performance here, so I&rsquo;ve been doing the following to get
+the query to run in 1ms rather than 15ms:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">set</span> parallel_setup_cost <span style="color:#00a">to</span> <span style="color:#099">10000</span>;</code></pre></div></p>
+</div>
+
+<p>So with PostgreSQL and some easily available extensionsm, we are actually
+capable of performing advanced geolocation lookups in a single SQL query.
+The timing of this query makes it possible to use it in production and serve
+users requests directly from it, too!</p>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>While some <em>geolocation</em> data provider are giving you some libs and code to
+do quite fast lookups, any interesting thing you want to do with the
+<em>geolocation</em> data is about the <strong><em>meta data</em></strong>. And that&rsquo;s where yet again
+<a href="http://www.postgresql.org/">PostgreSQL</a> shines: you can actually use
+specialized data types and operators, <em>JOINs</em> and <em>kNN</em> searches, all from
+within a single query. You get back only those results you are interested
+into, and the application is then responsible for adding value to that,
+rather than processing the data itself.</p>
+
+
+<figure class="right">
+    <a href="https://masteringpostgresql.com">
+        <img src="/img/MasteringPostgreSQLinAppDev-Cover-th.png" />
+    </a>
+    
+</figure>
+
+
+<p>Typically what the application here would be doing is drawing a map and
+locating the pubs on it, adding maybe descriptions and votes and notes on
+each address, maybe even the draft menu. An ideal application might even be
+able to join the draft menu of each nearby pub against your own preferences
+and offer you a nice short list ordered by what you&rsquo;re most likely to want
+to drink at this hour.</p>
+
+<p>Living in the future is both exciting and frightening!</p>
+              
+            </div>
+          </div>
+          <div id="post-footer" class="post-footer main-content-wrap">
+            
+              
+                
+                
+                  <div class="post-footer-tags">
+                    <span class="text-color-light text-small"></span><br/>
+                    
+  <a class="tag tag--primary tag--small" href="/tags/postgresql/">PostgreSQL</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/yesql/">YeSQL</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/point/">Point</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/geolocation/">Geolocation</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/extensions/">Extensions</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/ip4r/">ip4r</a>
+
+                  </div>
+                
+              
+            
+            <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    
+    <script async id="_ck_252762" src="https://forms.convertkit.com/252762?v=6"></script>
+    
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/08/postgresql-concurrency-an-article-series/" data-tooltip="PostgreSQL Concurrency: an Article Series">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f08%2fgeolocation-with-postgresql%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f08%2fgeolocation-with-postgresql%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=Geolocation%20with%20PostgreSQL with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f08%2fgeolocation-with-postgresql%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+            
+              
+                <div id="disqus_thread">
+  <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+              
+            
+          </div>
+        </article>
+        <footer id="footer" class="main-content-wrap">
+  <span class="copyrights">
+    &copy; 2018 Dimitri Fontaine. 
+  </span>
+</footer>
+
+      </div>
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="5">
+        <div class="post-actions-wrap">
+  <div class="post-footer-tags">
+    
+    <script async id="_ck_252762" src="https://forms.convertkit.com/252762?v=6"></script>
+    
+  </div>
+  <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/08/postgresql-concurrency-an-article-series/" data-tooltip="PostgreSQL Concurrency: an Article Series">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f08%2fgeolocation-with-postgresql%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f08%2fgeolocation-with-postgresql%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=Geolocation%20with%20PostgreSQL with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f08%2fgeolocation-with-postgresql%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+      </div>
+      <div id="share-options-bar" class="share-options-bar" data-behavior="5">
+  <ul class="share-options">
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f08%2fgeolocation-with-postgresql%2f">
+        <i class="fa fa-google-plus"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f08%2fgeolocation-with-postgresql%2f">
+        <i class="fa fa-facebook-official"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=Geolocation%20with%20PostgreSQL with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f08%2fgeolocation-with-postgresql%2f">
+        <i class="fa fa-twitter"></i><span></span>
+      </a>
+    </li>
+  </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
+    </div>
+    
+    <div id="about">
+  <div id="about-card">
+    <div id="about-btn-close">
+      <i class="fa fa-remove"></i>
+    </div>
+    
+      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+    
+    <h4 id="about-card-name">Dimitri Fontaine</h4>
+    
+      <div id="about-card-bio">PostgreSQL Major Contributor</div>
+    
+    
+      <div id="about-card-job">
+        <i class="fa fa-briefcase"></i>
+        <br/>
+        Open Source Software Engineer
+      </div>
+    
+    
+      <div id="about-card-location">
+        <i class="fa fa-map-marker"></i>
+        <br/>
+        France
+      </div>
+    
+  </div>
+</div>
+
+    <div id="algolia-search-modal" class="modal-container">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="close-button"><i class="fa fa-close"></i></span>
+      <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
+        <span class="searchby-algolia-text text-color-light text-small">by</span>
+        <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+      </a>
+      <i class="search-icon fa fa-search"></i>
+      <form id="algolia-search-form">
+        <input type="text" id="algolia-search-input" name="search"
+          class="form-control input--large search-input" placeholder="" />
+      </form>
+    </div>
+    <div class="modal-body">
+      <div class="no-result text-color-light text-center"></div>
+      <div class="results">
+        
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/08/geolocation-with-postgresql/">
+                <h3 class="media-heading">Geolocation with PostgreSQL</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Aug 8, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>We have loaded Open Street Map points of interests in the article <a href="/blog/2013/08/the-most-popular-pub-names/">The Most
+Popular Pub Names</a> — which
+compares PostgreSQL with MongoDB for simple geographical queries, and is
+part of our <a href="/tags/extensions/">PostgreSQL Extensions</a> article series. In
+today&rsquo;s article, look at how to geolocalize an IP address and locate the
+nearest pub, all within a single SQL query!</p>
+
+<p>For that, we are going to use the awesome
+<a href="https://github.com/RhodiumToad/ip4r">ip4r</a> extension from
+<a href="http://blog.rhodiumtoad.org.uk/">RhodiumToad</a>.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/08/postgresql-concurrency-an-article-series/">
+                <h3 class="media-heading">PostgreSQL Concurrency: an Article Series</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Aug 8, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p><a href="https://www.postgresql.org">PostgreSQL</a> is a relational database management
+system. It&rsquo;s even the world&rsquo;s most advanced open source one of them. As
+such, as its core, Postgres solves concurrent access to a set of data and
+maintains consistency while allowing concurrent operations.</p>
+
+<p>In the <a href="/tags/concurrency/">PostgreSQL Concurrency</a> series of articles here
+we did see several aspects of how to handle concurrent use cases of your
+application design with PostgreSQL. The main thing to remember is that a
+Database Management System first task is to handle concurrency access to the
+data for you.</p>
+
+<p></p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/08/scheduled-data-processing-how-to-use-cron/">
+                <h3 class="media-heading">Scheduled Data Processing: How to use cron?</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Aug 8, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>A previous article in the <a href="/tags/concurrency">PostgreSQL Concurrency</a> series
+covered how to manage concurrent retweets in an efficient way: in <a href="/blog/2018/07/computing-and-caching/">Computing
+and Caching</a>, we learnt how to
+maintain a cache right in your PostgreSQL database, using MATERIALIZED
+VIEWS. We also had a look at how to take care of <a href="/blog/2018/07/batch-updates-and-concurrency/">Batch Updates and
+Concurrency</a>.</p>
+
+<p>While in the first case we are providing a solution to a technical problem
+where we want to solve performance issues while keeping the same semantics,
+in the second case we are actually implementing a part of the application&rsquo;s
+<a href="/blog/2017/06/sql-and-business-logic/">Business Logic</a> as a scheduled job.</p>
+
+<p>Today&rsquo;s article shows a modern technique to handle the scheduling of those
+business oriented activities that are not tied to any user activity. When
+thinking about it this way, you certainly don&rsquo;t want to implement the
+backbone of your business logic in a <em>shell script</em> that&rsquo;s directly
+maintained in the production environment, do you?</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/07/batch-updates-and-concurrency/">
+                <h3 class="media-heading">Batch Updates and Concurrency</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jul 7, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>This article fits in the <a href="/tags/concurrency">PostgreSQL Concurrency</a> series,
+where we installed a tweeter like application schema and had all the
+characters from Shakespeare&rsquo;s <em>A Midsummer Night&rsquo;s Dream</em> tweet their own
+lines in our database in <a href="/blog/2018/06/PostgreSQL-DML.md">PostgreSQL Concurrency: Data Modification
+Language</a>.</p>
+
+<p>A previous article in the series covered how to manage concurrent retweets
+in an efficient way: <a href="/blog/2018/07/computing-and-caching/">Computing and
+Caching</a>, where we learn how to
+maintain a cache right in your PostgreSQL database, thanks for materialized
+views. We even went as far as maintaining an <em>external</em> cache in another
+application layer using PostgreSQL
+<a href="https://www.postgresql.org/docs/current/static/sql-listen.html">LISTEN</a> and
+<a href="https://www.postgresql.org/docs/current/static/sql-notify.html">NOTIFY</a>
+features and a Golang application.</p>
+
+<p>Today&rsquo;s article is going to address concurrency in the context of updating
+data in a batch. This activity is quite common, as soon as your system is
+connected to other systems either internally or with external providers.
+While it&rsquo;s pretty easy to ingest new data, and easy enough to update data
+from an external source when nothing happens in your database, doing the
+operation safely with concurrent activity is more complex. Once more though,
+PostgreSQL comes with all the tooling you need to handle that situation.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/07/postgresql-listen/notify/">
+                <h3 class="media-heading">PostgreSQL LISTEN/NOTIFY</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jul 7, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>This article fits in the <a href="/tags/concurrency">PostgreSQL Concurrency</a> series,
+where we installed a tweeter like application schema and had all the
+characters from Shakespeare&rsquo;s <em>A Midsummer Night&rsquo;s Dream</em> tweet their own
+lines in our database in <a href="/blog/2018/06/PostgreSQL-DML.md">PostgreSQL Concurrency: Data Modification
+Language</a>.</p>
+
+<p>A previous article in the series covered how to manage concurrent retweets
+in an efficient way: <a href="/blog/2018/07/computing-and-caching/">Computing and
+Caching</a>, where we learn how to
+maintain a cache right in your PostgreSQL database, thanks for materialized
+views.</p>
+
+<p>Today&rsquo;s article shows how to maintain an <em>external</em> cache in another
+application layer. In this article we are going to maintain an in-memory
+cache in a Golang service, using PostgreSQL
+<a href="https://www.postgresql.org/docs/current/static/sql-listen.html">LISTEN</a> and
+<a href="https://www.postgresql.org/docs/current/static/sql-notify.html">NOTIFY</a>
+features.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/07/postgresql-event-based-processing/">
+                <h3 class="media-heading">PostgreSQL Event Based Processing</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jul 7, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>In the previous article of the series <a href="/blog/2018/07/modeling-for-concurrency/">Modeling for
+Concurrency</a>, we saw how to model
+your application for highly concurrent activity. It was a follow-up to the
+article entitled <a href="/blog/2018/07/postgresql-concurrency-isolation-and-locking/">PostgreSQL Concurrency: Isolation and
+Locking</a>, which
+was a primer on PostgreSQL isolation and locking properties and behaviors.</p>
+
+<p>Today&rsquo;s article takes us a step further and builds on what we did in the
+previous articles in our series. After having had all the characters from
+Shakespeare&rsquo;s <em>A Midsummer Night&rsquo;s Dream</em> tweet their own lines in our
+database in <a href="/blog/2018/06/PostgreSQL-DML.md">PostgreSQL Concurrency: Data Modification
+Language</a>, and having had them like and
+retweet a lot in <a href="/blog/2018/07/postgresql-concurrency-isolation-and-locking/">PostgreSQL Concurrency: Isolation and
+Locking</a>, we
+saw how to manage concurrent retweets in an efficient way in <a href="/blog/2018/07/computing-and-caching/">Computing and
+Caching</a>.</p>
+
+<p>What we did implement in the previous article is a <em>cache</em> system, all with
+its necessary <strong>cache invalidation policy</strong>. Sometimes though, the
+processing of an <em>event</em> needs to happen within the same transaction where
+the event is registered in your system. PostgreSQL makes it possible to
+maintain a summary table transactionally thanks to its
+<a href="https://www.postgresql.org/docs/current/static/sql-createtrigger.html">trigger</a>
+support. Today, we&rsquo;re going to dive in how to maintain a summary table with
+triggers, and its impact on concurrency.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/07/computing-and-caching/">
+                <h3 class="media-heading">Computing and Caching</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jul 7, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Let&rsquo;s continue to dive in PostgreSQL Concurrency. In the previous article of
+the series, <a href="/blog/2018/07/modeling-for-concurrency/">Modeling for
+Concurrency</a>, we saw how to model
+your application for highly concurrent activity. It was a follow-up to the
+article entitled <a href="/blog/2018/07/postgresql-concurrency-isolation-and-locking/">PostgreSQL Concurrency: Isolation and
+Locking</a>, which
+was a primer on PostgreSQL isolation and locking properties and behaviors.</p>
+
+<p>Today&rsquo;s article takes us a step further and builds on what we did in the
+previous articles in our series. After having had all the characters from
+Shakespeare&rsquo;s <em>A Midsummer Night&rsquo;s Dream</em> tweet their own lines in our
+database in <a href="/blog/2018/06/PostgreSQL-DML.md">PostgreSQL Concurrency: Data Modification
+Language</a>, and having had them like a
+retweet a lot in <a href="/blog/2018/07/postgresql-concurrency-isolation-and-locking/">PostgreSQL Concurrency: Isolation and
+Locking</a>, it&rsquo;s
+time to think about how to display our counters in an efficient way.</p>
+
+<p>In this article, we&rsquo;re going to think about when we should compute results
+and when we should cache them for instant retrieval, all within the SQL
+tooling. The SQL tooling for handling cache is a <a href="https://www.postgresql.org/docs/current/static/sql-creatematerializedview.html">MATERIALIZED
+VIEW</a>,
+and it comes with <strong>cache invalidation</strong> routines, of course.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/07/modeling-for-concurrency/">
+                <h3 class="media-heading">Modeling for Concurrency</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jul 7, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p>Let&rsquo;s continue to dive in PostgreSQL Concurrency. Last week&rsquo;s article
+<a href="/blog/2018/07/postgresql-concurrency-isolation-and-locking/">PostgreSQL Concurrency: Isolation and
+Locking</a> was a
+primer on PostgreSQL isolation and locking properties and behaviors.</p>
+
+<p>Today&rsquo;s article takes us a step further and builds on what we did last week,
+in particular the database modeling for a <em>tweet</em> like application. After
+having had all the characters from Shakespeare&rsquo;s <em>A Midsummer Night&rsquo;s Dream</em>
+tweet their own lines in our database in <a href="/blog/2018/06/PostgreSQL-DML.md">PostgreSQL Concurrency: Data
+Modification Language</a>, it&rsquo;s time for them
+to do some actions on the tweets: likes and retweet.</p>
+
+<p>Of course, we&rsquo;re going to put concurrency to the test, so we&rsquo;re going to
+have to handle very very popular tweets from the play!</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/07/postgresql-concurrency-isolation-and-locking/">
+                <h3 class="media-heading">PostgreSQL Concurrency: Isolation and Locking</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jul 7, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather"><p><a href="https://www.postgresql.org">PostgreSQL</a> is a relational database management
+system. It&rsquo;s even the world&rsquo;s most advanced open source one of them. As
+such, as its core, Postgres solves concurrent access to a set of data and
+maintains consistency while allowing concurrent operations.</p>
+
+<p>This article is a primer on PostgreSQL Isolation and Locking properties and
+behaviors. You might be interested into the previous article in the series:
+<a href="/blog/2018/06/postgresql-concurrency-data-modification-language/">PostgreSQL Concurrency: Data Modification
+Language</a>.</p></div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+          <div class="media">
+            
+            <div class="media-body">
+              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/06/postgresql-concurrency-data-modification-language/">
+                <h3 class="media-heading">PostgreSQL Concurrency: Data Modification Language</h3>
+              </a>
+              <span class="media-meta">
+                <span class="media-date text-small">
+                  Jun 6, 2018
+                </span>
+              </span>
+              <div class="media-content hide-xs font-merryweather">PostgreSQL is a relational database management system. It&rsquo;s even the world&rsquo;s most advanced open source one of them. As such, as its core, Postgres solves concurrent access to a set of data and maintains consistency while allowing concurrent operations.
+Postgres exposes its concurrency APIs in the SQL language, in particular in the DML parts of it: you can read the Data Manipulation Language chapter of the PostgreSQL docs for all the details.</div>
+            </div>
+            <div style="clear:both;"></div>
+            <hr>
+          </div>
+        
+      </div>
+    </div>
+    <div class="modal-footer">
+      <p class="results-count text-medium"
+         data-message-zero=""
+         data-message-one=""
+         data-message-other="">
+         282 posts found
+      </p>
+    </div>
+  </div>
+</div>
+    
+  
+    
+    <div id="cover" style="background-image:url('https://tapoueh.org/images/mayan-calendar.jpg');"></div>
+  
+
+
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
+
+
+<script src="/js/script-qi9wbxp2ya2j6p7wx1i6tgavftewndznf4v0hy2gvivk1rxgc3lm7njqb6bz.min.js"></script>
+
+
+
+<script>
+$(document).ready(function() {
+  hljs.configure({ classPrefix: '', useBR: false });
+  $('pre.code-highlight > code, pre > code').each(function(i, block) {
+    if (!$(this).hasClass('codeblock')) {
+      $(this).addClass('codeblock');
+    }
+    hljs.highlightBlock(block);
+  });
+});
+</script>
+
+
+  
+    
+      <script>
+        var disqus_config = function () {
+          this.page.url = 'https:\/\/tapoueh.org\/blog\/2018\/08\/geolocation-with-postgresql\/';
+          
+            this.page.identifier = '\/blog\/2018\/08\/geolocation-with-postgresql\/'
+          
+        };
+        (function() {
+          
+          
+          if (window.location.hostname == "localhost") {
+            return;
+          }
+          var d = document, s = d.createElement('script');
+          var disqus_shortname = 'tapoueh';
+          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+          s.setAttribute('data-timestamp', +new Date());
+          (d.head || d.body).appendChild(s);
+        })();
+      </script>
+    
+  
+
+
+
+    
+  </body>
+</html>
+
