@@ -32,11 +32,11 @@
 
     
     <meta name="description" content="I&rsquo;ve been given a nice puzzle that I think is a good blog article
-opportunity, as it involves some thinking
-and window functions.">
+opportunity, as it involves some thinking and window
+functions.">
     <meta property="og:description" content="I&rsquo;ve been given a nice puzzle that I think is a good blog article
-opportunity, as it involves some thinking
-and window functions.">
+opportunity, as it involves some thinking and window
+functions.">
     <meta property="og:type" content="blog">
     <meta property="og:title" content="Reset Counter">
     <meta property="og:url" content="/blog/2012/10/reset-counter/">
@@ -44,8 +44,8 @@ and window functions.">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Reset Counter">
     <meta name="twitter:description" content="I&rsquo;ve been given a nice puzzle that I think is a good blog article
-opportunity, as it involves some thinking
-and window functions.">
+opportunity, as it involves some thinking and window
+functions.">
     
       <meta name="twitter:creator" content="@tapoueh">
     
@@ -62,7 +62,7 @@ and window functions.">
       <meta property="og:image" content="https://tapoueh.org/img/postgresql-512.jpg">
     
     
-      <meta property="og:image" content="https://tapoueh.org/img/postgresql-512.jpg">
+      <meta property="og:image" content="https://tapoueh.org/img/counter-reset.jpg">
     
     
 
@@ -260,20 +260,10 @@ if (!doNotTrack) {
   <div class="post-header-cover
               text-left
               post-header-cover--partial"
-       style="background-image:url('/img/postgresql-512.jpg')"
+       style="background-image:url('/img/counter-reset.jpg')"
        data-behavior="5">
     
-  </div>
-
-
-      <div id="main" data-behavior="5"
-        class="hasCover
-               hasCoverMetaOut
-               ">
-        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
-          
-          
-            <div class="post-header main-content-wrap text-left">
+      <div class="post-header main-content-wrap text-left">
   
     <h1 class="post-title" itemprop="headline">
       Reset Counter
@@ -331,12 +321,22 @@ if (!doNotTrack) {
 
 
 </div>
+    
+  </div>
+
+
+      <div id="main" data-behavior="5"
+        class="hasCover
+               hasCoverMetaIn
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
           
           <div class="post-content markdown" itemprop="articleBody">
             <div class="main-content-wrap">
               <p>I&rsquo;ve been given a nice puzzle that I think is a good blog article
-opportunity, as it involves some thinking
-and <a href="/blog/2013/08/understanding-window-functions/">window functions</a>.</p>
+opportunity, as it involves some thinking and <a href="/blog/2013/08/understanding-window-functions/">window
+functions</a>.</p>
 
 <p>
  
@@ -346,18 +346,13 @@ and <a href="/blog/2013/08/understanding-window-functions/">window functions</a>
 
 </p>
 
-<h1 id="what-s-to-solve">What&rsquo;s to solve</h1>
+<h1 id="ever-increasing-counter-with-resets">Ever Increasing Counter, with Resets</h1>
 
-<p>Say we store in a table entries from a
-<em>counter</em> that only increases and the
-time stamp when we did the measurement. So that when you read
-<code>30</code> then later
-<code>40</code> in fact that means we counted
-<code>10</code> more the second reading when compared to
-the first, in other words the first
-<code>30</code> are counted again in the second
-counter value,
-<code>40</code>.</p>
+<p>Say we store in a table entries from a <em>counter</em> that only increases and the
+time stamp when we did the measurement. So that when you read <code>30</code> then
+later <code>40</code> in fact that means we counted <code>10</code> more the second reading when
+compared to the first, in other words the first <code>30</code> are counted again in
+the second counter value, <code>40</code>.</p>
 
 <p><center>
 <div class="figure dim-margin">
@@ -371,25 +366,19 @@ counter value,
 network interface, if you want something real to play with in your mind. So
 the counter will sometime reset and you will read measure sequences such as
 <code>40, 0, 20</code> if you happen to read just when the counter is reset, or most of
-the time that will look like
-<code>45, 25, 50</code>.</p>
+the time that will look like <code>45, 25, 50</code>.</p>
 
 <p>The question we want to answer is, given a series of that counter measures,
 including some resets, what is the current logical value of the counter?</p>
 
-<p>Given the sequence of measures
-<code>0, 10, 20, 30, 40, 0, 20, 30, 60</code> the result
-we want is
-<code>40 + 60</code>, that is
-<code>100</code>. Right?</p>
+<p>Given the sequence of measures <code>0, 10, 20, 30, 40, 0, 20, 30, 60</code> the result
+we want is <code>40 + 60</code>, that is <code>100</code>. Right?</p>
 
 <h1 id="playing-with-some-data">Playing with some data</h1>
 
 <p>Let&rsquo;s model an hypothetical dataset easy enough to play with. What about
-just the previous example? We also need to
-<em>time stamp</em> the measurements,
-let&rsquo;s just use a
-<em>tick</em> for now, as it&rsquo;s easier to think about:</p>
+just the previous example? We also need to <em>time stamp</em> the measurements,
+let&rsquo;s just use a <em>tick</em> for now, as it&rsquo;s easier to think about:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span> <span style="color:#00a">table</span> measures(tick <span style="color:#0aa">int</span>, nb <span style="color:#0aa">int</span>);
 
 <span style="color:#00a">insert</span> <span style="color:#00a">into</span> measures
@@ -397,16 +386,14 @@ let&rsquo;s just use a
             (<span style="color:#099">6</span>, <span style="color:#099">0</span>), (<span style="color:#099">7</span>, <span style="color:#099">20</span>), (<span style="color:#099">8</span>, <span style="color:#099">30</span>), (<span style="color:#099">9</span>, <span style="color:#099">60</span>);</code></pre></div>
 <p>Now that we have some data in a table to play with, let&rsquo;s try to find out
 the numbers we are interested in: we only want to keep the latest measure we
-read on the counter just before it wraps. That means values where the
-<em>next
+read on the counter just before it wraps. That means values where the <em>next
 one</em> (in tick or time stamping order) is lesser than the current counter
 value.</p>
 
 <p>As we are lucky enough to be playing with the awesome
-<a href="http://www.postgresql.org/">PostgreSQL</a> which
-brings
-<a href="http://www.postgresql.org/docs/9.2/static/tutorial-window.html">window functions</a> on the table, we can easily implement just what we
-said in a readable way:</p>
+<a href="http://www.postgresql.org/">PostgreSQL</a> which brings <a href="http://www.postgresql.org/docs/9.2/static/tutorial-window.html">window
+functions</a>
+on the table, we can easily implement just what we said in a readable way:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> tick, nb,
          <span style="color:#00a">case</span> <span style="color:#00a">when</span> lead(nb) over w &lt; nb <span style="color:#00a">then</span> nb
               <span style="color:#00a">when</span> lead(nb) over w <span style="color:#00a">is</span> <span style="color:#00a">null</span> <span style="color:#00a">then</span> nb
@@ -414,56 +401,28 @@ said in a readable way:</p>
           <span style="color:#00a">end</span> <span style="color:#00a">as</span> <span style="color:#00a">max</span>
     <span style="color:#00a">from</span> measures
   window w <span style="color:#00a">as</span> (<span style="color:#00a">order</span> <span style="color:#00a">by</span> tick);</code></pre></div>
-<p>The firt
-<em>case</em> is the exact translation of the problem as spelled in english
-in just the previous paragraph where we stated we want to keep the current
-counter value in case of a
-<em>wraparound</em>, so I guess it&rsquo;s easy enough to get
-at.</p>
-
-<p><center>
+<p>The firt <em>case</em> is the exact translation of the problem as spelled in
+english in just the previous paragraph where we stated we want to keep the
+current counter value in case of a <em>wraparound</em>, so I guess it&rsquo;s easy enough
+to get at.</p>
 
 
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
 
-<div class="figure fig50 dim-margin" >
+
+<div class="figure fig25 right dim-margin" >
   
-    <a class="fancybox" href="/img/old/reset-circuit-thumbnail.jpg" data-fancybox-group="">
-  
-    <img class="fig-img" src="/img/old/reset-circuit-thumbnail.jpg" >
-  
-    </a>
+    <img class="fig-img" src="/img/old/reset-circuit-thumbnail.320.jpg" >
   
   
 </div>
 
-</center></p>
 
 <p>Then we have a couple of tricks in that query in order to massage the data
-as we want it. First, the last row of the output won&rsquo;t have a
-<em>lead</em>, that
-<em>window function</em> call is going to return
-<code>NULL</code>. In that case, we keep the
-current counter value as if we just did a
-<em>wraparound</em>. And finally, when
-there&rsquo;s no
-<em>wraparound</em>, we don&rsquo;t care about the data. Well, for the purpose
-of knowing the current
-<em>logical</em> value of the counter, that is.</p>
+as we want it. First, the last row of the output won&rsquo;t have a <em>lead</em>, that
+<em>window function</em> call is going to return <code>NULL</code>. In that case, we keep the
+current counter value as if we just did a <em>wraparound</em>. And finally, when
+there&rsquo;s no <em>wraparound</em>, we don&rsquo;t care about the data. Well, for the purpose
+of knowing the current <em>logical</em> value of the counter, that is.</p>
 
 <p>And we get that encouraging result:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"> tick | nb  | <span style="color:#00a">max</span> 
@@ -483,10 +442,8 @@ that new column only contains the data we are interested into.</p>
 <h1 id="finding-the-current-counter-value">Finding the current counter value</h1>
 
 <p>All we have to do now is sum this computed columns entries. Remember that
-the
-<code>sum()</code> aggregate function will simply discard nulls, so that we don&rsquo;t
-have to turn them into a bunch of
-<code>0</code>.</p>
+the <code>sum()</code> aggregate function will simply discard nulls, so that we don&rsquo;t
+have to turn them into a bunch of <code>0</code>.</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span> t(tops) <span style="color:#00a">as</span> (
   <span style="color:#00a">select</span> <span style="color:#00a">case</span> <span style="color:#00a">when</span> lead(nb) over w &lt; nb <span style="color:#00a">then</span> nb
               <span style="color:#00a">when</span> lead(nb) over w <span style="color:#00a">is</span> <span style="color:#00a">null</span> <span style="color:#00a">then</span> nb
@@ -496,107 +453,43 @@ have to turn them into a bunch of
   window w <span style="color:#00a">as</span> (<span style="color:#00a">order</span> <span style="color:#00a">by</span> tick)
 )
 <span style="color:#00a">select</span> <span style="color:#00a">sum</span>(tops) <span style="color:#00a">from</span> t;</code></pre></div>
-<p><center>
-
-
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/reset-elect.jpg" data-fancybox-group="">
-  
-    <img class="fig-img" src="/img/old/reset-elect.jpg" >
-  
-    </a>
-  
-  
-</div>
-
-</center></p>
-
 <p>And here&rsquo;s the expected result:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"> <span style="color:#00a">sum</span> 
-<span style="color:#aaa;font-style:italic">-----
-</span><span style="color:#aaa;font-style:italic"></span> <span style="color:#099">100</span></code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql"> sum 
+-----
+ 100</code></pre></div>
 <p>Now what about testing with another set of data or two, just to be sure that
 the counter is allowed to wrap more than once within our solution?</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span> <span style="color:#00a">into</span> measures
      <span style="color:#00a">values</span> (<span style="color:#099">10</span>, <span style="color:#099">0</span>), (<span style="color:#099">11</span>, <span style="color:#099">10</span>), (<span style="color:#099">12</span>, <span style="color:#099">30</span>), (<span style="color:#099">13</span>, <span style="color:#099">35</span>), (<span style="color:#099">14</span>, <span style="color:#099">45</span>),
             (<span style="color:#099">15</span>, <span style="color:#099">25</span>), (<span style="color:#099">16</span>, <span style="color:#099">50</span>), (<span style="color:#099">17</span>, <span style="color:#099">100</span>), (<span style="color:#099">18</span>, <span style="color:#099">110</span>);</code></pre></div>
-<p>Then we have:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span> t(tops) <span style="color:#00a">as</span> (
-   <span style="color:#00a">select</span> <span style="color:#00a">case</span> <span style="color:#00a">when</span> lead(nb) over w &lt; nb <span style="color:#00a">then</span> nb
-               <span style="color:#00a">when</span> lead(nb) over w <span style="color:#00a">is</span> <span style="color:#00a">null</span> <span style="color:#00a">then</span> nb
-               <span style="color:#00a">else</span> <span style="color:#00a">null</span>
-           <span style="color:#00a">end</span> <span style="color:#00a">as</span> <span style="color:#00a">max</span>
-     <span style="color:#00a">from</span> measures
-   window w <span style="color:#00a">as</span> (<span style="color:#00a">order</span> <span style="color:#00a">by</span> tick)
-)
-<span style="color:#00a">select</span> <span style="color:#00a">sum</span>(tops) <span style="color:#00a">from</span> t;
- 
- <span style="color:#00a">sum</span> 
-<span style="color:#aaa;font-style:italic">-----
-</span><span style="color:#aaa;font-style:italic"></span> <span style="color:#099">255</span>
-(<span style="color:#099">1</span> <span style="color:#00a">row</span>)</code></pre></div>
+<p>Then when running the same <em>with t(tops)</em> query again this time we get the
+following result:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql"> sum 
+-----
+ 255
+(1 row)</code></pre></div>
 <p>All good!</p>
 
 <h1 id="counter-logical-value-over-a-given-period">Counter logical value over a given period</h1>
+
+
+
+
+<div class="figure fig25 right dim-margin" >
+  
+    <img class="fig-img" src="/img/old/reset-coin-counter.jpg" >
+  
+  
+</div>
+
 
 <p>Now of course what we want is to find the logical value of the counter for a
 given day&rsquo;s or month&rsquo;s worth of measures. We then need to pay attention to
 the value of the counter at the start of our period so that we know to
 substract it from the logical sum over the period.</p>
 
-<p><center>
-
-
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/reset-coin-counter.jpg" data-fancybox-group="">
-  
-    <img class="fig-img" src="/img/old/reset-coin-counter.jpg" >
-  
-    </a>
-  
-  
-</div>
-
-</center></p>
-
 <p>Here&rsquo;s an SQL version of the same sentence, applied to the period in between
-ticks
-<code>4</code> and
-<code>14</code>, in a completely arbitrary choosing of mine:</p>
+ticks <code>4</code> and <code>14</code>, in a completely arbitrary choosing of mine:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span> t <span style="color:#00a">as</span> (
   <span style="color:#00a">select</span> tick,
          first_value(nb) over w <span style="color:#00a">as</span> <span style="color:#00a">first</span>,
@@ -610,27 +503,19 @@ ticks
 )
 <span style="color:#00a">select</span> <span style="color:#00a">sum</span>(<span style="color:#00a">max</span>) - <span style="color:#00a">min</span>(<span style="color:#00a">first</span>) <span style="color:#00a">as</span> <span style="color:#00a">sum</span>
  <span style="color:#00a">from</span> t;</code></pre></div>
-<p>Here we are using the
-<em>first_value()</em> window function to retain it in the
-whole resultset of the
-<em>Common Table Expression</em> (the inner query introduced
-by the keyword
-<code>WITH</code> is called that way). And when doing the sum we&rsquo;re
+<p>Here we are using the <em>first_value()</em> window function to retain it in the
+whole resultset of the <em>Common Table Expression</em> (the inner query introduced
+by the keyword <code>WITH</code> is called that way). And when doing the sum we&rsquo;re
 interested in at the outer level, we didn&rsquo;t forget to substract the first
-value: we need to use an aggregate here because we&rsquo;re doing a
-<code>sum()</code>
+value: we need to use an aggregate here because we&rsquo;re doing a <code>sum()</code>
 aggregate at the same query level, and we have the same value in each row of
-the resultset, so we used
-<code>min()</code>,
-<code>max()</code> would have been as good.</p>
+the resultset, so we used <code>min()</code>, <code>max()</code> would have been as good.</p>
 
 <p>Another important trick we&rsquo;re using in that query is how to express the date
-range. Never use
-<code>between</code> for that, as you would end up counting boundaries
+range. Never use <code>between</code> for that, as you would end up counting boundaries
 twice, and customer won&rsquo;t like your accounting process if you do that.
 Always use a combo of inclusive and exclusive boundaries comparison, as in
-that
-<code>WHERE</code> clause in the previous query.</p>
+that <code>WHERE</code> clause in the previous query.</p>
 
 <p>Let&rsquo;s have a quick look at the raw data in that range, using another nice
 <em>aggregate</em> that PostgreSQL comes with:</p>
@@ -639,16 +524,15 @@ that
 <span style="color:#aaa;font-style:italic">-------------------------------
 </span><span style="color:#aaa;font-style:italic"></span> <span style="color:#f00;background-color:#faa">{</span><span style="color:#099">30</span>,<span style="color:#099">40</span>,<span style="color:#099">0</span>,<span style="color:#099">20</span>,<span style="color:#099">30</span>,<span style="color:#099">60</span>,<span style="color:#099">0</span>,<span style="color:#099">10</span>,<span style="color:#099">30</span>,<span style="color:#099">35</span><span style="color:#f00;background-color:#faa">}</span>
 (<span style="color:#099">1</span> <span style="color:#00a">row</span>)</code></pre></div>
-<p>And now, the
-<em>logical counter value</em> for that period is computed as the
+<p>And now, the <em>logical counter value</em> for that period is computed as the
 following value by the previous query:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"> <span style="color:#00a">sum</span> 
-<span style="color:#aaa;font-style:italic">-----
-</span><span style="color:#aaa;font-style:italic"></span> <span style="color:#099">105</span>
-(<span style="color:#099">1</span> <span style="color:#00a">row</span>)</code></pre></div>
-<p>We can verify it manually, we want
-<code>40 + 60 + 35 - 30</code>, I think we&rsquo;re all good
-again. Don&rsquo;t forget we have to substract the first measure from the period!</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql"> sum 
+-----
+ 105
+(1 row)</code></pre></div>
+<p>We can verify it manually, we want <code>40 + 60 + 35 - 30</code>, I think we&rsquo;re all
+good again. Don&rsquo;t forget we have to substract the first measure from the
+period!</p>
 
 <h1 id="extending-the-problem">Extending the problem</h1>
 
@@ -656,45 +540,23 @@ again. Don&rsquo;t forget we have to substract the first measure from the period
 interesting enough to extend this article, is finding the ranges of time
 (here, ticks) within which the counter didn&rsquo;t reset.</p>
 
-<p><center>
 
 
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
 
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/reset-A2a.jpg" data-fancybox-group="">
+<div class="figure fig25 right dim-margin" >
   
     <img class="fig-img" src="/img/old/reset-A2a.jpg" >
-  
-    </a>
   
   
 </div>
 
-</center></p>
 
 <p>The query is more complex because we need to split the data into partitions,
 each partition containing data from the same counter series of measures
 without wrapping. The usual trick is to self-join our data set so that for
 each given row we have a set of rows from the same partition, we are going
-to instead use a
-<em>correlated subquery</em> to go fetch the next
-<em>wraparound</em> value:</p>
+to instead use a <em>correlated subquery</em> to go fetch the next <em>wraparound</em>
+value:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span> tops <span style="color:#00a">as</span> (
   <span style="color:#00a">select</span> tick, nb,
          <span style="color:#00a">case</span> <span style="color:#00a">when</span> lead(nb) over w &lt; nb <span style="color:#00a">then</span> nb
@@ -710,29 +572,29 @@ to instead use a
            <span style="color:#00a">where</span> t2.tick &gt;= t1.tick <span style="color:#00a">and</span> <span style="color:#00a">max</span> <span style="color:#00a">is</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span>
         <span style="color:#00a">order</span> <span style="color:#00a">by</span> t2.tick
            <span style="color:#00a">limit</span> <span style="color:#099">1</span>) <span style="color:#00a">as</span> p
-    <span style="color:#00a">from</span> tops t1;
-
- tick | nb  | <span style="color:#00a">max</span> | p  
-<span style="color:#aaa;font-style:italic">------+-----+-----+----
-</span><span style="color:#aaa;font-style:italic"></span>    <span style="color:#099">1</span> |   <span style="color:#099">0</span> |     |  <span style="color:#099">5</span>
-    <span style="color:#099">2</span> |  <span style="color:#099">10</span> |     |  <span style="color:#099">5</span>
-    <span style="color:#099">3</span> |  <span style="color:#099">20</span> |     |  <span style="color:#099">5</span>
-    <span style="color:#099">4</span> |  <span style="color:#099">30</span> |     |  <span style="color:#099">5</span>
-    <span style="color:#099">5</span> |  <span style="color:#099">40</span> |  <span style="color:#099">40</span> |  <span style="color:#099">5</span>
-    <span style="color:#099">6</span> |   <span style="color:#099">0</span> |     |  <span style="color:#099">9</span>
-    <span style="color:#099">7</span> |  <span style="color:#099">20</span> |     |  <span style="color:#099">9</span>
-    <span style="color:#099">8</span> |  <span style="color:#099">30</span> |     |  <span style="color:#099">9</span>
-    <span style="color:#099">9</span> |  <span style="color:#099">60</span> |  <span style="color:#099">60</span> |  <span style="color:#099">9</span>
-   <span style="color:#099">10</span> |   <span style="color:#099">0</span> |     | <span style="color:#099">14</span>
-   <span style="color:#099">11</span> |  <span style="color:#099">10</span> |     | <span style="color:#099">14</span>
-   <span style="color:#099">12</span> |  <span style="color:#099">30</span> |     | <span style="color:#099">14</span>
-   <span style="color:#099">13</span> |  <span style="color:#099">35</span> |     | <span style="color:#099">14</span>
-   <span style="color:#099">14</span> |  <span style="color:#099">45</span> |  <span style="color:#099">45</span> | <span style="color:#099">14</span>
-   <span style="color:#099">15</span> |  <span style="color:#099">25</span> |     | <span style="color:#099">18</span>
-   <span style="color:#099">16</span> |  <span style="color:#099">50</span> |     | <span style="color:#099">18</span>
-   <span style="color:#099">17</span> | <span style="color:#099">100</span> |     | <span style="color:#099">18</span>
-   <span style="color:#099">18</span> | <span style="color:#099">110</span> | <span style="color:#099">110</span> | <span style="color:#099">18</span>
-(<span style="color:#099">18</span> <span style="color:#00a">rows</span>)</code></pre></div>
+    <span style="color:#00a">from</span> tops t1;</code></pre></div>
+<p>Which results in the following <em>partitioned</em> output:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql"> tick | nb  | max | p  
+------+-----+-----+----
+    1 |   0 |     |  5
+    2 |  10 |     |  5
+    3 |  20 |     |  5
+    4 |  30 |     |  5
+    5 |  40 |  40 |  5
+    6 |   0 |     |  9
+    7 |  20 |     |  9
+    8 |  30 |     |  9
+    9 |  60 |  60 |  9
+   10 |   0 |     | 14
+   11 |  10 |     | 14
+   12 |  30 |     | 14
+   13 |  35 |     | 14
+   14 |  45 |  45 | 14
+   15 |  25 |     | 18
+   16 |  50 |     | 18
+   17 | 100 |     | 18
+   18 | 110 | 110 | 18
+(18 rows)</code></pre></div>
 <p>With that as an input it&rsquo;s then possible to build ranges of ticks including
 non wrapping set of measures from our counter, and get for each range the
 logical value tat the counter had at the end of it:</p>
@@ -761,55 +623,32 @@ logical value tat the counter had at the end of it:</p>
     <span style="color:#00a">from</span> parts
   window w <span style="color:#00a">as</span> (partition <span style="color:#00a">by</span> p <span style="color:#00a">order</span> <span style="color:#00a">by</span> tick)
 )
-<span style="color:#00a">select</span> * <span style="color:#00a">from</span> ranges <span style="color:#00a">where</span> <span style="color:#00a">max</span> <span style="color:#00a">is</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span>;
-
- <span style="color:#00a">start</span> | <span style="color:#00a">end</span> | <span style="color:#00a">max</span> 
-<span style="color:#aaa;font-style:italic">-------+-----+-----
-</span><span style="color:#aaa;font-style:italic"></span>     <span style="color:#099">1</span> |   <span style="color:#099">5</span> |  <span style="color:#099">40</span>
-     <span style="color:#099">6</span> |   <span style="color:#099">9</span> |  <span style="color:#099">60</span>
-    <span style="color:#099">10</span> |  <span style="color:#099">14</span> |  <span style="color:#099">45</span>
-    <span style="color:#099">15</span> |  <span style="color:#099">18</span> | <span style="color:#099">110</span>
-(<span style="color:#099">4</span> <span style="color:#00a">rows</span>)</code></pre></div>
+<span style="color:#00a">select</span> * <span style="color:#00a">from</span> ranges <span style="color:#00a">where</span> <span style="color:#00a">max</span> <span style="color:#00a">is</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span>;</code></pre></div>
+<p>And there we have a single row per partition, with the start and end values
+for the ticks, and the counter&rsquo;s proper max value:</p>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-psql" data-lang="psql"> start | end | max 
+-------+-----+-----
+     1 |   5 |  40
+     6 |   9 |  60
+    10 |  14 |  45
+    15 |  18 | 110
+(4 rows)</code></pre></div>
 <h1 id="conclusion">Conclusion</h1>
 
-<p>What I hope to have shown here, apart from some
-<em>window function</em> tips and
-some nice use cases for
-<em>common table expressions</em>, is that as a developper
-adding
-<code>SQL</code> to your tool set is a very good idea.</p>
-
-<p><center>
+<p>What I hope to have shown here, apart from some <em>window function</em> tips and
+some nice use cases for <em>common table expressions</em>, is that as a developper
+adding <code>SQL</code> to your tool set is a very good idea.</p>
 
 
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
 
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/skill-set.jpg" data-fancybox-group="">
+
+<div class="figure fig25 right dim-margin" >
   
     <img class="fig-img" src="/img/old/skill-set.jpg" >
-  
-    </a>
   
   
 </div>
 
-</center></p>
 
 <p>You don&rsquo;t want to have several parts of your code dealing with a logical
 counter like this, because you want the reporting, accounting, quota,
