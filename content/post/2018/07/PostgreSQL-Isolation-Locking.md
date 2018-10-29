@@ -161,7 +161,7 @@ In our *tweet* model of an application, we can have a look at handling
 
 The application model for Tweeting is introduced in the first article of
 this series:[PostgreSQL Concurrency: Data Modification
-Language](/blog/2018/06/PostgreSQL-DML.md).
+Language](/blog/2018/06/postgresql-concurrency-data-modification-language/).
 
 {{< /alert  >}}
 
