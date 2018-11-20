@@ -3,7 +3,7 @@ date = "2018-11-20T00:00:00.000000+02:00"
 title = "Architectures PostgreSQL"
 categories = ["Conferences","PostgreSQL Confs"]
 city = "Paris, France"
-slides = ["../../../images/confs/BBL-Orness-Meetup-2018.png;../../../images/confs/BBL-Orness-Meetup-2018.png.pdf"]
+slides = ["../../../images/confs/BBL-Orness-Meetup-2018.png;../../../images/confs/BBL-Orness-Meetup-2018.pdf"]
 conference = "Brown Bag Lunch Orness: Orness s'inspire du concept du *Brown Bag Lunch* et vous invite à déjeuner autour d'un sujet technique."
 summary = """Le domaine des bases de données se transforme depuis quelques années, avec en particulier de nouvelles offres autour des notions de NoSQL… Au point que l’on peut se demander si les bases de données relationnelles ont encore leur place dans nos infrastructures de production.
 
