@@ -69,7 +69,7 @@ compare to their equivalent Python code. Then we expand from there with a
 very important trick that's not well known, and a pretty advanced variation
 of it.
 
-### Part 3, Writting SQL Queries
+### Part 3, Writing SQL Queries
 
 The third part of the book covers how to write a SQL query as an application
 developer. We answer several important questions here:
