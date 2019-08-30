@@ -112,12 +112,12 @@ We can fetch the *Excel* file which is actually a *CSV* file using *tab* as
 a separator, remove the headings and load it into a PostgreSQL table.
 
 {{< figure class="right"
-             src="/img/MasteringPostgreSQLinAppDev-Cover-th.png"
-            link="https://masteringpostgresql.com" >}}
+             src="/img/TAOP_Book_Cover_200x260.png"
+            link="https://theartofpostgresql.com" >}}
 
-I have used this data set previously both in my book [Mastering PostgreSQL
-in Application Development](https://masteringpostgresql.com) and in the
-article [How to use PostgreSQL to streamline Python
+I have used this data set previously both in my book [The Art of
+PostgreSQL](https://theartofpostgresql.com) and in the article [How to use
+PostgreSQL to streamline Python
 code](https://opensource.com/article/17/12/python-and-postgresql) published
 at <http://opensource.com>. Here's what the `factbook` table looks like:
 
@@ -716,13 +716,10 @@ to SQL rather than Common-Lisp:
 PostgreSQL implements a very advanced version of SQL, so that's even more
 the case when focusing on PostgreSQL, as I do.
 
-{{< figure class="right" src="/img/MasteringPostgreSQLinAppDev-Cover-th.png"
-             link="https://masteringpostgresql.com" >}}
-
-The idea behing both this article and my book [Mastering PostgreSQL in
-Application Development](https://masteringpostgresql.com) is that as a
-developer using some SQL in your application code, you should master it and
-know what's possible to implement with the PostgreSQL system, so that you
-can make the right choices in terms of your application's architecture.
+The idea behing both this article and my book [The Art of
+PostgreSQL](https://theartofpostgresql.com) is that as a developer using
+some SQL in your application code, you should master it and know what's
+possible to implement with the PostgreSQL system, so that you can make the
+right choices in terms of your application's architecture.
 
 

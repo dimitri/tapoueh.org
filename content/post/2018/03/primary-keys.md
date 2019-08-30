@@ -13,9 +13,8 @@ thumbnailImagePosition = "left"
 
 In our previous article we saw three classic [Database Modelization
 Anti-Patterns](/blog/2018/03/database-modelization-anti-patterns/). The
-article also contains a reference to a Primary Key section of my book
-[Mastering PostgreSQL in Application
-Development](https://masteringpostgresql.com), so it's only fair that I
+article also contains a reference to a Primary Key section of my book [The
+Art of PostgresQL](https://theartofpostgresql.com), so it's only fair that I
 would now publish said Primary Key section!
 
 So in this article, we dive into Primary Keys as being a cornerstone of
@@ -256,16 +255,16 @@ about our data set.
 ## Conclusion
 
 {{< figure class="right"
-             src="/img/MasteringPostgreSQLinAppDev-Cover-th.png"
-            link="https://masteringpostgresql.com" >}}
+             src="/img/TAOP_Book_Cover_200x260.png"
+            link="https://theartofpostgresql.com" >}}
             
-This article is an extract from my book [Mastering PostgreSQL in Application
-Development](https://masteringpostgresql.com) where we dive into more
-details and examples around database modeling in Chapter 6. Before that you
-can read whole chapters about how to be proficient at advanced SQL so that
-it's easier to make the right choices when designing a database model. After
-all, an important trade-off in the database design is that we're able to
-write the queries we need to implement and support users workflows.
+This article is an extract from my book [The Art of
+PostgresQL](https://theartofpostgresql.com) where we dive into more details
+and examples around database modeling in Chapter 6. Before that you can read
+whole chapters about how to be proficient at advanced SQL so that it's
+easier to make the right choices when designing a database model. After all,
+an important trade-off in the database design is that we're able to write
+the queries we need to implement and support users workflows.
 
 After that, Chapter 7 is titled “Data Manipulation and Concurrency Control”
 and deals with concurrent accesses to your data, which is the most important

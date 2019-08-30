@@ -251,9 +251,8 @@ This time, as the query must scan all the hashtags in the table, it won't
 use the previous index of course. The *unnest()* function is a must-have
 when dealing with arrays in PostgreSQL, as it allows processing the array's
 content as if it were just another relation. And SQL comes with all the
-tooling to process relations, as we see in great details in my book
-[Mastering PostgreSQL in Application
-Development](https://masteringpostgresql.com).
+tooling to process relations, as we see in great details in my book [The Art
+of PostgresQL](https://theartofpostgresql.com).
 
 So we can see the most popular hashtags in our dataset:
 
@@ -336,13 +335,9 @@ over arrays elements really is inefficient, so learn to use *unnest()*
 instead, and filter elements with a *where* clause. If you see yourself
 doing that a lot, it might be a good sign that you really needed a lookup
 table!
-
-{{< figure class="right"
-             src="/img/MasteringPostgreSQLinAppDev-Cover-th.png"
-            link="https://masteringpostgresql.com" >}}
             
-This article is an extract from my book [Mastering PostgreSQL in Application
-Development](https://masteringpostgresql.com), which teaches SQL to
-developers so that they may replace thousands of lines of code with very
-simple queries. The book has a full chapter about data types in PostgreSQL,
-check it out!
+This article is an extract from my book [The Art of
+PostgresQL](https://theartofpostgresql.com), which teaches SQL to developers
+so that they may replace thousands of lines of code with very simple
+queries. The book has a full chapter about data types in PostgreSQL, check
+it out!

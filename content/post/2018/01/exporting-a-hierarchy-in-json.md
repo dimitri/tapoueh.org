@@ -435,13 +435,8 @@ covered in SQL thanks to WITH RECURSIVE, a standard feature that appeared in
 SQL-1999 and is available in many RDBMS. When coupled with PostgreSQL
 support for arrays and JSON, it's a very useful feature to master!
 
-{{< figure class="right"
-             src="/img/MasteringPostgreSQLinAppDev-Cover-th.png"
-            link="https://masteringpostgresql.com" >}}
-
 If you liked this article and want to learn more SQL features, discover
 PostgreSQL advanced processing tools, and write less code, then consider
-reading my book! [Mastering PostgreSQL in Application
-Development](https://masteringpostgresql.com) teaches SQL to application
-developers!
+reading my book! [The Art of PostgreSQL](https://theartofpostgresql.com)
+teaches SQL to application developers!
 

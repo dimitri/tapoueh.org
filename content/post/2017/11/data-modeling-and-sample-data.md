@@ -23,12 +23,12 @@ feedback, and we can also have that with modeling too.
 <!--more-->
 
 {{< figure class="right"
-           src="/img/MasteringPostgreSQLinAppDev-Cover-th.png"
-          link="https://masteringpostgresql.com" >}}
+           src="/img/TAOP_Book_Cover_200x260.png"
+          link="https://theartofpostgresql.com" >}}
 
-This article is extracted from my book [Mastering PostgreSQL in Application
-Development](https://masteringpostgresql.com). If you like what you read
-here, you might enjoy a full book of SQL learning material!
+This article is extracted from my book [The Art of
+PostgreSQL](https://theartofpostgresql.com). If you like what you read here,
+you might enjoy a full book of SQL learning material!
 
 <!--toc-->
 

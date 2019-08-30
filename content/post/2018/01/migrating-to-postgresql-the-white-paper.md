@@ -89,12 +89,8 @@ as easy to implement as it should be, and that's why the
 [pgloader](https://pgloader.io) open source project exists: it implements
 fully automated database migrations!
 
-{{< figure class="right"
-             src="/img/MasteringPostgreSQLinAppDev-Cover-th.png"
-            link="https://masteringpostgresql.com" >}}
-
 For your developers to be ready when it comes to making the most out of
-PostgreSQL, consider reading [Mastering PostgreSQL in Application
-Development](https://masteringpostgresql.com) which comes with an Enterprise
+PostgreSQL, consider reading [The Art of
+PostgreSQL](https://theartofpostgresql.com) which comes with an Enterprise
 Edition that allows a team of up to 50 developers to share this great
 resource.

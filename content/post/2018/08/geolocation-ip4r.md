@@ -454,10 +454,6 @@ within a single query. You get back only those results you are interested
 into, and the application is then responsible for adding value to that,
 rather than processing the data itself.
 
-{{< figure class="right"
-             src="/img/MasteringPostgreSQLinAppDev-Cover-th.png"
-            link="https://masteringpostgresql.com" >}}
-
 Typically what the application here would be doing is drawing a map and
 locating the pubs on it, adding maybe descriptions and votes and notes on
 each address, maybe even the draft menu. An ideal application might even be

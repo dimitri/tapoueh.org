@@ -559,8 +559,8 @@ You never know.
 
 If you like this kind of *dive into SQL* content, where every SQL query is
 presented in a context, and with a real data set that you can download and
-play with at home, then you will love my new book: [Mastering PostgreSQL in
-Application Development](http://masteringpostgresql.com).
+play with at home, then you will love my new book: [The Art of
+PostgreSQL](https://theartofpostgresql.com).
 
 {{< /alert >}}
 

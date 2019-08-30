@@ -41,10 +41,9 @@ next rate is published, which makes a very good use case for our PostgreSQL
 range types.
 
 The following SQL script is the main part of the *ELT* script that has been
-used for my book [Mastering PostgreSQL in Application
-Development](https://masteringpostgresql.com). Only missing from this book's
-pages is the transformation script that pivots the available *tsv* file into
-the more interesting format we use here:
+used for my book [The Art of PostgreSQL](https://theartofpostgresql.com).
+Only missing from this book's pages is the transformation script that pivots
+the available *tsv* file into the more interesting format we use here:
 
 ~~~ sql
 begin;
@@ -198,12 +197,8 @@ at all times, and EXCLUDE USING is an extension of the unicity constraint:
 it benefits from this capacity and guarantee your data set even when dealing
 with concurrency updates to it!
 
-{{< figure class="right"
-             src="/img/MasteringPostgreSQLinAppDev-Cover-th.png"
-            link="https://masteringpostgresql.com" >}}
-            
-This article is an extract from my book [Mastering PostgreSQL in Application
-Development](https://masteringpostgresql.com), which teaches SQL to
-developers so that they may replace thousands of lines of code with very
-simple queries. The book has a full chapter about data types in PostgreSQL,
-check it out!
+This article is an extract from my book [The Art of
+PostgreSQL](https://theartofpostgresql.com), which teaches SQL to developers
+so that they may replace thousands of lines of code with very simple
+queries. The book has a full chapter about data types in PostgreSQL, check
+it out!

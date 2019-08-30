@@ -22,12 +22,12 @@ and output redirection, formatted output, and more.
 <!--more-->
 
 {{< figure class="right"
-             src="/img/MasteringPostgreSQLinAppDev-Cover-th.png"
-            link="http://masteringpostgresql.com" >}}
+             src="/img/TAOP_Book_Cover_200x260.png"
+            link="https://theartofpostgresql.com" >}}
             
-> _This article is extracted from my book [Mastering PostgreSQL in
-> Application Development](https://masteringpostgresql.com). If you like
-> what you read here, you might enjoy a full book of SQL learning material!_
+> _This article is extracted from my book [The Art of
+> PostgreSQL](https://theartofpostgresql.com). If you like what you read
+> here, you might enjoy a full book of SQL learning material!_
 
 <!--toc-->
 

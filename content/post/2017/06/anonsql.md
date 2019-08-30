@@ -271,5 +271,4 @@ not yet listed?
 
 This topic is an important one and you will find more about *How to Write
 SQL* in the book I am currently
-writing:
-[Mastering PostgreSQL in Application Development](http://masteringpostgresql.com)!
+writing: [The Art of PostgreSQL](https://theartofpostgresql.com)!
