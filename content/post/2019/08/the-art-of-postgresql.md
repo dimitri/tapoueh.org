@@ -1,6 +1,6 @@
 +++
 title = "The Art Of PostgreSQL"
-date = "2019-08-10T10:15:00+01:00"
+date = "2019-08-26T10:15:00+01:00"
 tags = ["PostgreSQL","YeSQL","The Art of PostgreSQL"]
 categories = ["PostgreSQL","YeSQL"]
 coverImage = "/img/Book_Hardcover_Mockup3_1200x900.jpg"
