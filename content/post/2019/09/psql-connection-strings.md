@@ -107,7 +107,7 @@ where we dive in my current (at the time) setup for it. I recently changed
 my `~/.psqlrc` file to integrate [pspg](https://github.com/okbob/pspg) as
 the pager, and will probably do write-up about that later.
 
-Meanwhile, check-out my book [The Arf of
+Meanwhile, check-out my book [The Art of
 PostgreSQL](https://theartofpostgresql.com), you can register to get a
 **free** sample with many other good SQL techniques to improve your
 developer skills!
