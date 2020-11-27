@@ -16,7 +16,7 @@ In the Postgres community too we now record our talks at home and send a
 video file to be playedto a virtual audience, and sometimes shared later in
 a platform online.
 
-So this yeah I did participate in [Postgres Vision
+So this year I did participate in [Postgres Vision
 2020](https://www.postgresvision.com/) where I did deliver a talk about [The
 Art of PostgreSQL](https://sched.co/cTyt). This a talk all about the book
 that I have written and self-publish at [The Art of
@@ -65,13 +65,13 @@ like I should dive more into several of them.
     dedicated eBook on the topic, or as a part of my next book. There should
     be a second volume to [The Art of
     PostgreSQL](https://theartofpostgresql.com), and now I have mentionned
-    it publically!
+    it publicly!
     
   - Finally, we spent a good chunk of time talking about the
     [pg_auto_failover](https://github.com/citusdata/pg_auto_failover)
     project, an Open Source solution for implementing Postgres High
-    Availability. That's the project that has kept me busy in 2019/2020 and
-    probably will keep me busy in the 2021 too.
+    Availability. That's the project that has kept me busy in 2019 and 2020
+    and probably will keep me busy in the 2021 too.
     
 <hr />
 
@@ -95,7 +95,7 @@ simple and robust solution out of those.
 
 Have a look at the [pg_auto_failover project
 documentation](https://pg-auto-failover.readthedocs.io/en/latest/intro.html)
-online and give iut a try. If you fancy building from source, and if you are
+online and give it a try. If you fancy building from source, and if you are
 a tmux user, try the following recipe:
 
 ~~~
@@ -107,7 +107,7 @@ $ make NODES=3 cluster
 
 That's going to prepare a 3-nodes cluster for you, with a primary and two
 secondary nodes. Also you're going to have a nice tmux integration for
-interactively controling the cluster:
+interactivly controling the cluster:
 
 <center>
 {{< image classes="fig50 fancybox dim-margin" src="/img/pg_auto_failover_cluster.png" >}}
@@ -128,11 +128,11 @@ from sources, you may still enjoy the same facility with the more involved
 command:
 
 ~~~
-PG_AUTOCTL_DEBUG=1 pg_autoctl do tmux session        \
-         --root ./tmux                               \
-         --first-pgport 5500                         \
-         --nodes 3                                   \
-         --layout even-vertical	
+$ PG_AUTOCTL_DEBUG=1 pg_autoctl do tmux session        \
+           --root ./tmux                               \
+           --first-pgport 5500                         \
+           --nodes 3                                   \
+           --layout even-vertical	
 ~~~
 
 Now, let's get back to 2020, online conferences, remote activities with a
