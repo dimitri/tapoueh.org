@@ -8,6 +8,7 @@ showSocial = false
 showTags = false
 title = "About Dimitri Fontaine"
 aliases = ["/about.html","/about"]
+
 +++
 
 {{< image classes="fig50 right fancybox dim-margin"
@@ -31,7 +32,8 @@ Contributor to the CTO of a big company.
 
 <hr/>
 
-{{< image classes="fig50 left fancybox dim-margin" src="/images/book-320.jpg" >}}
+{{< image classes="fig50 left fancybox dim-margin" 
+              src="/img/TAOP_Book_Cover_200x260.png" >}}
             
 In this place I share my [PostgreSQL](/tags/postgresql/) expertise. You will
 find about my [projects](/projects/) of course, and the blog is full of
@@ -41,13 +43,9 @@ at
 has been helpful to many readers! This article is even part of a data driven
 series of post, the [YeSQL](/categories/yesql/) category, check it out!
 
-Also, I'm writing a book
-about
-[Mastering PostgreSQL in Application Development](http://masteringpostgresql.com),
-and you can subscribe to get sample content before anyone else and be the
-first to get the book when it's available!
-
-{{< ckbook >}}
+Also, I am publishing my book [The Art of
+PostgreSQL](https://theartofpostgresql.com) and it's fully available online.
+Check it out!
 
 <hr>
 
@@ -73,10 +71,13 @@ at [apt.postgresql.org](https://wiki.postgresql.org/wiki/Apt),
 with [Christoph Berg](https://github.com/ChristophBerg)
 and [Magnus Hagander](https://blog.hagander.net).
 
-My main project related to PostgreSQL these days
-is [pgloader](http://pgloader.io) which allows loading data into PostgreSQL
+My main projects related to PostgreSQL these days are
+[pgloader](http://pgloader.io), which allows loading data into PostgreSQL
 and include facilities to handle a full database migration from a live
-database connection!
+database connection, and
+[pg_auto_failover](https://github.com/citusdata/pg_auto_failover), which
+manages and monitors a Postgres deployment in a fault-tolerant way,
+implementing automated failover.
 
 <hr>
 
@@ -101,6 +102,49 @@ $ pgloader mysql://user@host/dbname pgsql:///dbname
 
 Also supported are SQLite and Microsoft® SQL Server. Email me if you want to
 add Oracle™ to the list!
+
+<hr>
+
+[pg_auto_failover](https://github.com/citusdata/pg_auto_failover) is a
+Postgres companion that you can use to manage fault-tolerance in your
+production environment. It is simple and robust.
+
+{{< image classes="fig50 left fancybox dim-margin"
+              src="/img/pgaf-arch-multi-standby.svg"
+            title="pg_auto_failover architecture with 2 standby nodes" >}}
+
+
+Simple means that the design is simple, and how to use it is simple too. Get
+started by following the [main pg_autoctl
+commands](https://pg-auto-failover.readthedocs.io/en/master/how-to.html) and
+then the rest of the documentation.
+
+The simplicity is visible in the command line tool `pg_autoctl` that is
+provided to manage your Postgres nodes and the pg_auto_failover monitor.
+This modern command has been designed in the spirit of git subcommands and
+embeds all you need in a single easy to use CLI application:
+
+```
+$ pg_autoctl
+
+Available commands:
+  pg_autoctl
+  + create   Create a pg_auto_failover node, or formation
+  + drop     Drop a pg_auto_failover node, or formation
+  + config   Manages the pg_autoctl configuration
+  + show     Show pg_auto_failover information
+  + enable   Enable a feature on a formation
+  + disable  Disable a feature on a formation
+  + get      Get a pg_auto_failover node, or formation setting
+  + set      Set a pg_auto_failover node, or formation setting
+  + perform  Perform an action orchestrated by the monitor
+    run      Run the pg_autoctl service (monitor or keeper)
+    stop     signal the pg_autoctl service for it to stop
+    reload   signal the pg_autoctl for it to reload its configuration
+    status   Display the current status of the pg_autoctl service
+    help     print help message
+    version  print pg_autoctl version
+```
 
 <hr>
 
