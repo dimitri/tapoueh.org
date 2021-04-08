@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.50">
+    <meta name="generator" content="Hugo 0.79.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Loading Geolocation Data</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -37,21 +37,17 @@ Common Lisp. In terms of
 technical debt that&rsquo;s akin
 to declaring
 bankrupcy, which is both sad news and good news as there&rsquo;s
-suddenly new hope of doing it right this time.
-
-">
+suddenly new hope of doing it right this time.">
     <meta property="og:description" content="As I&rsquo;ve been mentionning in the past already, I&rsquo;m currently rewriting
 pgloader from scratch in
 Common Lisp. In terms of
 technical debt that&rsquo;s akin
 to declaring
 bankrupcy, which is both sad news and good news as there&rsquo;s
-suddenly new hope of doing it right this time.
-
-">
+suddenly new hope of doing it right this time.">
     <meta property="og:type" content="blog">
     <meta property="og:title" content="Loading Geolocation Data">
-    <meta property="og:url" content="/blog/2013/10/loading-geolocation-data/">
+    <meta property="og:url" content="https://tapoueh.org/blog/2013/10/loading-geolocation-data/">
     <meta property="og:site_name" content="The Art of PostgreSQL">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Loading Geolocation Data">
@@ -61,9 +57,7 @@ Common Lisp. In terms of
 technical debt that&rsquo;s akin
 to declaring
 bankrupcy, which is both sad news and good news as there&rsquo;s
-suddenly new hope of doing it right this time.
-
-">
+suddenly new hope of doing it right this time.">
     
       <meta name="twitter:creator" content="@tapoueh">
     
@@ -213,11 +207,11 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="http://masteringpostgresql.com" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener">
     
       <i class="sidebar-button-icon fa fa-lg fa-book"></i>
       
-      <span class="sidebar-button-desc">Mastering PostgreSQL</span>
+      <span class="sidebar-button-desc">The Art of PostgreSQL</span>
     </a>
   </li>
 
@@ -387,8 +381,6 @@ pgloader from scratch in
 to declaring
 <em>bankrupcy</em>, which is both sad news and good news as there&rsquo;s
 suddenly new hope of doing it right this time.</p>
-
-<p></p>
 
 <p><center><em>Let&rsquo;s dive into the python to common lisp rewrite</em></center></p>
 
@@ -704,7 +696,6 @@ improving what I already had.</p>
 Common-Lisp, then I&rsquo;ll tell you why using a
 <em>parser generator library</em> in that
 language is less of a burden than doing the same thing in Python:</p>
-
 <pre><code>LOAD FROM ARCHIVE http://geolite.maxmind.com/download/geoip/database/GeoLiteCity_CSV/GeoLiteCity-latest.zip
    INTO postgresql://dim@localhost:54393/dim
 
@@ -748,13 +739,13 @@ BEFORE LOAD DO
         INTO postgresql://dim@localhost:54393/ip4r?geolite.location
              (
                 locid,country,region,city,postalCode,
-                location point using (format nil &quot;(~a,~a)&quot; longitude latitude),
+                location point using (format nil &#34;(~a,~a)&#34; longitude latitude),
                 metroCode,areaCode
              )
         WITH skip header = 2,
-             fields optionally enclosed by '&quot;',
+             fields optionally enclosed by &#39;&#34;&#39;,
              fields escaped by double-quote,
-             fields terminated by ','
+             fields terminated by &#39;,&#39;
 
 AND LOAD CSV FROM FILENAME MATCHING ~/GeoLiteCity-Blocks.csv/
              WITH ENCODING iso-8859-1
@@ -767,16 +758,14 @@ AND LOAD CSV FROM FILENAME MATCHING ~/GeoLiteCity-Blocks.csv/
                 locId
              )
         WITH skip header = 2,
-             fields optionally enclosed by '&quot;',
+             fields optionally enclosed by &#39;&#34;&#39;,
              fields escaped by double-quote,
-             fields terminated by ','
+             fields terminated by &#39;,&#39;
 
 FINALLY DO
    $$
      create index blocks_ip4r_idx on geolite.blocks using gist(iprange);
-   $$;
-</code></pre>
-
+   $$;</code></pre>
 <p>What you see here looks quite complex and heavy. That&rsquo;s because it&rsquo;s
 addressing the full needs, let&rsquo;s see about that:</p>
 
@@ -824,16 +813,13 @@ dependant on the fields.</p>
 
 <p>In the simplest case possible, each field ends up into a column of the same
 name, and that&rsquo;s still supported of course, it looks like this:</p>
-
 <pre><code>LOAD CSV FROM FILENAME MATCHING ~/GeoLiteCity-Blocks.csv/
          WITH ENCODING iso-8859-1
     INTO postgresql://dim@localhost:54393/ip4r?geonumip.blocks
     WITH skip header = 2,
-         fields optionally enclosed by '\&quot;',
+         fields optionally enclosed by &#39;\&#34;&#39;,
          fields escaped by double-quote,
-         fields terminated by ',';
-</code></pre>
-
+         fields terminated by &#39;,&#39;;</code></pre>
 <p>That&rsquo;s a very simple processing actually, with no added processing when
 reading the file.</p>
 
@@ -843,37 +829,34 @@ included in
 <em>pgloader</em> to transform a couple of integers into an
 <em>iprange</em>.
 Here&rsquo;s the Common Lisp sources for that function:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp">(<span style="color:#a00">defun</span> <span style="color:#a00">ip-range</span> (<span style="color:#a00">start-integer-string</span> <span style="color:#a00">end-integer-string</span>)
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp">(<span style="color:#0aa">defun</span> <span style="color:#a00">ip-range</span> (<span style="color:#a00">start-integer-string</span> <span style="color:#a00">end-integer-string</span>)
   <span style="color:#a50">&#34;Transform a couple of integers to an IP4R ip range notation.&#34;</span>
-  (<span style="color:#a00">declare</span> (<span style="color:#a00">inline</span>)
-	   (<span style="color:#a00">optimize</span> <span style="color:#a00">speed</span>)
-	   (<span style="color:#a00">type</span> <span style="color:#a00">string</span> <span style="color:#a00">start-integer-string</span> <span style="color:#a00">end-integer-string</span>))
-  (<span style="color:#a00">flet</span> ((<span style="color:#a00">integer-to-ip-string</span> (<span style="color:#a00">int</span>)
+  (<span style="color:#00a">declare</span> (<span style="color:#00a">inline</span>)
+	   (<span style="color:#00a">optimize</span> <span style="color:#a00">speed</span>)
+	   (<span style="color:#00a">type</span> <span style="color:#0a0;text-decoration:underline">string</span> <span style="color:#a00">start-integer-string</span> <span style="color:#a00">end-integer-string</span>))
+  (<span style="color:#00a">flet</span> ((<span style="color:#a00">integer-to-ip-string</span> (<span style="color:#a00">int</span>)
 	   <span style="color:#a50">&#34;see http://dev.maxmind.com/geoip/legacy/csv/&#34;</span>
-	   (<span style="color:#a00">declare</span> (<span style="color:#a00">inline</span>) (<span style="color:#a00">optimize</span> <span style="color:#a00">speed</span>) (<span style="color:#a00">type</span> <span style="color:#a00">fixnum</span> <span style="color:#a00">int</span>))
-	   (<span style="color:#a00">format</span> <span style="color:#a00">nil</span> <span style="color:#a50">&#34;~a.~a.~a.~a&#34;</span>
-		   (<span style="color:#a00">mod</span> (<span style="color:#a00">truncate</span> <span style="color:#a00">int</span> #. (<span style="color:#a00">expt</span> <span style="color:#099">2</span> <span style="color:#099">24</span>)) <span style="color:#099">256</span>)
-		   (<span style="color:#a00">mod</span> (<span style="color:#a00">truncate</span> <span style="color:#a00">int</span> #. (<span style="color:#a00">expt</span> <span style="color:#099">2</span> <span style="color:#099">16</span>)) <span style="color:#099">256</span>)
-		   (<span style="color:#a00">mod</span> (<span style="color:#a00">truncate</span> <span style="color:#a00">int</span> #. (<span style="color:#a00">expt</span> <span style="color:#099">2</span> <span style="color:#099">8</span>)) <span style="color:#099">256</span>)
-		   (<span style="color:#a00">mod</span> <span style="color:#a00">int</span> <span style="color:#099">256</span>))))
-    (<span style="color:#a00">let</span> ((<span style="color:#a00">ip-start</span> (<span style="color:#a00">integer-to-ip-string</span> (<span style="color:#a00">parse-integer</span> <span style="color:#a00">start-integer-string</span>)))
-	  (<span style="color:#a00">ip-end</span>   (<span style="color:#a00">integer-to-ip-string</span> (<span style="color:#a00">parse-integer</span> <span style="color:#a00">end-integer-string</span>))))
-      (<span style="color:#a00">format</span> <span style="color:#a00">nil</span> <span style="color:#a50">&#34;~a-~a&#34;</span> <span style="color:#a00">ip-start</span> <span style="color:#a00">ip-end</span>))))</code></pre></div>
+	   (<span style="color:#00a">declare</span> (<span style="color:#00a">inline</span>) (<span style="color:#00a">optimize</span> <span style="color:#a00">speed</span>) (<span style="color:#00a">type</span> <span style="color:#0aa">fixnum</span> <span style="color:#a00">int</span>))
+	   (<span style="color:#0a0">format</span> <span style="color:#a00">nil</span> <span style="color:#a50">&#34;~a.~a.~a.~a&#34;</span>
+		   (<span style="color:#0a0">mod</span> (<span style="color:#0a0">truncate</span> <span style="color:#a00">int</span> #. (<span style="color:#0a0">expt</span> <span style="color:#099">2</span> <span style="color:#099">24</span>)) <span style="color:#099">256</span>)
+		   (<span style="color:#0a0">mod</span> (<span style="color:#0a0">truncate</span> <span style="color:#a00">int</span> #. (<span style="color:#0a0">expt</span> <span style="color:#099">2</span> <span style="color:#099">16</span>)) <span style="color:#099">256</span>)
+		   (<span style="color:#0a0">mod</span> (<span style="color:#0a0">truncate</span> <span style="color:#a00">int</span> #. (<span style="color:#0a0">expt</span> <span style="color:#099">2</span> <span style="color:#099">8</span>)) <span style="color:#099">256</span>)
+		   (<span style="color:#0a0">mod</span> <span style="color:#a00">int</span> <span style="color:#099">256</span>))))
+    (<span style="color:#00a">let</span> ((<span style="color:#a00">ip-start</span> (<span style="color:#a00">integer-to-ip-string</span> (<span style="color:#0a0">parse-integer</span> <span style="color:#a00">start-integer-string</span>)))
+	  (<span style="color:#a00">ip-end</span>   (<span style="color:#a00">integer-to-ip-string</span> (<span style="color:#0a0">parse-integer</span> <span style="color:#a00">end-integer-string</span>))))
+      (<span style="color:#0a0">format</span> <span style="color:#a00">nil</span> <span style="color:#a50">&#34;~a-~a&#34;</span> <span style="color:#a00">ip-start</span> <span style="color:#a00">ip-end</span>))))</code></pre></div>
 <p>And here&rsquo;s how it&rsquo;s used:</p>
-
 <pre><code>INTO postgresql://dim@localhost:54393/ip4r?geolite.blocks
      (
         iprange ip4r using (ip-range startIpNum endIpNum),
         locId
-     )
-</code></pre>
-
+     )</code></pre>
 <p>Internally, pgloader generates a
 <em>lambda</em> expression to process each row, in
 that very case the expression looks like this:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp">(<span style="color:#a00">lambda</span> (<span style="color:#a00">row</span>)
-  (<span style="color:#a00">destructuring-bind</span> (<span style="color:#a00">startIpNum</span> <span style="color:#a00">endIpNum</span> <span style="color:#a00">locId</span>) <span style="color:#a00">row</span>
-    (<span style="color:#a00">list</span> (<span style="color:#a00">pgloader.transforms::ip-range</span> <span style="color:#a00">startIpNum</span> <span style="color:#a00">endIpNum</span>)
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp">(<span style="color:#0aa">lambda</span> (<span style="color:#a00">row</span>)
+  (<span style="color:#0aa">destructuring-bind</span> (<span style="color:#a00">startIpNum</span> <span style="color:#a00">endIpNum</span> <span style="color:#a00">locId</span>) <span style="color:#a00">row</span>
+    (<span style="color:#0a0;text-decoration:underline">list</span> (<span style="color:#a00">pgloader.transforms::ip-range</span> <span style="color:#a00">startIpNum</span> <span style="color:#a00">endIpNum</span>)
           <span style="color:#a00">locId</span>)))</code></pre></div>
 
 
@@ -894,15 +877,12 @@ allowing Common Lisp programmers not to resort to C.</p>
 <p>Note that as in the previous
 <em>location</em> example you can also directly write
 the Lisp expressions within the command itself:</p>
-
 <pre><code>INTO postgresql://dim@localhost:54393/ip4r?geolite.location
      (
         locid,country,region,city,postalCode,
-        location point using (format nil &quot;(~a,~a)&quot; longitude latitude),
+        location point using (format nil &#34;(~a,~a)&#34; longitude latitude),
         metroCode,areaCode
-     )
-</code></pre>
-
+     )</code></pre>
 <h2 id="simple-benchmarking">Simple benchmarking</h2>
 
 <p>Enough presenting the software already, let&rsquo;s run it!</p>
@@ -956,14 +936,13 @@ prepare that kind of configuration file:</p>
 Table name        |    duration |    size |  copy rows |     <span style="color:#a00">errors</span> 
 ====================================================================
 blocks            |  01m18.979s |       - |    <span style="color:#099">1790461</span> |          <span style="color:#099">0</span>
-location          |     <span style="color:#099">35</span>.710s |       - |     <span style="color:#099">438386</span> |          <span style="color:#a00">0</span>
+location          |     35.710s |       - |     <span style="color:#099">438386</span> |          <span style="color:#a00">0</span>
 ====================================================================
 Total             |  01m54.713s |       - |    <span style="color:#099">2228847</span> |          <span style="color:#099">0</span></code></pre></div>
 <h2 id="common-lisp-version-no-projection">Common Lisp version, no projection</h2>
 
 <p>With a command doing the same amount of work as the previous one for the
 <em>blocks</em> table (I still kept the longitude and latitude to point formating):</p>
-
 <pre><code>                    table name       read   imported     errors       time
 ------------------------------  ---------  ---------  ---------  ---------
                        extract          0          0          0      1.007
@@ -972,9 +951,7 @@ Total             |  01m54.713s |       - |    <span style="color:#099">2228847<
              geonumip.location     438386     438386          0      8.868
                geonumip.blocks    1790461    1790461          0     17.425
 ------------------------------  ---------  ---------  ---------  ---------
-             Total import time    2228847    2228847          0    27.324s
-</code></pre>
-
+             Total import time    2228847    2228847          0    27.324s</code></pre>
 <p>We can see new sections, as the command is now actually extracting the
 archive (at the size and given how many tests I wanted to do, the fetching
 step as been avoided in the tests here), then preparing the load with all
@@ -1018,7 +995,6 @@ Lisp alone on the other hand.</p>
 <p>Now, as we have some time budget left, let&rsquo;s have the loader actually do
 more work for us and convert on the fly to the data representation we are
 interested into:</p>
-
 <pre><code>                    table name       read   imported     errors       time
 ------------------------------  ---------  ---------  ---------  ---------
                        extract          0          0          0      1.008
@@ -1029,9 +1005,7 @@ interested into:</p>
 ------------------------------  ---------  ---------  ---------  ---------
                        finally          0          0          0     31.134
 ------------------------------  ---------  ---------  ---------  ---------
-             Total import time    2228847    2228847          0  1m13.343s
-</code></pre>
-
+             Total import time    2228847    2228847          0  1m13.343s</code></pre>
 <p>So this time with the extra work we&rsquo;re going from about 18 seconds up to
 about 32 seconds. The projection of integers to ip ranges is costly, but we
 are still so much ahead from the old solution than we have enough time to
@@ -1187,7 +1161,7 @@ of <em>Continuous Migration</em> using pgloader!</p>
         </article>
         <footer id="footer" class="main-content-wrap">
   <span class="copyrights">
-    &copy; 2020 Dimitri Fontaine. 
+    &copy; 2021 Dimitri Fontaine. 
   </span>
 </footer>
 
@@ -1310,346 +1284,14 @@ of <em>Continuous Migration</em> using pgloader!</p>
   </div>
 </div>
 
-    <div id="algolia-search-modal" class="modal-container">
-  <div class="modal">
-    <div class="modal-header">
-      <span class="close-button"><i class="fa fa-close"></i></span>
-      <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
-        <span class="searchby-algolia-text text-color-light text-small">by</span>
-        <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
-      </a>
-      <i class="search-icon fa fa-search"></i>
-      <form id="algolia-search-form">
-        <input type="text" id="algolia-search-input" name="search"
-          class="form-control input--large search-input" placeholder="" />
-      </form>
-    </div>
-    <div class="modal-body">
-      <div class="no-result text-color-light text-center"></div>
-      <div class="results">
-        
-        
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="https://tapoueh.org/blog/2020/11/2020-online-conferences/">
-                <h3 class="media-heading">2020: Online Conferences</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Nov 11, 2020
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather">Among a lot of other changes, the year 2020 brings Online Conferences to us. In the Postgres community too we now record our talks at home and send a video file to be playedto a virtual audience, and sometimes shared later in a platform online.
-So this year I did participate in Postgres Vision 2020 where I did deliver a talk about The Art of PostgreSQL. This a talk all about the book that I have written and self-publish at The Art of PostgreSQL: learn how to turn thousands of lines of code into simple SQL queries.</div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="https://tapoueh.org/blog/2019/11/list-postgresql-tables-using-extensions/">
-                <h3 class="media-heading">List PostgreSQL tables using extensions</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Nov 11, 2019
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p>Postgres has extensions, and that&rsquo;s awesome! Of course as the author of
-<code>CREATE EXTENSION</code> I&rsquo;m a little biased… just remember that the ability to
-extend Postgres is way more than just this command. The whole database
-system has been design from the ground up to allow for extensibility. Parts
-of the design is to be found in the way you can register new objects at
-runtime: functions of course, and also data types, operators, index support
-structures such as operator classes and families, even index access methods!</p>
+    
 
-<p>Today&rsquo;s article shows a query that you can use to list those tables in your
-schemas that are using a data type which is provided by an extension.</p>
-
-<p></p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="https://tapoueh.org/blog/2019/09/postgres-connection-strings-and-psql/">
-                <h3 class="media-heading">Postgres Connection Strings and psql</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Sep 9, 2019
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p><a href="https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING">PostgreSQL connection
-strings</a>
-embedded in your application can take two different forms: the key-value
-notation or the <code>postgresql://</code> URI scheme. When it comes to using <code>psql</code>
-though, another form of connection string is introduced, with command line
-options <code>-h -p -U</code> and environment variable support.</p>
-
-<p>In this short article you will learn that you can use either of the three
-different forms in <code>psql</code> and thus easily copy &amp; paste you application
-connection string right at the console to test it!</p>
-
-<p></p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="https://tapoueh.org/blog/2019/08/the-art-of-postgresql/">
-                <h3 class="media-heading">The Art Of PostgreSQL</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Aug 8, 2019
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p>I did it again! Today I am releasing the new edition of my book, with a new
-title: “The Art of PostgreSQL”. I&rsquo;m very happy (and quite excited) to
-declare my book as <em>Generally Available</em>!</p>
-
-<figure class="right"><a href="https://theartofpostgresql.com">
-    <img src="/img/TAOPCoverTablet.png"/> </a>
-</figure>
-
-
-<p><a href="https://theartofpostgresql.com">The Art of PostgreSQL</a> is the new edition
-of my previous release, <em>Mastering PostgreSQL in Application Development</em>.
-It contains mostly fixes to the old content, a new title, and a new book
-design (PDF and paperback). Content wise, <a href="https://theartofpostgresql.com">The Art of
-PostgreSQL</a> also comes with a new whole
-chapter about PostgreSQL Extensions.</p>
-
-<p>The new chapter covers extensions such as <code>hstore</code>, <code>pg_trgm</code>, <code>intarray</code>,
-<code>earthdistance</code>, <code>ip4r</code>, and <code>hll</code> or HyperLogLog, one of the all times
-favorite extensions of <a href="http://www.craigkerstiens.com">Craig Kerstiens</a>… who
-made himself available to answer my questions and share his view of
-PostgreSQL Extensions in an interview!</p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/11/preventing-sql-injections/">
-                <h3 class="media-heading">Preventing SQL Injections</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Nov 11, 2018
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p>An <em>SQL Injection</em> is a security breach, one made famous by the <a href="https://xkcd.com/327/">Exploits of
-a Mom</a> <code>xkcd</code> comic episode in which we read about
-<em>little Bobby Tables</em>:</p>
-
-<figure class="center"><a href="https://xkcd.com/327/">
-    <img src="/img/exploits_of_a_mom.png"/> </a>
-</figure>
-
-
-<p>PostgreSQL implements a protocol level facility to send the static SQL query
-text separately from its dynamic arguments. An SQL injection happens when
-the database server is mistakenly led to consider a dynamic argument of a
-query as part of the query text. Sending those parts as separate entities
-over the protocol means that SQL injection is no longer possible.</p>
-
-<!--toc-->
-
-<p></p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/08/geolocation-with-postgresql/">
-                <h3 class="media-heading">Geolocation with PostgreSQL</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Aug 8, 2018
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p>We have loaded Open Street Map points of interests in the article <a href="/blog/2013/08/the-most-popular-pub-names/">The Most
-Popular Pub Names</a> — which
-compares PostgreSQL with MongoDB for simple geographical queries, and is
-part of our <a href="/tags/extensions/">PostgreSQL Extensions</a> article series. In
-today&rsquo;s article, look at how to geolocalize an IP address and locate the
-nearest pub, all within a single SQL query!</p>
-
-<p>For that, we are going to use the awesome
-<a href="https://github.com/RhodiumToad/ip4r">ip4r</a> extension from
-<a href="http://blog.rhodiumtoad.org.uk/">RhodiumToad</a>.</p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/08/postgresql-concurrency-an-article-series/">
-                <h3 class="media-heading">PostgreSQL Concurrency: an Article Series</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Aug 8, 2018
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p><a href="https://www.postgresql.org">PostgreSQL</a> is a relational database management
-system. It&rsquo;s even the world&rsquo;s most advanced open source one of them. As
-such, as its core, Postgres solves concurrent access to a set of data and
-maintains consistency while allowing concurrent operations.</p>
-
-<p>In the <a href="/tags/concurrency/">PostgreSQL Concurrency</a> series of articles here
-we did see several aspects of how to handle concurrent use cases of your
-application design with PostgreSQL. The main thing to remember is that a
-Database Management System first task is to handle concurrency access to the
-data for you.</p>
-
-<p></p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/08/scheduled-data-processing-how-to-use-cron/">
-                <h3 class="media-heading">Scheduled Data Processing: How to use cron?</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Aug 8, 2018
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p>A previous article in the <a href="/tags/concurrency">PostgreSQL Concurrency</a> series
-covered how to manage concurrent retweets in an efficient way: in <a href="/blog/2018/07/computing-and-caching/">Computing
-and Caching</a>, we learnt how to
-maintain a cache right in your PostgreSQL database, using MATERIALIZED
-VIEWS. We also had a look at how to take care of <a href="/blog/2018/07/batch-updates-and-concurrency/">Batch Updates and
-Concurrency</a>.</p>
-
-<p>While in the first case we are providing a solution to a technical problem
-where we want to solve performance issues while keeping the same semantics,
-in the second case we are actually implementing a part of the application&rsquo;s
-<a href="/blog/2017/06/sql-and-business-logic/">Business Logic</a> as a scheduled job.</p>
-
-<p>Today&rsquo;s article shows a modern technique to handle the scheduling of those
-business oriented activities that are not tied to any user activity. When
-thinking about it this way, you certainly don&rsquo;t want to implement the
-backbone of your business logic in a <em>shell script</em> that&rsquo;s directly
-maintained in the production environment, do you?</p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/07/batch-updates-and-concurrency/">
-                <h3 class="media-heading">Batch Updates and Concurrency</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Jul 7, 2018
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p>This article fits in the <a href="/tags/concurrency">PostgreSQL Concurrency</a> series,
-where we installed a tweeter like application schema and had all the
-characters from Shakespeare&rsquo;s <em>A Midsummer Night&rsquo;s Dream</em> tweet their own
-lines in our database in <a href="/blog/2018/06/PostgreSQL-DML.md">PostgreSQL Concurrency: Data Modification
-Language</a>.</p>
-
-<p>A previous article in the series covered how to manage concurrent retweets
-in an efficient way: <a href="/blog/2018/07/computing-and-caching/">Computing and
-Caching</a>, where we learn how to
-maintain a cache right in your PostgreSQL database, thanks for materialized
-views. We even went as far as maintaining an <em>external</em> cache in another
-application layer using PostgreSQL
-<a href="https://www.postgresql.org/docs/current/static/sql-listen.html">LISTEN</a> and
-<a href="https://www.postgresql.org/docs/current/static/sql-notify.html">NOTIFY</a>
-features and a Golang application.</p>
-
-<p>Today&rsquo;s article is going to address concurrency in the context of updating
-data in a batch. This activity is quite common, as soon as your system is
-connected to other systems either internally or with external providers.
-While it&rsquo;s pretty easy to ingest new data, and easy enough to update data
-from an external source when nothing happens in your database, doing the
-operation safely with concurrent activity is more complex. Once more though,
-PostgreSQL comes with all the tooling you need to handle that situation.</p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/07/postgresql-listen-notify/">
-                <h3 class="media-heading">PostgreSQL LISTEN/NOTIFY</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Jul 7, 2018
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p>This article fits in the <a href="/tags/concurrency">PostgreSQL Concurrency</a> series,
-where we installed a tweeter like application schema and had all the
-characters from Shakespeare&rsquo;s <em>A Midsummer Night&rsquo;s Dream</em> tweet their own
-lines in our database in <a href="/blog/2018/06/PostgreSQL-DML.md">PostgreSQL Concurrency: Data Modification
-Language</a>.</p>
-
-<p>A previous article in the series covered how to manage concurrent retweets
-in an efficient way: <a href="/blog/2018/07/computing-and-caching/">Computing and
-Caching</a>, where we learn how to
-maintain a cache right in your PostgreSQL database, thanks for materialized
-views.</p>
-
-<p>Today&rsquo;s article shows how to maintain an <em>external</em> cache in another
-application layer. In this article we are going to maintain an in-memory
-cache in a Golang service, using PostgreSQL
-<a href="https://www.postgresql.org/docs/current/static/sql-listen.html">LISTEN</a> and
-<a href="https://www.postgresql.org/docs/current/static/sql-notify.html">NOTIFY</a>
-features.</p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
-      </div>
-    </div>
-    <div class="modal-footer">
-      <p class="results-count text-medium"
-         data-message-zero=""
-         data-message-one=""
-         data-message-other="">
-         287 posts found
-      </p>
-    </div>
-  </div>
-</div>
     
   
     
-    <div id="cover" style="background-image:url('https://tapoueh.org/images/mayan-calendar.jpg');"></div>
+      
+      <div id="cover" style="background-image:url('https://tapoueh.org/images/mayan-calendar.jpg');"></div>
+    
   
 
 
@@ -1661,9 +1303,23 @@ features.</p></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
 
 
-<script src="/js/script-qi9wbxp2ya2j6p7wx1i6tgavftewndznf4v0hy2gvivk1rxgc3lm7njqb6bz.min.js"></script>
+<script src="/js/script-pcw6v3xilnxydl1vddzazdverrnn9ctynvnxgwho987mfyqkuylcb1nlt.min.js"></script>
 
 
+<script lang="javascript">
+window.onload = updateMinWidth;
+window.onresize = updateMinWidth;
+document.getElementById("sidebar").addEventListener("transitionend", updateMinWidth);
+function updateMinWidth() {
+  var sidebar = document.getElementById("sidebar");
+  var main = document.getElementById("main");
+  main.style.minWidth = "";
+  var w1 = getComputedStyle(main).getPropertyValue("min-width");
+  var w2 = getComputedStyle(sidebar).getPropertyValue("width");
+  var w3 = getComputedStyle(sidebar).getPropertyValue("left");
+  main.style.minWidth = `calc(${w1} - ${w2} - ${w3})`;
+}
+</script>
 
 <script>
 $(document).ready(function() {
@@ -1703,6 +1359,7 @@ $(document).ready(function() {
       </script>
     
   
+
 
 
 

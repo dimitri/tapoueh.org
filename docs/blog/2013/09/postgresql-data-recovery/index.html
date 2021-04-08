@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.50">
+    <meta name="generator" content="Hugo 0.79.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>PostgreSQL data recovery</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -35,7 +35,7 @@
     <meta property="og:description" content="The following story is only interesting to read if you like it when bad things happen, or if you don&rsquo;t have a trustworthy backup policy in place. By trustworthy I mean that each backup you take must be tested with a test recovery job. Only tested backups will prove useful when you need them. So go read our Backup and Restore documentation chapter then learn how to setup Barman for handling physical backups and Point In Time Recovery.">
     <meta property="og:type" content="blog">
     <meta property="og:title" content="PostgreSQL data recovery">
-    <meta property="og:url" content="/blog/2013/09/postgresql-data-recovery/">
+    <meta property="og:url" content="https://tapoueh.org/blog/2013/09/postgresql-data-recovery/">
     <meta property="og:site_name" content="The Art of PostgreSQL">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="PostgreSQL data recovery">
@@ -189,11 +189,11 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="http://masteringpostgresql.com" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener">
     
       <i class="sidebar-button-icon fa fa-lg fa-book"></i>
       
-      <span class="sidebar-button-desc">Mastering PostgreSQL</span>
+      <span class="sidebar-button-desc">The Art of PostgreSQL</span>
     </a>
   </li>
 
@@ -553,7 +553,6 @@ have. With some luck&hellip;</p>
 <p><center><em>A broken clock is still right twice a day, a broken backup never is&hellip;</em></center></p>
 
 <p>Time to try our luck here:</p>
-
 <pre><code>$ export PGDATA=/some/place
 $ initdb
 $ hexedit $PGDATA/global/pg_control
@@ -561,11 +560,9 @@ $ pg_controldata
 $ xlogdump /archives/000000010000000000000009
 $ pg_resetxlog -f -l 1,9,19 -x 2126 -o 16667 $PGDATA
 $ cat &gt; $PGDATA/recovery.conf &lt;&lt;EOF
-restore_command = 'gunzip -c /archives/%f.gz &gt; &quot;%p&quot;'
+restore_command = &#39;gunzip -c /archives/%f.gz &gt; &#34;%p&#34;&#39;
 EOF
-$ pg_ctl start
-</code></pre>
-
+$ pg_ctl start</code></pre>
 <p>Using the transaction data we get from reading the first archive log file we
 have with
 <a href="https://github.com/snaga/xlogdump">xlogdump</a> then using
@@ -583,11 +580,8 @@ Common Lisp
 <em>REPL</em> open on my laptop, the easier for me to switch from decimal
 representation of the
 <em>database system identifier</em> was so:</p>
-
-<pre><code>(format nil &quot;~,,' ,2:x&quot; 5923145491842547187)
-&quot;52 33 3D 71 52 3B 3D F3&quot;
-</code></pre>
-
+<pre><code>(format nil &#34;~,,&#39; ,2:x&#34; 5923145491842547187)
+&#34;52 33 3D 71 52 3B 3D F3&#34;</code></pre>
 <p>Paying attention to the byte order means that you need to edit the control
 file&rsquo;s first 8 bytes in reverse:
 <code>F3 3D 3B 52 71 3D 33 52</code>. But in our case,
@@ -680,10 +674,7 @@ done here.</p>
 
 <p>By the way, here&rsquo;s one of those tricks I learnt in this exercise. You can
 read the second and fourth columns as filenames in the same directory:</p>
-
-<pre><code>od -j 8 -N $((512-8-8)) -td4 &lt; $PGDATA/global/pg_filenode.map
-</code></pre>
-
+<pre><code>od -j 8 -N $((512-8-8)) -td4 &lt; $PGDATA/global/pg_filenode.map</code></pre>
 <p>So copying default
 <code>pg_filenode.map</code> allowed us to pass that error and get to
 the next.</p>
@@ -707,21 +698,15 @@ status.</p>
 <p>Here&rsquo;s how to create those file from scratch, once you&rsquo;ve noticed that
 <code>01010101</code> is in fact the ascii code for the letter
 <code>U</code>.</p>
-
 <pre><code>(code-char #b01010101)
-#\U
-</code></pre>
-
+#\U</code></pre>
 <p>So to create a series of clog file where all transactions have been
 committed, so that we can see the data, we can use the following command
 line:</p>
-
 <pre><code>for c in 0000 0001 0002 0003 0004 0005 0006 0007 0008 0009 000A 000B 000C
 do
-    dd if=/dev/zero bs=256k count=1 | tr '\0' 'U' &gt; $c
-done
-</code></pre>
-
+    dd if=/dev/zero bs=256k count=1 | tr &#39;\0&#39; &#39;U&#39; &gt; $c
+done</code></pre>
 <p><center>
 
 
@@ -787,24 +772,18 @@ the new command and create the databases we need with the
 <code>OIDS</code> are then to be found on-disk in the file where
 <code>pg_database</code> is
 internally stored, and we can ask the system where that file is:</p>
-
 <pre><code>select oid, relname, pg_relation_filenode(oid)
   from pg_class
- where relname = 'pg_database';
+ where relname = &#39;pg_database&#39;;
  oid  |   relname   | pg_relation_filenode 
 ------+-------------+----------------------
  1262 | pg_database |                12319
-(1 row)
-</code></pre>
-
+(1 row)</code></pre>
 <p>Then without surprise we can see:</p>
-
 <pre><code>$ strings $PGDATA/global/12319
 postgres
 template0
-template1
-</code></pre>
-
+template1</code></pre>
 <p>Once that file is copied over to the (running, as it happened) damaged
 cluster, it&rsquo;s then possible to actually open a connection to a database. And
 that&rsquo;s pretty impressive. But suddenly it didn&rsquo;t work anymore&hellip;</p>
@@ -815,11 +794,8 @@ that&rsquo;s pretty impressive. But suddenly it didn&rsquo;t work anymore&hellip
 <code>psql</code> call would be fine, but the
 second one would always complain with an error you might have never seen in
 the field. I sure didn&rsquo;t before.</p>
-
-<pre><code>FATAL:  database &quot;dbname&quot; does not exists
-DETAIL:  Database OID 17838 now seems to belong to &quot;otherdbname&quot;
-</code></pre>
-
+<pre><code>FATAL:  database &#34;dbname&#34; does not exists
+DETAIL:  Database OID 17838 now seems to belong to &#34;otherdbname&#34;</code></pre>
 <p>Part of PostgreSQL startup is building up some caches, and for that it&rsquo;s
 using indexes. And we might have made a mistake, or the index is corrupted,
 but apparently there&rsquo;s a mismatch somewhere.</p>
@@ -871,16 +847,13 @@ commit
 <a href="http://www.postgresql.org/">PostgreSQL</a> and have that marvellous
 <strong><em>production ready</em></strong> system avoid any system indexes, for dealing with cases
 where you have reasons to think those are corrupted&hellip; or plain missing.</p>
-
-<pre><code>$ pg_ctl start -o &quot;-P&quot;
+<pre><code>$ pg_ctl start -o &#34;-P&#34;
 $ cat &gt; $PGDATA/postgresql.conf &lt;&lt;EOF
 	enable_indexscan = off
 	enable_bitmapscan = off
 	enable_indexonlyscan = off
 EOF
-$ pg_ctl reload
-</code></pre>
-
+$ pg_ctl reload</code></pre>
 <p>While at it, we edit the
 <code>postgresq.conf</code> and adjust some index usage related
 settings, as you can see, because this problem will certain happen outside
@@ -918,16 +891,13 @@ ECHO_HIDDEN</code> toggle.</p>
 files. To understand which file it is, I used the following query in a fresh
 cluster. The following example is about an error message where
 <code>base/16384/12062</code> is missing:</p>
-
 <pre><code>select oid, relname, pg_relation_filenode(oid)
   from pg_class
  where pg_relation_filenode(oid) = 12062;
  oid  | relname | pg_relation_filenode 
 ------+---------+----------------------
  1255 | pg_proc |                12062
-(1 row)
-</code></pre>
-
+(1 row)</code></pre>
 <p>In our specific case, no extensions were used. Check that before taking
 action here, or at least make sure that the tables you want to try and
 recover data from are not using extensions, that would make things so much
@@ -984,7 +954,6 @@ and the application here were using non default schema.</p>
 
 <p>To recover from that situation, we need to better understand how this
 relation is actually stored:</p>
-
 <pre><code># select oid, * from pg_namespace;
   oid  |      nspname       | nspowner |        nspacl        
 -------+--------------------+----------+----------------------
@@ -1002,9 +971,7 @@ relation is actually stored:</p>
 11223	pg_toast_temp_1	10	\N
 11	pg_catalog	10	{dim=UC/dim,=U/dim}
 2200	public	10	{dim=UC/dim,=UC/dim}
-11755	information_schema	10	{dim=UC/dim,=U/dim}
-</code></pre>
-
+11755	information_schema	10	{dim=UC/dim,=U/dim}</code></pre>
 <p><center>
 
 
@@ -1045,28 +1012,22 @@ IN</code>, being quite careful about using
 <code>tabs</code> (well, unless you use the
 <code>delimiter</code>
 option of course):</p>
-
 <pre><code># copy pg_namespace from stdin with oids;
 Enter data to be copied followed by a newline.
 End with a backslash and a period on a line by itself.
 &gt;&gt; 16443	my_namespace	10	\N
-&gt;&gt; \.
-</code></pre>
-
+&gt;&gt; \.</code></pre>
 <p>And now there&rsquo;s a new
 <em>schema</em> in there with the
 <code>OID</code> we want. Wait, how do we
 figure out the OID we need?</p>
-
 <pre><code># select c.oid, relname, relnamespace, nspname
     from pg_class c left join pg_namespace n on n.oid = c.relnamespace
-   where relname = 'bar';
+   where relname = &#39;bar&#39;;
   oid  | relname | relnamespace | nspname 
 -------+---------+--------------+---------
  16446 | bar     |        16443 | 
-(1 row)
-</code></pre>
-
+(1 row)</code></pre>
 <p>So in the result of that query we have no
 <code>nspname</code>, but we happen to know
 that the table
@@ -1140,44 +1101,38 @@ backups? and automated recovery tests?</p>
 <code>pg_attrdef</code> relation, wholesale.
 That relation is used for default expressions attached to columns, as we can
 see in the following example, taken on a working database server:</p>
-
 <pre><code># \d a
-                         Table &quot;public.a&quot;
+                         Table &#34;public.a&#34;
  Column |  Type   |                   Modifiers                    
 --------+---------+------------------------------------------------
- id     | integer | not null default nextval('a_id_seq'::regclass)
+ id     | integer | not null default nextval(&#39;a_id_seq&#39;::regclass)
  f1     | text    | 
 Indexes:
-    &quot;a_pkey&quot; PRIMARY KEY, btree (id)
+    &#34;a_pkey&#34; PRIMARY KEY, btree (id)
 
 #  select adrelid, adnum, adsrc
      from pg_attrdef
-    where adrelid = 'public.a'::regclass;
+    where adrelid = &#39;public.a&#39;::regclass;
  adrelid | adnum |             adsrc             
 ---------+-------+-------------------------------
-   16411 |     1 | nextval('a_id_seq'::regclass)
+   16411 |     1 | nextval(&#39;a_id_seq&#39;::regclass)
 (1 row)
 
 # select attnum, atthasdef
     from pg_attribute
-   where     attrelid = 'public.a'::regclass
+   where     attrelid = &#39;public.a&#39;::regclass
          and atthasdef;
  attnum | atthasdef 
 --------+-----------
       1 | t
-(1 row)
-</code></pre>
-
+(1 row)</code></pre>
 <p>We need to remember that the goal here is to salvage some data out of an
 installation where lots is missing, it&rsquo;s not at all about being able to ever
 use that system again. Given that, what we can do here is just ignore the
 default expression of the columns, by directly updating the catalogs:</p>
-
 <pre><code># update pg_attribute
      set atthasdef = false
-   where attrelid = 'my_namespace.bar';
-</code></pre>
-
+   where attrelid = &#39;my_namespace.bar&#39;;</code></pre>
 <h3 id="copy-the-data-out-now">COPY the data out! now!</h3>
 
 <p>At this point we are now able to actually run the
@@ -1353,7 +1308,7 @@ replicated that to the standby.</p>
         </article>
         <footer id="footer" class="main-content-wrap">
   <span class="copyrights">
-    &copy; 2020 Dimitri Fontaine. 
+    &copy; 2021 Dimitri Fontaine. 
   </span>
 </footer>
 
@@ -1476,346 +1431,14 @@ replicated that to the standby.</p>
   </div>
 </div>
 
-    <div id="algolia-search-modal" class="modal-container">
-  <div class="modal">
-    <div class="modal-header">
-      <span class="close-button"><i class="fa fa-close"></i></span>
-      <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
-        <span class="searchby-algolia-text text-color-light text-small">by</span>
-        <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
-      </a>
-      <i class="search-icon fa fa-search"></i>
-      <form id="algolia-search-form">
-        <input type="text" id="algolia-search-input" name="search"
-          class="form-control input--large search-input" placeholder="" />
-      </form>
-    </div>
-    <div class="modal-body">
-      <div class="no-result text-color-light text-center"></div>
-      <div class="results">
-        
-        
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="https://tapoueh.org/blog/2020/11/2020-online-conferences/">
-                <h3 class="media-heading">2020: Online Conferences</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Nov 11, 2020
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather">Among a lot of other changes, the year 2020 brings Online Conferences to us. In the Postgres community too we now record our talks at home and send a video file to be playedto a virtual audience, and sometimes shared later in a platform online.
-So this year I did participate in Postgres Vision 2020 where I did deliver a talk about The Art of PostgreSQL. This a talk all about the book that I have written and self-publish at The Art of PostgreSQL: learn how to turn thousands of lines of code into simple SQL queries.</div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="https://tapoueh.org/blog/2019/11/list-postgresql-tables-using-extensions/">
-                <h3 class="media-heading">List PostgreSQL tables using extensions</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Nov 11, 2019
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p>Postgres has extensions, and that&rsquo;s awesome! Of course as the author of
-<code>CREATE EXTENSION</code> I&rsquo;m a little biased… just remember that the ability to
-extend Postgres is way more than just this command. The whole database
-system has been design from the ground up to allow for extensibility. Parts
-of the design is to be found in the way you can register new objects at
-runtime: functions of course, and also data types, operators, index support
-structures such as operator classes and families, even index access methods!</p>
+    
 
-<p>Today&rsquo;s article shows a query that you can use to list those tables in your
-schemas that are using a data type which is provided by an extension.</p>
-
-<p></p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="https://tapoueh.org/blog/2019/09/postgres-connection-strings-and-psql/">
-                <h3 class="media-heading">Postgres Connection Strings and psql</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Sep 9, 2019
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p><a href="https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING">PostgreSQL connection
-strings</a>
-embedded in your application can take two different forms: the key-value
-notation or the <code>postgresql://</code> URI scheme. When it comes to using <code>psql</code>
-though, another form of connection string is introduced, with command line
-options <code>-h -p -U</code> and environment variable support.</p>
-
-<p>In this short article you will learn that you can use either of the three
-different forms in <code>psql</code> and thus easily copy &amp; paste you application
-connection string right at the console to test it!</p>
-
-<p></p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="https://tapoueh.org/blog/2019/08/the-art-of-postgresql/">
-                <h3 class="media-heading">The Art Of PostgreSQL</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Aug 8, 2019
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p>I did it again! Today I am releasing the new edition of my book, with a new
-title: “The Art of PostgreSQL”. I&rsquo;m very happy (and quite excited) to
-declare my book as <em>Generally Available</em>!</p>
-
-<figure class="right"><a href="https://theartofpostgresql.com">
-    <img src="/img/TAOPCoverTablet.png"/> </a>
-</figure>
-
-
-<p><a href="https://theartofpostgresql.com">The Art of PostgreSQL</a> is the new edition
-of my previous release, <em>Mastering PostgreSQL in Application Development</em>.
-It contains mostly fixes to the old content, a new title, and a new book
-design (PDF and paperback). Content wise, <a href="https://theartofpostgresql.com">The Art of
-PostgreSQL</a> also comes with a new whole
-chapter about PostgreSQL Extensions.</p>
-
-<p>The new chapter covers extensions such as <code>hstore</code>, <code>pg_trgm</code>, <code>intarray</code>,
-<code>earthdistance</code>, <code>ip4r</code>, and <code>hll</code> or HyperLogLog, one of the all times
-favorite extensions of <a href="http://www.craigkerstiens.com">Craig Kerstiens</a>… who
-made himself available to answer my questions and share his view of
-PostgreSQL Extensions in an interview!</p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/11/preventing-sql-injections/">
-                <h3 class="media-heading">Preventing SQL Injections</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Nov 11, 2018
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p>An <em>SQL Injection</em> is a security breach, one made famous by the <a href="https://xkcd.com/327/">Exploits of
-a Mom</a> <code>xkcd</code> comic episode in which we read about
-<em>little Bobby Tables</em>:</p>
-
-<figure class="center"><a href="https://xkcd.com/327/">
-    <img src="/img/exploits_of_a_mom.png"/> </a>
-</figure>
-
-
-<p>PostgreSQL implements a protocol level facility to send the static SQL query
-text separately from its dynamic arguments. An SQL injection happens when
-the database server is mistakenly led to consider a dynamic argument of a
-query as part of the query text. Sending those parts as separate entities
-over the protocol means that SQL injection is no longer possible.</p>
-
-<!--toc-->
-
-<p></p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/08/geolocation-with-postgresql/">
-                <h3 class="media-heading">Geolocation with PostgreSQL</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Aug 8, 2018
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p>We have loaded Open Street Map points of interests in the article <a href="/blog/2013/08/the-most-popular-pub-names/">The Most
-Popular Pub Names</a> — which
-compares PostgreSQL with MongoDB for simple geographical queries, and is
-part of our <a href="/tags/extensions/">PostgreSQL Extensions</a> article series. In
-today&rsquo;s article, look at how to geolocalize an IP address and locate the
-nearest pub, all within a single SQL query!</p>
-
-<p>For that, we are going to use the awesome
-<a href="https://github.com/RhodiumToad/ip4r">ip4r</a> extension from
-<a href="http://blog.rhodiumtoad.org.uk/">RhodiumToad</a>.</p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/08/postgresql-concurrency-an-article-series/">
-                <h3 class="media-heading">PostgreSQL Concurrency: an Article Series</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Aug 8, 2018
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p><a href="https://www.postgresql.org">PostgreSQL</a> is a relational database management
-system. It&rsquo;s even the world&rsquo;s most advanced open source one of them. As
-such, as its core, Postgres solves concurrent access to a set of data and
-maintains consistency while allowing concurrent operations.</p>
-
-<p>In the <a href="/tags/concurrency/">PostgreSQL Concurrency</a> series of articles here
-we did see several aspects of how to handle concurrent use cases of your
-application design with PostgreSQL. The main thing to remember is that a
-Database Management System first task is to handle concurrency access to the
-data for you.</p>
-
-<p></p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/08/scheduled-data-processing-how-to-use-cron/">
-                <h3 class="media-heading">Scheduled Data Processing: How to use cron?</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Aug 8, 2018
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p>A previous article in the <a href="/tags/concurrency">PostgreSQL Concurrency</a> series
-covered how to manage concurrent retweets in an efficient way: in <a href="/blog/2018/07/computing-and-caching/">Computing
-and Caching</a>, we learnt how to
-maintain a cache right in your PostgreSQL database, using MATERIALIZED
-VIEWS. We also had a look at how to take care of <a href="/blog/2018/07/batch-updates-and-concurrency/">Batch Updates and
-Concurrency</a>.</p>
-
-<p>While in the first case we are providing a solution to a technical problem
-where we want to solve performance issues while keeping the same semantics,
-in the second case we are actually implementing a part of the application&rsquo;s
-<a href="/blog/2017/06/sql-and-business-logic/">Business Logic</a> as a scheduled job.</p>
-
-<p>Today&rsquo;s article shows a modern technique to handle the scheduling of those
-business oriented activities that are not tied to any user activity. When
-thinking about it this way, you certainly don&rsquo;t want to implement the
-backbone of your business logic in a <em>shell script</em> that&rsquo;s directly
-maintained in the production environment, do you?</p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/07/batch-updates-and-concurrency/">
-                <h3 class="media-heading">Batch Updates and Concurrency</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Jul 7, 2018
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p>This article fits in the <a href="/tags/concurrency">PostgreSQL Concurrency</a> series,
-where we installed a tweeter like application schema and had all the
-characters from Shakespeare&rsquo;s <em>A Midsummer Night&rsquo;s Dream</em> tweet their own
-lines in our database in <a href="/blog/2018/06/PostgreSQL-DML.md">PostgreSQL Concurrency: Data Modification
-Language</a>.</p>
-
-<p>A previous article in the series covered how to manage concurrent retweets
-in an efficient way: <a href="/blog/2018/07/computing-and-caching/">Computing and
-Caching</a>, where we learn how to
-maintain a cache right in your PostgreSQL database, thanks for materialized
-views. We even went as far as maintaining an <em>external</em> cache in another
-application layer using PostgreSQL
-<a href="https://www.postgresql.org/docs/current/static/sql-listen.html">LISTEN</a> and
-<a href="https://www.postgresql.org/docs/current/static/sql-notify.html">NOTIFY</a>
-features and a Golang application.</p>
-
-<p>Today&rsquo;s article is going to address concurrency in the context of updating
-data in a batch. This activity is quite common, as soon as your system is
-connected to other systems either internally or with external providers.
-While it&rsquo;s pretty easy to ingest new data, and easy enough to update data
-from an external source when nothing happens in your database, doing the
-operation safely with concurrent activity is more complex. Once more though,
-PostgreSQL comes with all the tooling you need to handle that situation.</p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
-          <div class="media">
-            
-            <div class="media-body">
-              <a class="link-unstyled" href="https://tapoueh.org/blog/2018/07/postgresql-listen-notify/">
-                <h3 class="media-heading">PostgreSQL LISTEN/NOTIFY</h3>
-              </a>
-              <span class="media-meta">
-                <span class="media-date text-small">
-                  Jul 7, 2018
-                </span>
-              </span>
-              <div class="media-content hide-xs font-merryweather"><p>This article fits in the <a href="/tags/concurrency">PostgreSQL Concurrency</a> series,
-where we installed a tweeter like application schema and had all the
-characters from Shakespeare&rsquo;s <em>A Midsummer Night&rsquo;s Dream</em> tweet their own
-lines in our database in <a href="/blog/2018/06/PostgreSQL-DML.md">PostgreSQL Concurrency: Data Modification
-Language</a>.</p>
-
-<p>A previous article in the series covered how to manage concurrent retweets
-in an efficient way: <a href="/blog/2018/07/computing-and-caching/">Computing and
-Caching</a>, where we learn how to
-maintain a cache right in your PostgreSQL database, thanks for materialized
-views.</p>
-
-<p>Today&rsquo;s article shows how to maintain an <em>external</em> cache in another
-application layer. In this article we are going to maintain an in-memory
-cache in a Golang service, using PostgreSQL
-<a href="https://www.postgresql.org/docs/current/static/sql-listen.html">LISTEN</a> and
-<a href="https://www.postgresql.org/docs/current/static/sql-notify.html">NOTIFY</a>
-features.</p></div>
-            </div>
-            <div style="clear:both;"></div>
-            <hr>
-          </div>
-        
-      </div>
-    </div>
-    <div class="modal-footer">
-      <p class="results-count text-medium"
-         data-message-zero=""
-         data-message-one=""
-         data-message-other="">
-         287 posts found
-      </p>
-    </div>
-  </div>
-</div>
     
   
     
-    <div id="cover" style="background-image:url('https://tapoueh.org/images/mayan-calendar.jpg');"></div>
+      
+      <div id="cover" style="background-image:url('https://tapoueh.org/images/mayan-calendar.jpg');"></div>
+    
   
 
 
@@ -1827,9 +1450,23 @@ features.</p></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
 
 
-<script src="/js/script-qi9wbxp2ya2j6p7wx1i6tgavftewndznf4v0hy2gvivk1rxgc3lm7njqb6bz.min.js"></script>
+<script src="/js/script-pcw6v3xilnxydl1vddzazdverrnn9ctynvnxgwho987mfyqkuylcb1nlt.min.js"></script>
 
 
+<script lang="javascript">
+window.onload = updateMinWidth;
+window.onresize = updateMinWidth;
+document.getElementById("sidebar").addEventListener("transitionend", updateMinWidth);
+function updateMinWidth() {
+  var sidebar = document.getElementById("sidebar");
+  var main = document.getElementById("main");
+  main.style.minWidth = "";
+  var w1 = getComputedStyle(main).getPropertyValue("min-width");
+  var w2 = getComputedStyle(sidebar).getPropertyValue("width");
+  var w3 = getComputedStyle(sidebar).getPropertyValue("left");
+  main.style.minWidth = `calc(${w1} - ${w2} - ${w3})`;
+}
+</script>
 
 <script>
 $(document).ready(function() {
@@ -1869,6 +1506,7 @@ $(document).ready(function() {
       </script>
     
   
+
 
 
 
