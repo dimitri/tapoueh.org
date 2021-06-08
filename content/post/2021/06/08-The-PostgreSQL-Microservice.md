@@ -32,7 +32,7 @@ The podcast episode is available as a video, and it's in French.
 
 <hr />
 
-I must admit looking at Postgres as a microservice is an exerise that I
+I must admit looking at Postgres as a microservice is an exercise that I
 like. It allows focusing on what Postgres offers that your application is
 happy to re-use rather than having to implement it for itself.
 
