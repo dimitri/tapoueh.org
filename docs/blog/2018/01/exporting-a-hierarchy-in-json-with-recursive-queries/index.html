@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.79.0">
+    <meta name="generator" content="Hugo 0.85.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Exporting a Hierarchy in JSON: with recursive queries</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -126,7 +126,6 @@ if (!doNotTrack) {
 	ga('send', 'pageview');
 }
 </script>
-
     
     
   </head>
@@ -316,7 +315,7 @@ if (!doNotTrack) {
       </time>
     
     <span style="float: right; width: 65%">
-      <i class="fa fa-clock-o"></i> 11 mins read
+      <i class="fa fa-clock-o"></i> 10 mins read
       
     </span>
     <span style="float: left; width: 35%">
@@ -580,20 +579,20 @@ as in the following data loading SQL file:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#aaa;font-style:italic">--
 </span><span style="color:#aaa;font-style:italic">-- https://en.m.wikipedia.org/wiki/Character_class_(Dungeons_%26_Dragons)
 </span><span style="color:#aaa;font-style:italic">--
-</span><span style="color:#aaa;font-style:italic"></span>
-<span style="color:#00a">begin</span>;
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> dndclasses
- (
-   id         <span style="color:#0aa">int</span> <span style="color:#00a">generated</span> <span style="color:#00a">by</span> <span style="color:#00a">default</span> <span style="color:#00a">as</span> <span style="color:#00a">identity</span> <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
-   parent_id  <span style="color:#0aa">int</span> <span style="color:#00a">references</span> dndclasses(id),
-   name       <span style="color:#0aa">text</span>
- );
-
-<span style="color:#aaa;font-style:italic">-- INSERT commands
+</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">begin</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>dndclasses<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>id<span style="color:#bbb">         </span><span style="color:#0aa">int</span><span style="color:#bbb"> </span><span style="color:#00a">generated</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">default</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">identity</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>parent_id<span style="color:#bbb">  </span><span style="color:#0aa">int</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>dndclasses(id),<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>name<span style="color:#bbb">       </span><span style="color:#0aa">text</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#aaa;font-style:italic">-- INSERT commands
 </span><span style="color:#aaa;font-style:italic">-- ...
-</span><span style="color:#aaa;font-style:italic"></span>
-<span style="color:#00a">commit</span>;</code></pre></div>
+</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">commit</span>;</code></pre></div>
 <p>This data set looks like in the following query result, which is the ouput
 of a very simple <code>TABLE dndclasses;</code> SQL command:</p>
 <pre><code> id │ parent_id │           name            
@@ -650,8 +649,7 @@ hand-over to the browser so that the client rendering can now happen.</p>
             <span style="color:#a50">&#34;Name&#34;</span>: <span style="color:#a50">&#34;Thief&#34;</span>, <span style="color:#a50">&#34;Sub Classes&#34;</span>: [<span style="color:#a50">&#34;Assassin&#34;</span>]
         }
     }
-]
-</code></pre></div>
+]</code></pre></div>
 <p>To be able to export our whole data set as a single JSON document, we need
 to recurse over it from the parents classes to their sub-classes. Not only
 that, we also need to accumulate the sub-classes into a single entity.</p>
@@ -671,9 +669,9 @@ when you start at its top.</p>
 
 <p>The first step begins at the top of the tree, with those classes that don&rsquo;t
 have a parent class, our top-level classes:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> id, name, <span style="color:#a50">&#39;{}&#39;</span>::<span style="color:#0aa">int</span>[] <span style="color:#00a">as</span> parents, <span style="color:#099">0</span> <span style="color:#00a">as</span> <span style="color:#00a">level</span>
-  <span style="color:#00a">from</span> dndclasses
- <span style="color:#00a">where</span> parent_id <span style="color:#00a">is</span> <span style="color:#00a">NULL</span></code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span>id,<span style="color:#bbb"> </span>name,<span style="color:#bbb"> </span><span style="color:#a50">&#39;{}&#39;</span>::<span style="color:#0aa">int</span>[]<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>parents,<span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">level</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>dndclasses<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>parent_id<span style="color:#bbb"> </span><span style="color:#00a">is</span><span style="color:#bbb"> </span><span style="color:#00a">NULL</span></code></pre></div>
 <p>We have added computed columns to the base data set: both a <em>parent</em> array,
 built empty for now; and a recursion level, zero for the top-level items.</p>
 
@@ -698,22 +696,22 @@ direct sub-classes, then loop over that extended set to find the next level
 of sub-classes, until we find no sub-classes any more. Well that&rsquo;s exactly
 what WITH RECURSIVE is all about, automatically discovering how many steps
 need to be done:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span> <span style="color:#00a">recursive</span> dndclasses_from_parents <span style="color:#00a">as</span>
-(
-      <span style="color:#00a">select</span> id, name, <span style="color:#a50">&#39;{}&#39;</span>::<span style="color:#0aa">int</span>[] <span style="color:#00a">as</span> parents, <span style="color:#099">0</span> <span style="color:#00a">as</span> <span style="color:#00a">level</span>
-        <span style="color:#00a">from</span> dndclasses
-       <span style="color:#00a">where</span> parent_id <span style="color:#00a">is</span> <span style="color:#00a">NULL</span>
-
-   <span style="color:#00a">union</span> <span style="color:#00a">all</span>
-
-      <span style="color:#00a">select</span> <span style="color:#00a">c</span>.id, <span style="color:#00a">c</span>.name, parents || <span style="color:#00a">c</span>.parent_id, <span style="color:#00a">level</span>+<span style="color:#099">1</span>
-        <span style="color:#00a">from</span>      dndclasses_from_parents p
-             <span style="color:#00a">join</span> dndclasses <span style="color:#00a">c</span>
-               <span style="color:#00a">on</span> <span style="color:#00a">c</span>.parent_id = p.id
-       <span style="color:#00a">where</span> <span style="color:#00a">not</span> <span style="color:#00a">c</span>.id = <span style="color:#00a">any</span>(parents)
-)
-<span style="color:#00a">select</span> name, id, parents, <span style="color:#00a">level</span>
-  <span style="color:#00a">from</span> dndclasses_from_parents;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span><span style="color:#bbb"> </span><span style="color:#00a">recursive</span><span style="color:#bbb"> </span>dndclasses_from_parents<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span>(<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>id,<span style="color:#bbb"> </span>name,<span style="color:#bbb"> </span><span style="color:#a50">&#39;{}&#39;</span>::<span style="color:#0aa">int</span>[]<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>parents,<span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">level</span><span style="color:#bbb">
+</span><span style="color:#bbb">        </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>dndclasses<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>parent_id<span style="color:#bbb"> </span><span style="color:#00a">is</span><span style="color:#bbb"> </span><span style="color:#00a">NULL</span><span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">union</span><span style="color:#bbb"> </span><span style="color:#00a">all</span><span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">c</span>.id,<span style="color:#bbb"> </span><span style="color:#00a">c</span>.name,<span style="color:#bbb"> </span>parents<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span><span style="color:#00a">c</span>.parent_id,<span style="color:#bbb"> </span><span style="color:#00a">level</span>+<span style="color:#099">1</span><span style="color:#bbb">
+</span><span style="color:#bbb">        </span><span style="color:#00a">from</span><span style="color:#bbb">      </span>dndclasses_from_parents<span style="color:#bbb"> </span>p<span style="color:#bbb">
+</span><span style="color:#bbb">             </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>dndclasses<span style="color:#bbb"> </span><span style="color:#00a">c</span><span style="color:#bbb">
+</span><span style="color:#bbb">               </span><span style="color:#00a">on</span><span style="color:#bbb"> </span><span style="color:#00a">c</span>.parent_id<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>p.id<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">c</span>.id<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">any</span>(parents)<span style="color:#bbb">
+</span><span style="color:#bbb"></span>)<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">select</span><span style="color:#bbb"> </span>name,<span style="color:#bbb"> </span>id,<span style="color:#bbb"> </span>parents,<span style="color:#bbb"> </span><span style="color:#00a">level</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>dndclasses_from_parents;</code></pre></div>
 <p>Before trying to explain the query, let&rsquo;s have a look at its result, in
 order for the more visuals of you to get plenty of hints already:</p>
 <pre><code>           name            │ id │ parents │ level 
@@ -778,7 +776,7 @@ cycles in your data. Here it would mean that a sub-class would be found both
 in the above and below another class in the chart, which would likely not be
 intended. The cycle detection and prevention is done thanks to the following
 WHERE clause to the second part of the <em>union all</em> query:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">       <span style="color:#00a">where</span> <span style="color:#00a">not</span> <span style="color:#00a">c</span>.id = <span style="color:#00a">any</span>(parents)</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">       </span><span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">c</span>.id<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">any</span>(parents)</code></pre></div>
 <h2 id="from-parents-to-children-node-and-back">From parents to children node, and back</h2>
 
 <p>Now, this result is very nice, but it&rsquo;s not what we&rsquo;ve been asked to
@@ -920,8 +918,7 @@ JSON array to group them into a single valid document:</p>
             ]
         }
     }
-]
-</code></pre></div>
+]</code></pre></div>
 <p>Ta-dah! Job done! It&rsquo;s now possible to pass the result over to the very nice
 visual and interactive <a href="https://bl.ocks.org/mbostock/7607535">Zoomable Circle
 Packing</a> tool and enjoy a browsable

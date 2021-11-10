@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.79.0">
+    <meta name="generator" content="Hugo 0.85.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Computing and Caching</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -153,7 +153,6 @@ if (!doNotTrack) {
 	ga('send', 'pageview');
 }
 </script>
-
     
     
   </head>
@@ -343,7 +342,7 @@ if (!doNotTrack) {
       </time>
     
     <span style="float: right; width: 65%">
-      <i class="fa fa-clock-o"></i> 7 mins read
+      <i class="fa fa-clock-o"></i> 6 mins read
       
     </span>
     <span style="float: left; width: 35%">
@@ -545,15 +544,15 @@ Creating a set of values for caching is of course really easy as it usually
 boils down to writing a SQL query. Any SQL query executed by PostgreSQL uses
 a snapshot of the whole database system. To create a cache from that
 snapshot, the simplest way is to use the <em>create table as</em> command.</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span> <span style="color:#00a">table</span> tweet.counters <span style="color:#00a">as</span>
-  <span style="color:#00a">select</span>   <span style="color:#00a">count</span>(*) filter(<span style="color:#00a">where</span> action = <span style="color:#a50">&#39;rt&#39;</span>)
-         - <span style="color:#00a">count</span>(*) filter(<span style="color:#00a">where</span> action = <span style="color:#a50">&#39;de-rt&#39;</span>)
-         <span style="color:#00a">as</span> rts,
-           <span style="color:#00a">count</span>(*) filter(<span style="color:#00a">where</span> action = <span style="color:#a50">&#39;fav&#39;</span>)
-         - <span style="color:#00a">count</span>(*) filter(<span style="color:#00a">where</span> action = <span style="color:#a50">&#39;de-fav&#39;</span>)
-         <span style="color:#00a">as</span> favs
-    <span style="color:#00a">from</span> tweet.activity
-         <span style="color:#00a">join</span> tweet.message <span style="color:#00a">using</span>(messageid);</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>tweet.counters<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb">   </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span>action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">         </span>-<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span>action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-rt&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>rts,<span style="color:#bbb">
+</span><span style="color:#bbb">           </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span>action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;fav&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">         </span>-<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span>action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-fav&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>favs<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>tweet.activity<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>tweet.message<span style="color:#bbb"> </span><span style="color:#00a">using</span>(messageid);</code></pre></div>
 <p>Now we have a <em>tweet.counters</em> table that we can use whenever we need the
 numbers of <em>rts</em> or <em>favs</em> from a tweet message. How do we update the
 counters? That&rsquo;s the cache invalidation problem quoted above, and we&rsquo;ll come
@@ -565,35 +564,35 @@ to the answer by the end of this article!</p>
 relation. The computing still happens dynamically at query time and is made
 transparent to the client. When using a view, there&rsquo;s no problem with <em>cache
 invalidation</em>, because nothing gets cached away.</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span> <span style="color:#00a">view</span> tweet.message_with_counters
-      <span style="color:#00a">as</span>
-  <span style="color:#00a">select</span> messageid,
-         message.userid,
-         message.datetime,
-         message.message,
-           <span style="color:#00a">count</span>(*) filter(<span style="color:#00a">where</span> action = <span style="color:#a50">&#39;rt&#39;</span>)
-         - <span style="color:#00a">count</span>(*) filter(<span style="color:#00a">where</span> action = <span style="color:#a50">&#39;de-rt&#39;</span>)
-         <span style="color:#00a">as</span> rts,
-           <span style="color:#00a">count</span>(*) filter(<span style="color:#00a">where</span> action = <span style="color:#a50">&#39;fav&#39;</span>)
-         - <span style="color:#00a">count</span>(*) filter(<span style="color:#00a">where</span> action = <span style="color:#a50">&#39;de-fav&#39;</span>)
-         <span style="color:#00a">as</span> favs,
-         message.<span style="color:#00a">location</span>,
-         message.lang,
-         message.url
-    <span style="color:#00a">from</span> tweet.activity
-         <span style="color:#00a">join</span> tweet.message <span style="color:#00a">using</span>(messageid)
-<span style="color:#00a">group</span> <span style="color:#00a">by</span> message.messageid, activity.messageid;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">view</span><span style="color:#bbb"> </span>tweet.message_with_counters<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">as</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>messageid,<span style="color:#bbb">
+</span><span style="color:#bbb">         </span>message.userid,<span style="color:#bbb">
+</span><span style="color:#bbb">         </span>message.datetime,<span style="color:#bbb">
+</span><span style="color:#bbb">         </span>message.message,<span style="color:#bbb">
+</span><span style="color:#bbb">           </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span>action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">         </span>-<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span>action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-rt&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>rts,<span style="color:#bbb">
+</span><span style="color:#bbb">           </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span>action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;fav&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">         </span>-<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span>action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-fav&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>favs,<span style="color:#bbb">
+</span><span style="color:#bbb">         </span>message.<span style="color:#00a">location</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">         </span>message.lang,<span style="color:#bbb">
+</span><span style="color:#bbb">         </span>message.url<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>tweet.activity<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>tweet.message<span style="color:#bbb"> </span><span style="color:#00a">using</span>(messageid)<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>message.messageid,<span style="color:#bbb"> </span>activity.messageid;</code></pre></div>
 <p>Given this view, the application code can query
 <em>tweet.message_with_counters</em> and process the same relation as in the first
 normalized version of our schema. The view hides the <em>complexity</em> of how to
 obtain the counters from the schema.</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span> messageid,
-         rts,
-         nickname
-    <span style="color:#00a">from</span> tweet.message_with_counters
-         <span style="color:#00a">join</span> tweet.users <span style="color:#00a">using</span>(userid)
-   <span style="color:#00a">where</span> messageid <span style="color:#00a">between</span> <span style="color:#099">1</span> <span style="color:#00a">and</span> <span style="color:#099">6</span>
-<span style="color:#00a">order</span> <span style="color:#00a">by</span> messageid;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>messageid,<span style="color:#bbb">
+</span><span style="color:#bbb">         </span>rts,<span style="color:#bbb">
+</span><span style="color:#bbb">         </span>nickname<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>tweet.message_with_counters<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>tweet.users<span style="color:#bbb"> </span><span style="color:#00a">using</span>(userid)<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>messageid<span style="color:#bbb"> </span><span style="color:#00a">between</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">and</span><span style="color:#bbb"> </span><span style="color:#099">6</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>messageid;</code></pre></div>
 <p>We can see that I played with generating some retweets in my local testing,
 done mainly over the six first messages:</p>
 <pre><code class="language-psql" data-lang="psql"> messageid │  rts   │   nickname   
@@ -618,8 +617,7 @@ each time it&rsquo;s referenced in a query.</p>
 
 <hr />
 
-<figure class="right"><a href="https://theartofpostgresql.com">
-    <img src="/img/TAOP_Book_Cover_200x260.png"/> </a>
+<figure class="right"><a href="https://theartofpostgresql.com"><img src="/img/TAOP_Book_Cover_200x260.png"/></a>
 </figure>
 
 
@@ -637,15 +635,15 @@ views, check it out!</p>
 <p>It is easy enough to cache a snapshot of the database into a permanent
 relation for later querying thanks to PostgreSQL implementation of
 <em>materialized views</em>:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span> <span style="color:#00a">schema</span> <span style="color:#00a">if</span> <span style="color:#00a">not</span> <span style="color:#00a">exists</span> twcache;
-
-<span style="color:#00a">create</span> materialized <span style="color:#00a">view</span> twcache.message
-    <span style="color:#00a">as</span> <span style="color:#00a">select</span> messageid, userid, datetime, message,
-              rts, favs,
-              <span style="color:#00a">location</span>, lang, url
-         <span style="color:#00a">from</span> tweet.message_with_counters;
-
-<span style="color:#00a">create</span> <span style="color:#00a">unique</span> <span style="color:#00a">index</span> <span style="color:#00a">on</span> twcache.message(messageid);</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">schema</span><span style="color:#bbb"> </span><span style="color:#00a">if</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">exists</span><span style="color:#bbb"> </span>twcache;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span>materialized<span style="color:#bbb"> </span><span style="color:#00a">view</span><span style="color:#bbb"> </span>twcache.message<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>messageid,<span style="color:#bbb"> </span>userid,<span style="color:#bbb"> </span>datetime,<span style="color:#bbb"> </span>message,<span style="color:#bbb">
+</span><span style="color:#bbb">              </span>rts,<span style="color:#bbb"> </span>favs,<span style="color:#bbb">
+</span><span style="color:#bbb">              </span><span style="color:#00a">location</span>,<span style="color:#bbb"> </span>lang,<span style="color:#bbb"> </span>url<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>tweet.message_with_counters;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">unique</span><span style="color:#bbb"> </span><span style="color:#00a">index</span><span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>twcache.message(messageid);</code></pre></div>
 <p>As usual, read the PostgreSQL documentation about the command <a href="https://www.postgresql.org/docs/current/static/sql-creatematerializedview.html">CREATE
 MATERIALIZED
 VIEW</a>
@@ -667,14 +665,14 @@ workers doing each 100 retweets on <em>messageid</em> 3:</p>
 <span style="color:#a00">Starting</span> <span style="color:#a00">benchmark</span> <span style="color:#a00">for</span> <span style="color:#a00">inserts</span>
 <span style="color:#a00">Inserting</span> <span style="color:#a00">took</span> <span style="color:#099">6.684597</span> <span style="color:#a00">seconds,</span> <span style="color:#a00">did</span> <span style="color:#099">10000</span> <span style="color:#a00">rts</span></code></pre></div>
 <p>Then we query our cache again:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span> messageid,
-         rts,
-         nickname,
-         <span style="color:#00a">substring</span>(message <span style="color:#00a">from</span> E<span style="color:#a50">&#39;[^\n]+&#39;</span>) <span style="color:#00a">as</span> first_line
-    <span style="color:#00a">from</span> twcache.message
-         <span style="color:#00a">join</span> tweet.users <span style="color:#00a">using</span>(userid)
-   <span style="color:#00a">where</span> messageid = <span style="color:#099">3</span>
-<span style="color:#00a">order</span> <span style="color:#00a">by</span> messageid;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>messageid,<span style="color:#bbb">
+</span><span style="color:#bbb">         </span>rts,<span style="color:#bbb">
+</span><span style="color:#bbb">         </span>nickname,<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">substring</span>(message<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>E<span style="color:#a50">&#39;[^\n]+&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>first_line<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>twcache.message<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>tweet.users<span style="color:#bbb"> </span><span style="color:#00a">using</span>(userid)<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>messageid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#099">3</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>messageid;</code></pre></div>
 <p>We can see that the <em>materialized view</em> is indeed a cache, as it knows
 nothing about the last round of retweets that just happened:</p>
 <pre><code class="language-psql" data-lang="psql"> messageid │ rts  │   nickname   │    first_line    
@@ -693,7 +691,7 @@ cache <em>time to live</em>, if you will, making the problem more obvious.</p>
 the <a href="https://www.postgresql.org/docs/current/static/sql-refreshmaterializedview.html">refresh materialized
 view</a>
 command:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">refresh materialized <span style="color:#00a">view</span> concurrently twcache.message;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">refresh<span style="color:#bbb"> </span>materialized<span style="color:#bbb"> </span><span style="color:#00a">view</span><span style="color:#bbb"> </span>concurrently<span style="color:#bbb"> </span>twcache.message;</code></pre></div>
 <p>This command makes it possible to implement a <em>cache invalidation policy</em>.
 In some cases, a business only analyses data up to the day before, in which
 case you can <em>refresh</em> your materialized views every night: that&rsquo;s your
@@ -714,8 +712,7 @@ the <em>cron</em> Unix task scheduler.</p>
 
 <h2 id="conclusion">Conclusion</h2>
 
-<figure class="right">
-    <img src="/img/there-are-two-hard-problems-in-computer-science-0-naming-320.png"/> 
+<figure class="right"><img src="/img/there-are-two-hard-problems-in-computer-science-0-naming-320.png"/>
 </figure>
 
 

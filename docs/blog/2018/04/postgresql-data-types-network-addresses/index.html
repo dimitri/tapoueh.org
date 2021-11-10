@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.79.0">
+    <meta name="generator" content="Hugo 0.85.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>PostgreSQL Data Types: Network Addresses</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -105,7 +105,6 @@ if (!doNotTrack) {
 	ga('send', 'pageview');
 }
 </script>
-
     
     
   </head>
@@ -486,21 +485,21 @@ network address types and <a href="http://old.honeynet.org/scans/scan34/">The Ho
 Project</a> has some free samples for us
 to play with. This time we&rsquo;re using the <em>Scan 34</em> entry. Here&rsquo;s how to load
 the sample data set, once cleaned into a proper CSV file:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
-
-<span style="color:#00a">drop</span> <span style="color:#00a">table</span> <span style="color:#00a">if</span> <span style="color:#00a">exists</span> access_log;
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> access_log
- (
-  ip      inet,
-  ts      timestamptz,
-  request <span style="color:#0aa">text</span>,
-  status  <span style="color:#0aa">integer</span>
- );
-
-<span style="color:#f00;background-color:#faa">\</span><span style="color:#00a">copy</span> access_log <span style="color:#00a">from</span> <span style="color:#a50">&#39;access.csv&#39;</span> <span style="color:#00a">with</span> csv <span style="color:#00a">delimiter</span> <span style="color:#a50">&#39;;&#39;</span>
-
-<span style="color:#00a">commit</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">drop</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span><span style="color:#00a">if</span><span style="color:#bbb"> </span><span style="color:#00a">exists</span><span style="color:#bbb"> </span>access_log;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>access_log<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>ip<span style="color:#bbb">      </span>inet,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>ts<span style="color:#bbb">      </span>timestamptz,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>request<span style="color:#bbb"> </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>status<span style="color:#bbb">  </span><span style="color:#0aa">integer</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#f00;background-color:#faa">\</span><span style="color:#00a">copy</span><span style="color:#bbb"> </span>access_log<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;access.csv&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">with</span><span style="color:#bbb"> </span>csv<span style="color:#bbb"> </span><span style="color:#00a">delimiter</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;;&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">commit</span>;</code></pre></div>
 <p>The script used to cleanse the original data into a CSV that PostgreSQL is
 happy about implements a pretty simple transformation from</p>
 <pre><code>211.141.115.145 - - [13/Mar/2005:04:10:18 -0500] &#34;GET / HTTP/1.1&#34; 403 2898 &#34;-&#34; &#34;Mozilla/4.0 (compatible; MSIE 5.5; Windows 98)&#34;</code></pre>
@@ -519,12 +518,12 @@ the logs.</p>
 <p>To enable that analysis, we can use the <em>set_masklen()</em> function which
 allows us to transforms an IP address into an arbitrary CIDR network
 address:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> <span style="color:#00a">distinct</span> <span style="color:#00a">on</span> (ip)
-       ip,
-       set_masklen(ip, <span style="color:#099">24</span>) <span style="color:#00a">as</span> inet_24,
-       set_masklen(ip::cidr, <span style="color:#099">24</span>) <span style="color:#00a">as</span> cidr_24
-  <span style="color:#00a">from</span> access_log
- <span style="color:#00a">limit</span> <span style="color:#099">10</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">distinct</span><span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>(ip)<span style="color:#bbb">
+</span><span style="color:#bbb">       </span>ip,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span>set_masklen(ip,<span style="color:#bbb"> </span><span style="color:#099">24</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>inet_24,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span>set_masklen(ip::cidr,<span style="color:#bbb"> </span><span style="color:#099">24</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>cidr_24<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>access_log<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">10</span>;</code></pre></div>
 <p>And we can see that if we keep the data type as <em>inet</em>, we still get the
 full IP address with the <em>/24</em> network notation added. To have the <em>.0/24</em>
 notation we need to be using <em>cidr</em>:</p>
@@ -542,12 +541,12 @@ notation we need to be using <em>cidr</em>:</p>
  18.194.1.122  │ 18.194.1.122/24  │ 18.194.1.0/24
 (10 rows)</code></pre>
 <p>Of course, note that you could be analyzing other networks than <em>/24</em>:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> <span style="color:#00a">distinct</span> <span style="color:#00a">on</span> (ip)
-       ip,
-       set_masklen(ip::cidr, <span style="color:#099">27</span>) <span style="color:#00a">as</span> cidr_27,
-       set_masklen(ip::cidr, <span style="color:#099">28</span>) <span style="color:#00a">as</span> cidr_28
-  <span style="color:#00a">from</span> access_log
- <span style="color:#00a">limit</span> <span style="color:#099">10</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">distinct</span><span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>(ip)<span style="color:#bbb">
+</span><span style="color:#bbb">       </span>ip,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span>set_masklen(ip::cidr,<span style="color:#bbb"> </span><span style="color:#099">27</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>cidr_27,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span>set_masklen(ip::cidr,<span style="color:#bbb"> </span><span style="color:#099">28</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>cidr_28<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>access_log<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">10</span>;</code></pre></div>
 <p>This computes for us the proper starting ip addresses for our CIDR notation
 for us, of course. After all, what&rsquo;s the point of using proper data types if
 not for advanced processing?</p>
@@ -568,13 +567,13 @@ not for advanced processing?</p>
 
 <p>Equipped with this <em>set_masklen()</em> function, it&rsquo;s now easy to analyze our
 access logs using arbitrary CIDR network definitions.</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span> set_masklen(ip::cidr, <span style="color:#099">24</span>) <span style="color:#00a">as</span> network,
-         <span style="color:#00a">count</span>(*) <span style="color:#00a">as</span> requests,
-         array_length(array_agg(<span style="color:#00a">distinct</span> ip), <span style="color:#099">1</span>) <span style="color:#00a">as</span> ipcount
-    <span style="color:#00a">from</span> access_log
-<span style="color:#00a">group</span> <span style="color:#00a">by</span> network
-  <span style="color:#00a">having</span> array_length(array_agg(<span style="color:#00a">distinct</span> ip), <span style="color:#099">1</span>) &gt; <span style="color:#099">1</span>
-<span style="color:#00a">order</span> <span style="color:#00a">by</span> requests <span style="color:#00a">desc</span>, ipcount <span style="color:#00a">desc</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>set_masklen(ip::cidr,<span style="color:#bbb"> </span><span style="color:#099">24</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>network,<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>requests,<span style="color:#bbb">
+</span><span style="color:#bbb">         </span>array_length(array_agg(<span style="color:#00a">distinct</span><span style="color:#bbb"> </span>ip),<span style="color:#bbb"> </span><span style="color:#099">1</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>ipcount<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>access_log<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>network<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">having</span><span style="color:#bbb"> </span>array_length(array_agg(<span style="color:#00a">distinct</span><span style="color:#bbb"> </span>ip),<span style="color:#bbb"> </span><span style="color:#099">1</span>)<span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>requests<span style="color:#bbb"> </span><span style="color:#00a">desc</span>,<span style="color:#bbb"> </span>ipcount<span style="color:#bbb"> </span><span style="color:#00a">desc</span>;</code></pre></div>
 <p>In our case, we get the following result:</p>
 <pre><code class="language-psql" data-lang="psql">     network      │ requests │ ipcount 
 ══════════════════╪══════════╪═════════

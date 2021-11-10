@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.79.0">
+    <meta name="generator" content="Hugo 0.85.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>PostgreSQL Concurrency: Isolation and Locking</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -114,7 +114,6 @@ if (!doNotTrack) {
 	ga('send', 'pageview');
 }
 </script>
-
     
     
   </head>
@@ -533,8 +532,7 @@ allows some user control in terms of locking aspects of your queries.</p>
 
 <hr />
 
-<figure class="right"><a href="https://theartofpostgresql.com">
-    <img src="/img/TAOP_Book_Cover_200x260.png"/> </a>
+<figure class="right"><a href="https://theartofpostgresql.com"><img src="/img/TAOP_Book_Cover_200x260.png"/></a>
 </figure>
 
 
@@ -647,29 +645,29 @@ Language</a>.</p>
 </div>
 
 <p>Here&rsquo;s how to make a <em>retweet</em> in our model:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">update</span> tweet.message
-   <span style="color:#00a">set</span> rts = rts + <span style="color:#099">1</span>
- <span style="color:#00a">where</span> messageid = <span style="color:#099">1</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">update</span><span style="color:#bbb"> </span>tweet.message<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">set</span><span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>messageid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#099">1</span>;</code></pre></div>
 <p>Now, what happens if two users are doing that at the same time?</p>
 
 <p>To better understand what <em>at the same time</em> means here, we can write the
 query extended with manual transaction control, as PostgreSQL will do when
 sent a single command without an explicit transaction:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
-
-   <span style="color:#00a">update</span> tweet.message
-      <span style="color:#00a">set</span> rts = rts + <span style="color:#099">1</span>
-    <span style="color:#00a">where</span> messageid = <span style="color:#099">1</span>;
-returning messageid, rts;
-
-<span style="color:#00a">commit</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">update</span><span style="color:#bbb"> </span>tweet.message<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">set</span><span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>messageid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#099">1</span>;<span style="color:#bbb">
+</span><span style="color:#bbb"></span>returning<span style="color:#bbb"> </span>messageid,<span style="color:#bbb"> </span>rts;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">commit</span>;</code></pre></div>
 <p>Now, rather than doing this query, we open a <em>psql</em> prompt and send in:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
-
-   <span style="color:#00a">update</span> tweet.message
-      <span style="color:#00a">set</span> rts = rts + <span style="color:#099">1</span>
-    <span style="color:#00a">where</span> messageid = <span style="color:#099">1</span>
-returning messageid, rts;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">update</span><span style="color:#bbb"> </span>tweet.message<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">set</span><span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>messageid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span>returning<span style="color:#bbb"> </span>messageid,<span style="color:#bbb"> </span>rts;</code></pre></div>
 <p>We get the following result now:</p>
 <pre><code class="language-psql" data-lang="psql"> messageid │ rts 
 ═══════════╪═════
@@ -702,12 +700,12 @@ showing next. Type the following command to momentarily disable this helpful
 setting, so that we can see what really happens:</p>
 <pre><code>\set ON_ERROR_ROLLBACK off</code></pre>
 <p>If we pick the isolation level <em>repeatable read</em>, with the following syntax:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">start</span> <span style="color:#00a">transaction</span> <span style="color:#00a">isolation</span> <span style="color:#00a">level</span> <span style="color:#00a">repeatable</span> <span style="color:#00a">read</span>;
-
-   <span style="color:#00a">update</span> tweet.message
-      <span style="color:#00a">set</span> rts = rts + <span style="color:#099">1</span>
-    <span style="color:#00a">where</span> messageid = <span style="color:#099">1</span>
-returning messageid, rts;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">start</span><span style="color:#bbb"> </span><span style="color:#00a">transaction</span><span style="color:#bbb"> </span><span style="color:#00a">isolation</span><span style="color:#bbb"> </span><span style="color:#00a">level</span><span style="color:#bbb"> </span><span style="color:#00a">repeatable</span><span style="color:#bbb"> </span><span style="color:#00a">read</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">update</span><span style="color:#bbb"> </span>tweet.message<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">set</span><span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>messageid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span>returning<span style="color:#bbb"> </span>messageid,<span style="color:#bbb"> </span>rts;</code></pre></div>
 <p>Again, we leave the transaction open, switch to a second prompt and do the
 same thing, and only then — while the second update is waiting for the first
 transaction to finish — commit the first transactions. What we get this time

@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.79.0">
+    <meta name="generator" content="Hugo 0.85.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Object Relational Database Management System</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -114,7 +114,6 @@ if (!doNotTrack) {
 	ga('send', 'pageview');
 }
 </script>
-
     
     
   </head>
@@ -314,7 +313,7 @@ if (!doNotTrack) {
       </time>
     
     <span style="float: right; width: 65%">
-      <i class="fa fa-clock-o"></i> 8 mins read
+      <i class="fa fa-clock-o"></i> 7 mins read
       
     </span>
     <span style="float: left; width: 35%">
@@ -589,11 +588,11 @@ planner has to lookup the catalogs to understand what&rsquo;s going on.</p>
 <p>In the following query, for example, PostgreSQL&rsquo;s planner has to lookup the
 catalog tables in order to know what you mean, and any extension could be
 providing new data types, operators, functions and index support.</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> x, 
-       <span style="color:#099">1</span> + x <span style="color:#00a">as</span> <span style="color:#a50">&#34;1+&#34;</span>,
-       <span style="color:#a50">&#39;127.0.0.1&#39;</span>::inet + x <span style="color:#00a">as</span> <span style="color:#a50">&#34;ip address&#34;</span>,
-       <span style="color:#0aa">date</span> <span style="color:#a50">&#39;today&#39;</span> + x <span style="color:#00a">as</span> <span style="color:#0aa">date</span>
-  <span style="color:#00a">from</span> (<span style="color:#00a">values</span> (<span style="color:#099">0</span>), (<span style="color:#099">1</span>), (<span style="color:#099">2</span>), (<span style="color:#099">3</span>)) <span style="color:#00a">as</span> t(x);</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span>x,<span style="color:#bbb"> 
+</span><span style="color:#bbb">       </span><span style="color:#099">1</span><span style="color:#bbb"> </span>+<span style="color:#bbb"> </span>x<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;1+&#34;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#a50">&#39;127.0.0.1&#39;</span>::inet<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span>x<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;ip address&#34;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;today&#39;</span><span style="color:#bbb"> </span>+<span style="color:#bbb"> </span>x<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>(<span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#099">0</span>),<span style="color:#bbb"> </span>(<span style="color:#099">1</span>),<span style="color:#bbb"> </span>(<span style="color:#099">2</span>),<span style="color:#bbb"> </span>(<span style="color:#099">3</span>))<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>t(x);</code></pre></div>
 <p>The query has the following result, where you can see that the <code>+</code> operator
 implementation obviously depends on the datatype:</p>
 <pre><code> x │ 1+ │ ip address │    date    
@@ -605,27 +604,27 @@ implementation obviously depends on the datatype:</p>
 (4 rows)</code></pre>
 <p>How does that work? Well, the PostgreSQL catalogs contains useful hints to
 answer that question:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">SELECT</span> <span style="color:#00a">CASE</span> <span style="color:#00a">WHEN</span> o.oprkind=<span style="color:#a50">&#39;l&#39;</span> <span style="color:#00a">THEN</span> <span style="color:#00a">NULL</span>
-              <span style="color:#00a">ELSE</span> pg_catalog.format_type(o.oprleft, <span style="color:#00a">NULL</span>)
-          <span style="color:#00a">END</span> <span style="color:#00a">AS</span> <span style="color:#a50">&#34;Left arg type&#34;</span>,
-       
-         <span style="color:#00a">CASE</span> <span style="color:#00a">WHEN</span> o.oprkind=<span style="color:#a50">&#39;r&#39;</span> <span style="color:#00a">THEN</span> <span style="color:#00a">NULL</span>
-              <span style="color:#00a">ELSE</span> pg_catalog.format_type(o.oprright, <span style="color:#00a">NULL</span>)
-          <span style="color:#00a">END</span> <span style="color:#00a">AS</span> <span style="color:#a50">&#34;Right arg type&#34;</span>,
-       
-         pg_catalog.format_type(o.oprresult, <span style="color:#00a">NULL</span>) <span style="color:#00a">AS</span> <span style="color:#a50">&#34;Result type&#34;</span>,
-         
-         oprcode::regprocedure <span style="color:#00a">as</span> <span style="color:#00a">function</span>
-  
-    <span style="color:#00a">FROM</span> pg_catalog.pg_operator o
-         <span style="color:#00a">LEFT</span> <span style="color:#00a">JOIN</span> pg_catalog.pg_namespace n <span style="color:#00a">ON</span> n.oid = o.oprnamespace
-         <span style="color:#00a">LEFT</span> <span style="color:#00a">JOIN</span> pg_catalog.pg_type l <span style="color:#00a">ON</span> l.oid = o.oprleft
-         
-   <span style="color:#00a">WHERE</span> o.oprname = <span style="color:#a50">&#39;+&#39;</span>
-     <span style="color:#00a">AND</span> l.typname <span style="color:#00a">in</span> (<span style="color:#a50">&#39;integer&#39;</span>, <span style="color:#a50">&#39;inet&#39;</span>, <span style="color:#a50">&#39;date&#39;</span>)
-     <span style="color:#00a">AND</span> pg_catalog.pg_operator_is_visible(o.oid)
-    
-<span style="color:#00a">ORDER</span> <span style="color:#00a">BY</span> <span style="color:#099">1</span>, <span style="color:#099">2</span>, <span style="color:#099">3</span>, <span style="color:#099">4</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">  </span><span style="color:#00a">SELECT</span><span style="color:#bbb"> </span><span style="color:#00a">CASE</span><span style="color:#bbb"> </span><span style="color:#00a">WHEN</span><span style="color:#bbb"> </span>o.oprkind=<span style="color:#a50">&#39;l&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">THEN</span><span style="color:#bbb"> </span><span style="color:#00a">NULL</span><span style="color:#bbb">
+</span><span style="color:#bbb">              </span><span style="color:#00a">ELSE</span><span style="color:#bbb"> </span>pg_catalog.format_type(o.oprleft,<span style="color:#bbb"> </span><span style="color:#00a">NULL</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">          </span><span style="color:#00a">END</span><span style="color:#bbb"> </span><span style="color:#00a">AS</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;Left arg type&#34;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">       
+</span><span style="color:#bbb">         </span><span style="color:#00a">CASE</span><span style="color:#bbb"> </span><span style="color:#00a">WHEN</span><span style="color:#bbb"> </span>o.oprkind=<span style="color:#a50">&#39;r&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">THEN</span><span style="color:#bbb"> </span><span style="color:#00a">NULL</span><span style="color:#bbb">
+</span><span style="color:#bbb">              </span><span style="color:#00a">ELSE</span><span style="color:#bbb"> </span>pg_catalog.format_type(o.oprright,<span style="color:#bbb"> </span><span style="color:#00a">NULL</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">          </span><span style="color:#00a">END</span><span style="color:#bbb"> </span><span style="color:#00a">AS</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;Right arg type&#34;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">       
+</span><span style="color:#bbb">         </span>pg_catalog.format_type(o.oprresult,<span style="color:#bbb"> </span><span style="color:#00a">NULL</span>)<span style="color:#bbb"> </span><span style="color:#00a">AS</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;Result type&#34;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">         
+</span><span style="color:#bbb">         </span>oprcode::regprocedure<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">function</span><span style="color:#bbb">
+</span><span style="color:#bbb">  
+</span><span style="color:#bbb">    </span><span style="color:#00a">FROM</span><span style="color:#bbb"> </span>pg_catalog.pg_operator<span style="color:#bbb"> </span>o<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">LEFT</span><span style="color:#bbb"> </span><span style="color:#00a">JOIN</span><span style="color:#bbb"> </span>pg_catalog.pg_namespace<span style="color:#bbb"> </span>n<span style="color:#bbb"> </span><span style="color:#00a">ON</span><span style="color:#bbb"> </span>n.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>o.oprnamespace<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">LEFT</span><span style="color:#bbb"> </span><span style="color:#00a">JOIN</span><span style="color:#bbb"> </span>pg_catalog.pg_type<span style="color:#bbb"> </span>l<span style="color:#bbb"> </span><span style="color:#00a">ON</span><span style="color:#bbb"> </span>l.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>o.oprleft<span style="color:#bbb">
+</span><span style="color:#bbb">         
+</span><span style="color:#bbb">   </span><span style="color:#00a">WHERE</span><span style="color:#bbb"> </span>o.oprname<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;+&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">AND</span><span style="color:#bbb"> </span>l.typname<span style="color:#bbb"> </span><span style="color:#00a">in</span><span style="color:#bbb"> </span>(<span style="color:#a50">&#39;integer&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;inet&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;date&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">AND</span><span style="color:#bbb"> </span>pg_catalog.pg_operator_is_visible(o.oid)<span style="color:#bbb">
+</span><span style="color:#bbb">    
+</span><span style="color:#bbb"></span><span style="color:#00a">ORDER</span><span style="color:#bbb"> </span><span style="color:#00a">BY</span><span style="color:#bbb"> </span><span style="color:#099">1</span>,<span style="color:#bbb"> </span><span style="color:#099">2</span>,<span style="color:#bbb"> </span><span style="color:#099">3</span>,<span style="color:#bbb"> </span><span style="color:#099">4</span>;</code></pre></div>
 <p>At query planning time, PostgreSQL does a catalog lookup that is equivalent
 to our catalog query above. For optimisation purposes, the lookup is done
 in-memory, using an efficient cache of the catalog contents, though.</p>
@@ -675,8 +674,8 @@ function returns the same result type, we can see function overloading here:</p>
 <p>Here&rsquo;s an example of calling that function, where the expression <code>date
 'today'</code> is of type <em>date</em> and the expression <code>now()</code> is of type <em>timestamp
 with time zone</em>.</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> date_part(<span style="color:#a50">&#39;dow&#39;</span>, <span style="color:#0aa">date</span> <span style="color:#a50">&#39;today&#39;</span>) <span style="color:#00a">as</span> dow,
-       date_part(<span style="color:#a50">&#39;month&#39;</span>, now()) <span style="color:#00a">as</span> <span style="color:#00a">month</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span>date_part(<span style="color:#a50">&#39;dow&#39;</span>,<span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;today&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>dow,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span>date_part(<span style="color:#a50">&#39;month&#39;</span>,<span style="color:#bbb"> </span>now())<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">month</span>;</code></pre></div>
 <p>Which, today, gives:</p>
 <pre><code> dow │ month 
 ═════╪═══════

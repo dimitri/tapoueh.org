@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.79.0">
+    <meta name="generator" content="Hugo 0.85.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Simple Data Modeling with a Test Data Set</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -111,7 +111,6 @@ if (!doNotTrack) {
 	ga('send', 'pageview');
 }
 </script>
-
     
     
   </head>
@@ -301,7 +300,7 @@ if (!doNotTrack) {
       </time>
     
     <span style="float: right; width: 65%">
-      <i class="fa fa-clock-o"></i> 12 mins read
+      <i class="fa fa-clock-o"></i> 9 mins read
       
     </span>
     <span style="float: left; width: 35%">
@@ -382,8 +381,7 @@ parameters with the <em>psql</em> syntax for that (<code>:variable</code>, <code
 important aspect of using <em>psql</em> is its capacity to provide immediate
 feedback, and we can also have that with modeling too.</p>
 
-<figure class="right"><a href="https://theartofpostgresql.com">
-    <img src="/img/TAOP_Book_Cover_200x260.png"/> </a>
+<figure class="right"><a href="https://theartofpostgresql.com"><img src="/img/TAOP_Book_Cover_200x260.png"/></a>
 </figure>
 
 
@@ -520,13 +518,13 @@ you might enjoy a full book of SQL learning material!</p>
 
 
 <h2 id="how-to-write-a-database-model">How to Write a Database Model</h2>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span> <span style="color:#00a">database</span> sandbox;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">database</span><span style="color:#bbb"> </span>sandbox;</code></pre></div>
 <p>Now you have a place where to try things out without disturbing existing
 application code. If you need to interact with existing SQL objects, it
 might be better to use a <em>schema</em> rather than a full-blown separate
 database:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span> <span style="color:#00a">schema</span> sandbox;
-<span style="color:#00a">set</span> search_path <span style="color:#00a">to</span> sandbox;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">schema</span><span style="color:#bbb"> </span>sandbox;<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">set</span><span style="color:#bbb"> </span>search_path<span style="color:#bbb"> </span><span style="color:#00a">to</span><span style="color:#bbb"> </span>sandbox;</code></pre></div>
 <p>In PostgreSQL, each database is an isolated environment. A connection string
 must pick a target database, and it&rsquo;s not possible for one database to
 interact with objects from another one, because catalogs are kept separated.
@@ -554,74 +552,74 @@ populates it with random data following the specifications above, which are
 intentionally pretty loose. Notice how the script is contained within a
 single transaction and ends with a <em>rollback</em> statement: PostgreSQL even
 implements transaction for DDL statements.</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
-
-<span style="color:#00a">create</span> <span style="color:#00a">schema</span> <span style="color:#00a">if</span> <span style="color:#00a">not</span> <span style="color:#00a">exists</span> sandbox;
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> sandbox.category
- (
-   id    <span style="color:#0aa">serial</span> <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
-   name  <span style="color:#0aa">text</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span>
- );
-
-<span style="color:#00a">insert</span> <span style="color:#00a">into</span> sandbox.category(name)
-     <span style="color:#00a">values</span> (<span style="color:#a50">&#39;sport&#39;</span>),(<span style="color:#a50">&#39;news&#39;</span>),(<span style="color:#a50">&#39;box office&#39;</span>),(<span style="color:#a50">&#39;music&#39;</span>);
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> sandbox.article
- (
-   id         bigserial <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
-   category   <span style="color:#0aa">integer</span> <span style="color:#00a">references</span> sandbox.category(id),
-   title      <span style="color:#0aa">text</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
-   content    <span style="color:#0aa">text</span>
- );
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> sandbox.<span style="color:#00a">comment</span>
- (
-   id         bigserial <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
-   article    <span style="color:#0aa">integer</span> <span style="color:#00a">references</span> sandbox.article(id),
-   content    <span style="color:#0aa">text</span>
- );
-
-<span style="color:#00a">insert</span> <span style="color:#00a">into</span> sandbox.article(category, title, content)
-     <span style="color:#00a">select</span> random(<span style="color:#099">1</span>, <span style="color:#099">4</span>) <span style="color:#00a">as</span> category,
-            initcap(sandbox.lorem(<span style="color:#099">5</span>)) <span style="color:#00a">as</span> title,
-            sandbox.lorem(<span style="color:#099">100</span>) <span style="color:#00a">as</span> content
-       <span style="color:#00a">from</span> generate_series(<span style="color:#099">1</span>, <span style="color:#099">1000</span>) <span style="color:#00a">as</span> t(x);
-
-<span style="color:#00a">insert</span> <span style="color:#00a">into</span> sandbox.<span style="color:#00a">comment</span>(article, content)
-     <span style="color:#00a">select</span> random(<span style="color:#099">1</span>, <span style="color:#099">1000</span>) <span style="color:#00a">as</span> article,
-            sandbox.lorem(<span style="color:#099">150</span>) <span style="color:#00a">as</span> content
-       <span style="color:#00a">from</span> generate_series(<span style="color:#099">1</span>, <span style="color:#099">50000</span>) <span style="color:#00a">as</span> t(x);
-            
-<span style="color:#00a">select</span> article.id, category.name, title
-  <span style="color:#00a">from</span>      sandbox.article
-       <span style="color:#00a">join</span> sandbox.category
-         <span style="color:#00a">on</span> category.id = article.category
- <span style="color:#00a">limit</span> <span style="color:#099">3</span>;
-
-<span style="color:#00a">select</span> <span style="color:#00a">count</span>(*),
-       <span style="color:#00a">avg</span>(<span style="color:#00a">length</span>(title))::<span style="color:#0aa">int</span> <span style="color:#00a">as</span> avg_title_length,
-       <span style="color:#00a">avg</span>(<span style="color:#00a">length</span>(content))::<span style="color:#0aa">int</span> <span style="color:#00a">as</span> avg_content_length
-  <span style="color:#00a">from</span> sandbox.article;
-
-   <span style="color:#00a">select</span> article.id, article.title, <span style="color:#00a">count</span>(*)
-     <span style="color:#00a">from</span>      sandbox.article
-          <span style="color:#00a">join</span> sandbox.<span style="color:#00a">comment</span>
-            <span style="color:#00a">on</span> article.id = <span style="color:#00a">comment</span>.article
-<span style="color:#00a">group</span> <span style="color:#00a">by</span> article.id
-<span style="color:#00a">order</span> <span style="color:#00a">by</span> <span style="color:#00a">count</span> <span style="color:#00a">desc</span>
-   <span style="color:#00a">limit</span> <span style="color:#099">5</span>;
-
-<span style="color:#00a">select</span> category.name,
-       <span style="color:#00a">count</span>(<span style="color:#00a">distinct</span> article.id) <span style="color:#00a">as</span> articles,
-       <span style="color:#00a">count</span>(*) <span style="color:#00a">as</span> comments
-  <span style="color:#00a">from</span>      sandbox.category
-       <span style="color:#00a">left</span> <span style="color:#00a">join</span> sandbox.article <span style="color:#00a">on</span> article.category = category.id
-       <span style="color:#00a">left</span> <span style="color:#00a">join</span> sandbox.<span style="color:#00a">comment</span> <span style="color:#00a">on</span> <span style="color:#00a">comment</span>.article = article.id
-<span style="color:#00a">group</span> <span style="color:#00a">by</span> category.name
-<span style="color:#00a">order</span> <span style="color:#00a">by</span> category.name;
-
-<span style="color:#00a">rollback</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">schema</span><span style="color:#bbb"> </span><span style="color:#00a">if</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">exists</span><span style="color:#bbb"> </span>sandbox;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>sandbox.category<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>id<span style="color:#bbb">    </span><span style="color:#0aa">serial</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>name<span style="color:#bbb">  </span><span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>sandbox.category(name)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#a50">&#39;sport&#39;</span>),(<span style="color:#a50">&#39;news&#39;</span>),(<span style="color:#a50">&#39;box office&#39;</span>),(<span style="color:#a50">&#39;music&#39;</span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>sandbox.article<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>id<span style="color:#bbb">         </span>bigserial<span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>category<span style="color:#bbb">   </span><span style="color:#0aa">integer</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>sandbox.category(id),<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>title<span style="color:#bbb">      </span><span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>content<span style="color:#bbb">    </span><span style="color:#0aa">text</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>sandbox.<span style="color:#00a">comment</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>id<span style="color:#bbb">         </span>bigserial<span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>article<span style="color:#bbb">    </span><span style="color:#0aa">integer</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>sandbox.article(id),<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>content<span style="color:#bbb">    </span><span style="color:#0aa">text</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>sandbox.article(category,<span style="color:#bbb"> </span>title,<span style="color:#bbb"> </span>content)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>random(<span style="color:#099">1</span>,<span style="color:#bbb"> </span><span style="color:#099">4</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>category,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>initcap(sandbox.lorem(<span style="color:#099">5</span>))<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>title,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>sandbox.lorem(<span style="color:#099">100</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>content<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>generate_series(<span style="color:#099">1</span>,<span style="color:#bbb"> </span><span style="color:#099">1000</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>t(x);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>sandbox.<span style="color:#00a">comment</span>(article,<span style="color:#bbb"> </span>content)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>random(<span style="color:#099">1</span>,<span style="color:#bbb"> </span><span style="color:#099">1000</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>article,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>sandbox.lorem(<span style="color:#099">150</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>content<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>generate_series(<span style="color:#099">1</span>,<span style="color:#bbb"> </span><span style="color:#099">50000</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>t(x);<span style="color:#bbb">
+</span><span style="color:#bbb">            
+</span><span style="color:#bbb"></span><span style="color:#00a">select</span><span style="color:#bbb"> </span>article.id,<span style="color:#bbb"> </span>category.name,<span style="color:#bbb"> </span>title<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb">      </span>sandbox.article<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>sandbox.category<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>category.id<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>article.category<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">3</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">count</span>(*),<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">avg</span>(<span style="color:#00a">length</span>(title))::<span style="color:#0aa">int</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>avg_title_length,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">avg</span>(<span style="color:#00a">length</span>(content))::<span style="color:#0aa">int</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>avg_content_length<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>sandbox.article;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>article.id,<span style="color:#bbb"> </span>article.title,<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb">      </span>sandbox.article<span style="color:#bbb">
+</span><span style="color:#bbb">          </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>sandbox.<span style="color:#00a">comment</span><span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>article.id<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">comment</span>.article<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>article.id<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">count</span><span style="color:#bbb"> </span><span style="color:#00a">desc</span><span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">5</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">select</span><span style="color:#bbb"> </span>category.name,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">count</span>(<span style="color:#00a">distinct</span><span style="color:#bbb"> </span>article.id)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>articles,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>comments<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb">      </span>sandbox.category<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">left</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>sandbox.article<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>article.category<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>category.id<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">left</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>sandbox.<span style="color:#00a">comment</span><span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span><span style="color:#00a">comment</span>.article<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>article.id<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>category.name<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>category.name;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">rollback</span>;</code></pre></div>
 <p>This SQL script references ad-hoc functions creating a random data set. This
 time for the book I&rsquo;ve been using a source of <em>Lorem Ipsum</em> texts and some
 variations on the <em>random()</em> function. Typical usage of the script would be
@@ -673,30 +671,30 @@ and do it again, at will, without having to first clean up the previous run.</p>
 <p>In the previous script, you might have noticed calls to functions that don&rsquo;t
 exist in the distribution of PostgreSQL, such as <em>random(int, int)</em> or
 <em>sandbox.lorem(int)</em>. Here&rsquo;s a complete ad-hoc definition for them:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
-
-<span style="color:#00a">create</span> <span style="color:#00a">schema</span> <span style="color:#00a">if</span> <span style="color:#00a">not</span> <span style="color:#00a">exists</span> sandbox;
-
-<span style="color:#00a">drop</span> <span style="color:#00a">table</span> <span style="color:#00a">if</span> <span style="color:#00a">exists</span> sandbox.lorem;
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> sandbox.lorem
- (
-   word <span style="color:#0aa">text</span>
- );
-
-<span style="color:#00a">with</span> w(word) <span style="color:#00a">as</span>
-(
-     <span style="color:#00a">select</span> regexp_split_to_table(<span style="color:#a50">&#39;Lorem ipsum dolor sit amet, consectetur
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">schema</span><span style="color:#bbb"> </span><span style="color:#00a">if</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">exists</span><span style="color:#bbb"> </span>sandbox;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">drop</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span><span style="color:#00a">if</span><span style="color:#bbb"> </span><span style="color:#00a">exists</span><span style="color:#bbb"> </span>sandbox.lorem;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>sandbox.lorem<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>word<span style="color:#bbb"> </span><span style="color:#0aa">text</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">with</span><span style="color:#bbb"> </span>w(word)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span>(<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>regexp_split_to_table(<span style="color:#a50">&#39;Lorem ipsum dolor sit amet, consectetur
 </span><span style="color:#a50">        adipiscing elit, sed do eiusmod tempor incididunt ut labore et
 </span><span style="color:#a50">        dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
 </span><span style="color:#a50">        exercitation ullamco laboris nisi ut aliquip ex ea commodo
 </span><span style="color:#a50">        consequat. Duis aute irure dolor in reprehenderit in voluptate velit
 </span><span style="color:#a50">        esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat
 </span><span style="color:#a50">        cupidatat non proident, sunt in culpa qui officia deserunt mollit
-</span><span style="color:#a50">        anim id est laborum.&#39;</span>
-            , <span style="color:#a50">&#39;[\s., ]&#39;</span>)
-      <span style="color:#00a">union</span>
-     <span style="color:#00a">select</span> regexp_split_to_table(<span style="color:#a50">&#39;Sed ut perspiciatis unde omnis iste natus
+</span><span style="color:#a50">        anim id est laborum.&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">            </span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;[\s., ]&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">union</span><span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>regexp_split_to_table(<span style="color:#a50">&#39;Sed ut perspiciatis unde omnis iste natus
 </span><span style="color:#a50">        error sit voluptatem accusantium doloremque laudantium, totam rem
 </span><span style="color:#a50">        aperiam, eaque ipsa quae ab illo inventore veritatis et quasi
 </span><span style="color:#a50">        architecto beatae vitae dicta sunt explicabo. Nemo enim ipsam
@@ -709,10 +707,10 @@ exist in the distribution of PostgreSQL, such as <em>random(int, int)</em> or
 </span><span style="color:#a50">        ullam corporis suscipit laboriosam, nisi ut aliquid ex ea commodi
 </span><span style="color:#a50">        consequatur? Quis autem vel eum iure reprehenderit qui in ea
 </span><span style="color:#a50">        voluptate velit esse quam nihil molestiae consequatur, vel illum qui
-</span><span style="color:#a50">        dolorem eum fugiat quo voluptas nulla pariatur?&#39;</span>
-            , <span style="color:#a50">&#39;[\s., ]&#39;</span>)
-      <span style="color:#00a">union</span>
-     <span style="color:#00a">select</span> regexp_split_to_table(<span style="color:#a50">&#39;At vero eos et accusamus et iusto odio
+</span><span style="color:#a50">        dolorem eum fugiat quo voluptas nulla pariatur?&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">            </span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;[\s., ]&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">union</span><span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>regexp_split_to_table(<span style="color:#a50">&#39;At vero eos et accusamus et iusto odio
 </span><span style="color:#a50">        dignissimos ducimus qui blanditiis praesentium voluptatum deleniti
 </span><span style="color:#a50">        atque corrupti quos dolores et quas molestias excepturi sint
 </span><span style="color:#a50">        occaecati cupiditate non provident, similique sunt in culpa qui
@@ -725,39 +723,39 @@ exist in the distribution of PostgreSQL, such as <em>random(int, int)</em> or
 </span><span style="color:#a50">        voluptates repudiandae sint et molestiae non recusandae. Itaque
 </span><span style="color:#a50">        earum rerum hic tenetur a sapiente delectus, ut aut reiciendis
 </span><span style="color:#a50">        voluptatibus maiores alias consequatur aut perferendis doloribus
-</span><span style="color:#a50">        asperiores repellat.&#39;</span>
-            , <span style="color:#a50">&#39;[\s., ]&#39;</span>)
-)
-  <span style="color:#00a">insert</span> <span style="color:#00a">into</span> sandbox.lorem(word)
-       <span style="color:#00a">select</span> word
-         <span style="color:#00a">from</span> w
-        <span style="color:#00a">where</span> word <span style="color:#00a">is</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span>
-          <span style="color:#00a">and</span> word &lt;&gt; <span style="color:#a50">&#39;&#39;</span>;
-
-<span style="color:#00a">create</span> <span style="color:#00a">or</span> <span style="color:#00a">replace</span> <span style="color:#00a">function</span> random(a <span style="color:#0aa">int</span>, b <span style="color:#0aa">int</span>)
-  <span style="color:#00a">returns</span> <span style="color:#0aa">int</span>
-  <span style="color:#00a">volatile</span>
-  <span style="color:#00a">language</span> <span style="color:#00a">sql</span>
-<span style="color:#00a">as</span> <span style="color:#f00;background-color:#faa">$$</span>
-  <span style="color:#00a">select</span> a + ((b-a) * random())::<span style="color:#0aa">int</span>;
-<span style="color:#f00;background-color:#faa">$$</span>;
-
-<span style="color:#00a">create</span> <span style="color:#00a">or</span> <span style="color:#00a">replace</span> <span style="color:#00a">function</span> sandbox.lorem(len <span style="color:#0aa">int</span>)
-  <span style="color:#00a">returns</span> <span style="color:#0aa">text</span>
-  <span style="color:#00a">volatile</span>
-  <span style="color:#00a">language</span> <span style="color:#00a">sql</span>
-<span style="color:#00a">as</span> <span style="color:#f00;background-color:#faa">$$</span>
-  <span style="color:#00a">with</span> words(w) <span style="color:#00a">as</span> (
-      <span style="color:#00a">select</span> word
-       <span style="color:#00a">from</span> sandbox.lorem
-   <span style="color:#00a">order</span> <span style="color:#00a">by</span> random()
-      <span style="color:#00a">limit</span> len
-  )
-  <span style="color:#00a">select</span> string_agg(w, <span style="color:#a50">&#39; &#39;</span>)
-    <span style="color:#00a">from</span> words;
-<span style="color:#f00;background-color:#faa">$$</span>;
-
-<span style="color:#00a">commit</span>;</code></pre></div>
+</span><span style="color:#a50">        asperiores repellat.&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">            </span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;[\s., ]&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb"></span>)<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>sandbox.lorem(word)<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>word<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>w<span style="color:#bbb">
+</span><span style="color:#bbb">        </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>word<span style="color:#bbb"> </span><span style="color:#00a">is</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb">
+</span><span style="color:#bbb">          </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>word<span style="color:#bbb"> </span>&lt;&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;&#39;</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">or</span><span style="color:#bbb"> </span><span style="color:#00a">replace</span><span style="color:#bbb"> </span><span style="color:#00a">function</span><span style="color:#bbb"> </span>random(a<span style="color:#bbb"> </span><span style="color:#0aa">int</span>,<span style="color:#bbb"> </span>b<span style="color:#bbb"> </span><span style="color:#0aa">int</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">returns</span><span style="color:#bbb"> </span><span style="color:#0aa">int</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">volatile</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">language</span><span style="color:#bbb"> </span><span style="color:#00a">sql</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">$$</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>a<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span>((b-a)<span style="color:#bbb"> </span>*<span style="color:#bbb"> </span>random())::<span style="color:#0aa">int</span>;<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#f00;background-color:#faa">$$</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">or</span><span style="color:#bbb"> </span><span style="color:#00a">replace</span><span style="color:#bbb"> </span><span style="color:#00a">function</span><span style="color:#bbb"> </span>sandbox.lorem(len<span style="color:#bbb"> </span><span style="color:#0aa">int</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">returns</span><span style="color:#bbb"> </span><span style="color:#0aa">text</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">volatile</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">language</span><span style="color:#bbb"> </span><span style="color:#00a">sql</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">$$</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">with</span><span style="color:#bbb"> </span>words(w)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>word<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>sandbox.lorem<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>random()<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span>len<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>)<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>string_agg(w,<span style="color:#bbb"> </span><span style="color:#a50">&#39; &#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>words;<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#f00;background-color:#faa">$$</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">commit</span>;</code></pre></div>
 <p>The not-so-random Latin text comes from <a href="http://lipsum.com/">Lorem Ipsum</a>
 and is a pretty good base for generating random content. We go even further
 by separating words from their context and then aggregating them together
@@ -791,96 +789,96 @@ drop cascades to table sandbox.article
 drop cascades to table sandbox.comment
 DROP SCHEMA</code></pre>
 <p>The next version of our schema then looks like this:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
-
-<span style="color:#00a">create</span> <span style="color:#00a">schema</span> <span style="color:#00a">if</span> <span style="color:#00a">not</span> <span style="color:#00a">exists</span> sandbox;
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> sandbox.category
- (
-   id    <span style="color:#0aa">serial</span> <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
-   name  <span style="color:#0aa">text</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span>
- );
-
-<span style="color:#00a">insert</span> <span style="color:#00a">into</span> sandbox.category(name)
-     <span style="color:#00a">values</span> (<span style="color:#a50">&#39;sport&#39;</span>),(<span style="color:#a50">&#39;news&#39;</span>),(<span style="color:#a50">&#39;box office&#39;</span>),(<span style="color:#a50">&#39;music&#39;</span>);
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> sandbox.article
- (
-   id         bigserial <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
-   category   <span style="color:#0aa">integer</span> <span style="color:#00a">references</span> sandbox.category(id),
-   pubdate    timestamptz,
-   title      <span style="color:#0aa">text</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
-   content    <span style="color:#0aa">text</span>
- );
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> sandbox.<span style="color:#00a">comment</span>
- (
-   id         bigserial <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
-   article    <span style="color:#0aa">integer</span> <span style="color:#00a">references</span> sandbox.article(id),
-   pubdate    timestamptz,
-   content    <span style="color:#0aa">text</span>
- );
-
-<span style="color:#00a">insert</span> <span style="color:#00a">into</span> sandbox.article(category, title, pubdate, content)
-     <span style="color:#00a">select</span> random(<span style="color:#099">1</span>, <span style="color:#099">4</span>) <span style="color:#00a">as</span> category,
-            initcap(sandbox.lorem(<span style="color:#099">5</span>)) <span style="color:#00a">as</span> title,
-            random( now() - <span style="color:#0aa">interval</span> <span style="color:#a50">&#39;3 months&#39;</span>,
-                    now() + <span style="color:#0aa">interval</span> <span style="color:#a50">&#39;1 months&#39;</span>) <span style="color:#00a">as</span> pubdate,
-            sandbox.lorem(<span style="color:#099">100</span>) <span style="color:#00a">as</span> content
-       <span style="color:#00a">from</span> generate_series(<span style="color:#099">1</span>, <span style="color:#099">1000</span>) <span style="color:#00a">as</span> t(x);
-
-<span style="color:#00a">insert</span> <span style="color:#00a">into</span> sandbox.<span style="color:#00a">comment</span>(article, pubdate, content)
-     <span style="color:#00a">select</span> random(<span style="color:#099">1</span>, <span style="color:#099">1000</span>) <span style="color:#00a">as</span> article,
-            random( now() - <span style="color:#0aa">interval</span> <span style="color:#a50">&#39;3 months&#39;</span>,
-                    now() + <span style="color:#0aa">interval</span> <span style="color:#a50">&#39;1 months&#39;</span>) <span style="color:#00a">as</span> pubdate,
-            sandbox.lorem(<span style="color:#099">150</span>) <span style="color:#00a">as</span> content
-       <span style="color:#00a">from</span> generate_series(<span style="color:#099">1</span>, <span style="color:#099">50000</span>) <span style="color:#00a">as</span> t(x);
-            
-<span style="color:#00a">select</span> article.id, category.name, title
-  <span style="color:#00a">from</span>      sandbox.article
-       <span style="color:#00a">join</span> sandbox.category
-         <span style="color:#00a">on</span> category.id = article.category
- <span style="color:#00a">limit</span> <span style="color:#099">3</span>;
-
-<span style="color:#00a">select</span> <span style="color:#00a">count</span>(*),
-       <span style="color:#00a">avg</span>(<span style="color:#00a">length</span>(title))::<span style="color:#0aa">int</span> <span style="color:#00a">as</span> avg_title_length,
-       <span style="color:#00a">avg</span>(<span style="color:#00a">length</span>(content))::<span style="color:#0aa">int</span> <span style="color:#00a">as</span> avg_content_length
-  <span style="color:#00a">from</span> sandbox.article;
-
-   <span style="color:#00a">select</span> article.id, article.title, <span style="color:#00a">count</span>(*)
-     <span style="color:#00a">from</span>      sandbox.article
-          <span style="color:#00a">join</span> sandbox.<span style="color:#00a">comment</span>
-            <span style="color:#00a">on</span> article.id = <span style="color:#00a">comment</span>.article
-<span style="color:#00a">group</span> <span style="color:#00a">by</span> article.id
-<span style="color:#00a">order</span> <span style="color:#00a">by</span> <span style="color:#00a">count</span> <span style="color:#00a">desc</span>
-   <span style="color:#00a">limit</span> <span style="color:#099">5</span>;
-
-<span style="color:#00a">select</span> category.name,
-       <span style="color:#00a">count</span>(<span style="color:#00a">distinct</span> article.id) <span style="color:#00a">as</span> articles,
-       <span style="color:#00a">count</span>(*) <span style="color:#00a">as</span> comments
-  <span style="color:#00a">from</span>      sandbox.category
-       <span style="color:#00a">left</span> <span style="color:#00a">join</span> sandbox.article <span style="color:#00a">on</span> article.category = category.id
-       <span style="color:#00a">left</span> <span style="color:#00a">join</span> sandbox.<span style="color:#00a">comment</span> <span style="color:#00a">on</span> <span style="color:#00a">comment</span>.article = article.id
-<span style="color:#00a">group</span> <span style="color:#00a">by</span> category.name
-<span style="color:#00a">order</span> <span style="color:#00a">by</span> category.name;
-
-<span style="color:#00a">commit</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">schema</span><span style="color:#bbb"> </span><span style="color:#00a">if</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">exists</span><span style="color:#bbb"> </span>sandbox;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>sandbox.category<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>id<span style="color:#bbb">    </span><span style="color:#0aa">serial</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>name<span style="color:#bbb">  </span><span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>sandbox.category(name)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#a50">&#39;sport&#39;</span>),(<span style="color:#a50">&#39;news&#39;</span>),(<span style="color:#a50">&#39;box office&#39;</span>),(<span style="color:#a50">&#39;music&#39;</span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>sandbox.article<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>id<span style="color:#bbb">         </span>bigserial<span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>category<span style="color:#bbb">   </span><span style="color:#0aa">integer</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>sandbox.category(id),<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>pubdate<span style="color:#bbb">    </span>timestamptz,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>title<span style="color:#bbb">      </span><span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>content<span style="color:#bbb">    </span><span style="color:#0aa">text</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>sandbox.<span style="color:#00a">comment</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>id<span style="color:#bbb">         </span>bigserial<span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>article<span style="color:#bbb">    </span><span style="color:#0aa">integer</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>sandbox.article(id),<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>pubdate<span style="color:#bbb">    </span>timestamptz,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>content<span style="color:#bbb">    </span><span style="color:#0aa">text</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>sandbox.article(category,<span style="color:#bbb"> </span>title,<span style="color:#bbb"> </span>pubdate,<span style="color:#bbb"> </span>content)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>random(<span style="color:#099">1</span>,<span style="color:#bbb"> </span><span style="color:#099">4</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>category,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>initcap(sandbox.lorem(<span style="color:#099">5</span>))<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>title,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>random(<span style="color:#bbb"> </span>now()<span style="color:#bbb"> </span>-<span style="color:#bbb"> </span><span style="color:#0aa">interval</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;3 months&#39;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">                    </span>now()<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#0aa">interval</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;1 months&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>pubdate,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>sandbox.lorem(<span style="color:#099">100</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>content<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>generate_series(<span style="color:#099">1</span>,<span style="color:#bbb"> </span><span style="color:#099">1000</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>t(x);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>sandbox.<span style="color:#00a">comment</span>(article,<span style="color:#bbb"> </span>pubdate,<span style="color:#bbb"> </span>content)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>random(<span style="color:#099">1</span>,<span style="color:#bbb"> </span><span style="color:#099">1000</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>article,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>random(<span style="color:#bbb"> </span>now()<span style="color:#bbb"> </span>-<span style="color:#bbb"> </span><span style="color:#0aa">interval</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;3 months&#39;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">                    </span>now()<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#0aa">interval</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;1 months&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>pubdate,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>sandbox.lorem(<span style="color:#099">150</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>content<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>generate_series(<span style="color:#099">1</span>,<span style="color:#bbb"> </span><span style="color:#099">50000</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>t(x);<span style="color:#bbb">
+</span><span style="color:#bbb">            
+</span><span style="color:#bbb"></span><span style="color:#00a">select</span><span style="color:#bbb"> </span>article.id,<span style="color:#bbb"> </span>category.name,<span style="color:#bbb"> </span>title<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb">      </span>sandbox.article<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>sandbox.category<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>category.id<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>article.category<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">3</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">count</span>(*),<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">avg</span>(<span style="color:#00a">length</span>(title))::<span style="color:#0aa">int</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>avg_title_length,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">avg</span>(<span style="color:#00a">length</span>(content))::<span style="color:#0aa">int</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>avg_content_length<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>sandbox.article;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>article.id,<span style="color:#bbb"> </span>article.title,<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb">      </span>sandbox.article<span style="color:#bbb">
+</span><span style="color:#bbb">          </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>sandbox.<span style="color:#00a">comment</span><span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>article.id<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">comment</span>.article<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>article.id<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">count</span><span style="color:#bbb"> </span><span style="color:#00a">desc</span><span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">5</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">select</span><span style="color:#bbb"> </span>category.name,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">count</span>(<span style="color:#00a">distinct</span><span style="color:#bbb"> </span>article.id)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>articles,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>comments<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb">      </span>sandbox.category<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">left</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>sandbox.article<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>article.category<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>category.id<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">left</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>sandbox.<span style="color:#00a">comment</span><span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span><span style="color:#00a">comment</span>.article<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>article.id<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>category.name<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>category.name;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">commit</span>;</code></pre></div>
 <p>To be able to generate random timestamp entries, the script uses another
 function that&rsquo;s not provided by default in PostgreSQL, and here&rsquo;s its
 definition:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span> <span style="color:#00a">or</span> <span style="color:#00a">replace</span> <span style="color:#00a">function</span> random
- (
-  a timestamptz,
-  b timestamptz
- )
- <span style="color:#00a">returns</span> timestamptz
- <span style="color:#00a">volatile</span>
- <span style="color:#00a">language</span> <span style="color:#00a">sql</span>
-<span style="color:#00a">as</span> <span style="color:#f00;background-color:#faa">$$</span>
-  <span style="color:#00a">select</span> a
-         + random(<span style="color:#099">0</span>, <span style="color:#00a">extract</span>(epoch <span style="color:#00a">from</span> (b-a))::<span style="color:#0aa">int</span>)
-           * <span style="color:#0aa">interval</span> <span style="color:#a50">&#39;1 sec&#39;</span>;
-<span style="color:#f00;background-color:#faa">$$</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">or</span><span style="color:#bbb"> </span><span style="color:#00a">replace</span><span style="color:#bbb"> </span><span style="color:#00a">function</span><span style="color:#bbb"> </span>random<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>a<span style="color:#bbb"> </span>timestamptz,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>b<span style="color:#bbb"> </span>timestamptz<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>)<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">returns</span><span style="color:#bbb"> </span>timestamptz<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">volatile</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">language</span><span style="color:#bbb"> </span><span style="color:#00a">sql</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">$$</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>a<span style="color:#bbb">
+</span><span style="color:#bbb">         </span>+<span style="color:#bbb"> </span>random(<span style="color:#099">0</span>,<span style="color:#bbb"> </span><span style="color:#00a">extract</span>(epoch<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>(b-a))::<span style="color:#0aa">int</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">           </span>*<span style="color:#bbb"> </span><span style="color:#0aa">interval</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;1 sec&#39;</span>;<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#f00;background-color:#faa">$$</span>;</code></pre></div>
 <h2 id="querying-the-schema-our-minimal-viable-product">Querying the Schema: our Minimal Viable Product</h2>
 
 <p>Now we can have a go at solving the first query of the product&rsquo;s <em>MVP</em>, as
@@ -889,58 +887,58 @@ of the schema and how well it implements the business rules.</p>
 
 <p>The following query lists the most recent articles per category with the
 first three comments on each article:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#f00;background-color:#faa">\</span><span style="color:#00a">set</span> comments <span style="color:#099">3</span>
-<span style="color:#f00;background-color:#faa">\</span><span style="color:#00a">set</span> articles <span style="color:#099">1</span>
-
-  <span style="color:#00a">select</span> category.name <span style="color:#00a">as</span> category,
-         article.pubdate,
-         title,
-         jsonb_pretty(comments) <span style="color:#00a">as</span> comments
-
-    <span style="color:#00a">from</span> sandbox.category
-         <span style="color:#aaa;font-style:italic">/*
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#f00;background-color:#faa">\</span><span style="color:#00a">set</span><span style="color:#bbb"> </span>comments<span style="color:#bbb"> </span><span style="color:#099">3</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#f00;background-color:#faa">\</span><span style="color:#00a">set</span><span style="color:#bbb"> </span>articles<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>category.name<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>category,<span style="color:#bbb">
+</span><span style="color:#bbb">         </span>article.pubdate,<span style="color:#bbb">
+</span><span style="color:#bbb">         </span>title,<span style="color:#bbb">
+</span><span style="color:#bbb">         </span>jsonb_pretty(comments)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>comments<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>sandbox.category<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#aaa;font-style:italic">/*
 </span><span style="color:#aaa;font-style:italic">          * Classic implementation of a Top-N query
 </span><span style="color:#aaa;font-style:italic">          * to fetch 3 most recent articles per category
-</span><span style="color:#aaa;font-style:italic">          */</span>
-         <span style="color:#00a">left</span> <span style="color:#00a">join</span> <span style="color:#00a">lateral</span>
-         (
-            <span style="color:#00a">select</span> id,
-                   title,
-                   article.pubdate,
-                   jsonb_agg(<span style="color:#00a">comment</span>) <span style="color:#00a">as</span> comments
-              <span style="color:#00a">from</span> sandbox.article
-                  <span style="color:#aaa;font-style:italic">/*
+</span><span style="color:#aaa;font-style:italic">          */</span><span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">left</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span><span style="color:#00a">lateral</span><span style="color:#bbb">
+</span><span style="color:#bbb">         </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>id,<span style="color:#bbb">
+</span><span style="color:#bbb">                   </span>title,<span style="color:#bbb">
+</span><span style="color:#bbb">                   </span>article.pubdate,<span style="color:#bbb">
+</span><span style="color:#bbb">                   </span>jsonb_agg(<span style="color:#00a">comment</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>comments<span style="color:#bbb">
+</span><span style="color:#bbb">              </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>sandbox.article<span style="color:#bbb">
+</span><span style="color:#bbb">                  </span><span style="color:#aaa;font-style:italic">/*
 </span><span style="color:#aaa;font-style:italic">                   * Classic implementation of a Top-N query
 </span><span style="color:#aaa;font-style:italic">                   * to fetch 3 most recent comments per article
-</span><span style="color:#aaa;font-style:italic">                   */</span>
-                  <span style="color:#00a">left</span> <span style="color:#00a">join</span> <span style="color:#00a">lateral</span>
-                  (
-                      <span style="color:#00a">select</span> <span style="color:#00a">comment</span>.pubdate,
-                             <span style="color:#00a">substring</span>(<span style="color:#00a">comment</span>.content <span style="color:#00a">from</span> <span style="color:#099">1</span> <span style="color:#00a">for</span> <span style="color:#099">25</span>) || <span style="color:#a50">&#39;…&#39;</span>
-                             <span style="color:#00a">as</span> content
-                        <span style="color:#00a">from</span> sandbox.<span style="color:#00a">comment</span>
-                       <span style="color:#00a">where</span> <span style="color:#00a">comment</span>.article = article.id
-                    <span style="color:#00a">order</span> <span style="color:#00a">by</span> <span style="color:#00a">comment</span>.pubdate <span style="color:#00a">desc</span>
-                       <span style="color:#00a">limit</span> :comments
-                  )
-                  <span style="color:#00a">as</span> <span style="color:#00a">comment</span>
-                  <span style="color:#00a">on</span> <span style="color:#00a">true</span>   <span style="color:#aaa;font-style:italic">-- required with a lateral join
-</span><span style="color:#aaa;font-style:italic"></span>              
-             <span style="color:#00a">where</span> category = category.id
-
-          <span style="color:#00a">group</span> <span style="color:#00a">by</span> article.id
-          <span style="color:#00a">order</span> <span style="color:#00a">by</span> article.pubdate <span style="color:#00a">desc</span>
-             <span style="color:#00a">limit</span> :articles
-         )
-         <span style="color:#00a">as</span> article
-         <span style="color:#00a">on</span> <span style="color:#00a">true</span> <span style="color:#aaa;font-style:italic">-- required with a lateral join
-</span><span style="color:#aaa;font-style:italic"></span>
-<span style="color:#00a">order</span> <span style="color:#00a">by</span> category.name, article.pubdate <span style="color:#00a">desc</span>;</code></pre></div>
+</span><span style="color:#aaa;font-style:italic">                   */</span><span style="color:#bbb">
+</span><span style="color:#bbb">                  </span><span style="color:#00a">left</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span><span style="color:#00a">lateral</span><span style="color:#bbb">
+</span><span style="color:#bbb">                  </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">                      </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">comment</span>.pubdate,<span style="color:#bbb">
+</span><span style="color:#bbb">                             </span><span style="color:#00a">substring</span>(<span style="color:#00a">comment</span>.content<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">for</span><span style="color:#bbb"> </span><span style="color:#099">25</span>)<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39;…&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">                             </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>content<span style="color:#bbb">
+</span><span style="color:#bbb">                        </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>sandbox.<span style="color:#00a">comment</span><span style="color:#bbb">
+</span><span style="color:#bbb">                       </span><span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#00a">comment</span>.article<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>article.id<span style="color:#bbb">
+</span><span style="color:#bbb">                    </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">comment</span>.pubdate<span style="color:#bbb"> </span><span style="color:#00a">desc</span><span style="color:#bbb">
+</span><span style="color:#bbb">                       </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span>:comments<span style="color:#bbb">
+</span><span style="color:#bbb">                  </span>)<span style="color:#bbb">
+</span><span style="color:#bbb">                  </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">comment</span><span style="color:#bbb">
+</span><span style="color:#bbb">                  </span><span style="color:#00a">on</span><span style="color:#bbb"> </span><span style="color:#00a">true</span><span style="color:#bbb">   </span><span style="color:#aaa;font-style:italic">-- required with a lateral join
+</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">              
+</span><span style="color:#bbb">             </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>category<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>category.id<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb">          </span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>article.id<span style="color:#bbb">
+</span><span style="color:#bbb">          </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>article.pubdate<span style="color:#bbb"> </span><span style="color:#00a">desc</span><span style="color:#bbb">
+</span><span style="color:#bbb">             </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span>:articles<span style="color:#bbb">
+</span><span style="color:#bbb">         </span>)<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>article<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">on</span><span style="color:#bbb"> </span><span style="color:#00a">true</span><span style="color:#bbb"> </span><span style="color:#aaa;font-style:italic">-- required with a lateral join
+</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>category.name,<span style="color:#bbb"> </span>article.pubdate<span style="color:#bbb"> </span><span style="color:#00a">desc</span>;</code></pre></div>
 <p>The first thing we notice when running this query is the lack of indexing
 for it. Let&rsquo;s fix this:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span> <span style="color:#00a">index</span> <span style="color:#00a">on</span> sandbox.article(pubdate);
-<span style="color:#00a">create</span> <span style="color:#00a">index</span> <span style="color:#00a">on</span> sandbox.<span style="color:#00a">comment</span>(article);
-<span style="color:#00a">create</span> <span style="color:#00a">index</span> <span style="color:#00a">on</span> sandbox.<span style="color:#00a">comment</span>(pubdate);</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">index</span><span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>sandbox.article(pubdate);<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">index</span><span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>sandbox.<span style="color:#00a">comment</span>(article);<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">index</span><span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>sandbox.<span style="color:#00a">comment</span>(pubdate);</code></pre></div>
 <p>Here&rsquo;s the query result set, with some content removed. The query has been
 edited for a nice result text which fits in the book pages, using
 <em>jsonb_pretty()</em> and <em>substring()</em>. When embedding it in application&rsquo;s code,

@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.79.0">
+    <meta name="generator" content="Hugo 0.85.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>The Mode Ordered-Set Aggregate Function</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -129,7 +129,6 @@ if (!doNotTrack) {
 	ga('send', 'pageview');
 }
 </script>
-
     
     
   </head>
@@ -404,17 +403,17 @@ explain the Mathematics background behind it at <a href="https://en.wikipedia.or
 of view. As we saw in the <em>Chinook</em> database model a given album is always
 edited by a single artist, but might contain several different genres, one
 per track. Do we have multi-genre albums?</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span> title <span style="color:#00a">as</span> album,
-         string_agg(
-             <span style="color:#00a">distinct</span> genre.name, <span style="color:#a50">&#39;, &#39;</span>
-             <span style="color:#00a">order</span> <span style="color:#00a">by</span> genre.name
-         )
-         <span style="color:#00a">as</span> genres
-    <span style="color:#00a">from</span>      track
-         <span style="color:#00a">join</span> genre <span style="color:#00a">using</span>(genreid)
-         <span style="color:#00a">join</span> album <span style="color:#00a">using</span> (albumid)
-<span style="color:#00a">group</span> <span style="color:#00a">by</span> title
-  <span style="color:#00a">having</span> <span style="color:#00a">count</span>(<span style="color:#00a">distinct</span> genre.name) &gt; <span style="color:#099">1</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>title<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>album,<span style="color:#bbb">
+</span><span style="color:#bbb">         </span>string_agg(<span style="color:#bbb">
+</span><span style="color:#bbb">             </span><span style="color:#00a">distinct</span><span style="color:#bbb"> </span>genre.name,<span style="color:#bbb"> </span><span style="color:#a50">&#39;, &#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">             </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>genre.name<span style="color:#bbb">
+</span><span style="color:#bbb">         </span>)<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>genres<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb">      </span>track<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>genre<span style="color:#bbb"> </span><span style="color:#00a">using</span>(genreid)<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>album<span style="color:#bbb"> </span><span style="color:#00a">using</span><span style="color:#bbb"> </span>(albumid)<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>title<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">having</span><span style="color:#bbb"> </span><span style="color:#00a">count</span>(<span style="color:#00a">distinct</span><span style="color:#bbb"> </span>genre.name)<span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span><span style="color:#099">1</span>;</code></pre></div>
 <p>We have the following list of multi-genre albums in our collection:</p>
 <pre><code>             album              │                   genres                    
 ════════════════════════════════╪═════════════════════════════════════════════
@@ -437,21 +436,21 @@ genre per album and selected the most frequent genre: the one with the
 greatest number of tracks.</p>
 
 <p>SQL provides an Ordered-Set Aggregate Function that does just that:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span> multi_genre_albums
- <span style="color:#00a">as</span> ( 
-    <span style="color:#00a">select</span> albumid
-      <span style="color:#00a">from</span> track
-  <span style="color:#00a">group</span> <span style="color:#00a">by</span> albumid
-    <span style="color:#00a">having</span> <span style="color:#00a">count</span>(<span style="color:#00a">distinct</span> genreid) &gt; <span style="color:#099">1</span>
- )
- <span style="color:#00a">select</span> artist.name <span style="color:#00a">as</span> artist,
-        album.title <span style="color:#00a">as</span> title,
-        genre.name <span style="color:#00a">as</span> genre,
-        <span style="color:#00a">mode</span>() within <span style="color:#00a">group</span> (<span style="color:#00a">order</span> <span style="color:#00a">by</span> genreid)
-   <span style="color:#00a">from</span> multi_genre_albums
-        <span style="color:#00a">join</span> genre <span style="color:#00a">using</span>(genreid)
-        <span style="color:#00a">join</span> album <span style="color:#00a">using</span>(albumid)
-        <span style="color:#00a">join</span> artist <span style="color:#00a">using</span> (artistid);</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span><span style="color:#bbb"> </span>multi_genre_albums<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>(<span style="color:#bbb"> 
+</span><span style="color:#bbb">    </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>albumid<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>track<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>albumid<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">having</span><span style="color:#bbb"> </span><span style="color:#00a">count</span>(<span style="color:#00a">distinct</span><span style="color:#bbb"> </span>genreid)<span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>)<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>artist.name<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>artist,<span style="color:#bbb">
+</span><span style="color:#bbb">        </span>album.title<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>title,<span style="color:#bbb">
+</span><span style="color:#bbb">        </span>genre.name<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>genre,<span style="color:#bbb">
+</span><span style="color:#bbb">        </span><span style="color:#00a">mode</span>()<span style="color:#bbb"> </span>within<span style="color:#bbb"> </span><span style="color:#00a">group</span><span style="color:#bbb"> </span>(<span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>genreid)<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>multi_genre_albums<span style="color:#bbb">
+</span><span style="color:#bbb">        </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>genre<span style="color:#bbb"> </span><span style="color:#00a">using</span>(genreid)<span style="color:#bbb">
+</span><span style="color:#bbb">        </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>album<span style="color:#bbb"> </span><span style="color:#00a">using</span>(albumid)<span style="color:#bbb">
+</span><span style="color:#bbb">        </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>artist<span style="color:#bbb"> </span><span style="color:#00a">using</span><span style="color:#bbb"> </span>(artistid);</code></pre></div>
 <p>In this query we limit our processing to albums containing tracks of several
 genres, thanks to the <code>multi_genre_albums</code> CTE, where we use a simple <code>GROUP
 BY</code> and <code>HAVING</code> clause. We then use the result of the CTE and fetch

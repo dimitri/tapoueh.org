@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.79.0">
+    <meta name="generator" content="Hugo 0.85.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>SQL and Business Logic</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -108,7 +108,6 @@ if (!doNotTrack) {
 	ga('send', 'pageview');
 }
 </script>
-
     
     
   </head>
@@ -556,14 +555,14 @@ given artist, each with its total duration.</p>
 <em>milliseconds</em>. Each track is associated with an album through its
 <em>albumid</em>, and each album is the work of one artist that we reach through
 <em>artistid</em>. Let&rsquo;s write a query for solving our business case:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span> album.title <span style="color:#00a">as</span> album,
-         <span style="color:#00a">sum</span>(milliseconds) * <span style="color:#0aa">interval</span> <span style="color:#a50">&#39;1 ms&#39;</span> <span style="color:#00a">as</span> duration
-    <span style="color:#00a">from</span> album
-         <span style="color:#00a">join</span> artist <span style="color:#00a">using</span>(artistid)
-         <span style="color:#00a">left</span> <span style="color:#00a">join</span> track <span style="color:#00a">using</span>(albumid)
-   <span style="color:#00a">where</span> artist.name = <span style="color:#a50">&#39;Red Hot Chili Peppers&#39;</span>
-<span style="color:#00a">group</span> <span style="color:#00a">by</span> album
-<span style="color:#00a">order</span> <span style="color:#00a">by</span> album;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>album.title<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>album,<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">sum</span>(milliseconds)<span style="color:#bbb"> </span>*<span style="color:#bbb"> </span><span style="color:#0aa">interval</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;1 ms&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>duration<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>album<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>artist<span style="color:#bbb"> </span><span style="color:#00a">using</span>(artistid)<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">left</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>track<span style="color:#bbb"> </span><span style="color:#00a">using</span>(albumid)<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>artist.name<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;Red Hot Chili Peppers&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>album<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>album;</code></pre></div>
 <p>The output is:</p>
 <pre><code>         album         │           duration           
 ═══════════════════════╪══════════════════════════════
@@ -594,13 +593,13 @@ ORM librairies. Here goes:</p>
 <span style="color:#00a">import</span> <span style="color:#0aa;text-decoration:underline">sys</span>
 <span style="color:#00a">from</span> <span style="color:#0aa;text-decoration:underline">datetime</span> <span style="color:#00a">import</span> timedelta
 
-DEBUGSQL = False
+DEBUGSQL = <span style="color:#00a">False</span>
 PGCONNSTRING = <span style="color:#a50">&#34;dbname=chinook application_name=cdstore&#34;</span>
 
 
 <span style="color:#00a">class</span> <span style="color:#0a0;text-decoration:underline">Model</span>(<span style="color:#0aa">object</span>):
-    tablename = None
-    columns = None
+    tablename = <span style="color:#00a">None</span>
+    columns = <span style="color:#00a">None</span>
 
     <span style="color:#888">@classmethod</span>
     <span style="color:#00a">def</span> <span style="color:#0a0">buildsql</span>(cls, pgconn, **kwargs): ...
@@ -641,9 +640,9 @@ PGCONNSTRING = <span style="color:#a50">&#34;dbname=chinook application_name=cds
                 ms += track.duration
 
             duration = timedelta(milliseconds=ms)
-            <span style="color:#00a">print</span>(<span style="color:#a50">&#34;</span><span style="color:#a50">%25s</span><span style="color:#a50">: </span><span style="color:#a50">%s</span><span style="color:#a50">&#34;</span> % (album.title, duration))
+            <span style="color:#0aa">print</span>(<span style="color:#a50">&#34;</span><span style="color:#a50">%25s</span><span style="color:#a50">: </span><span style="color:#a50">%s</span><span style="color:#a50">&#34;</span> % (album.title, duration))
     <span style="color:#00a">else</span>:
-        <span style="color:#00a">print</span>(<span style="color:#a50">&#39;albums.py &lt;artist name&gt;&#39;</span>)</code></pre></div>
+        <span style="color:#0aa">print</span>(<span style="color:#a50">&#39;albums.py &lt;artist name&gt;&#39;</span>)</code></pre></div>
 <p>When we run the code we have the same result as before with the query:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ ./albums.py <span style="color:#a50">&#34;Red Hot Chili Peppers&#34;</span>
     Blood Sugar Sex Magik: 1:13:57.073000
@@ -709,16 +708,16 @@ lines of Python code:</p>
         ms += track.duration
 
     duration = timedelta(milliseconds=ms)
-    <span style="color:#00a">print</span>(<span style="color:#a50">&#34;</span><span style="color:#a50">%25s</span><span style="color:#a50">: </span><span style="color:#a50">%s</span><span style="color:#a50">&#34;</span> % (album.title, duration))</code></pre></div>
+    <span style="color:#0aa">print</span>(<span style="color:#a50">&#34;</span><span style="color:#a50">%25s</span><span style="color:#a50">: </span><span style="color:#a50">%s</span><span style="color:#a50">&#34;</span> % (album.title, duration))</code></pre></div>
 <p>With the equivalent query written as:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span> album.title <span style="color:#00a">as</span> album,
-         <span style="color:#00a">sum</span>(milliseconds) * <span style="color:#0aa">interval</span> <span style="color:#a50">&#39;1 ms&#39;</span> <span style="color:#00a">as</span> duration
-    <span style="color:#00a">from</span> album
-         <span style="color:#00a">join</span> artist <span style="color:#00a">using</span>(artistid)
-         <span style="color:#00a">left</span> <span style="color:#00a">join</span> track <span style="color:#00a">using</span>(albumid)
-   <span style="color:#00a">where</span> artist.name = <span style="color:#a50">&#39;Red Hot Chili Peppers&#39;</span>
-<span style="color:#00a">group</span> <span style="color:#00a">by</span> album
-<span style="color:#00a">order</span> <span style="color:#00a">by</span> album;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>album.title<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>album,<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">sum</span>(milliseconds)<span style="color:#bbb"> </span>*<span style="color:#bbb"> </span><span style="color:#0aa">interval</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;1 ms&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>duration<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>album<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>artist<span style="color:#bbb"> </span><span style="color:#00a">using</span>(artistid)<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">left</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>track<span style="color:#bbb"> </span><span style="color:#00a">using</span>(albumid)<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>artist.name<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;Red Hot Chili Peppers&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>album<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>album;</code></pre></div>
 <p>It seems to me that the expected maintenance burden of both the solution are
 roughly equivalent. The main difference is that in the second case
 PostgreSQL is smart enough to pick the proper join algorithm depending on

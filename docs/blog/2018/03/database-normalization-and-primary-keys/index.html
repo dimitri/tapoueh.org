@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.79.0">
+    <meta name="generator" content="Hugo 0.85.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Database Normalization and Primary Keys</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -120,7 +120,6 @@ if (!doNotTrack) {
 	ga('send', 'pageview');
 }
 </script>
-
     
     
   </head>
@@ -310,7 +309,7 @@ if (!doNotTrack) {
       </time>
     
     <span style="float: right; width: 65%">
-      <i class="fa fa-clock-o"></i> 7 mins read
+      <i class="fa fa-clock-o"></i> 6 mins read
       
     </span>
     <span style="float: left; width: 35%">
@@ -592,19 +591,19 @@ open the gates for violation of the first normal form.</p>
 <p>As an example of that, we&rsquo;re going to model the publication of articles in a
 newspaper, where each article belongs to a single category. Here&rsquo;s a first
 version of our main article table definition:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span> <span style="color:#00a">table</span> sandbox.article
- (
-   id         bigserial <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
-   category   <span style="color:#0aa">integer</span> <span style="color:#00a">references</span> sandbox.category(id),
-   pubdate    timestamptz,
-   title      <span style="color:#0aa">text</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
-   content    <span style="color:#0aa">text</span>
- );</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>sandbox.article<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>id<span style="color:#bbb">         </span>bigserial<span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>category<span style="color:#bbb">   </span><span style="color:#0aa">integer</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>sandbox.category(id),<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>pubdate<span style="color:#bbb">    </span>timestamptz,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>title<span style="color:#bbb">      </span><span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>content<span style="color:#bbb">    </span><span style="color:#0aa">text</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);</code></pre></div>
 <p>This model isn&rsquo;t even compliant with <em>1NF</em>:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span> <span style="color:#00a">into</span> sandbox.article (category, pubdate, title)
-     <span style="color:#00a">values</span> (<span style="color:#099">2</span>, now(), <span style="color:#a50">&#39;Hot from the Press&#39;</span>),
-            (<span style="color:#099">2</span>, now(), <span style="color:#a50">&#39;Hot from the Press&#39;</span>)
-  returning *;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>sandbox.article<span style="color:#bbb"> </span>(category,<span style="color:#bbb"> </span>pubdate,<span style="color:#bbb"> </span>title)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#099">2</span>,<span style="color:#bbb"> </span>now(),<span style="color:#bbb"> </span><span style="color:#a50">&#39;Hot from the Press&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#099">2</span>,<span style="color:#bbb"> </span>now(),<span style="color:#bbb"> </span><span style="color:#a50">&#39;Hot from the Press&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>returning<span style="color:#bbb"> </span>*;</code></pre></div>
 <p>PostgreSQL is happy to insert duplicate entries here:</p>
 <pre><code>─[ RECORD 1 ]───────────────────────────
 id       │ 1001
@@ -634,45 +633,45 @@ for the business rules.</p>
 key</em> would allow preventing duplicate entries in our data set.</p>
 
 <p>We can fix our schema to prevent duplicate entries:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span> <span style="color:#00a">table</span> sandbox.article
- (
-   category   <span style="color:#0aa">integer</span> <span style="color:#00a">references</span> sandbox.category(id),
-   pubdate    timestamptz,
-   title      <span style="color:#0aa">text</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
-   content    <span style="color:#0aa">text</span>,
-   
-   <span style="color:#00a">primary</span> <span style="color:#00a">key</span>(category, title);
- );</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>sandbox.article<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>category<span style="color:#bbb">   </span><span style="color:#0aa">integer</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>sandbox.category(id),<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>pubdate<span style="color:#bbb">    </span>timestamptz,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>title<span style="color:#bbb">      </span><span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>content<span style="color:#bbb">    </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   
+</span><span style="color:#bbb">   </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>(category,<span style="color:#bbb"> </span>title);<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);</code></pre></div>
 <p>Now, you can share the same article&rsquo;s title in different categories, but you
 can only publish with a title once in the whole history of our publication
 system. Given this alternative design, we allow publications with the same
 title at different publication dates. It might be needed, after all, as we
 know that history often repeats itself.</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span> <span style="color:#00a">table</span> sandboxpk.article
- (
-   category   <span style="color:#0aa">integer</span> <span style="color:#00a">references</span> sandbox.category(id),
-   pubdate    timestamptz,
-   title      <span style="color:#0aa">text</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
-   content    <span style="color:#0aa">text</span>,
-   
-   <span style="color:#00a">primary</span> <span style="color:#00a">key</span>(category, pubdate, title)
- );</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>sandboxpk.article<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>category<span style="color:#bbb">   </span><span style="color:#0aa">integer</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>sandbox.category(id),<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>pubdate<span style="color:#bbb">    </span>timestamptz,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>title<span style="color:#bbb">      </span><span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>content<span style="color:#bbb">    </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   
+</span><span style="color:#bbb">   </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>(category,<span style="color:#bbb"> </span>pubdate,<span style="color:#bbb"> </span>title)<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);</code></pre></div>
 <p>Say we go with the solution that allows reusing the same title at a later
 date. We now have to change the model of our <em>comment</em> table, which
 references the <em>sandbox.article</em> table:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span> <span style="color:#00a">table</span> sandboxpk.<span style="color:#00a">comment</span>
- (
-   a_category <span style="color:#0aa">integer</span>     <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
-   a_pubdate  timestamptz <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
-   a_title    <span style="color:#0aa">text</span>        <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
-   pubdate    timestamptz,
-   content    <span style="color:#0aa">text</span>,
-   
-   <span style="color:#00a">primary</span> <span style="color:#00a">key</span>(a_category, a_pubdate, a_title, pubdate, content),
-
-   <span style="color:#00a">foreign</span> <span style="color:#00a">key</span>(a_category, a_pubdate, a_title)
-    <span style="color:#00a">references</span> sandboxpk.article(category, pubdate, title)
- );</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>sandboxpk.<span style="color:#00a">comment</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>a_category<span style="color:#bbb"> </span><span style="color:#0aa">integer</span><span style="color:#bbb">     </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>a_pubdate<span style="color:#bbb">  </span>timestamptz<span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>a_title<span style="color:#bbb">    </span><span style="color:#0aa">text</span><span style="color:#bbb">        </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>pubdate<span style="color:#bbb">    </span>timestamptz,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>content<span style="color:#bbb">    </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   
+</span><span style="color:#bbb">   </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>(a_category,<span style="color:#bbb"> </span>a_pubdate,<span style="color:#bbb"> </span>a_title,<span style="color:#bbb"> </span>pubdate,<span style="color:#bbb"> </span>content),<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">foreign</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>(a_category,<span style="color:#bbb"> </span>a_pubdate,<span style="color:#bbb"> </span>a_title)<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>sandboxpk.article(category,<span style="color:#bbb"> </span>pubdate,<span style="color:#bbb"> </span>title)<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);</code></pre></div>
 <p>As you can see each entry in the <em>comment</em> table must have enough
 information to be able to reference a single entry in the <em>article</em> table,
 with a guarantee that there are no duplicates.</p>
@@ -681,16 +680,16 @@ with a guarantee that there are no duplicates.</p>
 there&rsquo;s yet another solution to this <em>surrogate</em> key approach, a trade-off
 where you have the generated summary key benefits and still the natural
 primary key guarantees needed for the <em>1NF</em>:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span> <span style="color:#00a">table</span> sandboxpk.article
- (
-   id         bigserial <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
-   category   <span style="color:#0aa">integer</span>      <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">references</span> sandbox.category(id),
-   pubdate    timestamptz  <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
-   title      <span style="color:#0aa">text</span>         <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
-   content    <span style="color:#0aa">text</span>,
-   
-   <span style="color:#00a">unique</span>(category, pubdate, title)
- );</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>sandboxpk.article<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>id<span style="color:#bbb">         </span>bigserial<span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>category<span style="color:#bbb">   </span><span style="color:#0aa">integer</span><span style="color:#bbb">      </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>sandbox.category(id),<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>pubdate<span style="color:#bbb">    </span>timestamptz<span style="color:#bbb">  </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>title<span style="color:#bbb">      </span><span style="color:#0aa">text</span><span style="color:#bbb">         </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>content<span style="color:#bbb">    </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   
+</span><span style="color:#bbb">   </span><span style="color:#00a">unique</span>(category,<span style="color:#bbb"> </span>pubdate,<span style="color:#bbb"> </span>title)<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);</code></pre></div>
 <p>Now the <em>category</em>, <em>pubdate</em> and <em>title</em> have a <em>not null</em> constraint and a
 <em>unique</em> constraint, which is the same level of guarantee as when declaring
 them a <em>primary key</em>. So we both have a <em>surrogate</em> key that&rsquo;s easy to
@@ -699,8 +698,7 @@ about our data set.</p>
 
 <h2 id="conclusion">Conclusion</h2>
 
-<figure class="right"><a href="https://theartofpostgresql.com">
-    <img src="/img/TAOP_Book_Cover_200x260.png"/> </a>
+<figure class="right"><a href="https://theartofpostgresql.com"><img src="/img/TAOP_Book_Cover_200x260.png"/></a>
 </figure>
 
 

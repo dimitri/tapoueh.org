@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.79.0">
+    <meta name="generator" content="Hugo 0.85.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>PostgreSQL LISTEN/NOTIFY</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -141,7 +141,6 @@ if (!doNotTrack) {
 	ga('send', 'pageview');
 }
 </script>
-
     
     
   </head>
@@ -331,7 +330,7 @@ if (!doNotTrack) {
       </time>
     
     <span style="float: right; width: 65%">
-      <i class="fa fa-clock-o"></i> 15 mins read
+      <i class="fa fa-clock-o"></i> 14 mins read
       
     </span>
     <span style="float: left; width: 35%">
@@ -610,13 +609,13 @@ processed by the client. It could be that the server is being restarted, or
 an application message is being delivered.</p>
 
 <p>Here&rsquo;s an example of doing this:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">yesql# <span style="color:#00a">listen</span> channel;
-<span style="color:#00a">LISTEN</span>
-
-yesql# <span style="color:#00a">notify</span> channel, <span style="color:#a50">&#39;foo&#39;</span>;
-<span style="color:#00a">NOTIFY</span>
-Asynchronous notification <span style="color:#a50">&#34;channel&#34;</span> <span style="color:#00a">with</span> payload <span style="color:#a50">&#34;foo&#34;</span>  <span style="color:#f00;background-color:#faa">⏎</span>
-received <span style="color:#00a">from</span> server process <span style="color:#00a">with</span> PID <span style="color:#099">40430</span>.</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">yesql#<span style="color:#bbb"> </span><span style="color:#00a">listen</span><span style="color:#bbb"> </span>channel;<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">LISTEN</span><span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span>yesql#<span style="color:#bbb"> </span><span style="color:#00a">notify</span><span style="color:#bbb"> </span>channel,<span style="color:#bbb"> </span><span style="color:#a50">&#39;foo&#39;</span>;<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">NOTIFY</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span>Asynchronous<span style="color:#bbb"> </span>notification<span style="color:#bbb"> </span><span style="color:#a50">&#34;channel&#34;</span><span style="color:#bbb"> </span><span style="color:#00a">with</span><span style="color:#bbb"> </span>payload<span style="color:#bbb"> </span><span style="color:#a50">&#34;foo&#34;</span><span style="color:#bbb">  </span><span style="color:#f00;background-color:#faa">⏎</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span>received<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>server<span style="color:#bbb"> </span>process<span style="color:#bbb"> </span><span style="color:#00a">with</span><span style="color:#bbb"> </span>PID<span style="color:#bbb"> </span><span style="color:#099">40430</span>.</code></pre></div>
 <p>Note that the message could be sent from another connection, so try it and
 see with several <em>psql</em> instances. The <em>payload</em> from the message can be any
 text, up to 8kB in length. This allows for rich messages to flow, such as
@@ -638,48 +637,48 @@ concurrency issues.</p>
 
 <p>Before implementing the client application, we can implement the trigger for
 notification, and use <em>psql</em> as a testing client:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
-
-<span style="color:#00a">create</span> <span style="color:#00a">or</span> <span style="color:#00a">replace</span> <span style="color:#00a">function</span> twcache.tg_notify_counters ()
- <span style="color:#00a">returns</span> <span style="color:#00a">trigger</span>
- <span style="color:#00a">language</span> plpgsql
-<span style="color:#00a">as</span> <span style="color:#f00;background-color:#faa">$$</span>
-<span style="color:#00a">declare</span>
-  channel <span style="color:#0aa">text</span> := TG_ARGV[<span style="color:#099">0</span>];
-<span style="color:#00a">begin</span>
-  PERFORM (
-     <span style="color:#00a">with</span> payload(messageid, rts, favs) <span style="color:#00a">as</span>
-     (
-       <span style="color:#00a">select</span> <span style="color:#00a">NEW</span>.messageid,
-              coalesce(
-                 <span style="color:#00a">case</span> <span style="color:#00a">NEW</span>.action
-                   <span style="color:#00a">when</span> <span style="color:#a50">&#39;rt&#39;</span>    <span style="color:#00a">then</span>  <span style="color:#099">1</span>
-                   <span style="color:#00a">when</span> <span style="color:#a50">&#39;de-rt&#39;</span> <span style="color:#00a">then</span> -<span style="color:#099">1</span>
-                  <span style="color:#00a">end</span>,
-                 <span style="color:#099">0</span>
-              ) <span style="color:#00a">as</span> rts,
-              coalesce(
-                <span style="color:#00a">case</span> <span style="color:#00a">NEW</span>.action
-                  <span style="color:#00a">when</span> <span style="color:#a50">&#39;fav&#39;</span>    <span style="color:#00a">then</span>  <span style="color:#099">1</span>
-                  <span style="color:#00a">when</span> <span style="color:#a50">&#39;de-fav&#39;</span> <span style="color:#00a">then</span> -<span style="color:#099">1</span>
-                 <span style="color:#00a">end</span>,
-                <span style="color:#099">0</span>
-              ) <span style="color:#00a">as</span> favs
-     )
-     <span style="color:#00a">select</span> pg_notify(channel, row_to_json(payload)::<span style="color:#0aa">text</span>)
-       <span style="color:#00a">from</span> payload
-  );
-  <span style="color:#00a">RETURN</span> <span style="color:#00a">NULL</span>;
-<span style="color:#00a">end</span>;
-<span style="color:#f00;background-color:#faa">$$</span>;
-
-<span style="color:#00a">CREATE</span> <span style="color:#00a">TRIGGER</span> notify_counters
-         <span style="color:#00a">AFTER</span> <span style="color:#00a">INSERT</span>
-            <span style="color:#00a">ON</span> tweet.activity
-      <span style="color:#00a">FOR</span> <span style="color:#00a">EACH</span> <span style="color:#00a">ROW</span>
-       <span style="color:#00a">EXECUTE</span> <span style="color:#00a">PROCEDURE</span> twcache.tg_notify_counters(<span style="color:#a50">&#39;tweet.activity&#39;</span>);
-
-<span style="color:#00a">commit</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">or</span><span style="color:#bbb"> </span><span style="color:#00a">replace</span><span style="color:#bbb"> </span><span style="color:#00a">function</span><span style="color:#bbb"> </span>twcache.tg_notify_counters<span style="color:#bbb"> </span>()<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">returns</span><span style="color:#bbb"> </span><span style="color:#00a">trigger</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">language</span><span style="color:#bbb"> </span>plpgsql<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">$$</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">declare</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span>channel<span style="color:#bbb"> </span><span style="color:#0aa">text</span><span style="color:#bbb"> </span>:=<span style="color:#bbb"> </span>TG_ARGV[<span style="color:#099">0</span>];<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">begin</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span>PERFORM<span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">with</span><span style="color:#bbb"> </span>payload(messageid,<span style="color:#bbb"> </span>rts,<span style="color:#bbb"> </span>favs)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
+</span><span style="color:#bbb">     </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.messageid,<span style="color:#bbb">
+</span><span style="color:#bbb">              </span>coalesce(<span style="color:#bbb">
+</span><span style="color:#bbb">                 </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb">
+</span><span style="color:#bbb">                   </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span><span style="color:#bbb">    </span><span style="color:#00a">then</span><span style="color:#bbb">  </span><span style="color:#099">1</span><span style="color:#bbb">
+</span><span style="color:#bbb">                   </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;de-rt&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>-<span style="color:#099">1</span><span style="color:#bbb">
+</span><span style="color:#bbb">                  </span><span style="color:#00a">end</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">                 </span><span style="color:#099">0</span><span style="color:#bbb">
+</span><span style="color:#bbb">              </span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>rts,<span style="color:#bbb">
+</span><span style="color:#bbb">              </span>coalesce(<span style="color:#bbb">
+</span><span style="color:#bbb">                </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb">
+</span><span style="color:#bbb">                  </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;fav&#39;</span><span style="color:#bbb">    </span><span style="color:#00a">then</span><span style="color:#bbb">  </span><span style="color:#099">1</span><span style="color:#bbb">
+</span><span style="color:#bbb">                  </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;de-fav&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>-<span style="color:#099">1</span><span style="color:#bbb">
+</span><span style="color:#bbb">                 </span><span style="color:#00a">end</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">                </span><span style="color:#099">0</span><span style="color:#bbb">
+</span><span style="color:#bbb">              </span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>favs<span style="color:#bbb">
+</span><span style="color:#bbb">     </span>)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>pg_notify(channel,<span style="color:#bbb"> </span>row_to_json(payload)::<span style="color:#0aa">text</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>payload<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>);<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">RETURN</span><span style="color:#bbb"> </span><span style="color:#00a">NULL</span>;<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">end</span>;<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#f00;background-color:#faa">$$</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">CREATE</span><span style="color:#bbb"> </span><span style="color:#00a">TRIGGER</span><span style="color:#bbb"> </span>notify_counters<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">AFTER</span><span style="color:#bbb"> </span><span style="color:#00a">INSERT</span><span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">ON</span><span style="color:#bbb"> </span>tweet.activity<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">FOR</span><span style="color:#bbb"> </span><span style="color:#00a">EACH</span><span style="color:#bbb"> </span><span style="color:#00a">ROW</span><span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">EXECUTE</span><span style="color:#bbb"> </span><span style="color:#00a">PROCEDURE</span><span style="color:#bbb"> </span>twcache.tg_notify_counters(<span style="color:#a50">&#39;tweet.activity&#39;</span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">commit</span>;</code></pre></div>
 <p>Then to test the trigger, we can issue the following statements at a <em>psql</em>
 prompt:</p>
 <pre><code class="language-psql" data-lang="psql">listen &#34;tweet.activity&#34;;
@@ -730,10 +729,10 @@ that our implementation of the cache server with <em>notify</em> can only be
 correct if the main application issues only distinct <em>tweet.activity</em>
 actions in a single transaction. For our usage, this is not a deal-breaker,
 so we can fix our tests.</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span> <span style="color:#00a">into</span> tweet.activity(messageid, action) <span style="color:#00a">values</span> (<span style="color:#099">33</span>, <span style="color:#a50">&#39;rt&#39;</span>);
-<span style="color:#00a">insert</span> <span style="color:#00a">into</span> tweet.activity(messageid, action) <span style="color:#00a">values</span> (<span style="color:#099">33</span>, <span style="color:#a50">&#39;de-rt&#39;</span>);
-<span style="color:#00a">insert</span> <span style="color:#00a">into</span> tweet.activity(messageid, action) <span style="color:#00a">values</span> (<span style="color:#099">33</span>, <span style="color:#a50">&#39;fav&#39;</span>);
-<span style="color:#00a">insert</span> <span style="color:#00a">into</span> tweet.activity(messageid, action) <span style="color:#00a">values</span> (<span style="color:#099">33</span>, <span style="color:#a50">&#39;de-rt&#39;</span>);</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>tweet.activity(messageid,<span style="color:#bbb"> </span>action)<span style="color:#bbb"> </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#099">33</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>);<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>tweet.activity(messageid,<span style="color:#bbb"> </span>action)<span style="color:#bbb"> </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#099">33</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-rt&#39;</span>);<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>tweet.activity(messageid,<span style="color:#bbb"> </span>action)<span style="color:#bbb"> </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#099">33</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;fav&#39;</span>);<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>tweet.activity(messageid,<span style="color:#bbb"> </span>action)<span style="color:#bbb"> </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#099">33</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-rt&#39;</span>);</code></pre></div>
 <p>And this time we get the expected notifications:</p>
 <pre><code class="language-psql" data-lang="psql">Asynchronous notification &#34;tweet.activity&#34; with payload        ⏎
 &#34;{&#34;messageid&#34;:33,&#34;rts&#34;:1,&#34;favs&#34;:0}&#34; received from              ⏎
@@ -749,8 +748,7 @@ Asynchronous notification &#34;tweet.activity&#34; with payload        ⏎
 server process with PID 73216.</code></pre>
 <hr />
 
-<figure class="right"><a href="https://theartofpostgresql.com">
-    <img src="/img/TAOP_Book_Cover_200x260.png"/> </a>
+<figure class="right"><a href="https://theartofpostgresql.com"><img src="/img/TAOP_Book_Cover_200x260.png"/></a>
 </figure>
 
 
@@ -795,18 +793,18 @@ might also be one of the popular cache solutions such as
 
 <p>In our example, we implement a cache maintenance service in Go and the cache
 itself is maintained as a PostgreSQL table:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
-
-<span style="color:#00a">create</span> <span style="color:#00a">schema</span> <span style="color:#00a">if</span> <span style="color:#00a">not</span> <span style="color:#00a">exists</span> twcache;
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> twcache.counters
- (
-   messageid   <span style="color:#0aa">bigint</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
-   rts         <span style="color:#0aa">bigint</span>,
-   favs        <span style="color:#0aa">bigint</span>
- );
-
-<span style="color:#00a">commit</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">schema</span><span style="color:#bbb"> </span><span style="color:#00a">if</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">exists</span><span style="color:#bbb"> </span>twcache;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>twcache.counters<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>messageid<span style="color:#bbb">   </span><span style="color:#0aa">bigint</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>rts<span style="color:#bbb">         </span><span style="color:#0aa">bigint</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>favs<span style="color:#bbb">        </span><span style="color:#0aa">bigint</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">commit</span>;</code></pre></div>
 <p>With this table, implementing a NOTIFY client service that maintains the
 cache is easy enough to do, and here&rsquo;s what happens when the service runs
 and we do some testing:</p>
@@ -831,8 +829,7 @@ down to our PostgreSQL table <em>twcache.counters</em>.</p>
 	Favs      <span style="color:#0aa">int</span> <span style="color:#a50">`json:&#34;favs&#34;`</span>
 }
 
-<span style="color:#00a">type</span> Cache <span style="color:#00a">map</span>[<span style="color:#0aa">int</span>]*Counter
-</code></pre></div>
+<span style="color:#00a">type</span> Cache <span style="color:#00a">map</span>[<span style="color:#0aa">int</span>]*Counter</code></pre></div>
 <p>And given such a data structure, we use the efficient Go default JSON
 marshaling facility to transform the cache elements and pass them all down
 to PostgreSQL as a single JSON object.</p>
@@ -850,28 +847,27 @@ to PostgreSQL as a single JSON object.</p>
     
     ...
     <span style="color:#00a">return</span> <span style="color:#00a">nil</span>
-}
-</code></pre></div>
+}</code></pre></div>
 <p>The JSON object is then processed in a SQL query, that we find embedded in
 the Go code — it&rsquo;s the <em>q</em> string variable that is used in the snippet above
 in the expression <em>db.Query(q, js)</em>, where <em>js</em> is the JSON representation
 of the entirety of the cache data.</p>
 
 <p>Here&rsquo;s the SQL query we use:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span> rec <span style="color:#00a">as</span>
- (
-   <span style="color:#00a">select</span> rec.*
-     <span style="color:#00a">from</span> json_each(<span style="color:#f00;background-color:#faa">$</span><span style="color:#099">1</span>) <span style="color:#00a">as</span> t,
-          json_populate_record(<span style="color:#00a">null</span>::twcache.counters, value) <span style="color:#00a">as</span> rec
- )
- <span style="color:#00a">insert</span> <span style="color:#00a">into</span> twcache.counters(messageid, rts, favs)
-      <span style="color:#00a">select</span> messageid, rts, favs
-        <span style="color:#00a">from</span> rec
- <span style="color:#00a">on</span> conflict (messageid)
-   <span style="color:#00a">do</span> <span style="color:#00a">update</span>
-         <span style="color:#00a">set</span> rts  = counters.rts + excluded.rts,
-             favs = counters.favs + excluded.favs
-       <span style="color:#00a">where</span> counters.messageid = excluded.messageid</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span><span style="color:#bbb"> </span>rec<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>rec.*<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>json_each(<span style="color:#f00;background-color:#faa">$</span><span style="color:#099">1</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>t,<span style="color:#bbb">
+</span><span style="color:#bbb">          </span>json_populate_record(<span style="color:#00a">null</span>::twcache.counters,<span style="color:#bbb"> </span>value)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>rec<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>)<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>twcache.counters(messageid,<span style="color:#bbb"> </span>rts,<span style="color:#bbb"> </span>favs)<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>messageid,<span style="color:#bbb"> </span>rts,<span style="color:#bbb"> </span>favs<span style="color:#bbb">
+</span><span style="color:#bbb">        </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>rec<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>conflict<span style="color:#bbb"> </span>(messageid)<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">do</span><span style="color:#bbb"> </span><span style="color:#00a">update</span><span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">set</span><span style="color:#bbb"> </span>rts<span style="color:#bbb">  </span>=<span style="color:#bbb"> </span>counters.rts<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span>excluded.rts,<span style="color:#bbb">
+</span><span style="color:#bbb">             </span>favs<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>counters.favs<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span>excluded.favs<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>counters.messageid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>excluded.messageid</code></pre></div>
 <p>In this query, we use the PostgreSQL
 <a href="https://www.postgresql.org/docs/9.6/static/functions-json.html#FUNCTIONS-JSON-PROCESSING-TABLE">json_populate_record</a>
 function. This function is almost magical and it is described as such in the
@@ -1112,16 +1108,15 @@ update</em> variant that we&rsquo;re used to by now.</p>
 	} <span style="color:#00a">else</span> {
 		cache[c.MessageId] = &amp;c
 	}
-}
-</code></pre></div>
+}</code></pre></div>
 <p>It&rsquo;s important to note that coded as such, we can use the function to both
 materialize a full cache as fetched at startup, and to materialize the cache
 we build in-memory while receiving notifications.</p>
 
 <p>The query used to fetch the initial value of the cache and set it again at
 startup is the following:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> messageid, rts, favs
-  <span style="color:#00a">from</span> tweet.message_with_counters;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span>messageid,<span style="color:#bbb"> </span>rts,<span style="color:#bbb"> </span>favs<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>tweet.message_with_counters;</code></pre></div>
 <p>We use the view definition that we saw earlier to do the computations for
 us, and fill in our in-memory cache data structure from the result of the
 query.</p>
@@ -1152,7 +1147,7 @@ once, as we can see from the logs:</p>
 2017/09/21 22:24:06 Received event: {&#34;messageid&#34;:35,&#34;rts&#34;:1,&#34;favs&#34;:0}
 2017/09/21 22:24:09 Materializing 1 events from memory</code></pre>
 <p>Having a look at the cache, here&rsquo;s what we have:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">table</span> twcache.counters;</code></pre></div><pre><code class="language-psql" data-lang="psql"> messageid │  rts   │ favs 
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">table</span><span style="color:#bbb"> </span>twcache.counters;</code></pre></div><pre><code class="language-psql" data-lang="psql"> messageid │  rts   │ favs 
 ═══════════╪════════╪══════
          1 │  41688 │    0
          2 │ 222690 │    0

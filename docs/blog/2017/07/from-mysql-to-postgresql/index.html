@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.79.0">
+    <meta name="generator" content="Hugo 0.85.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>from MySQL to PostgreSQL</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -117,7 +117,6 @@ if (!doNotTrack) {
 	ga('send', 'pageview');
 }
 </script>
-
     
     
   </head>
@@ -725,7 +724,7 @@ HINT: You must specify an operator class for the index or define a default opera
 QUERY: CREATE INDEX idx_188012_idx_location ON pagila.address (location);</code></pre>
 <p>In that case what we should do is issue to PostgreSQL the following <em>CREATE
 INDEX</em> command instead:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">CREATE</span> <span style="color:#00a">INDEX</span> idx_188012_idx_location <span style="color:#00a">ON</span> pagila.address <span style="color:#00a">USING</span> gist(<span style="color:#00a">location</span>);</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">CREATE</span><span style="color:#bbb"> </span><span style="color:#00a">INDEX</span><span style="color:#bbb"> </span>idx_188012_idx_location<span style="color:#bbb"> </span><span style="color:#00a">ON</span><span style="color:#bbb"> </span>pagila.address<span style="color:#bbb"> </span><span style="color:#00a">USING</span><span style="color:#bbb"> </span>gist(<span style="color:#00a">location</span>);</code></pre></div>
 <p>And guess what? yes of course this is a paste from a run of current
 pgloader&rsquo;s version, where this is implemented in a transparent way for the
 users. Also, rather than hardcoding which PostgreSQL types need a special
@@ -733,21 +732,21 @@ treatment here, pgloader runs the following SQL query against the PostgreSQL
 catalogs, as found in the source tree
 at
 <a href="https://github.com/dimitri/pgloader/blob/master/src/pgsql/sql/list-typenames-without-btree-support.sql">src/pgsql/sql/list-typenames-without-btree-support.sql</a>:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> typname,
-       array_agg(amname <span style="color:#00a">order</span> <span style="color:#00a">by</span> amname &lt;&gt; <span style="color:#a50">&#39;gist&#39;</span>, amname &lt;&gt; <span style="color:#a50">&#39;gin&#39;</span>)
-  <span style="color:#00a">from</span> pg_type
-       <span style="color:#00a">join</span> pg_opclass <span style="color:#00a">on</span> pg_opclass.opcintype = pg_type.oid
-       <span style="color:#00a">join</span> pg_am <span style="color:#00a">on</span> pg_am.oid = pg_opclass.opcmethod
- <span style="color:#00a">where</span> <span style="color:#00a">substring</span>(typname <span style="color:#00a">from</span> <span style="color:#099">1</span> <span style="color:#00a">for</span> <span style="color:#099">1</span>) &lt;&gt; <span style="color:#a50">&#39;_&#39;</span>
-       <span style="color:#00a">and</span> <span style="color:#00a">not</span> <span style="color:#00a">exists</span>
-       (
-         <span style="color:#00a">select</span> amname
-           <span style="color:#00a">from</span> pg_am am
-                <span style="color:#00a">join</span> pg_opclass <span style="color:#00a">c</span> <span style="color:#00a">on</span> am.oid = <span style="color:#00a">c</span>.opcmethod
-                <span style="color:#00a">join</span> pg_type t <span style="color:#00a">on</span> <span style="color:#00a">c</span>.opcintype = t.oid
-          <span style="color:#00a">where</span> amname = <span style="color:#a50">&#39;btree&#39;</span> <span style="color:#00a">and</span> t.oid = pg_type.oid
-       )
-<span style="color:#00a">group</span> <span style="color:#00a">by</span> typname;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span>typname,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span>array_agg(amname<span style="color:#bbb"> </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>amname<span style="color:#bbb"> </span>&lt;&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;gist&#39;</span>,<span style="color:#bbb"> </span>amname<span style="color:#bbb"> </span>&lt;&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;gin&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pg_type<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_opclass<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>pg_opclass.opcintype<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>pg_type.oid<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_am<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>pg_am.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>pg_opclass.opcmethod<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#00a">substring</span>(typname<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">for</span><span style="color:#bbb"> </span><span style="color:#099">1</span>)<span style="color:#bbb"> </span>&lt;&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;_&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">and</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">exists</span><span style="color:#bbb">
+</span><span style="color:#bbb">       </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>amname<span style="color:#bbb">
+</span><span style="color:#bbb">           </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pg_am<span style="color:#bbb"> </span>am<span style="color:#bbb">
+</span><span style="color:#bbb">                </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_opclass<span style="color:#bbb"> </span><span style="color:#00a">c</span><span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>am.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">c</span>.opcmethod<span style="color:#bbb">
+</span><span style="color:#bbb">                </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_type<span style="color:#bbb"> </span>t<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span><span style="color:#00a">c</span>.opcintype<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>t.oid<span style="color:#bbb">
+</span><span style="color:#bbb">          </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>amname<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;btree&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>t.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>pg_type.oid<span style="color:#bbb">
+</span><span style="color:#bbb">       </span>)<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>typname;</code></pre></div>
 <p>The typical result of the query is following. The important part of
 discovering data types without btree support at run time is that pgloader
 then will support locally installed extensions it knows nothing about, and

@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.79.0">
+    <meta name="generator" content="Hugo 0.85.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Modeling for Concurrency</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -129,7 +129,6 @@ if (!doNotTrack) {
 	ga('send', 'pageview');
 }
 </script>
-
     
     
   </head>
@@ -508,43 +507,43 @@ counters are dependent on the message&rsquo;s key — we know that concurrent
 activity is going to be hard to handle in production.</p>
 
 <p>So here&rsquo;s a smarter version of the <em>activity</em> parts of the database model:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
-
-<span style="color:#00a">create</span> <span style="color:#00a">type</span> tweet.action_t
-    <span style="color:#00a">as</span> enum(<span style="color:#a50">&#39;rt&#39;</span>, <span style="color:#a50">&#39;fav&#39;</span>, <span style="color:#a50">&#39;de-rt&#39;</span>, <span style="color:#a50">&#39;de-fav&#39;</span>);
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> tweet.activity
- (
-  id          bigserial <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
-  messageid   <span style="color:#0aa">bigint</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">references</span> tweet.message(messageid),
-  datetime    timestamptz <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">default</span> now(),
-  action      tweet.action_t <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
-
-  <span style="color:#00a">unique</span>(messageid, datetime, action)
- );
-
-<span style="color:#00a">commit</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">type</span><span style="color:#bbb"> </span>tweet.action_t<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>enum(<span style="color:#a50">&#39;rt&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;fav&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-rt&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-fav&#39;</span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>tweet.activity<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>id<span style="color:#bbb">          </span>bigserial<span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>messageid<span style="color:#bbb">   </span><span style="color:#0aa">bigint</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>tweet.message(messageid),<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>datetime<span style="color:#bbb">    </span>timestamptz<span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">default</span><span style="color:#bbb"> </span>now(),<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>action<span style="color:#bbb">      </span>tweet.action_t<span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">unique</span>(messageid,<span style="color:#bbb"> </span>datetime,<span style="color:#bbb"> </span>action)<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">commit</span>;</code></pre></div>
 <p>In this version, the counters have disappeared, replaced by a full record of
 the base information needed to compute them. We now have an <em>activity</em> list
 with a denormalized <em>ENUM</em> for possible actions.</p>
 
 <p>To get the <em>rts</em> and <em>favs</em> counters back from this schema, we count lines
 in the <em>activity</em> records associated with a given <em>messageid</em>:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span>   <span style="color:#00a">count</span>(*) filter(<span style="color:#00a">where</span> action = <span style="color:#a50">&#39;rt&#39;</span>)
-         - <span style="color:#00a">count</span>(*) filter(<span style="color:#00a">where</span> action = <span style="color:#a50">&#39;de-rt&#39;</span>)
-         <span style="color:#00a">as</span> rts,
-           <span style="color:#00a">count</span>(*) filter(<span style="color:#00a">where</span> action = <span style="color:#a50">&#39;fav&#39;</span>)
-         - <span style="color:#00a">count</span>(*) filter(<span style="color:#00a">where</span> action = <span style="color:#a50">&#39;de-fav&#39;</span>)
-         <span style="color:#00a">as</span> favs
-    <span style="color:#00a">from</span> tweet.activity
-         <span style="color:#00a">join</span> tweet.message <span style="color:#00a">using</span>(messageid)
-   <span style="color:#00a">where</span> messageid = :id;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb">   </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span>action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">         </span>-<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span>action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-rt&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>rts,<span style="color:#bbb">
+</span><span style="color:#bbb">           </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span>action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;fav&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">         </span>-<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span>action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-fav&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>favs<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>tweet.activity<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>tweet.message<span style="color:#bbb"> </span><span style="color:#00a">using</span>(messageid)<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>messageid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>:id;</code></pre></div>
 <p>Reading the current counter value has become quite complex when compared to
 just adding a column to your query output list. On the other hand, when
 adding a <em>rt</em> or a <em>fav</em> action to a message, we transform the SQL:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">update</span> tweet.message <span style="color:#00a">set</span> rts = rts +<span style="color:#099">1</span> <span style="color:#00a">where</span> messageid = :id;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">update</span><span style="color:#bbb"> </span>tweet.message<span style="color:#bbb"> </span><span style="color:#00a">set</span><span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>+<span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>messageid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>:id;</code></pre></div>
 <p>This is what we use instead:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span> <span style="color:#00a">into</span> tweet.activity(messageid, action) <span style="color:#00a">values</span>(:id, <span style="color:#a50">&#39;rt&#39;</span>);</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>tweet.activity(messageid,<span style="color:#bbb"> </span>action)<span style="color:#bbb"> </span><span style="color:#00a">values</span>(:id,<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>);</code></pre></div>
 <p>The reason why replacing an <em>update</em> with an <em>insert</em> is interesting is
 concurrency behavior and locking. In the first version, retweeting has to
 wait until all concurrent retweets are done, and the business model wants to
@@ -575,8 +574,8 @@ deal with:</p>
 DETAIL: Key (messageid, datetime, action)                            ⏎
            =(2, 2017-09-19 18:00:03.831818+02, rt) already exists.</code></pre>
 <p>The best course of action here is to do this:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">    <span style="color:#00a">alter</span> <span style="color:#00a">table</span> tweet.activity
-<span style="color:#00a">drop</span> <span style="color:#00a">constraint</span> activity_messageid_datetime_action_key;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">    </span><span style="color:#00a">alter</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>tweet.activity<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">drop</span><span style="color:#bbb"> </span><span style="color:#00a">constraint</span><span style="color:#bbb"> </span>activity_messageid_datetime_action_key;</code></pre></div>
 <p>Now we can properly compare the concurrency scaling of the <em>insert</em> and the
 <em>update</em> based version. In case you might be curious about it, here&rsquo;s the
 testing code that&rsquo;s been used:</p>
@@ -674,8 +673,7 @@ worker, we can show that the results are repeatable:</p>
 <span style="color:#a00">Inserting</span> <span style="color:#a00">took</span> <span style="color:#099">3.739505</span> <span style="color:#a00">seconds,</span> <span style="color:#a00">did</span> <span style="color:#099">5000</span> <span style="color:#a00">rts</span></code></pre></div>
 <hr />
 
-<figure class="right"><a href="https://theartofpostgresql.com">
-    <img src="/img/TAOP_Book_Cover_200x260.png"/> </a>
+<figure class="right"><a href="https://theartofpostgresql.com"><img src="/img/TAOP_Book_Cover_200x260.png"/></a>
 </figure>
 
 

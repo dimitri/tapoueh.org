@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.79.0">
+    <meta name="generator" content="Hugo 0.85.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Database Modelization Anti-Patterns</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -111,7 +111,6 @@ if (!doNotTrack) {
 	ga('send', 'pageview');
 }
 </script>
-
     
     
   </head>
@@ -301,7 +300,7 @@ if (!doNotTrack) {
       </time>
     
     <span style="float: right; width: 65%">
-      <i class="fa fa-clock-o"></i> 9 mins read
+      <i class="fa fa-clock-o"></i> 8 mins read
       
     </span>
     <span style="float: left; width: 35%">
@@ -364,8 +363,7 @@ Denormalization</a>.
 Then we have <a href="https://2018.pgday.paris">pgday.paris</a> with an awesome
 schedule and a strong focus on the needs of application developers!</p>
 
-<figure class="right"><a href="https://theartofpostgresql.com">
-    <img src="/img/TAOP_Book_Cover_200x260.png"/> </a>
+<figure class="right"><a href="https://theartofpostgresql.com"><img src="/img/TAOP_Book_Cover_200x260.png"/></a>
 </figure>
 
 
@@ -493,33 +491,33 @@ specifications. In our application, we have to deal with parameters and new
 parameters may be added at each release. It&rsquo;s not clear which parameters we
 need, we just want a place to manage them easily, and we are already using a
 database server after all. So there we go:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
-
-<span style="color:#00a">create</span> <span style="color:#00a">schema</span> <span style="color:#00a">if</span> <span style="color:#00a">not</span> <span style="color:#00a">exists</span> eav;
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> eav.params
- (
-   entity    <span style="color:#0aa">text</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
-   <span style="color:#00a">parameter</span> <span style="color:#0aa">text</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
-   value     <span style="color:#0aa">text</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
-   
-   <span style="color:#00a">primary</span> <span style="color:#00a">key</span>(entity, <span style="color:#00a">parameter</span>)
- );
-
-<span style="color:#00a">commit</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">schema</span><span style="color:#bbb"> </span><span style="color:#00a">if</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">exists</span><span style="color:#bbb"> </span>eav;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>eav.params<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>entity<span style="color:#bbb">    </span><span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">parameter</span><span style="color:#bbb"> </span><span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>value<span style="color:#bbb">     </span><span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   
+</span><span style="color:#bbb">   </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>(entity,<span style="color:#bbb"> </span><span style="color:#00a">parameter</span>)<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">commit</span>;</code></pre></div>
 <p>You might have already seen this model or a variation of it in the field.
 The model makes it very easy to add <em>things</em> to it, and very difficult to
 make sense of the accumulated data, or to use them effectively in SQL,
 making it an anti-pattern.</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span> <span style="color:#00a">into</span> eav.params(entity, <span style="color:#00a">parameter</span>, value)
-     <span style="color:#00a">values</span> (<span style="color:#a50">&#39;backend&#39;</span>, <span style="color:#a50">&#39;log_level&#39;</span>, <span style="color:#a50">&#39;notice&#39;</span>),
-            (<span style="color:#a50">&#39;backend&#39;</span>, <span style="color:#a50">&#39;loglevel&#39;</span>, <span style="color:#a50">&#39;info&#39;</span>),
-            (<span style="color:#a50">&#39;api&#39;</span>, <span style="color:#a50">&#39;timeout&#39;</span>, <span style="color:#a50">&#39;30&#39;</span>),
-            (<span style="color:#a50">&#39;api&#39;</span>, <span style="color:#a50">&#39;timout&#39;</span>, <span style="color:#a50">&#39;40&#39;</span>),
-            (<span style="color:#a50">&#39;gold&#39;</span>, <span style="color:#a50">&#39;response time&#39;</span>, <span style="color:#a50">&#39;60&#39;</span>),
-            (<span style="color:#a50">&#39;gold&#39;</span>, <span style="color:#a50">&#39;escalation time&#39;</span>, <span style="color:#a50">&#39;90&#39;</span>),
-            (<span style="color:#a50">&#39;platinum&#39;</span>, <span style="color:#a50">&#39;response time&#39;</span>, <span style="color:#a50">&#39;15&#39;</span>),
-            (<span style="color:#a50">&#39;platinum&#39;</span>, <span style="color:#a50">&#39;escalation time&#39;</span>, <span style="color:#a50">&#39;30&#39;</span>);</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>eav.params(entity,<span style="color:#bbb"> </span><span style="color:#00a">parameter</span>,<span style="color:#bbb"> </span>value)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#a50">&#39;backend&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;log_level&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;notice&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;backend&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;loglevel&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;info&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;api&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;timeout&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;30&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;api&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;timout&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;40&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;gold&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;response time&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;60&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;gold&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;escalation time&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;90&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;platinum&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;response time&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;15&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;platinum&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;escalation time&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;30&#39;</span>);</code></pre></div>
 <p>In this example we made some typos on purpose, to show the limits of the
 <em>EAV</em> model. It&rsquo;s impossible to catch those errors, and you might have parts
 of your code that query one spelling or a different one.</p>
@@ -548,69 +546,69 @@ join to the <em>params</em> table for each parameter you are interested in.</p><
 time</em> and the <em>escalated time</em> for support customers when using the previous
 <em>params</em> setup. First, we need a quick design for a customer and a support
 contract table:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> eav.support_contract_type
- (
-   id   <span style="color:#0aa">serial</span> <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
-   name <span style="color:#0aa">text</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span>
- );
- 
-<span style="color:#00a">insert</span> <span style="color:#00a">into</span> eav.support_contract_type(name)
-     <span style="color:#00a">values</span> (<span style="color:#a50">&#39;gold&#39;</span>), (<span style="color:#a50">&#39;platinum&#39;</span>);
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> eav.support_contract
- (
-   id       <span style="color:#0aa">serial</span> <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
-   <span style="color:#00a">type</span>     <span style="color:#0aa">integer</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">references</span> eav.support_contract_type(id),
-   validity daterange <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
-   contract <span style="color:#0aa">text</span>,
-   
-   exclude <span style="color:#00a">using</span> gist(<span style="color:#00a">type</span> <span style="color:#00a">with</span> =, validity <span style="color:#00a">with</span> &amp;&amp;)
- );
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> eav.customer
- (
-   id       <span style="color:#0aa">serial</span> <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
-   name     <span style="color:#0aa">text</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
-   address  <span style="color:#0aa">text</span>
- );
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> eav.support
- (
-   customer  <span style="color:#0aa">integer</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
-   contract  <span style="color:#0aa">integer</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">references</span> eav.support_contract(id),
-   instances <span style="color:#0aa">integer</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
-
-   <span style="color:#00a">primary</span> <span style="color:#00a">key</span>(customer, contract),
-   <span style="color:#00a">check</span>(instances &gt; <span style="color:#099">0</span>)
- );
-
-<span style="color:#00a">commit</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>eav.support_contract_type<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>id<span style="color:#bbb">   </span><span style="color:#0aa">serial</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>name<span style="color:#bbb"> </span><span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb"> 
+</span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>eav.support_contract_type(name)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#a50">&#39;gold&#39;</span>),<span style="color:#bbb"> </span>(<span style="color:#a50">&#39;platinum&#39;</span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>eav.support_contract<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>id<span style="color:#bbb">       </span><span style="color:#0aa">serial</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">type</span><span style="color:#bbb">     </span><span style="color:#0aa">integer</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>eav.support_contract_type(id),<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>validity<span style="color:#bbb"> </span>daterange<span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>contract<span style="color:#bbb"> </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   
+</span><span style="color:#bbb">   </span>exclude<span style="color:#bbb"> </span><span style="color:#00a">using</span><span style="color:#bbb"> </span>gist(<span style="color:#00a">type</span><span style="color:#bbb"> </span><span style="color:#00a">with</span><span style="color:#bbb"> </span>=,<span style="color:#bbb"> </span>validity<span style="color:#bbb"> </span><span style="color:#00a">with</span><span style="color:#bbb"> </span>&amp;&amp;)<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>eav.customer<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>id<span style="color:#bbb">       </span><span style="color:#0aa">serial</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>name<span style="color:#bbb">     </span><span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>address<span style="color:#bbb">  </span><span style="color:#0aa">text</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>eav.support<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>customer<span style="color:#bbb">  </span><span style="color:#0aa">integer</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>contract<span style="color:#bbb">  </span><span style="color:#0aa">integer</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>eav.support_contract(id),<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>instances<span style="color:#bbb"> </span><span style="color:#0aa">integer</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>(customer,<span style="color:#bbb"> </span>contract),<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">check</span>(instances<span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span><span style="color:#099">0</span>)<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">commit</span>;</code></pre></div>
 <p>And now it&rsquo;s possible to get customer support contract parameters such as
 <em>response time</em> and <em>escalation time</em>, each with its own join:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> customer.id,
-       customer.name,
-       ctype.name,
-       rtime.value::<span style="color:#0aa">interval</span> <span style="color:#00a">as</span> <span style="color:#a50">&#34;resp. time&#34;</span>,
-       etime.value::<span style="color:#0aa">interval</span> <span style="color:#00a">as</span> <span style="color:#a50">&#34;esc. time&#34;</span>
-  <span style="color:#00a">from</span> eav.customer
-       <span style="color:#00a">join</span> eav.support
-         <span style="color:#00a">on</span> support.customer = customer.id
-
-       <span style="color:#00a">join</span> eav.support_contract <span style="color:#00a">as</span> contract
-         <span style="color:#00a">on</span> support.contract = contract.id
-
-       <span style="color:#00a">join</span> eav.support_contract_type <span style="color:#00a">as</span> ctype
-         <span style="color:#00a">on</span> ctype.id = contract.<span style="color:#00a">type</span>
-
-       <span style="color:#00a">join</span> eav.params <span style="color:#00a">as</span> rtime
-         <span style="color:#00a">on</span> rtime.entity = ctype.name
-        <span style="color:#00a">and</span> rtime.<span style="color:#00a">parameter</span> = <span style="color:#a50">&#39;response time&#39;</span>
-       
-       <span style="color:#00a">join</span> eav.params <span style="color:#00a">as</span> etime
-         <span style="color:#00a">on</span> etime.entity = ctype.name
-        <span style="color:#00a">and</span> etime.<span style="color:#00a">parameter</span> = <span style="color:#a50">&#39;escalation time&#39;</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span>customer.id,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span>customer.name,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span>ctype.name,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span>rtime.value::<span style="color:#0aa">interval</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;resp. time&#34;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span>etime.value::<span style="color:#0aa">interval</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;esc. time&#34;</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>eav.customer<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>eav.support<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>support.customer<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>customer.id<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>eav.support_contract<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>contract<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>support.contract<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>contract.id<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>eav.support_contract_type<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>ctype<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>ctype.id<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>contract.<span style="color:#00a">type</span><span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>eav.params<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>rtime<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>rtime.entity<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>ctype.name<span style="color:#bbb">
+</span><span style="color:#bbb">        </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>rtime.<span style="color:#00a">parameter</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;response time&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">       
+</span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>eav.params<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>etime<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>etime.entity<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>ctype.name<span style="color:#bbb">
+</span><span style="color:#bbb">        </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>etime.<span style="color:#00a">parameter</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;escalation time&#39;</span>;</code></pre></div>
 <p>Each parameter you add has to be added as an extra <em>join</em> operation in the
 previous query. Also, if someone enters a value for <em>response time</em> that
 isn&rsquo;t compatible with the <em>interval</em> data type representation, then the
@@ -638,13 +636,13 @@ normal form</em> (<em>1NF</em>) if:</p>
 
 <p>An anti-pattern that fails to comply with those rules means having a
 multi-valued field in a database schema:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span> <span style="color:#00a">table</span> tweet
- (
-   id      <span style="color:#0aa">bigint</span> <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
-   <span style="color:#0aa">date</span>    timestamptz,
-   message <span style="color:#0aa">text</span>,
-   tags    <span style="color:#0aa">text</span>
- );</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>tweet<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>id<span style="color:#bbb">      </span><span style="color:#0aa">bigint</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#0aa">date</span><span style="color:#bbb">    </span>timestamptz,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>message<span style="color:#bbb"> </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>tags<span style="color:#bbb">    </span><span style="color:#0aa">text</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);</code></pre></div>
 <p>Data would then be added with a semicolon separator, for instance, or maybe
 a pipe <code>|</code> char, or in some cases with a fancy Unicode separator char such
 as <code>§</code>, <code>¶</code> or <code>¦</code>. Here we find a classic semicolon:</p>

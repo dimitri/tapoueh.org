@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.79.0">
+    <meta name="generator" content="Hugo 0.85.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>PostgreSQL Concurrency: Data Modification Language</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -93,7 +93,6 @@ if (!doNotTrack) {
 	ga('send', 'pageview');
 }
 </script>
-
     
     
   </head>
@@ -293,7 +292,7 @@ if (!doNotTrack) {
       </time>
     
     <span style="float: right; width: 65%">
-      <i class="fa fa-clock-o"></i> 16 mins read
+      <i class="fa fa-clock-o"></i> 14 mins read
       
     </span>
     <span style="float: left; width: 35%">
@@ -382,79 +381,79 @@ follow other users, and then will see what those other users sent to the
 void.</p>
 
 <p>We&rsquo;ll begin with something simple:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span> <span style="color:#00a">schema</span> <span style="color:#00a">if</span> <span style="color:#00a">not</span> <span style="color:#00a">exists</span> tweet;
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> tweet.users
- (
-   userid     bigserial <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
-   uname      <span style="color:#0aa">text</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
-   nickname   <span style="color:#0aa">text</span>,
-   bio        <span style="color:#0aa">text</span>,
-   picture    <span style="color:#0aa">text</span>,
-
-   <span style="color:#00a">unique</span>(uname)
- );
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> tweet.follower
- (
-   follower   <span style="color:#0aa">bigint</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">references</span> tweet.users(userid),
-   following  <span style="color:#0aa">bigint</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">references</span> tweet.users(userid),
-
-   <span style="color:#00a">primary</span> <span style="color:#00a">key</span>(follower, following)
- );
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> tweet.message
- (
-   messageid  bigserial <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
-   userid     <span style="color:#0aa">bigint</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">references</span> tweet.users(userid),
-   datetime   timestamptz <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">default</span> now(),
-   message    <span style="color:#0aa">text</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span>,
-   favs       <span style="color:#0aa">bigint</span>,
-   rts        <span style="color:#0aa">bigint</span>,
-   <span style="color:#00a">location</span>   point,
-   lang       <span style="color:#0aa">text</span>,
-   url        <span style="color:#0aa">text</span>
- );</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">schema</span><span style="color:#bbb"> </span><span style="color:#00a">if</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">exists</span><span style="color:#bbb"> </span>tweet;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>tweet.users<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>userid<span style="color:#bbb">     </span>bigserial<span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>uname<span style="color:#bbb">      </span><span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>nickname<span style="color:#bbb">   </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>bio<span style="color:#bbb">        </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>picture<span style="color:#bbb">    </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">unique</span>(uname)<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>tweet.follower<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>follower<span style="color:#bbb">   </span><span style="color:#0aa">bigint</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>tweet.users(userid),<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>following<span style="color:#bbb">  </span><span style="color:#0aa">bigint</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>tweet.users(userid),<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>(follower,<span style="color:#bbb"> </span>following)<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>tweet.message<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>messageid<span style="color:#bbb">  </span>bigserial<span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>userid<span style="color:#bbb">     </span><span style="color:#0aa">bigint</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>tweet.users(userid),<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>datetime<span style="color:#bbb">   </span>timestamptz<span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">default</span><span style="color:#bbb"> </span>now(),<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>message<span style="color:#bbb">    </span><span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>favs<span style="color:#bbb">       </span><span style="color:#0aa">bigint</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>rts<span style="color:#bbb">        </span><span style="color:#0aa">bigint</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">location</span><span style="color:#bbb">   </span>point,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>lang<span style="color:#bbb">       </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>url<span style="color:#bbb">        </span><span style="color:#0aa">text</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);</code></pre></div>
 <h2 id="insert-into">Insert Into</h2>
 
 <p>Given our model of tweets, the first thing we need are users. Here&rsquo;s how to
 create our first users:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span> <span style="color:#00a">into</span> tweet.users (userid, uname, nickname, bio)
-     <span style="color:#00a">values</span> (<span style="color:#00a">default</span>, <span style="color:#a50">&#39;Theseus&#39;</span>, <span style="color:#a50">&#39;Duke Theseus&#39;</span>, <span style="color:#a50">&#39;Duke of Athens.&#39;</span>);</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>tweet.users<span style="color:#bbb"> </span>(userid,<span style="color:#bbb"> </span>uname,<span style="color:#bbb"> </span>nickname,<span style="color:#bbb"> </span>bio)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#00a">default</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Theseus&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Duke Theseus&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Duke of Athens.&#39;</span>);</code></pre></div>
 <p>The SQL standard <em>values</em> clause is usable anywhere <em>select</em> is expected, as
 we saw already in our truth tables in the <a href="/blog/2018/04/postgresql-data-types-an-intro/">introduction to PostgreSQL Data
 Types</a> article. Also,
 <a href="https://www.postgresql.org/docs/current/static/sql-values.html">values</a>
 accepts several rows at a time.</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span> <span style="color:#00a">into</span> tweet.users (uname, bio)
-     <span style="color:#00a">values</span> (<span style="color:#a50">&#39;Egeus&#39;</span>, <span style="color:#a50">&#39;father to #Hermia.&#39;</span>),
-            (<span style="color:#a50">&#39;Lysander&#39;</span>, <span style="color:#a50">&#39;in love with #Hermia.&#39;</span>),
-            (<span style="color:#a50">&#39;Demetrius&#39;</span>, <span style="color:#a50">&#39;in love with #Hermia.&#39;</span>),
-            (<span style="color:#a50">&#39;Philostrate&#39;</span>, <span style="color:#a50">&#39;master of the revels to Theseus.&#39;</span>),
-            (<span style="color:#a50">&#39;Peter Quince&#39;</span>, <span style="color:#a50">&#39;a carpenter.&#39;</span>),
-            (<span style="color:#a50">&#39;Snug&#39;</span>, <span style="color:#a50">&#39;a joiner.&#39;</span>),
-            (<span style="color:#a50">&#39;Nick Bottom&#39;</span>, <span style="color:#a50">&#39;a weaver.&#39;</span>),
-            (<span style="color:#a50">&#39;Francis Flute&#39;</span>, <span style="color:#a50">&#39;a bellows-mender.&#39;</span>),
-            (<span style="color:#a50">&#39;Tom Snout&#39;</span>, <span style="color:#a50">&#39;a tinker.&#39;</span>),
-            (<span style="color:#a50">&#39;Robin Starveling&#39;</span>, <span style="color:#a50">&#39;a tailor.&#39;</span>),
-            (<span style="color:#a50">&#39;Hippolyta&#39;</span>, <span style="color:#a50">&#39;queen of the Amazons, betrothed to Theseus.&#39;</span>),
-            (<span style="color:#a50">&#39;Hermia&#39;</span>, <span style="color:#a50">&#39;daughter to Egeus, in love with Lysander.&#39;</span>),
-            (<span style="color:#a50">&#39;Helena&#39;</span>, <span style="color:#a50">&#39;in love with Demetrius.&#39;</span>),
-            (<span style="color:#a50">&#39;Oberon&#39;</span>, <span style="color:#a50">&#39;king of the fairies.&#39;</span>),
-            (<span style="color:#a50">&#39;Titania&#39;</span>, <span style="color:#a50">&#39;queen of the fairies.&#39;</span>),
-            (<span style="color:#a50">&#39;Puck&#39;</span>, <span style="color:#a50">&#39;or Robin Goodfellow.&#39;</span>),
-            (<span style="color:#a50">&#39;Peaseblossom&#39;</span>, <span style="color:#a50">&#39;Team #Fairies&#39;</span>),
-            (<span style="color:#a50">&#39;Cobweb&#39;</span>, <span style="color:#a50">&#39;Team #Fairies&#39;</span>),
-            (<span style="color:#a50">&#39;Moth&#39;</span>, <span style="color:#a50">&#39;Team #Fairies&#39;</span>),
-            (<span style="color:#a50">&#39;Mustardseed&#39;</span>, <span style="color:#a50">&#39;Team #Fairies&#39;</span>),
-            (<span style="color:#a50">&#39;All&#39;</span>, <span style="color:#a50">&#39;Everyone speaking at the same time&#39;</span>),
-            (<span style="color:#a50">&#39;Fairy&#39;</span>, <span style="color:#a50">&#39;One of them #Fairies&#39;</span>),
-            (<span style="color:#a50">&#39;Prologue&#39;</span>, <span style="color:#a50">&#39;a play within a play&#39;</span>),
-            (<span style="color:#a50">&#39;Wall&#39;</span>, <span style="color:#a50">&#39;a play within a play&#39;</span>),
-            (<span style="color:#a50">&#39;Pyramus&#39;</span>, <span style="color:#a50">&#39;a play within a play&#39;</span>),
-            (<span style="color:#a50">&#39;Thisbe&#39;</span>, <span style="color:#a50">&#39;a play within a play&#39;</span>),
-            (<span style="color:#a50">&#39;Lion&#39;</span>, <span style="color:#a50">&#39;a play within a play&#39;</span>),
-            (<span style="color:#a50">&#39;Moonshine&#39;</span>, <span style="color:#a50">&#39;a play within a play&#39;</span>);</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>tweet.users<span style="color:#bbb"> </span>(uname,<span style="color:#bbb"> </span>bio)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#a50">&#39;Egeus&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;father to #Hermia.&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;Lysander&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;in love with #Hermia.&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;Demetrius&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;in love with #Hermia.&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;Philostrate&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;master of the revels to Theseus.&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;Peter Quince&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;a carpenter.&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;Snug&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;a joiner.&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;Nick Bottom&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;a weaver.&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;Francis Flute&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;a bellows-mender.&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;Tom Snout&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;a tinker.&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;Robin Starveling&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;a tailor.&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;Hippolyta&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;queen of the Amazons, betrothed to Theseus.&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;Hermia&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;daughter to Egeus, in love with Lysander.&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;Helena&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;in love with Demetrius.&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;Oberon&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;king of the fairies.&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;Titania&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;queen of the fairies.&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;Puck&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;or Robin Goodfellow.&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;Peaseblossom&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Team #Fairies&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;Cobweb&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Team #Fairies&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;Moth&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Team #Fairies&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;Mustardseed&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Team #Fairies&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;All&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Everyone speaking at the same time&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;Fairy&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;One of them #Fairies&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;Prologue&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;a play within a play&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;Wall&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;a play within a play&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;Pyramus&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;a play within a play&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;Thisbe&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;a play within a play&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;Lion&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;a play within a play&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;Moonshine&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;a play within a play&#39;</span>);</code></pre></div>
 <p>If you have lots of rows to insert into your database, consider using the
 <a href="https://www.postgresql.org/docs/current/static/sql-copy.html">copy</a> command
 instead of doing a series of <em>inserts</em>. If for some reason you can&rsquo;t use
@@ -463,8 +462,7 @@ several <em>insert</em> statements each with many <em>values</em>.</p>
 
 <hr />
 
-<figure class="right"><a href="https://theartofpostgresql.com">
-    <img src="/img/TAOP_Book_Cover_200x260.png"/> </a>
+<figure class="right"><a href="https://theartofpostgresql.com"><img src="/img/TAOP_Book_Cover_200x260.png"/></a>
 </figure>
 
 
@@ -486,14 +484,14 @@ follow their queen and king, maybe.</p>
 
 <p>First, we need to take this data apart from the previously inserted fields,
 which is our data source here.</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> users.userid <span style="color:#00a">as</span> follower,
-       users.uname,
-       f.userid <span style="color:#00a">as</span> following,
-       f.uname
-  <span style="color:#00a">from</span>      tweet.users
-       <span style="color:#00a">join</span> tweet.users f
-         <span style="color:#00a">on</span> f.uname = <span style="color:#00a">substring</span>(users.bio <span style="color:#00a">from</span> <span style="color:#a50">&#39;in love with #?(.*).&#39;</span>)
- <span style="color:#00a">where</span> users.bio ~ <span style="color:#a50">&#39;in love with&#39;</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span>users.userid<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>follower,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span>users.uname,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span>f.userid<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>following,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span>f.uname<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb">      </span>tweet.users<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>tweet.users<span style="color:#bbb"> </span>f<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>f.uname<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">substring</span>(users.bio<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;in love with #?(.*).&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>users.bio<span style="color:#bbb"> </span>~<span style="color:#bbb"> </span><span style="color:#a50">&#39;in love with&#39;</span>;</code></pre></div>
 <p>The <em>substring</em> expression here returns only the regular expression matching
 group, which happens to be the name of who our user loves. The query then
 gives us the following result, which looks about right:</p>
@@ -508,41 +506,41 @@ gives us the following result, which looks about right:</p>
 <em>tweet.follower</em> table of course. As the <em>insert into</em> command knows how to
 read its input from the result of a <em>select</em> statement, it&rsquo;s pretty easy to
 do:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span> <span style="color:#00a">into</span> tweet.follower
-     <span style="color:#00a">select</span> users.userid <span style="color:#00a">as</span> follower,
-            f.userid <span style="color:#00a">as</span> following
-       <span style="color:#00a">from</span>      tweet.users
-            <span style="color:#00a">join</span> tweet.users f
-              <span style="color:#00a">on</span> f.uname = <span style="color:#00a">substring</span>(users.bio <span style="color:#00a">from</span> <span style="color:#a50">&#39;in love with #?(.*).&#39;</span>)
-      <span style="color:#00a">where</span> users.bio ~ <span style="color:#a50">&#39;in love with&#39;</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>tweet.follower<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>users.userid<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>follower,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>f.userid<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>following<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb">      </span>tweet.users<span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>tweet.users<span style="color:#bbb"> </span>f<span style="color:#bbb">
+</span><span style="color:#bbb">              </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>f.uname<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">substring</span>(users.bio<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;in love with #?(.*).&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>users.bio<span style="color:#bbb"> </span>~<span style="color:#bbb"> </span><span style="color:#a50">&#39;in love with&#39;</span>;</code></pre></div>
 <p>Now about those fairies following their queen and king:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span> fairies <span style="color:#00a">as</span>
-(
-  <span style="color:#00a">select</span> userid
-    <span style="color:#00a">from</span> tweet.users
-   <span style="color:#00a">where</span> bio ~ <span style="color:#a50">&#39;#Fairies&#39;</span>
-)
-<span style="color:#00a">insert</span> <span style="color:#00a">into</span> tweet.follower(follower, following)
-     <span style="color:#00a">select</span> fairies.userid <span style="color:#00a">as</span> follower,
-            users.userid <span style="color:#00a">as</span> following
-       <span style="color:#00a">from</span> fairies <span style="color:#00a">cross</span> <span style="color:#00a">join</span> tweet.users
-      <span style="color:#00a">where</span> users.bio ~ <span style="color:#a50">&#39;of the fairies&#39;</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span><span style="color:#bbb"> </span>fairies<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span>(<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>userid<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>tweet.users<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>bio<span style="color:#bbb"> </span>~<span style="color:#bbb"> </span><span style="color:#a50">&#39;#Fairies&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span>)<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>tweet.follower(follower,<span style="color:#bbb"> </span>following)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>fairies.userid<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>follower,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>users.userid<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>following<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>fairies<span style="color:#bbb"> </span><span style="color:#00a">cross</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>tweet.users<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>users.bio<span style="color:#bbb"> </span>~<span style="color:#bbb"> </span><span style="color:#a50">&#39;of the fairies&#39;</span>;</code></pre></div>
 <p>This time we even have the opportunity to use a <em>cross join</em> as we want to
 produce all the different combinations of a <em>fairy</em> with their royal
 subjects.</p>
 
 <p>Here&rsquo;s what we have set-up in terms of followers now:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> follower.uname <span style="color:#00a">as</span> follower,
-       follower.bio <span style="color:#00a">as</span> <span style="color:#a50">&#34;follower&#39;s bio&#34;</span>,
-       following.uname <span style="color:#00a">as</span> following
-       
-  <span style="color:#00a">from</span> tweet.follower <span style="color:#00a">as</span> follows
-  
-       <span style="color:#00a">join</span> tweet.users <span style="color:#00a">as</span> follower
-         <span style="color:#00a">on</span> follows.follower = follower.userid
-         
-       <span style="color:#00a">join</span> tweet.users <span style="color:#00a">as</span> following
-         <span style="color:#00a">on</span> follows.following = following.userid;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span>follower.uname<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>follower,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span>follower.bio<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;follower&#39;s bio&#34;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span>following.uname<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>following<span style="color:#bbb">
+</span><span style="color:#bbb">       
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>tweet.follower<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>follows<span style="color:#bbb">
+</span><span style="color:#bbb">  
+</span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>tweet.users<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>follower<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>follows.follower<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>follower.userid<span style="color:#bbb">
+</span><span style="color:#bbb">         
+</span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>tweet.users<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>following<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>follows.following<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>following.userid;</code></pre></div>
 <p>And here&rsquo;s what we&rsquo;ve setup:</p>
 <pre><code class="language-psql" data-lang="psql">   follower   │              follower&#39;s bio               │ following 
 ══════════════╪═══════════════════════════════════════════╪═══════════
@@ -587,14 +585,14 @@ targets the same row(s).</p>
 
 <p>We created some users without a <em>nickname</em> before, and maybe it&rsquo;s time to
 remedy that, by assigning them their <em>uname</em> as a <em>nickname</em> for now.</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
-
-   <span style="color:#00a">update</span> tweet.users
-      <span style="color:#00a">set</span> nickname = <span style="color:#a50">&#39;Robin Goodfellow&#39;</span>
-    <span style="color:#00a">where</span> userid = <span style="color:#099">17</span> <span style="color:#00a">and</span> uname = <span style="color:#a50">&#39;Puck&#39;</span>
-returning users.*;
-
-<span style="color:#00a">commit</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">update</span><span style="color:#bbb"> </span>tweet.users<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">set</span><span style="color:#bbb"> </span>nickname<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;Robin Goodfellow&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>userid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#099">17</span><span style="color:#bbb"> </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>uname<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;Puck&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span>returning<span style="color:#bbb"> </span>users.*;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">commit</span>;</code></pre></div>
 <p>Here we pick the id 17 from the table after a manual lookup. The idea is to
 show how to update fields in a single tuple from a <em>primary key</em> lookup. In
 a lot of cases, our application&rsquo;s code has fetched the <em>id</em> previously and
@@ -630,22 +628,22 @@ check what happened and issue a <em>rollback;</em> when it&rsquo;s not what you 
 
 <p>We can also <em>update</em> several rows at the same time. Say we want to add a
 default nickname to all those characters:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">   <span style="color:#00a">update</span> tweet.users
-      <span style="color:#00a">set</span> nickname = <span style="color:#00a">case</span> <span style="color:#00a">when</span> uname ~ <span style="color:#a50">&#39; &#39;</span>
-                          <span style="color:#00a">then</span> <span style="color:#00a">substring</span>(uname <span style="color:#00a">from</span> <span style="color:#a50">&#39;[^ ]* (.*)&#39;</span>)
-                          <span style="color:#00a">else</span> uname
-                      <span style="color:#00a">end</span>
-    <span style="color:#00a">where</span> nickname <span style="color:#00a">is</span> <span style="color:#00a">null</span>
-returning users.*;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">   </span><span style="color:#00a">update</span><span style="color:#bbb"> </span>tweet.users<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">set</span><span style="color:#bbb"> </span>nickname<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span>uname<span style="color:#bbb"> </span>~<span style="color:#bbb"> </span><span style="color:#a50">&#39; &#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">                          </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#00a">substring</span>(uname<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;[^ ]* (.*)&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">                          </span><span style="color:#00a">else</span><span style="color:#bbb"> </span>uname<span style="color:#bbb">
+</span><span style="color:#bbb">                      </span><span style="color:#00a">end</span><span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>nickname<span style="color:#bbb"> </span><span style="color:#00a">is</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span>returning<span style="color:#bbb"> </span>users.*;</code></pre></div>
 <p>And now everyone is assigned a proper nickname, computed from their username
 with the easy and practical trick you can see in the query. The main thing
 to remember in that query is that you can use existing data in your <em>UPDATE</em>
 statement.</p>
 
 <p>Now, who are our Twitter users?</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span> uname, nickname, bio
-    <span style="color:#00a">from</span> tweet.users
-<span style="color:#00a">order</span> <span style="color:#00a">by</span> userid;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>uname,<span style="color:#bbb"> </span>nickname,<span style="color:#bbb"> </span>bio<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>tweet.users<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>userid;</code></pre></div>
 <p>It&rsquo;s a bunch of folks you might have heard about before. I&rsquo;ve taken the
 names and biographies from the <a href="https://en.wikipedia.org/wiki/A_Midsummer_Night%27s_Dream#Characters">A Midsummer Night&rsquo;s
 Dream</a>
@@ -724,20 +722,20 @@ Attendants<span style="color:#1e90ff;font-weight:bold">&lt;/STAGEDIR&gt;</span>
 <p>To have the characters of the play tweet their lines, we write a simple XML
 parser for the format and use the <em>insert</em> SQL command. Extracted from the
 code used to insert the data, here&rsquo;s the <em>insert</em> query:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span> <span style="color:#00a">into</span> tweet.message(userid, message)
-     <span style="color:#00a">select</span> userid, <span style="color:#f00;background-color:#faa">$</span><span style="color:#099">2</span>
-       <span style="color:#00a">from</span> tweet.users
-      <span style="color:#00a">where</span> users.uname = <span style="color:#f00;background-color:#faa">$</span><span style="color:#099">1</span> <span style="color:#00a">or</span> users.nickname = <span style="color:#f00;background-color:#faa">$</span><span style="color:#099">1</span></code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>tweet.message(userid,<span style="color:#bbb"> </span>message)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>userid,<span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">$</span><span style="color:#099">2</span><span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>tweet.users<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>users.uname<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">$</span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">or</span><span style="color:#bbb"> </span>users.nickname<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">$</span><span style="color:#099">1</span></code></pre></div>
 <p>As the play&rsquo;s text uses names such as <code>&lt;SPEAKER&gt;QUINCE&lt;/SPEAKER&gt;</code> and we
 inserted the real name into our database, we match the play&rsquo;s XML content
 against either the <em>uname</em> or the <em>nickname</em> field.</p>
 
 <p>Now that the data is loaded, we can have a look at the beginning of the play
 in SQL.</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span> uname, message
-    <span style="color:#00a">from</span> tweet.message
-         <span style="color:#00a">left</span> <span style="color:#00a">join</span> tweet.users <span style="color:#00a">using</span>(userid)
-<span style="color:#00a">order</span> <span style="color:#00a">by</span> messageid <span style="color:#00a">limit</span> <span style="color:#099">4</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>uname,<span style="color:#bbb"> </span>message<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>tweet.message<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">left</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>tweet.users<span style="color:#bbb"> </span><span style="color:#00a">using</span>(userid)<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>messageid<span style="color:#bbb"> </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">4</span>;</code></pre></div>
 <p>And yes, we can now see Shakespeare tweeting:</p>
 <pre><code>   uname   │                      message                      
 ═══════════╪═══════════════════════════════════════════════════
@@ -791,22 +789,22 @@ soon as the tuple isn&rsquo;t visible for any transaction anymore.</p>
 
 <p>Say we mistakenly added characters from another play, and we don&rsquo;t want to
 have to deal with them. First, inserting them:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span> <span style="color:#00a">into</span> tweet.users (uname, bio)
-     <span style="color:#00a">values</span> (<span style="color:#a50">&#39;CLAUDIUS&#39;</span>, <span style="color:#a50">&#39;king of Denmark.&#39;</span>),
-            (<span style="color:#a50">&#39;HAMLET&#39;</span>, <span style="color:#a50">&#39;son to the late, and nephew to the present king&#39;</span>),
-            (<span style="color:#a50">&#39;POLONIUS&#39;</span>, <span style="color:#a50">&#39;lord chamberlain.&#39;</span>),
-            (<span style="color:#a50">&#39;HORATIO&#39;</span>, <span style="color:#a50">&#39;friend to Hamlet&#39;</span>),
-            (<span style="color:#a50">&#39;LAERTES&#39;</span>, <span style="color:#a50">&#39;son to Polonius&#39;</span>),
-            (<span style="color:#a50">&#39;LUCIANUS&#39;</span>, <span style="color:#a50">&#39;nephew to the king&#39;</span>);</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>tweet.users<span style="color:#bbb"> </span>(uname,<span style="color:#bbb"> </span>bio)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#a50">&#39;CLAUDIUS&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;king of Denmark.&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;HAMLET&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;son to the late, and nephew to the present king&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;POLONIUS&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;lord chamberlain.&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;HORATIO&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;friend to Hamlet&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;LAERTES&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;son to Polonius&#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;LUCIANUS&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;nephew to the king&#39;</span>);</code></pre></div>
 <p>The <em>delete</em> syntax is quite simple:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
-
-   <span style="color:#00a">delete</span>
-     <span style="color:#00a">from</span> tweet.users
-    <span style="color:#00a">where</span> userid = <span style="color:#099">22</span> <span style="color:#00a">and</span> uname = <span style="color:#a50">&#39;CLAUDIUS&#39;</span>
-returning *;
-
-<span style="color:#00a">commit</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">delete</span><span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>tweet.users<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>userid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#099">22</span><span style="color:#bbb"> </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>uname<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;CLAUDIUS&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span>returning<span style="color:#bbb"> </span>*;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">commit</span>;</code></pre></div>
 <p>And as usual thanks to the <em>returning</em> clause, we know exactly what we just
 marked for deletion:</p>
 <pre><code class="language-psql" data-lang="psql"> userid │  uname   │ nickname │       bio        │ picture 
@@ -817,26 +815,26 @@ marked for deletion:</p>
 depends on what we match. As the new characters inserted by mistake didn&rsquo;t
 have a part in the play we inserted our messages from, then we can use an
 <em>anti-join</em> to delete them based on that information:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
-
-<span style="color:#00a">with</span> deleted_rows <span style="color:#00a">as</span>
-(
-    <span style="color:#00a">delete</span>
-      <span style="color:#00a">from</span> tweet.users
-     <span style="color:#00a">where</span> <span style="color:#00a">not</span> <span style="color:#00a">exists</span>
-           (
-             <span style="color:#00a">select</span> <span style="color:#099">1</span>
-               <span style="color:#00a">from</span> tweet.message
-              <span style="color:#00a">where</span> userid = users.userid
-           )
- returning *
-)
-<span style="color:#00a">select</span> <span style="color:#00a">min</span>(userid), <span style="color:#00a">max</span>(userid),
-       <span style="color:#00a">count</span>(*),
-       array_agg(uname)
-  <span style="color:#00a">from</span> deleted_rows;
-
-<span style="color:#00a">commit</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">with</span><span style="color:#bbb"> </span>deleted_rows<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span>(<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">delete</span><span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>tweet.users<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">exists</span><span style="color:#bbb">
+</span><span style="color:#bbb">           </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">             </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
+</span><span style="color:#bbb">               </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>tweet.message<span style="color:#bbb">
+</span><span style="color:#bbb">              </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>userid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>users.userid<span style="color:#bbb">
+</span><span style="color:#bbb">           </span>)<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>returning<span style="color:#bbb"> </span>*<span style="color:#bbb">
+</span><span style="color:#bbb"></span>)<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">min</span>(userid),<span style="color:#bbb"> </span><span style="color:#00a">max</span>(userid),<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">count</span>(*),<span style="color:#bbb">
+</span><span style="color:#bbb">       </span>array_agg(uname)<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>deleted_rows;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">commit</span>;</code></pre></div>
 <p>And as expected we get a nice summary output of exactly what we did. This
 should now be your default syntax for any <em>delete</em> you have to run
 interactively in any database, right?</p>
@@ -872,13 +870,13 @@ way to purge a table of all of its content at once, as it doesn&rsquo;t follow t
 per-tuple MVCC system and will simply remove the data files on disk.</p>
 
 <p>Note that the <em>truncate</em> command is still MVCC compliant:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> <span style="color:#00a">count</span>(*) <span style="color:#00a">from</span> foo;
-
-<span style="color:#00a">begin</span>;
-<span style="color:#00a">truncate</span> foo;
-<span style="color:#00a">rollback</span>;
-
-<span style="color:#00a">select</span> <span style="color:#00a">count</span>(*) <span style="color:#00a">from</span> foo;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>foo;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">begin</span>;<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">truncate</span><span style="color:#bbb"> </span>foo;<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">rollback</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>foo;</code></pre></div>
 <p>Assuming there&rsquo;s no concurrent activity on your system when running the
 commands, both the counting queries naturally return the same number.</p>
 
@@ -890,19 +888,19 @@ expired or something like that. As we saw earlier when using PostgreSQL,
 <em>delete</em> marks the tuples as not being visible anymore and then <em>vacuum</em>
 does the heavy lifting in the background. It is then more efficient to
 create a table containing only the new rows and swap it with the old table:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> new_name (<span style="color:#00a">like</span> name <span style="color:#00a">including</span> <span style="color:#00a">all</span>);
-
-<span style="color:#00a">insert</span> <span style="color:#00a">into</span> new_name
-     <span style="color:#00a">select</span> &lt;<span style="color:#00a">column</span> list&gt;
-       <span style="color:#00a">from</span> name
-      <span style="color:#00a">where</span> &lt;restrictions&gt;;
-      
- <span style="color:#00a">drop</span> <span style="color:#00a">table</span> name;
-<span style="color:#00a">alter</span> <span style="color:#00a">table</span> new_name <span style="color:#00a">rename</span> <span style="color:#00a">to</span> name;
-
-<span style="color:#00a">commit</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>new_name<span style="color:#bbb"> </span>(<span style="color:#00a">like</span><span style="color:#bbb"> </span>name<span style="color:#bbb"> </span><span style="color:#00a">including</span><span style="color:#bbb"> </span><span style="color:#00a">all</span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>new_name<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>&lt;<span style="color:#00a">column</span><span style="color:#bbb"> </span>list&gt;<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>name<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>&lt;restrictions&gt;;<span style="color:#bbb">
+</span><span style="color:#bbb">      
+</span><span style="color:#bbb"> </span><span style="color:#00a">drop</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>name;<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">alter</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>new_name<span style="color:#bbb"> </span><span style="color:#00a">rename</span><span style="color:#bbb"> </span><span style="color:#00a">to</span><span style="color:#bbb"> </span>name;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">commit</span>;</code></pre></div>
 <p>In the general case, as soon as you remove <em>most</em> entries from your table,
 this method is going to be more efficient. The trouble with that method is
 the level of locking required to run the <em>drop table</em> and the <em>alter table</em>

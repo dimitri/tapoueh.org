@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.79.0">
+    <meta name="generator" content="Hugo 0.85.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Archiving data as fast as possible</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -114,7 +114,6 @@ if (!doNotTrack) {
 	ga('send', 'pageview');
 }
 </script>
-
     
     
   </head>
@@ -376,12 +375,12 @@ about aims to move data out of a table (that&rsquo;s a
 the destination (
 <em>archiving</em>) table, and that&rsquo;s an
 <code>INSERT</code>:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">WITH</span> archive <span style="color:#00a">AS</span> (
-    <span style="color:#00a">DELETE</span> <span style="color:#00a">FROM</span> <span style="color:#00a">source</span> <span style="color:#00a">WHERE</span> ...
- RETURNING s.id
-)
-<span style="color:#00a">INSERT</span> <span style="color:#00a">INTO</span> target(id, counter)
-     <span style="color:#00a">SELECT</span> * <span style="color:#00a">FROM</span> archive;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">WITH</span><span style="color:#bbb"> </span>archive<span style="color:#bbb"> </span><span style="color:#00a">AS</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">DELETE</span><span style="color:#bbb"> </span><span style="color:#00a">FROM</span><span style="color:#bbb"> </span><span style="color:#00a">source</span><span style="color:#bbb"> </span><span style="color:#00a">WHERE</span><span style="color:#bbb"> </span>...<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>RETURNING<span style="color:#bbb"> </span>s.id<span style="color:#bbb">
+</span><span style="color:#bbb"></span>)<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">INSERT</span><span style="color:#bbb"> </span><span style="color:#00a">INTO</span><span style="color:#bbb"> </span>target(id,<span style="color:#bbb"> </span>counter)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">SELECT</span><span style="color:#bbb"> </span>*<span style="color:#bbb"> </span><span style="color:#00a">FROM</span><span style="color:#bbb"> </span>archive;</code></pre></div>
 <p>That&rsquo;s probably the most efficient way to move data around in PostgreSQL
 when the source and target tables are within the same database. If not, then
 I can&rsquo;t wait to play with the
@@ -408,22 +407,22 @@ to
 <em>lag</em> in
 between the Hot Standby you&rsquo;re interested into and the primary server by
 running that query periodically:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> pg_current_xlog_location() <span style="color:#00a">as</span> <span style="color:#00a">current</span>, replay_location <span style="color:#00a">as</span> replay
-  <span style="color:#00a">from</span> pg_stat_replication
- <span style="color:#00a">where</span> application_name = <span style="color:#a50">&#39;standby-name&#39;</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span>pg_current_xlog_location()<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">current</span>,<span style="color:#bbb"> </span>replay_location<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>replay<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pg_stat_replication<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>application_name<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;standby-name&#39;</span>;</code></pre></div>
 <p>Be aware that any replication client that you use will show up in the
 <code>pg_stat_replication</code> view, and that includes
 <a href="http://www.postgresql.org/docs/current/static/app-pgbasebackup.html">pg_basebackup</a> and
 <a href="http://www.postgresql.org/docs/current/static/app-pgreceivexlog.html">pg_receivexlog</a>:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"> <span style="color:#00a">select</span> application_name, pg_current_xlog_location(),
-        sent_location, replay_location
-   <span style="color:#00a">from</span> pg_stat_replication;
-   
- application_name | pg_current_xlog_location | sent_location  | replay_location 
-<span style="color:#aaa;font-style:italic">------------------+--------------------------+----------------+-----------------
-</span><span style="color:#aaa;font-style:italic"></span> pg_receivexlog   | <span style="color:#099">18</span>C85/<span style="color:#099">55</span>DCA900           | <span style="color:#099">18</span>C85/<span style="color:#099">55</span>DAEC20 | <span style="color:#f00;background-color:#faa">{</span><span style="color:#00a">NULL</span><span style="color:#f00;background-color:#faa">}</span>
- standby-name     | <span style="color:#099">18</span>C85/<span style="color:#099">55</span>DCA900           | <span style="color:#099">18</span>C85/<span style="color:#099">55</span>DCA900 | <span style="color:#099">18</span>C76/<span style="color:#099">4</span>B327D0
-(<span style="color:#099">2</span> lignes)</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb"> </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>application_name,<span style="color:#bbb"> </span>pg_current_xlog_location(),<span style="color:#bbb">
+</span><span style="color:#bbb">        </span>sent_location,<span style="color:#bbb"> </span>replay_location<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pg_stat_replication;<span style="color:#bbb">
+</span><span style="color:#bbb">   
+</span><span style="color:#bbb"> </span>application_name<span style="color:#bbb"> </span>|<span style="color:#bbb"> </span>pg_current_xlog_location<span style="color:#bbb"> </span>|<span style="color:#bbb"> </span>sent_location<span style="color:#bbb">  </span>|<span style="color:#bbb"> </span>replay_location<span style="color:#bbb"> 
+</span><span style="color:#bbb"></span><span style="color:#aaa;font-style:italic">------------------+--------------------------+----------------+-----------------
+</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb"> </span>pg_receivexlog<span style="color:#bbb">   </span>|<span style="color:#bbb"> </span><span style="color:#099">18</span>C85/<span style="color:#099">55</span>DCA900<span style="color:#bbb">           </span>|<span style="color:#bbb"> </span><span style="color:#099">18</span>C85/<span style="color:#099">55</span>DAEC20<span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">{</span><span style="color:#00a">NULL</span><span style="color:#f00;background-color:#faa">}</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>standby-name<span style="color:#bbb">     </span>|<span style="color:#bbb"> </span><span style="color:#099">18</span>C85/<span style="color:#099">55</span>DCA900<span style="color:#bbb">           </span>|<span style="color:#bbb"> </span><span style="color:#099">18</span>C85/<span style="color:#099">55</span>DCA900<span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#099">18</span>C76/<span style="color:#099">4</span>B327D0<span style="color:#bbb">
+</span><span style="color:#bbb"></span>(<span style="color:#099">2</span><span style="color:#bbb"> </span>lignes)</code></pre></div>
 <p>Then in between loops of running the
 <code>WITH archive AS (DELETE ...) INSERT</code>
 query, when the lag is higher than your arbitrary threshold, just pause

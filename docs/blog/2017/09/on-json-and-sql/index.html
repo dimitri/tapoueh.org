@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.79.0">
+    <meta name="generator" content="Hugo 0.85.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>on Json and SQL</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -129,7 +129,6 @@ if (!doNotTrack) {
 	ga('send', 'pageview');
 }
 </script>
-
     
     
   </head>
@@ -319,7 +318,7 @@ if (!doNotTrack) {
       </time>
     
     <span style="float: right; width: 65%">
-      <i class="fa fa-clock-o"></i> 32 mins read
+      <i class="fa fa-clock-o"></i> 27 mins read
       
     </span>
     <span style="float: left; width: 35%">
@@ -796,8 +795,8 @@ versions of the database schema.</p>
 
 <p>First retrieve <a href="https://mtgjson.com/json/AllSets.json.zip">AllSets.json</a> and
 then load it into your local testing PostgreSQL instance as following:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span> <span style="color:#00a">schema</span> <span style="color:#00a">if</span> <span style="color:#00a">not</span> <span style="color:#00a">exists</span> magic;
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> magic.allsets(<span style="color:#00a">data</span> jsonb);</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">schema</span><span style="color:#bbb"> </span><span style="color:#00a">if</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">exists</span><span style="color:#bbb"> </span>magic;<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>magic.allsets(<span style="color:#00a">data</span><span style="color:#bbb"> </span>jsonb);</code></pre></div>
 <p>For loading the 27MB single json document in PostgreSQL, we can&rsquo;t directly
 use COPY this time, so we&rsquo;ll write some Python code:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#aaa;font-style:italic">#! /usr/bin/env python3</span>
@@ -822,12 +821,12 @@ show the PostgreSQL capabilities when it comes to handling this data type.
 Also, I doubt your application would do that, even when using MongoDB. I
 guess a collection of cards would be better, so let&rsquo;s transform our giant
 JSON document into such a collection:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span> <span style="color:#00a">table</span> magic.cards
-          <span style="color:#00a">as</span>
-      <span style="color:#00a">select</span> jsonb_array_elements(value-&gt;<span style="color:#a50">&#39;cards&#39;</span>) <span style="color:#00a">as</span> <span style="color:#00a">data</span>
-        <span style="color:#00a">from</span> magic.allsets, jsonb_each(<span style="color:#00a">data</span>);
-      
-<span style="color:#00a">create</span> <span style="color:#00a">index</span> <span style="color:#00a">on</span> magic.cards <span style="color:#00a">using</span> gin(<span style="color:#00a">data</span> jsonb_path_ops);</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>magic.cards<span style="color:#bbb">
+</span><span style="color:#bbb">          </span><span style="color:#00a">as</span><span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>jsonb_array_elements(value-&gt;<span style="color:#a50">&#39;cards&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">data</span><span style="color:#bbb">
+</span><span style="color:#bbb">        </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.allsets,<span style="color:#bbb"> </span>jsonb_each(<span style="color:#00a">data</span>);<span style="color:#bbb">
+</span><span style="color:#bbb">      
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">index</span><span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>magic.cards<span style="color:#bbb"> </span><span style="color:#00a">using</span><span style="color:#bbb"> </span>gin(<span style="color:#00a">data</span><span style="color:#bbb"> </span>jsonb_path_ops);</code></pre></div>
 <p>On the old laptop I&rsquo;m using for typing this blog post and playing with
 PostgreSQL, extracting the Magic™ cards from the single document into 34207
 entries in the <em>magic.cards</em> table took 603.524 ms, and creating a dedicated
@@ -839,9 +838,9 @@ mean nothing…</p>
 <p>The home page of the <a href="https://mtgjson.com">https://mtgjson.com</a> website features the card named
 <em>Sen Triplets</em>, how can we find it in our collection? The following query is
 one way to do implement the search:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> jsonb_pretty(<span style="color:#00a">data</span>)
-  <span style="color:#00a">from</span> magic.cards
- <span style="color:#00a">where</span> <span style="color:#00a">data</span> @&gt; <span style="color:#a50">&#39;{&#34;name&#34; : &#34;Sen Triplets&#34;}&#39;</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span>jsonb_pretty(<span style="color:#00a">data</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.cards<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#00a">data</span><span style="color:#bbb"> </span>@&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;{&#34;name&#34; : &#34;Sen Triplets&#34;}&#39;</span>;</code></pre></div>
 <p>You might have noticed that we created a <em>gin</em> index using the
 <a href="https://www.postgresql.org/docs/9.4/static/datatype-json.html#JSON-INDEXING">jsonb_path_ops</a>
 operator class, which supports only the <code>@&gt;</code> operator (it reads <em>contains</em>).
@@ -901,9 +900,9 @@ query to a <em>sen-triplets.sql</em> file, then run the following command:</p>
 }</code></pre></div>
 <p>Now this <em>Mana Cost</em> expression does seem quite complex, and I guess it&rsquo;s
 pretty rare to find it. Let&rsquo;s figure that out:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> <span style="color:#00a">count</span>(*)
-  <span style="color:#00a">from</span> magic.cards
- <span style="color:#00a">where</span> <span style="color:#00a">data</span> @&gt; <span style="color:#a50">&#39;{&#34;manaCost&#34;: &#34;{2}{W}{U}{B}&#34;}&#39;</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.cards<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#00a">data</span><span style="color:#bbb"> </span>@&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;{&#34;manaCost&#34;: &#34;{2}{W}{U}{B}&#34;}&#39;</span>;</code></pre></div>
 <p>Only 3 cards in our complete collection do match such a <em>Mana Cost</em>.</p>
 
 <p>In order to show other ways to query our collection and benefit from the
@@ -912,12 +911,12 @@ index, we could count how many cards are found with the 3 colors <code>[&quot;Wh
 given a json array searches for arrays that <em>intersect</em> with the search
 query. It means that it finds arrays with more elements than those in the
 search query, as seen in the following example:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span> <span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;colors&#39;</span> <span style="color:#00a">as</span> colors,
-         <span style="color:#00a">count</span>(*)
-    <span style="color:#00a">from</span> magic.cards
-   <span style="color:#00a">where</span> <span style="color:#00a">data</span> @&gt; <span style="color:#a50">&#39;{&#34;colors&#34;: [&#34;White&#34;,&#34;Blue&#34;,&#34;Black&#34;]}&#39;</span>
-<span style="color:#00a">group</span> <span style="color:#00a">by</span> <span style="color:#00a">grouping</span> <span style="color:#00a">sets</span>(<span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;colors&#39;</span>, ())
-<span style="color:#00a">order</span> <span style="color:#00a">by</span> <span style="color:#00a">count</span> <span style="color:#00a">desc</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;colors&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>colors,<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">count</span>(*)<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.cards<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#00a">data</span><span style="color:#bbb"> </span>@&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;{&#34;colors&#34;: [&#34;White&#34;,&#34;Blue&#34;,&#34;Black&#34;]}&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">grouping</span><span style="color:#bbb"> </span><span style="color:#00a">sets</span>(<span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;colors&#39;</span>,<span style="color:#bbb"> </span>())<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">count</span><span style="color:#bbb"> </span><span style="color:#00a">desc</span>;</code></pre></div>
 <p>Note we used a <em>grouping sets</em> expression that returns both the total count
 and the count per specific array of colors:</p>
 <pre><code>                   colors                   │ count 
@@ -932,28 +931,28 @@ and the count per specific array of colors:</p>
 
 <p>When creating our <em>magic.cards</em> table, we didn&rsquo;t keep the sets information,
 and for more interesting queries we&rsquo;re going to need that.</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> magic.<span style="color:#00a">sets</span>
-    <span style="color:#00a">as</span>
-<span style="color:#00a">select</span> <span style="color:#00a">key</span> <span style="color:#00a">as</span> name, value - <span style="color:#a50">&#39;cards&#39;</span> <span style="color:#00a">as</span> <span style="color:#00a">data</span>
-  <span style="color:#00a">from</span> magic.allsets, jsonb_each(<span style="color:#00a">data</span>);
-  
-<span style="color:#00a">drop</span> <span style="color:#00a">table</span> magic.cards;
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> magic.cards
-    <span style="color:#00a">as</span>
-  <span style="color:#00a">with</span> collection <span style="color:#00a">as</span>
-  (
-     <span style="color:#00a">select</span> <span style="color:#00a">key</span> <span style="color:#00a">as</span> <span style="color:#00a">set</span>,
-            value-&gt;<span style="color:#a50">&#39;cards&#39;</span> <span style="color:#00a">as</span> <span style="color:#00a">data</span>
-       <span style="color:#00a">from</span> magic.allsets,
-            <span style="color:#00a">lateral</span> jsonb_each(<span style="color:#00a">data</span>)
-  )
-  <span style="color:#00a">select</span> <span style="color:#00a">set</span>, jsonb_array_elements(<span style="color:#00a">data</span>) <span style="color:#00a">as</span> <span style="color:#00a">data</span>
-    <span style="color:#00a">from</span> collection;
-
-<span style="color:#00a">commit</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>magic.<span style="color:#00a">sets</span><span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">as</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">key</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>name,<span style="color:#bbb"> </span>value<span style="color:#bbb"> </span>-<span style="color:#bbb"> </span><span style="color:#a50">&#39;cards&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">data</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.allsets,<span style="color:#bbb"> </span>jsonb_each(<span style="color:#00a">data</span>);<span style="color:#bbb">
+</span><span style="color:#bbb">  
+</span><span style="color:#bbb"></span><span style="color:#00a">drop</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>magic.cards;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>magic.cards<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">as</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">with</span><span style="color:#bbb"> </span>collection<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">key</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">set</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>value-&gt;<span style="color:#a50">&#39;cards&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">data</span><span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.allsets,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">lateral</span><span style="color:#bbb"> </span>jsonb_each(<span style="color:#00a">data</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>)<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">set</span>,<span style="color:#bbb"> </span>jsonb_array_elements(<span style="color:#00a">data</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">data</span><span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>collection;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">commit</span>;</code></pre></div>
 <p>The expression <em>value - &lsquo;cards&rsquo;</em> allow to remove the <em>cards</em> key from the
 JSON object. In our case this allows to register only the collection parts
 of the object, and leave away the cards for the other table.</p>
@@ -963,24 +962,24 @@ of the object, and leave away the cards for the other table.</p>
 <p>With this data we can see about building a booster from any edition of the
 cards collection. First, let&rsquo;s have a look at the <em>Limited Edition Alpha</em>
 edtition:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span> booster <span style="color:#00a">as</span>
-(
-    <span style="color:#00a">select</span> name,
-           initcap(
-             jsonb_array_elements_text(<span style="color:#00a">sets</span>.<span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;booster&#39;</span>)
-           ) <span style="color:#00a">as</span> rarity,
-           <span style="color:#00a">count</span>(*)
-      <span style="color:#00a">from</span> magic.<span style="color:#00a">sets</span>
-     <span style="color:#00a">where</span> name = <span style="color:#a50">&#39;LEA&#39;</span>
-  <span style="color:#00a">group</span> <span style="color:#00a">by</span> name, rarity
-)
-   <span style="color:#00a">select</span> rarity, booster.<span style="color:#00a">count</span>, <span style="color:#00a">count</span>(*)
-     <span style="color:#00a">from</span> booster
-          <span style="color:#00a">left</span> <span style="color:#00a">join</span> magic.cards
-            <span style="color:#00a">on</span> cards.<span style="color:#00a">set</span> = booster.name
-           <span style="color:#00a">and</span> cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;rarity&#39;</span> = booster.rarity
-  <span style="color:#00a">group</span> <span style="color:#00a">by</span> rarity, <span style="color:#00a">count</span>
-  <span style="color:#00a">order</span> <span style="color:#00a">by</span> rarity &lt;&gt; <span style="color:#a50">&#39;Uncommon&#39;</span>, rarity &lt;&gt; <span style="color:#a50">&#39;Common&#39;</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span><span style="color:#bbb"> </span>booster<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span>(<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>name,<span style="color:#bbb">
+</span><span style="color:#bbb">           </span>initcap(<span style="color:#bbb">
+</span><span style="color:#bbb">             </span>jsonb_array_elements_text(<span style="color:#00a">sets</span>.<span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;booster&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">           </span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>rarity,<span style="color:#bbb">
+</span><span style="color:#bbb">           </span><span style="color:#00a">count</span>(*)<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.<span style="color:#00a">sets</span><span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>name<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;LEA&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>name,<span style="color:#bbb"> </span>rarity<span style="color:#bbb">
+</span><span style="color:#bbb"></span>)<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>rarity,<span style="color:#bbb"> </span>booster.<span style="color:#00a">count</span>,<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>booster<span style="color:#bbb">
+</span><span style="color:#bbb">          </span><span style="color:#00a">left</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>magic.cards<span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>cards.<span style="color:#00a">set</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>booster.name<span style="color:#bbb">
+</span><span style="color:#bbb">           </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;rarity&#39;</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>booster.rarity<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>rarity,<span style="color:#bbb"> </span><span style="color:#00a">count</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>rarity<span style="color:#bbb"> </span>&lt;&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;Uncommon&#39;</span>,<span style="color:#bbb"> </span>rarity<span style="color:#bbb"> </span>&lt;&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;Common&#39;</span>;</code></pre></div>
 <p>This query shows several interesting techniques:</p>
 
 <ul>
@@ -1009,37 +1008,37 @@ being very small (34207 different cards) that&rsquo;s no problem,</p></li>
 <p>So, to build a magic deck from the <em>LEA</em> set we need to pick 3 uncommon
 cards among 95 available, then 11 common cards among the 74 available and
 finally 1 rare in the 116 rare cards from the collection.</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#f00;background-color:#faa">\</span><span style="color:#00a">set</span> collection <span style="color:#a50">&#39;LEA&#39;</span>
-
-<span style="color:#00a">with</span> booster <span style="color:#00a">as</span>
-(
-    <span style="color:#00a">select</span> name,
-           initcap(
-             jsonb_array_elements_text(<span style="color:#00a">sets</span>.<span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;booster&#39;</span>)
-           ) <span style="color:#00a">as</span> rarity,
-           <span style="color:#00a">count</span>(*)
-      <span style="color:#00a">from</span> magic.<span style="color:#00a">sets</span>
-     <span style="color:#00a">where</span> name = :<span style="color:#a50">&#39;collection&#39;</span>
-  <span style="color:#00a">group</span> <span style="color:#00a">by</span> name, rarity
-)
-   <span style="color:#00a">select</span> cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;rarity&#39;</span> <span style="color:#00a">as</span> rarity,
-          cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;name&#39;</span> <span style="color:#00a">as</span> name,
-          cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;manaCost&#39;</span> <span style="color:#00a">as</span> manacost,
-          cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;type&#39;</span> <span style="color:#00a">as</span> <span style="color:#00a">type</span>
-     <span style="color:#00a">from</span> booster
-          <span style="color:#00a">left</span> <span style="color:#00a">join</span> <span style="color:#00a">lateral</span>
-          (
-            <span style="color:#00a">select</span> <span style="color:#00a">data</span>
-              <span style="color:#00a">from</span> magic.cards
-             <span style="color:#00a">where</span> cards.<span style="color:#00a">set</span> = booster.name
-               <span style="color:#00a">and</span> cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;rarity&#39;</span> = booster.rarity
-          <span style="color:#00a">order</span> <span style="color:#00a">by</span> random()
-             <span style="color:#00a">limit</span> booster.<span style="color:#00a">count</span>
-          )
-          <span style="color:#00a">as</span> cards
-          <span style="color:#00a">on</span> <span style="color:#00a">true</span>
-  <span style="color:#00a">order</span> <span style="color:#00a">by</span> cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;rarity&#39;</span> &lt;&gt; <span style="color:#a50">&#39;Uncommon&#39;</span>,
-           cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;rarity&#39;</span> &lt;&gt; <span style="color:#a50">&#39;Common&#39;</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#f00;background-color:#faa">\</span><span style="color:#00a">set</span><span style="color:#bbb"> </span>collection<span style="color:#bbb"> </span><span style="color:#a50">&#39;LEA&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">with</span><span style="color:#bbb"> </span>booster<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span>(<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>name,<span style="color:#bbb">
+</span><span style="color:#bbb">           </span>initcap(<span style="color:#bbb">
+</span><span style="color:#bbb">             </span>jsonb_array_elements_text(<span style="color:#00a">sets</span>.<span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;booster&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">           </span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>rarity,<span style="color:#bbb">
+</span><span style="color:#bbb">           </span><span style="color:#00a">count</span>(*)<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.<span style="color:#00a">sets</span><span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>name<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>:<span style="color:#a50">&#39;collection&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>name,<span style="color:#bbb"> </span>rarity<span style="color:#bbb">
+</span><span style="color:#bbb"></span>)<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;rarity&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>rarity,<span style="color:#bbb">
+</span><span style="color:#bbb">          </span>cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;name&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>name,<span style="color:#bbb">
+</span><span style="color:#bbb">          </span>cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;manaCost&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>manacost,<span style="color:#bbb">
+</span><span style="color:#bbb">          </span>cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;type&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">type</span><span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>booster<span style="color:#bbb">
+</span><span style="color:#bbb">          </span><span style="color:#00a">left</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span><span style="color:#00a">lateral</span><span style="color:#bbb">
+</span><span style="color:#bbb">          </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">data</span><span style="color:#bbb">
+</span><span style="color:#bbb">              </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.cards<span style="color:#bbb">
+</span><span style="color:#bbb">             </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>cards.<span style="color:#00a">set</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>booster.name<span style="color:#bbb">
+</span><span style="color:#bbb">               </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;rarity&#39;</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>booster.rarity<span style="color:#bbb">
+</span><span style="color:#bbb">          </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>random()<span style="color:#bbb">
+</span><span style="color:#bbb">             </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span>booster.<span style="color:#00a">count</span><span style="color:#bbb">
+</span><span style="color:#bbb">          </span>)<span style="color:#bbb">
+</span><span style="color:#bbb">          </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>cards<span style="color:#bbb">
+</span><span style="color:#bbb">          </span><span style="color:#00a">on</span><span style="color:#bbb"> </span><span style="color:#00a">true</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;rarity&#39;</span><span style="color:#bbb"> </span>&lt;&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;Uncommon&#39;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">           </span>cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;rarity&#39;</span><span style="color:#bbb"> </span>&lt;&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;Common&#39;</span>;</code></pre></div>
 <p>The <em>left join lateral</em> allows to inject directly how many rows we need in
 the subquery limit clause. We use the <em>order by random()</em> trick here to get
 our cards. It&rsquo;s ok because we know that a booster doesn&rsquo;t contain that many
@@ -1104,29 +1103,29 @@ Arcane, Equipment, Aura, Human, Rat, Squirrel, etc.</p></li>
 
 <p>Of course those are repeated a lot in every card instance, as we can see
 with the following queries:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span> <span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;type&#39;</span> <span style="color:#00a">as</span> <span style="color:#00a">type</span>, <span style="color:#00a">count</span>(*)
-    <span style="color:#00a">from</span> magic.cards
-<span style="color:#00a">group</span> <span style="color:#00a">by</span> <span style="color:#00a">type</span>
-<span style="color:#00a">order</span> <span style="color:#00a">by</span> <span style="color:#00a">count</span> <span style="color:#00a">desc</span>
-   <span style="color:#00a">limit</span> <span style="color:#099">3</span>;</code></pre></div><pre><code>    type     │ count 
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;type&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">type</span>,<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.cards<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">type</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">count</span><span style="color:#bbb"> </span><span style="color:#00a">desc</span><span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">3</span>;</code></pre></div><pre><code>    type     │ count 
 ═════════════╪═══════
  Instant     │  4052
  Sorcery     │  3805
  Enchantment │  2020
-(3 rows)</code></pre><div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span> jsonb_array_elements_text(<span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;subtypes&#39;</span>) <span style="color:#00a">as</span> subtypes, <span style="color:#00a">count</span>(*)
-    <span style="color:#00a">from</span> magic.cards
-<span style="color:#00a">group</span> <span style="color:#00a">by</span> subtypes
-<span style="color:#00a">order</span> <span style="color:#00a">by</span> <span style="color:#00a">count</span> <span style="color:#00a">desc</span>
-   <span style="color:#00a">limit</span> <span style="color:#099">3</span>;</code></pre></div><pre><code> subtypes │ count 
+(3 rows)</code></pre><div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>jsonb_array_elements_text(<span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;subtypes&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>subtypes,<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.cards<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>subtypes<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">count</span><span style="color:#bbb"> </span><span style="color:#00a">desc</span><span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">3</span>;</code></pre></div><pre><code> subtypes │ count 
 ══════════╪═══════
  Human    │  3192
  Aura     │  1669
  Wizard   │  1013
-(3 rows)</code></pre><div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span> jsonb_array_elements_text(<span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;types&#39;</span>) <span style="color:#00a">as</span> types, <span style="color:#00a">count</span>(*)
-    <span style="color:#00a">from</span> magic.cards
-<span style="color:#00a">group</span> <span style="color:#00a">by</span> types
-<span style="color:#00a">order</span> <span style="color:#00a">by</span> <span style="color:#099">2</span> <span style="color:#00a">desc</span>
-   <span style="color:#00a">limit</span> <span style="color:#099">3</span>;</code></pre></div><pre><code>    types    │ count 
+(3 rows)</code></pre><div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>jsonb_array_elements_text(<span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;types&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>types,<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.cards<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>types<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#099">2</span><span style="color:#bbb"> </span><span style="color:#00a">desc</span><span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">3</span>;</code></pre></div><pre><code>    types    │ count 
 ═════════════╪═══════
  Creature    │ 15827
  Instant     │  4201
@@ -1158,10 +1157,10 @@ setCode + cardName + cardImageName</p>
 <p>There&rsquo;s no constraint to guarantee that the <em>id</em> is actually unique, in the
 JSON file. Let&rsquo;s have a look. Here&rsquo;s a classic query to find duplicates, and
 we expect no result:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span> <span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;id&#39;</span> <span style="color:#00a">as</span> id, <span style="color:#00a">count</span>(*)
-    <span style="color:#00a">from</span> magic.cards
-<span style="color:#00a">group</span> <span style="color:#00a">by</span> id
-  <span style="color:#00a">having</span> <span style="color:#00a">count</span>(*)&gt;<span style="color:#099">1</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;id&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>id,<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.cards<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>id<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">having</span><span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)&gt;<span style="color:#099">1</span>;</code></pre></div>
 <p>Oh. Oopsie:</p>
 <pre><code>                    id                    │ count 
 ══════════════════════════════════════════╪═══════
@@ -1203,19 +1202,19 @@ user-defined serial number, should be used to identify logical rows.</p>
 </blockquote>
 
 <p>So we can actually clean up this mess:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
-
-<span style="color:#00a">delete</span>
-  <span style="color:#00a">from</span> magic.cards
- <span style="color:#00a">where</span> <span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;id&#39;</span> = <span style="color:#a50">&#39;2ba1628b4169e33a4a6773124bec72fadfb6c983&#39;</span>
-   <span style="color:#00a">and</span> ctid = <span style="color:#a50">&#39;(493,8)&#39;</span>;
-
-<span style="color:#00a">delete</span>
-  <span style="color:#00a">from</span> magic.cards
- <span style="color:#00a">where</span> <span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;id&#39;</span> = <span style="color:#a50">&#39;34bbf9e14b771f9eb4c4c2970ed54b8ff836118a&#39;</span>
-   <span style="color:#00a">and</span> ctid = <span style="color:#a50">&#39;(497,7)&#39;</span>;
-
-<span style="color:#00a">commit</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">delete</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.cards<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;id&#39;</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;2ba1628b4169e33a4a6773124bec72fadfb6c983&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>ctid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;(493,8)&#39;</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">delete</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.cards<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;id&#39;</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;34bbf9e14b771f9eb4c4c2970ed54b8ff836118a&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>ctid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;(497,7)&#39;</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">commit</span>;</code></pre></div>
 <p>You can see in the <em>delete</em> statements above that we use <strong><em>both</em></strong> the
 system column <em>ctid</em> and a user column, here <em>data-&gt;&gt;&lsquo;id&rsquo;</em>. This allows to
 <em>delete</em> nothing should concurrent activity move the data around on disk.
@@ -1235,10 +1234,10 @@ PostgreSQL</a>.</p>
 <p>As we&rsquo;ve seen in a previous section of this document, cards and set&rsquo;s
 boosters rarities are oddly different. Let&rsquo;s have a closer look now. For the
 cards, it&rsquo;s quite simple as each card has a simple <em>rarity</em> key:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span> <span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;rarity&#39;</span> <span style="color:#00a">as</span> rarity, <span style="color:#00a">count</span>(*)
-    <span style="color:#00a">from</span> magic.cards
-<span style="color:#00a">group</span> <span style="color:#00a">by</span> rarity
-<span style="color:#00a">order</span> <span style="color:#00a">by</span> <span style="color:#00a">count</span> <span style="color:#00a">desc</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;rarity&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>rarity,<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.cards<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>rarity<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">count</span><span style="color:#bbb"> </span><span style="color:#00a">desc</span>;</code></pre></div>
 <p>It&rsquo;s interesting to count the cards by <em>rarity</em> classification, because
 that&rsquo;s how it supposed to be classified. We expect <em>Rare</em> cards have a
 lesser count than <em>Common</em> ones, and that&rsquo;s what we have:</p>
@@ -1266,17 +1265,17 @@ strings representing possible types for that booster card.</p>
 
 <p>Here&rsquo;s how to extract all the different possible values from the <em>boosters</em>,
 and it&rsquo;s more complex than we would like it to:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span> <span style="color:#00a">case</span> jsonb_typeof(booster)
-              <span style="color:#00a">when</span> <span style="color:#a50">&#39;array&#39;</span>
-              <span style="color:#00a">then</span> initcap(jsonb_array_elements_text(booster))
-              <span style="color:#00a">else</span> initcap(booster #&gt;&gt; <span style="color:#a50">&#39;{}&#39;</span>)
-          <span style="color:#00a">end</span>
-         <span style="color:#00a">as</span> rarity,
-         <span style="color:#00a">count</span>(*)
-    <span style="color:#00a">from</span> magic.<span style="color:#00a">sets</span>,
-         jsonb_array_elements(<span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;booster&#39;</span>) booster
-<span style="color:#00a">group</span> <span style="color:#00a">by</span> rarity
-<span style="color:#00a">order</span> <span style="color:#00a">by</span> <span style="color:#00a">count</span> <span style="color:#00a">desc</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">case</span><span style="color:#bbb"> </span>jsonb_typeof(booster)<span style="color:#bbb">
+</span><span style="color:#bbb">              </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;array&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">              </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>initcap(jsonb_array_elements_text(booster))<span style="color:#bbb">
+</span><span style="color:#bbb">              </span><span style="color:#00a">else</span><span style="color:#bbb"> </span>initcap(booster<span style="color:#bbb"> </span>#&gt;&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;{}&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">          </span><span style="color:#00a">end</span><span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>rarity,<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">count</span>(*)<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.<span style="color:#00a">sets</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">         </span>jsonb_array_elements(<span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;booster&#39;</span>)<span style="color:#bbb"> </span>booster<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>rarity<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">count</span><span style="color:#bbb"> </span><span style="color:#00a">desc</span>;</code></pre></div>
 <div class="alert warning ">
   <p>This query won&rsquo;t run in PostgreSQL 10, to get the fixed version and know
 why, and understand how to fix it, please read <a href="/blog/2017/10/set-returning-functions-and-postgresql-10/">Set Returning Functions and
@@ -1337,18 +1336,18 @@ and the <em>array contains item</em> operator, spelled <code>@&gt;</code>.</p>
 should be no surprise that PostgreSQL covers arrays of enums too. So our
 choice for representing a booster pack is going to be able to use an array
 of <em>rarity_t</em> elements:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span> <span style="color:#00a">type</span> rarity_t <span style="color:#00a">as</span> enum
- (
-  <span style="color:#a50">&#39;Common&#39;</span>, <span style="color:#a50">&#39;Uncommon&#39;</span>, <span style="color:#a50">&#39;Rare&#39;</span>, <span style="color:#a50">&#39;Land&#39;</span>, <span style="color:#a50">&#39;Mythic Rare&#39;</span>,
-  <span style="color:#a50">&#39;Marketing&#39;</span>, <span style="color:#a50">&#39;Timeshifted Common&#39;</span>, <span style="color:#a50">&#39;Checklist&#39;</span>,
-  <span style="color:#a50">&#39;Foil Mythic Rare&#39;</span>, <span style="color:#a50">&#39;Foil Rare&#39;</span>, <span style="color:#a50">&#39;Foil Common&#39;</span>, <span style="color:#a50">&#39;Foil Uncommon&#39;</span>,
-  <span style="color:#a50">&#39;Timeshifted Uncommon&#39;</span>, <span style="color:#a50">&#39;Double Faced Uncommon&#39;</span>,
-  <span style="color:#a50">&#39;Draft-Matters&#39;</span>, <span style="color:#a50">&#39;Double Faced Rare&#39;</span>,
-  <span style="color:#a50">&#39;Timeshifted Rare&#39;</span>, <span style="color:#a50">&#39;Timeshifted Purple&#39;</span>,
-  <span style="color:#a50">&#39;Double Faced Mythic Rare&#39;</span>, <span style="color:#a50">&#39;Double Faced Common&#39;</span>,
-  <span style="color:#a50">&#39;Foil&#39;</span>, <span style="color:#a50">&#39;Urza Land&#39;</span>, <span style="color:#a50">&#39;Power Nine&#39;</span>, <span style="color:#a50">&#39;Double Faced&#39;</span>,
-  <span style="color:#a50">&#39;Basic Land&#39;</span>, <span style="color:#a50">&#39;Special&#39;</span>
- );</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">type</span><span style="color:#bbb"> </span>rarity_t<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>enum<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#a50">&#39;Common&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Uncommon&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Rare&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Land&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Mythic Rare&#39;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#a50">&#39;Marketing&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Timeshifted Common&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Checklist&#39;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#a50">&#39;Foil Mythic Rare&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Foil Rare&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Foil Common&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Foil Uncommon&#39;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#a50">&#39;Timeshifted Uncommon&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Double Faced Uncommon&#39;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#a50">&#39;Draft-Matters&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Double Faced Rare&#39;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#a50">&#39;Timeshifted Rare&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Timeshifted Purple&#39;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#a50">&#39;Double Faced Mythic Rare&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Double Faced Common&#39;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#a50">&#39;Foil&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Urza Land&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Power Nine&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Double Faced&#39;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#a50">&#39;Basic Land&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Special&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);</code></pre></div>
 <p>With that data type, we now are able to build arrays of <em>rarity_t</em> elements,
 and check if a card&rsquo;s <em>rarity</em> value is contained into such as array.</p>
 
@@ -1372,39 +1371,39 @@ proper relational model.</p>
 
 <p>PostgreSQL makes the translation from the JSON document to a proper schema
 quite easy, as we are going to see now. First, the sets.</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span> <span style="color:#00a">type</span> border_t <span style="color:#00a">as</span> enum
- (
-  <span style="color:#a50">&#39;black&#39;</span>, <span style="color:#a50">&#39;white&#39;</span>, <span style="color:#a50">&#39;silver&#39;</span>
- );
- 
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> settype
- (
-   settypeid  <span style="color:#0aa">serial</span> <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
-   name       <span style="color:#0aa">text</span>,
-   
-   <span style="color:#00a">unique</span>(name)
- );
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> <span style="color:#00a">set</span>
- (
-   setid     <span style="color:#0aa">serial</span> <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
-   mkmid     <span style="color:#0aa">integer</span>,
-   name      <span style="color:#0aa">text</span>,
-   code      <span style="color:#0aa">text</span>,
-   info_code <span style="color:#0aa">text</span>,
-   release   <span style="color:#0aa">date</span>,
-   border    border_t,
-   settypeid <span style="color:#0aa">integer</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">references</span> settype(settypeid)
- );
- 
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> booster
- (
-   setid      <span style="color:#0aa">integer</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">references</span> <span style="color:#00a">set</span>(setid),
-   num        <span style="color:#0aa">integer</span>,
-   rarity     rarity_t[],
-   
-   <span style="color:#00a">primary</span> <span style="color:#00a">key</span>(setid, num)
- );</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">type</span><span style="color:#bbb"> </span>border_t<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>enum<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#a50">&#39;black&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;white&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;silver&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb"> 
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>settype<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>settypeid<span style="color:#bbb">  </span><span style="color:#0aa">serial</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>name<span style="color:#bbb">       </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   
+</span><span style="color:#bbb">   </span><span style="color:#00a">unique</span>(name)<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span><span style="color:#00a">set</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>setid<span style="color:#bbb">     </span><span style="color:#0aa">serial</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>mkmid<span style="color:#bbb">     </span><span style="color:#0aa">integer</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>name<span style="color:#bbb">      </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>code<span style="color:#bbb">      </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>info_code<span style="color:#bbb"> </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>release<span style="color:#bbb">   </span><span style="color:#0aa">date</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>border<span style="color:#bbb">    </span>border_t,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>settypeid<span style="color:#bbb"> </span><span style="color:#0aa">integer</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>settype(settypeid)<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb"> 
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>booster<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>setid<span style="color:#bbb">      </span><span style="color:#0aa">integer</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span><span style="color:#00a">set</span>(setid),<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>num<span style="color:#bbb">        </span><span style="color:#0aa">integer</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>rarity<span style="color:#bbb">     </span>rarity_t[],<span style="color:#bbb">
+</span><span style="color:#bbb">   
+</span><span style="color:#bbb">   </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>(setid,<span style="color:#bbb"> </span>num)<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);</code></pre></div>
 <p>We made some trade-offs here, and didn&rsquo;t follow the <em>Normal Forms</em> rules to
 the letter. The <em>booster</em> is now a proper reference table with as many
 entries as cards, each having a “number”, as in card number 1 is a “Mythic
@@ -1420,76 +1419,76 @@ types have been produced. I think using an <em>enum</em> here is a good trade-of
 <h2 id="cards">Cards</h2>
 
 <p>Now about the cards themselves:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span> <span style="color:#00a">type</span> color_t <span style="color:#00a">as</span> enum
- (
-  <span style="color:#a50">&#39;Black&#39;</span>, <span style="color:#a50">&#39;Blue&#39;</span>, <span style="color:#a50">&#39;Green&#39;</span>, <span style="color:#a50">&#39;Red&#39;</span>, <span style="color:#a50">&#39;White&#39;</span>
- );
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> artist
- (
-   artistid <span style="color:#0aa">serial</span> <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
-   name     <span style="color:#0aa">text</span>,
-   
-   <span style="color:#00a">unique</span>(name)
- );
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> layout
- (
-  layoutid  <span style="color:#0aa">serial</span> <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
-  layout    <span style="color:#0aa">text</span>,
-  
-  <span style="color:#00a">unique</span>(layout)
- );
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> cardtype
- (
-  cardtypeid   <span style="color:#0aa">serial</span> <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
-  cardtype     <span style="color:#0aa">text</span>,
-  
-  <span style="color:#00a">unique</span>(cardtype)
- );
- 
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> subtype
- (
-  subtypeid <span style="color:#0aa">serial</span> <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
-  subtype   <span style="color:#0aa">text</span>,
-
-  <span style="color:#00a">unique</span>(subtype)
-);
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> <span style="color:#00a">type</span>
- (
-  typeid <span style="color:#0aa">serial</span> <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
-  <span style="color:#00a">type</span>   <span style="color:#0aa">text</span>,
-
-  <span style="color:#00a">unique</span>(<span style="color:#00a">type</span>)
- );
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> card
- (
-  id           <span style="color:#0aa">text</span> <span style="color:#00a">primary</span> <span style="color:#00a">key</span>,
-  setid        <span style="color:#0aa">integer</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">references</span> <span style="color:#00a">set</span>(setid),
-  name         <span style="color:#0aa">text</span>,
-  flavor       <span style="color:#0aa">text</span>,
-  description  <span style="color:#0aa">text</span>,
-  image_name   <span style="color:#0aa">text</span>,
-  layoutid     <span style="color:#0aa">integer</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">references</span> layout(layoutid),
-  artistid     <span style="color:#0aa">integer</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">references</span> artist(artistid),
-  cardtypeid   <span style="color:#0aa">integer</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span> <span style="color:#00a">references</span> cardtype(cardtypeid),
-  types        <span style="color:#0aa">integer</span>[],
-  subtypes     <span style="color:#0aa">integer</span>[],
-  colors       color_t[],
-  color_id     color_t[],
-  rarity       rarity_t,
-  mci          <span style="color:#0aa">text</span>,
-  multiverseid <span style="color:#0aa">integer</span>,
-  <span style="color:#0aa">number</span>       <span style="color:#0aa">text</span>,
-  cmc          <span style="color:#0aa">numeric</span>,
-  power        <span style="color:#0aa">text</span>,
-  toughness    <span style="color:#0aa">text</span>,
-  manacost     jsonb,
-  extra        jsonb
- ); </code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">type</span><span style="color:#bbb"> </span>color_t<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>enum<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#a50">&#39;Black&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Blue&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Green&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Red&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;White&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>artist<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>artistid<span style="color:#bbb"> </span><span style="color:#0aa">serial</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   </span>name<span style="color:#bbb">     </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">   
+</span><span style="color:#bbb">   </span><span style="color:#00a">unique</span>(name)<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>layout<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>layoutid<span style="color:#bbb">  </span><span style="color:#0aa">serial</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>layout<span style="color:#bbb">    </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  
+</span><span style="color:#bbb">  </span><span style="color:#00a">unique</span>(layout)<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>cardtype<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>cardtypeid<span style="color:#bbb">   </span><span style="color:#0aa">serial</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>cardtype<span style="color:#bbb">     </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  
+</span><span style="color:#bbb">  </span><span style="color:#00a">unique</span>(cardtype)<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb"> 
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>subtype<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>subtypeid<span style="color:#bbb"> </span><span style="color:#0aa">serial</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>subtype<span style="color:#bbb">   </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">unique</span>(subtype)<span style="color:#bbb">
+</span><span style="color:#bbb"></span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span><span style="color:#00a">type</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>typeid<span style="color:#bbb"> </span><span style="color:#0aa">serial</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">type</span><span style="color:#bbb">   </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">unique</span>(<span style="color:#00a">type</span>)<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>card<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>id<span style="color:#bbb">           </span><span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>setid<span style="color:#bbb">        </span><span style="color:#0aa">integer</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span><span style="color:#00a">set</span>(setid),<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>name<span style="color:#bbb">         </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>flavor<span style="color:#bbb">       </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>description<span style="color:#bbb">  </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>image_name<span style="color:#bbb">   </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>layoutid<span style="color:#bbb">     </span><span style="color:#0aa">integer</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>layout(layoutid),<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>artistid<span style="color:#bbb">     </span><span style="color:#0aa">integer</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>artist(artistid),<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>cardtypeid<span style="color:#bbb">   </span><span style="color:#0aa">integer</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>cardtype(cardtypeid),<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>types<span style="color:#bbb">        </span><span style="color:#0aa">integer</span>[],<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>subtypes<span style="color:#bbb">     </span><span style="color:#0aa">integer</span>[],<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>colors<span style="color:#bbb">       </span>color_t[],<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>color_id<span style="color:#bbb">     </span>color_t[],<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>rarity<span style="color:#bbb">       </span>rarity_t,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>mci<span style="color:#bbb">          </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>multiverseid<span style="color:#bbb"> </span><span style="color:#0aa">integer</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#0aa">number</span><span style="color:#bbb">       </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>cmc<span style="color:#bbb">          </span><span style="color:#0aa">numeric</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>power<span style="color:#bbb">        </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>toughness<span style="color:#bbb">    </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>manacost<span style="color:#bbb">     </span>jsonb,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>extra<span style="color:#bbb">        </span>jsonb<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb"> </span></code></pre></div>
 <p>This isn&rsquo;t a fully normalized schema. Rather than going to full distance and
 having association tables between a <em>color</em> reference table and the <em>card</em>
 table, we chose to declare the color as an enumerate data type. That&rsquo;s
@@ -1516,31 +1515,31 @@ populate it? Well, in SQL of course!</p>
 <h2 id="sets-1">Sets</h2>
 
 <p>It begins with the sets and their type:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span> <span style="color:#00a">into</span> settype(name)
-     <span style="color:#00a">select</span> <span style="color:#00a">distinct</span>(<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;type&#39;</span>)
-       <span style="color:#00a">from</span> magic.<span style="color:#00a">sets</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>settype(name)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">distinct</span>(<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;type&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.<span style="color:#00a">sets</span>;</code></pre></div>
 <p>And we have our 17 types of sets registered. On to the sets themselves:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span> <span style="color:#00a">into</span> <span style="color:#00a">set</span>(mkmid, name, code, info_code,
-                release, border, settypeid)
-     <span style="color:#00a">select</span> (<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;mkm_id&#39;</span>)::<span style="color:#0aa">int</span>,
-            <span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;name&#39;</span>,
-            <span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;code&#39;</span>,
-            <span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;magicCardsInfoCode&#39;</span>,
-            (<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;releaseDate&#39;</span>)::<span style="color:#0aa">date</span>,
-            (<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;border&#39;</span>)::border_t,
-            settypeid
-       <span style="color:#00a">from</span> magic.<span style="color:#00a">sets</span>
-            <span style="color:#00a">join</span> settype
-              <span style="color:#00a">on</span> <span style="color:#00a">sets</span>.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;type&#39;</span> = settype.name;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span><span style="color:#00a">set</span>(mkmid,<span style="color:#bbb"> </span>name,<span style="color:#bbb"> </span>code,<span style="color:#bbb"> </span>info_code,<span style="color:#bbb">
+</span><span style="color:#bbb">                </span>release,<span style="color:#bbb"> </span>border,<span style="color:#bbb"> </span>settypeid)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>(<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;mkm_id&#39;</span>)::<span style="color:#0aa">int</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;name&#39;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;code&#39;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;magicCardsInfoCode&#39;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;releaseDate&#39;</span>)::<span style="color:#0aa">date</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;border&#39;</span>)::border_t,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>settypeid<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.<span style="color:#00a">sets</span><span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>settype<span style="color:#bbb">
+</span><span style="color:#bbb">              </span><span style="color:#00a">on</span><span style="color:#bbb"> </span><span style="color:#00a">sets</span>.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;type&#39;</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>settype.name;</code></pre></div>
 <p>As you can see the PostgreSQL json operator <code>-&gt;&gt;</code> extract the data as <em>text</em>
 and we need to convert those text entries to their target data types at
 times. It&rsquo;s easy to do, and ensures we know what we&rsquo;re dealing with.</p>
 
 <p>And now we have a clean data set for the sets:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> setid, mkmid, <span style="color:#00a">set</span>.name, code, release, settype.name
-  <span style="color:#00a">from</span> <span style="color:#00a">set</span>
-       <span style="color:#00a">join</span> settype <span style="color:#00a">using</span>(settypeid)
- <span style="color:#00a">limit</span> <span style="color:#099">10</span>;</code></pre></div><pre><code> setid │ mkmid │         name          │ code │  release   │   name    
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span>setid,<span style="color:#bbb"> </span>mkmid,<span style="color:#bbb"> </span><span style="color:#00a">set</span>.name,<span style="color:#bbb"> </span>code,<span style="color:#bbb"> </span>release,<span style="color:#bbb"> </span>settype.name<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span><span style="color:#00a">set</span><span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>settype<span style="color:#bbb"> </span><span style="color:#00a">using</span>(settypeid)<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">10</span>;</code></pre></div><pre><code> setid │ mkmid │         name          │ code │  release   │   name    
 ═══════╪═══════╪═══════════════════════╪══════╪════════════╪═══════════
      1 │    74 │ Tenth Edition         │ 10E  │ 2007-07-13 │ core
      2 │     3 │ Unlimited Edition     │ 2ED  │ 1993-12-01 │ core
@@ -1557,22 +1556,22 @@ times. It&rsquo;s easy to do, and ensures we know what we&rsquo;re dealing with.
 
 <p>Our <em>set</em> table is missing the <em>booster</em> information, which is now handled
 separately. It is now time for us to handle it.</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span> <span style="color:#00a">into</span> booster(setid, num, rarity)
-     <span style="color:#00a">select</span> setid,
-            row_number() over(partition <span style="color:#00a">by</span> setid) <span style="color:#00a">as</span> num,
-            <span style="color:#00a">case</span> jsonb_typeof(booster)
-                 <span style="color:#00a">when</span> <span style="color:#a50">&#39;array&#39;</span>
-                 <span style="color:#00a">then</span> (
-                       <span style="color:#00a">select</span> array_agg(initcap(rarity)::rarity_t)
-                         <span style="color:#00a">from</span> jsonb_array_elements_text(booster) <span style="color:#00a">as</span> rarity
-                      )
-                 <span style="color:#00a">else</span> <span style="color:#0aa">array</span>[initcap(booster #&gt;&gt; <span style="color:#a50">&#39;{}&#39;</span>)::rarity_t]
-             <span style="color:#00a">end</span>
-            <span style="color:#00a">as</span> rarity
-       <span style="color:#00a">from</span> magic.<span style="color:#00a">sets</span>
-            <span style="color:#00a">join</span> <span style="color:#00a">set</span> <span style="color:#00a">on</span> <span style="color:#00a">set</span>.code = <span style="color:#00a">sets</span>.name,
-            <span style="color:#00a">lateral</span> jsonb_array_elements(<span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;booster&#39;</span>) booster
-   <span style="color:#00a">order</span> <span style="color:#00a">by</span> setid;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>booster(setid,<span style="color:#bbb"> </span>num,<span style="color:#bbb"> </span>rarity)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>setid,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>row_number()<span style="color:#bbb"> </span>over(partition<span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>setid)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>num,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">case</span><span style="color:#bbb"> </span>jsonb_typeof(booster)<span style="color:#bbb">
+</span><span style="color:#bbb">                 </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;array&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">                 </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">                       </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>array_agg(initcap(rarity)::rarity_t)<span style="color:#bbb">
+</span><span style="color:#bbb">                         </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>jsonb_array_elements_text(booster)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>rarity<span style="color:#bbb">
+</span><span style="color:#bbb">                      </span>)<span style="color:#bbb">
+</span><span style="color:#bbb">                 </span><span style="color:#00a">else</span><span style="color:#bbb"> </span><span style="color:#0aa">array</span>[initcap(booster<span style="color:#bbb"> </span>#&gt;&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;{}&#39;</span>)::rarity_t]<span style="color:#bbb">
+</span><span style="color:#bbb">             </span><span style="color:#00a">end</span><span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>rarity<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.<span style="color:#00a">sets</span><span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">join</span><span style="color:#bbb"> </span><span style="color:#00a">set</span><span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span><span style="color:#00a">set</span>.code<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">sets</span>.name,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">lateral</span><span style="color:#bbb"> </span>jsonb_array_elements(<span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;booster&#39;</span>)<span style="color:#bbb"> </span>booster<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>setid;</code></pre></div>
 <p>In this query, we process the booster array elements in the same way as
 before, depending on if they are an array again (and then fetch each array
 element as text, capitalize this text using the <em>initcap</em> function and
@@ -1590,11 +1589,11 @@ array its index position, and keep that in our <em>booster</em> target table.</p
 configurations and randomly generated booster instances in the right order.</p>
 
 <p>We may have a look at one particular booster definition, the first one ever:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> mkmid, release, <span style="color:#00a">set</span>.name,
-       booster.num, booster.rarity
-  <span style="color:#00a">from</span> booster
-       <span style="color:#00a">join</span> <span style="color:#00a">set</span> <span style="color:#00a">using</span>(setid)
- <span style="color:#00a">where</span> <span style="color:#00a">set</span>.code = <span style="color:#a50">&#39;LEA&#39;</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span>mkmid,<span style="color:#bbb"> </span>release,<span style="color:#bbb"> </span><span style="color:#00a">set</span>.name,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span>booster.num,<span style="color:#bbb"> </span>booster.rarity<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>booster<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span><span style="color:#00a">set</span><span style="color:#bbb"> </span><span style="color:#00a">using</span>(setid)<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#00a">set</span>.code<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;LEA&#39;</span>;</code></pre></div>
 <p>And here&rsquo;s what the booster for the <em>Limiter Edition Alpha</em> looks like in
 our setup:</p>
 <pre><code> mkmid │  release   │         name          │ num │   rarity   
@@ -1619,20 +1618,20 @@ our setup:</p>
 information about them. Not every set type has a booster attached, and we
 have boosters with different number of cards in them. Is there something to
 learn about that?</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span> stats <span style="color:#00a">as</span>
-(
-      <span style="color:#00a">select</span> settype.name <span style="color:#00a">as</span> <span style="color:#00a">type</span>,
-             <span style="color:#00a">count</span>(booster.num) <span style="color:#00a">as</span> cards
-        <span style="color:#00a">from</span> <span style="color:#00a">set</span>
-             <span style="color:#00a">join</span> settype <span style="color:#00a">using</span>(settypeid)
-             <span style="color:#00a">left</span> <span style="color:#00a">join</span> booster <span style="color:#00a">using</span>(setid)
-    <span style="color:#00a">group</span> <span style="color:#00a">by</span> setid, settype.name
-      <span style="color:#00a">having</span> <span style="color:#00a">count</span>(booster.num) &gt; <span style="color:#099">0</span>
-)
-  <span style="color:#00a">select</span> <span style="color:#00a">type</span>, cards, <span style="color:#00a">count</span>(*)
-    <span style="color:#00a">from</span> stats
-<span style="color:#00a">group</span> <span style="color:#00a">by</span> <span style="color:#00a">type</span>, cards
-<span style="color:#00a">order</span> <span style="color:#00a">by</span> <span style="color:#00a">type</span>, cards <span style="color:#00a">desc</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span><span style="color:#bbb"> </span>stats<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span>(<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>settype.name<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">type</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">             </span><span style="color:#00a">count</span>(booster.num)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>cards<span style="color:#bbb">
+</span><span style="color:#bbb">        </span><span style="color:#00a">from</span><span style="color:#bbb"> </span><span style="color:#00a">set</span><span style="color:#bbb">
+</span><span style="color:#bbb">             </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>settype<span style="color:#bbb"> </span><span style="color:#00a">using</span>(settypeid)<span style="color:#bbb">
+</span><span style="color:#bbb">             </span><span style="color:#00a">left</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>booster<span style="color:#bbb"> </span><span style="color:#00a">using</span>(setid)<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>setid,<span style="color:#bbb"> </span>settype.name<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">having</span><span style="color:#bbb"> </span><span style="color:#00a">count</span>(booster.num)<span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span>)<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">type</span>,<span style="color:#bbb"> </span>cards,<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>stats<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">type</span>,<span style="color:#bbb"> </span>cards<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">type</span>,<span style="color:#bbb"> </span>cards<span style="color:#bbb"> </span><span style="color:#00a">desc</span>;</code></pre></div>
 <p>In this very classic SQL query we see a couple for join operations and the
 use of the <em>having</em> clause to select only those groups with at least a card
 in their attached booster, as in the expression <em>count(booster.num) &gt; 0</em>.
@@ -1679,93 +1678,93 @@ article.</p>
 <h2 id="cards-1">Cards</h2>
 
 <p>On to the artists, with a easy query:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span> <span style="color:#00a">into</span> artist(name)
-     <span style="color:#00a">select</span> <span style="color:#00a">distinct</span>(<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;artist&#39;</span>)
-       <span style="color:#00a">from</span> magic.cards;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>artist(name)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">distinct</span>(<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;artist&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.cards;</code></pre></div>
 <p>And we have 663 different artists. Now, the layouts:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span> <span style="color:#00a">into</span> layout(layout)
-     <span style="color:#00a">select</span> <span style="color:#00a">distinct</span>(<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;layout&#39;</span>)
-       <span style="color:#00a">from</span> magic.cards;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>layout(layout)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">distinct</span>(<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;layout&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.cards;</code></pre></div>
 <p>And we have only 12 different layouts used in our cards collection. Now, the
 rarity:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span> <span style="color:#00a">into</span> rarity(rarity)
-     <span style="color:#00a">select</span> <span style="color:#00a">distinct</span>(<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;rarity&#39;</span>)
-       <span style="color:#00a">from</span> magic.cards;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>rarity(rarity)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">distinct</span>(<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;rarity&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.cards;</code></pre></div>
 <p>And we have only 6 different rarities in all our cards collection. Only 6.
 For 34207 cards. That&rsquo;s a lot of repetition in there. Now, the card types:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span> <span style="color:#00a">into</span> cardtype(cardtype)
-     <span style="color:#00a">select</span> <span style="color:#00a">distinct</span>(<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;type&#39;</span>)
-       <span style="color:#00a">from</span> magic.cards;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>cardtype(cardtype)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">distinct</span>(<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;type&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.cards;</code></pre></div>
 <p>And we have 1541 card types to work with. What about the types and subtypes,
 which are JSON arrays this time? It might be more complex… but thanks to
 PostgreSQL advanced support for JSON in SQL, not that much:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span> <span style="color:#00a">into</span> subtype(subtype)
-     <span style="color:#00a">select</span> <span style="color:#00a">distinct</span>(jsonb_array_elements_text(<span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;subtypes&#39;</span>))
-       <span style="color:#00a">from</span> magic.cards;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>subtype(subtype)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">distinct</span>(jsonb_array_elements_text(<span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;subtypes&#39;</span>))<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.cards;</code></pre></div>
 <p>And we have now 349 subtypes registered. The types are going to have about
 the same level of complexity of course:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span> <span style="color:#00a">into</span> <span style="color:#00a">type</span>(<span style="color:#00a">type</span>)
-     <span style="color:#00a">select</span> <span style="color:#00a">distinct</span>(jsonb_array_elements_text(<span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;types&#39;</span>))
-       <span style="color:#00a">from</span> magic.cards;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span><span style="color:#00a">type</span>(<span style="color:#00a">type</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">distinct</span>(jsonb_array_elements_text(<span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;types&#39;</span>))<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.cards;</code></pre></div>
 <p>And that&rsquo;s 20 types for our 34207 cards. We&rsquo;re left with the main table now:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span> <span style="color:#00a">into</span> card(id, setid, name, flavor, description, image_name,
-                 layoutid, artistid, cardtypeid,
-                 types, subtypes, colors, color_id,
-                 rarity, mci, multiverseid, <span style="color:#0aa">number</span>,
-                 cmc, power, toughness, manacost, extra)
-     <span style="color:#00a">select</span> <span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;id&#39;</span>,
-            <span style="color:#00a">set</span>.setid,
-            <span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;name&#39;</span>,
-            <span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;flavour&#39;</span>,
-            <span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;text&#39;</span>,
-            <span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;imageName&#39;</span>,
-            layoutid,
-            artistid,
-            cardtypeid,
-            (
-             <span style="color:#00a">select</span> array_agg(typeid <span style="color:#00a">order</span> <span style="color:#00a">by</span> typeid)
-               <span style="color:#00a">from</span> <span style="color:#00a">type</span>
-              <span style="color:#00a">where</span> <span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;types&#39;</span> @&gt; format(<span style="color:#a50">&#39;[&#34;%s&#34;]&#39;</span>, <span style="color:#00a">type</span>)::jsonb
-            ),
-            (
-             <span style="color:#00a">select</span> array_agg(subtypeid <span style="color:#00a">order</span> <span style="color:#00a">by</span> subtypeid)
-               <span style="color:#00a">from</span> subtype
-              <span style="color:#00a">where</span> <span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;subtypes&#39;</span> @&gt; format(<span style="color:#a50">&#39;[&#34;%s&#34;]&#39;</span>, subtype)::jsonb
-            ),
-            (
-             <span style="color:#00a">select</span> array_agg(color::color_t <span style="color:#00a">order</span> <span style="color:#00a">by</span> color::color_t)
-               <span style="color:#00a">from</span> jsonb_array_elements_text(<span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;colors&#39;</span>) <span style="color:#00a">as</span> color
-            ),
-            (
-             <span style="color:#00a">select</span> array_agg(<span style="color:#00a">case</span> <span style="color:#00a">when</span> color = <span style="color:#a50">&#39;B&#39;</span> <span style="color:#00a">then</span> <span style="color:#a50">&#39;Black&#39;</span>::color_t
-                                   <span style="color:#00a">when</span> color = <span style="color:#a50">&#39;U&#39;</span> <span style="color:#00a">then</span> <span style="color:#a50">&#39;Blue&#39;</span>::color_t
-                                   <span style="color:#00a">when</span> color = <span style="color:#a50">&#39;G&#39;</span> <span style="color:#00a">then</span> <span style="color:#a50">&#39;Green&#39;</span>::color_t
-                                   <span style="color:#00a">when</span> color = <span style="color:#a50">&#39;R&#39;</span> <span style="color:#00a">then</span> <span style="color:#a50">&#39;Red&#39;</span>::color_t
-                                   <span style="color:#00a">when</span> color = <span style="color:#a50">&#39;W&#39;</span> <span style="color:#00a">then</span> <span style="color:#a50">&#39;White&#39;</span>::color_t
-                               <span style="color:#00a">end</span>
-                             )
-               <span style="color:#00a">from</span> jsonb_array_elements_text(<span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;colorIdentity&#39;</span>) <span style="color:#00a">as</span> color
-            ),
-            (<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;rarity&#39;</span>)::rarity_t,
-            <span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;mciNumber&#39;</span>,
-            (<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;multiverseid&#39;</span>)::<span style="color:#0aa">integer</span>,
-            <span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;number&#39;</span>,
-            (<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;cmc&#39;</span>)::<span style="color:#0aa">numeric</span>,
-            <span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;power&#39;</span>,
-            <span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;toughness&#39;</span>,
-            <span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;manaCost&#39;</span>,
-
-            <span style="color:#00a">data</span> - <span style="color:#a50">&#39;id&#39;</span> - <span style="color:#a50">&#39;name&#39;</span> - <span style="color:#a50">&#39;flavor&#39;</span> - <span style="color:#a50">&#39;text&#39;</span> - <span style="color:#a50">&#39;imageName&#39;</span>
-                 - <span style="color:#a50">&#39;layout&#39;</span> - <span style="color:#a50">&#39;artist&#39;</span> - <span style="color:#a50">&#39;type&#39;</span> - <span style="color:#a50">&#39;rarity&#39;</span>
-                 - <span style="color:#a50">&#39;types&#39;</span> - <span style="color:#a50">&#39;subtypes&#39;</span> - <span style="color:#a50">&#39;colors&#39;</span> - <span style="color:#a50">&#39;colorIdentity&#39;</span>
-                 - <span style="color:#a50">&#39;mciNumber&#39;</span> - <span style="color:#a50">&#39;multiverseid&#39;</span> - <span style="color:#a50">&#39;number&#39;</span>
-                 - <span style="color:#a50">&#39;cmc&#39;</span> - <span style="color:#a50">&#39;power&#39;</span> - <span style="color:#a50">&#39;toughness&#39;</span> - <span style="color:#a50">&#39;manaCost&#39;</span>
-            
-       <span style="color:#00a">from</span> magic.cards
-            <span style="color:#00a">join</span> <span style="color:#00a">set</span> <span style="color:#00a">on</span> <span style="color:#00a">set</span>.code = cards.<span style="color:#00a">set</span>
-            <span style="color:#00a">join</span> layout <span style="color:#00a">on</span> layout.layout = cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;layout&#39;</span>
-            <span style="color:#00a">join</span> artist <span style="color:#00a">on</span> artist.name = cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;artist&#39;</span>
-            <span style="color:#00a">join</span> cardtype <span style="color:#00a">on</span> cardtype = cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;type&#39;</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>card(id,<span style="color:#bbb"> </span>setid,<span style="color:#bbb"> </span>name,<span style="color:#bbb"> </span>flavor,<span style="color:#bbb"> </span>description,<span style="color:#bbb"> </span>image_name,<span style="color:#bbb">
+</span><span style="color:#bbb">                 </span>layoutid,<span style="color:#bbb"> </span>artistid,<span style="color:#bbb"> </span>cardtypeid,<span style="color:#bbb">
+</span><span style="color:#bbb">                 </span>types,<span style="color:#bbb"> </span>subtypes,<span style="color:#bbb"> </span>colors,<span style="color:#bbb"> </span>color_id,<span style="color:#bbb">
+</span><span style="color:#bbb">                 </span>rarity,<span style="color:#bbb"> </span>mci,<span style="color:#bbb"> </span>multiverseid,<span style="color:#bbb"> </span><span style="color:#0aa">number</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">                 </span>cmc,<span style="color:#bbb"> </span>power,<span style="color:#bbb"> </span>toughness,<span style="color:#bbb"> </span>manacost,<span style="color:#bbb"> </span>extra)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;id&#39;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">set</span>.setid,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;name&#39;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;flavour&#39;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;text&#39;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;imageName&#39;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>layoutid,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>artistid,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>cardtypeid,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">             </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>array_agg(typeid<span style="color:#bbb"> </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>typeid)<span style="color:#bbb">
+</span><span style="color:#bbb">               </span><span style="color:#00a">from</span><span style="color:#bbb"> </span><span style="color:#00a">type</span><span style="color:#bbb">
+</span><span style="color:#bbb">              </span><span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;types&#39;</span><span style="color:#bbb"> </span>@&gt;<span style="color:#bbb"> </span>format(<span style="color:#a50">&#39;[&#34;%s&#34;]&#39;</span>,<span style="color:#bbb"> </span><span style="color:#00a">type</span>)::jsonb<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">             </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>array_agg(subtypeid<span style="color:#bbb"> </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>subtypeid)<span style="color:#bbb">
+</span><span style="color:#bbb">               </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>subtype<span style="color:#bbb">
+</span><span style="color:#bbb">              </span><span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;subtypes&#39;</span><span style="color:#bbb"> </span>@&gt;<span style="color:#bbb"> </span>format(<span style="color:#a50">&#39;[&#34;%s&#34;]&#39;</span>,<span style="color:#bbb"> </span>subtype)::jsonb<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">             </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>array_agg(color::color_t<span style="color:#bbb"> </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>color::color_t)<span style="color:#bbb">
+</span><span style="color:#bbb">               </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>jsonb_array_elements_text(<span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;colors&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>color<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">             </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>array_agg(<span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span>color<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;B&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;Black&#39;</span>::color_t<span style="color:#bbb">
+</span><span style="color:#bbb">                                   </span><span style="color:#00a">when</span><span style="color:#bbb"> </span>color<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;U&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;Blue&#39;</span>::color_t<span style="color:#bbb">
+</span><span style="color:#bbb">                                   </span><span style="color:#00a">when</span><span style="color:#bbb"> </span>color<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;G&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;Green&#39;</span>::color_t<span style="color:#bbb">
+</span><span style="color:#bbb">                                   </span><span style="color:#00a">when</span><span style="color:#bbb"> </span>color<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;R&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;Red&#39;</span>::color_t<span style="color:#bbb">
+</span><span style="color:#bbb">                                   </span><span style="color:#00a">when</span><span style="color:#bbb"> </span>color<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;W&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;White&#39;</span>::color_t<span style="color:#bbb">
+</span><span style="color:#bbb">                               </span><span style="color:#00a">end</span><span style="color:#bbb">
+</span><span style="color:#bbb">                             </span>)<span style="color:#bbb">
+</span><span style="color:#bbb">               </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>jsonb_array_elements_text(<span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;colorIdentity&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>color<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>),<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;rarity&#39;</span>)::rarity_t,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;mciNumber&#39;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;multiverseid&#39;</span>)::<span style="color:#0aa">integer</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;number&#39;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>(<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;cmc&#39;</span>)::<span style="color:#0aa">numeric</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;power&#39;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;toughness&#39;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;manaCost&#39;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">data</span><span style="color:#bbb"> </span>-<span style="color:#bbb"> </span><span style="color:#a50">&#39;id&#39;</span><span style="color:#bbb"> </span>-<span style="color:#bbb"> </span><span style="color:#a50">&#39;name&#39;</span><span style="color:#bbb"> </span>-<span style="color:#bbb"> </span><span style="color:#a50">&#39;flavor&#39;</span><span style="color:#bbb"> </span>-<span style="color:#bbb"> </span><span style="color:#a50">&#39;text&#39;</span><span style="color:#bbb"> </span>-<span style="color:#bbb"> </span><span style="color:#a50">&#39;imageName&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">                 </span>-<span style="color:#bbb"> </span><span style="color:#a50">&#39;layout&#39;</span><span style="color:#bbb"> </span>-<span style="color:#bbb"> </span><span style="color:#a50">&#39;artist&#39;</span><span style="color:#bbb"> </span>-<span style="color:#bbb"> </span><span style="color:#a50">&#39;type&#39;</span><span style="color:#bbb"> </span>-<span style="color:#bbb"> </span><span style="color:#a50">&#39;rarity&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">                 </span>-<span style="color:#bbb"> </span><span style="color:#a50">&#39;types&#39;</span><span style="color:#bbb"> </span>-<span style="color:#bbb"> </span><span style="color:#a50">&#39;subtypes&#39;</span><span style="color:#bbb"> </span>-<span style="color:#bbb"> </span><span style="color:#a50">&#39;colors&#39;</span><span style="color:#bbb"> </span>-<span style="color:#bbb"> </span><span style="color:#a50">&#39;colorIdentity&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">                 </span>-<span style="color:#bbb"> </span><span style="color:#a50">&#39;mciNumber&#39;</span><span style="color:#bbb"> </span>-<span style="color:#bbb"> </span><span style="color:#a50">&#39;multiverseid&#39;</span><span style="color:#bbb"> </span>-<span style="color:#bbb"> </span><span style="color:#a50">&#39;number&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">                 </span>-<span style="color:#bbb"> </span><span style="color:#a50">&#39;cmc&#39;</span><span style="color:#bbb"> </span>-<span style="color:#bbb"> </span><span style="color:#a50">&#39;power&#39;</span><span style="color:#bbb"> </span>-<span style="color:#bbb"> </span><span style="color:#a50">&#39;toughness&#39;</span><span style="color:#bbb"> </span>-<span style="color:#bbb"> </span><span style="color:#a50">&#39;manaCost&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">            
+</span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.cards<span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">join</span><span style="color:#bbb"> </span><span style="color:#00a">set</span><span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span><span style="color:#00a">set</span>.code<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>cards.<span style="color:#00a">set</span><span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>layout<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>layout.layout<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;layout&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>artist<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>artist.name<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;artist&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>cardtype<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>cardtype<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;type&#39;</span>;</code></pre></div>
 <p>And our 34205 cards are now loaded into a normalized (enough) schema, with
 some guarantees.</p>
 
@@ -1786,17 +1785,17 @@ because they may contain non numeric entries. We find cards with the
 
 <p>As I really can&rsquo;t resists those nice bar-diagram-in-the-console tricks,
 here&rsquo;s the repartition of cards by their types:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span> <span style="color:#00a">type</span>, <span style="color:#00a">count</span>(*),
-         repeat(<span style="color:#a50">&#39;■&#39;</span>, (   <span style="color:#099">100</span>.<span style="color:#099">0</span> 
-                       * <span style="color:#00a">count</span>(*)
-                       / <span style="color:#00a">sum</span>(<span style="color:#00a">count</span>(*)) over ()
-                     )::<span style="color:#0aa">int</span>
-               ) <span style="color:#00a">as</span> pct
-    <span style="color:#00a">from</span> <span style="color:#00a">type</span>
-         <span style="color:#00a">left</span> <span style="color:#00a">join</span> card
-                <span style="color:#00a">on</span> card.types @&gt; <span style="color:#0aa">array</span>[typeid]
-<span style="color:#00a">group</span> <span style="color:#00a">by</span> <span style="color:#00a">type</span>
-<span style="color:#00a">order</span> <span style="color:#00a">by</span> <span style="color:#00a">type</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">type</span>,<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*),<span style="color:#bbb">
+</span><span style="color:#bbb">         </span>repeat(<span style="color:#a50">&#39;■&#39;</span>,<span style="color:#bbb"> </span>(<span style="color:#bbb">   </span><span style="color:#099">100</span>.<span style="color:#099">0</span><span style="color:#bbb"> 
+</span><span style="color:#bbb">                       </span>*<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb">
+</span><span style="color:#bbb">                       </span>/<span style="color:#bbb"> </span><span style="color:#00a">sum</span>(<span style="color:#00a">count</span>(*))<span style="color:#bbb"> </span>over<span style="color:#bbb"> </span>()<span style="color:#bbb">
+</span><span style="color:#bbb">                     </span>)::<span style="color:#0aa">int</span><span style="color:#bbb">
+</span><span style="color:#bbb">               </span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>pct<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span><span style="color:#00a">type</span><span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">left</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>card<span style="color:#bbb">
+</span><span style="color:#bbb">                </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>card.types<span style="color:#bbb"> </span>@&gt;<span style="color:#bbb"> </span><span style="color:#0aa">array</span>[typeid]<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">type</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">type</span>;</code></pre></div>
 <p>The query shows how to join the <em>type</em> and the <em>card</em> table when a single
 card references several types from a single column, an array of types. We do
 that with the PostgreSQL array operator <code>@&gt;</code> that reads <em>contains</em> and works
@@ -1827,21 +1826,21 @@ against an array on each side. And here&rsquo;s the console bar diagram:</p>
 <p>The <em>“You&rsquo;ll”</em> type reads quite strange, almost like a bug. So let&rsquo;s try and
 see where this comes from, by querying the original data set, before
 normalization:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> <span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;name&#39;</span> <span style="color:#00a">as</span> name, <span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;types&#39;</span> <span style="color:#00a">as</span> types
-  <span style="color:#00a">from</span> magic.cards
- <span style="color:#00a">where</span> <span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;types&#39;</span> @&gt; <span style="color:#a50">&#39;[&#34;You&#39;&#39;ll&#34;]&#39;</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;name&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>name,<span style="color:#bbb"> </span><span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;types&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>types<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.cards<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;types&#39;</span><span style="color:#bbb"> </span>@&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;[&#34;You&#39;&#39;ll&#34;]&#39;</span>;</code></pre></div>
 <p>And here&rsquo;s what we get:</p>
 <pre><code>─[ RECORD 1 ]────────────────────────────────────────────
 name  │ B.F.M. (Big Furry Monster)
 types │ [&#34;Scariest&#34;, &#34;Creature&#34;, &#34;You&#39;ll&#34;, &#34;Ever&#34;, &#34;See&#34;]</code></pre>
 <p>Well, it might be that people encoding the JSON data set had good reasons to
 turn that sentence into card types, or it might be a bug.</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span> card.name, <span style="color:#00a">count</span>(<span style="color:#00a">distinct</span> card.id)
-    <span style="color:#00a">from</span> card
-         <span style="color:#00a">join</span> <span style="color:#00a">type</span>
-           <span style="color:#00a">on</span> <span style="color:#00a">type</span>.typeid = <span style="color:#00a">any</span> (card.types)
-          <span style="color:#00a">and</span> <span style="color:#00a">type</span>.<span style="color:#00a">type</span> = <span style="color:#00a">any</span>(<span style="color:#a50">&#39;{&#34;Scariest&#34;, &#34;You&#39;&#39;ll&#34;, &#34;Ever&#34;, &#34;See&#34;}&#39;</span>::<span style="color:#0aa">text</span>[])
-<span style="color:#00a">group</span> <span style="color:#00a">by</span> card.id;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>card.name,<span style="color:#bbb"> </span><span style="color:#00a">count</span>(<span style="color:#00a">distinct</span><span style="color:#bbb"> </span>card.id)<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>card<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">join</span><span style="color:#bbb"> </span><span style="color:#00a">type</span><span style="color:#bbb">
+</span><span style="color:#bbb">           </span><span style="color:#00a">on</span><span style="color:#bbb"> </span><span style="color:#00a">type</span>.typeid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">any</span><span style="color:#bbb"> </span>(card.types)<span style="color:#bbb">
+</span><span style="color:#bbb">          </span><span style="color:#00a">and</span><span style="color:#bbb"> </span><span style="color:#00a">type</span>.<span style="color:#00a">type</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">any</span>(<span style="color:#a50">&#39;{&#34;Scariest&#34;, &#34;You&#39;&#39;ll&#34;, &#34;Ever&#34;, &#34;See&#34;}&#39;</span>::<span style="color:#0aa">text</span>[])<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>card.id;</code></pre></div>
 <p>In this query we search for all the cards that have one of the words as a
 type, with <em>card.types</em> being an array of <em>type.typeid</em> integers. And of
 course we omit the <em>Creature</em> word from the sentence, as we know that&rsquo;s a
@@ -1856,63 +1855,63 @@ pretty common card type to find around. And here we go:</p>
 
 <p>For comparing purposes, let&rsquo;s place the previous query against the JSON
 encoded data set first:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#f00;background-color:#faa">\</span><span style="color:#00a">set</span> collection <span style="color:#a50">&#39;LEA&#39;</span>
-
-<span style="color:#00a">with</span> booster <span style="color:#00a">as</span>
-(
-    <span style="color:#00a">select</span> name,
-           initcap(
-             jsonb_array_elements_text(<span style="color:#00a">sets</span>.<span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;booster&#39;</span>)
-           ) <span style="color:#00a">as</span> rarity,
-           <span style="color:#00a">count</span>(*)
-      <span style="color:#00a">from</span> magic.<span style="color:#00a">sets</span>
-     <span style="color:#00a">where</span> name = :<span style="color:#a50">&#39;collection&#39;</span>
-  <span style="color:#00a">group</span> <span style="color:#00a">by</span> name, rarity
-)
-   <span style="color:#00a">select</span> cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;rarity&#39;</span> <span style="color:#00a">as</span> rarity,
-          cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;name&#39;</span> <span style="color:#00a">as</span> name,
-          cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;manaCost&#39;</span> <span style="color:#00a">as</span> manacost,
-          cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;type&#39;</span> <span style="color:#00a">as</span> <span style="color:#00a">type</span>
-     <span style="color:#00a">from</span> booster
-          <span style="color:#00a">left</span> <span style="color:#00a">join</span> <span style="color:#00a">lateral</span>
-          (
-            <span style="color:#00a">select</span> <span style="color:#00a">data</span>
-              <span style="color:#00a">from</span> magic.cards
-             <span style="color:#00a">where</span> cards.<span style="color:#00a">set</span> = booster.name
-               <span style="color:#00a">and</span> cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;rarity&#39;</span> = booster.rarity
-          <span style="color:#00a">order</span> <span style="color:#00a">by</span> random()
-             <span style="color:#00a">limit</span> booster.<span style="color:#00a">count</span>
-          )
-          <span style="color:#00a">as</span> cards
-          <span style="color:#00a">on</span> <span style="color:#00a">true</span>
-  <span style="color:#00a">order</span> <span style="color:#00a">by</span> cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;rarity&#39;</span> &lt;&gt; <span style="color:#a50">&#39;Uncommon&#39;</span>,
-           cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;rarity&#39;</span> &lt;&gt; <span style="color:#a50">&#39;Common&#39;</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#f00;background-color:#faa">\</span><span style="color:#00a">set</span><span style="color:#bbb"> </span>collection<span style="color:#bbb"> </span><span style="color:#a50">&#39;LEA&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">with</span><span style="color:#bbb"> </span>booster<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span>(<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>name,<span style="color:#bbb">
+</span><span style="color:#bbb">           </span>initcap(<span style="color:#bbb">
+</span><span style="color:#bbb">             </span>jsonb_array_elements_text(<span style="color:#00a">sets</span>.<span style="color:#00a">data</span>-&gt;<span style="color:#a50">&#39;booster&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">           </span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>rarity,<span style="color:#bbb">
+</span><span style="color:#bbb">           </span><span style="color:#00a">count</span>(*)<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.<span style="color:#00a">sets</span><span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>name<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>:<span style="color:#a50">&#39;collection&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>name,<span style="color:#bbb"> </span>rarity<span style="color:#bbb">
+</span><span style="color:#bbb"></span>)<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;rarity&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>rarity,<span style="color:#bbb">
+</span><span style="color:#bbb">          </span>cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;name&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>name,<span style="color:#bbb">
+</span><span style="color:#bbb">          </span>cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;manaCost&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>manacost,<span style="color:#bbb">
+</span><span style="color:#bbb">          </span>cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;type&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">type</span><span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>booster<span style="color:#bbb">
+</span><span style="color:#bbb">          </span><span style="color:#00a">left</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span><span style="color:#00a">lateral</span><span style="color:#bbb">
+</span><span style="color:#bbb">          </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">data</span><span style="color:#bbb">
+</span><span style="color:#bbb">              </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>magic.cards<span style="color:#bbb">
+</span><span style="color:#bbb">             </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>cards.<span style="color:#00a">set</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>booster.name<span style="color:#bbb">
+</span><span style="color:#bbb">               </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;rarity&#39;</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>booster.rarity<span style="color:#bbb">
+</span><span style="color:#bbb">          </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>random()<span style="color:#bbb">
+</span><span style="color:#bbb">             </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span>booster.<span style="color:#00a">count</span><span style="color:#bbb">
+</span><span style="color:#bbb">          </span>)<span style="color:#bbb">
+</span><span style="color:#bbb">          </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>cards<span style="color:#bbb">
+</span><span style="color:#bbb">          </span><span style="color:#00a">on</span><span style="color:#bbb"> </span><span style="color:#00a">true</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;rarity&#39;</span><span style="color:#bbb"> </span>&lt;&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;Uncommon&#39;</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">           </span>cards.<span style="color:#00a">data</span>-&gt;&gt;<span style="color:#a50">&#39;rarity&#39;</span><span style="color:#bbb"> </span>&lt;&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;Common&#39;</span>;</code></pre></div>
 <p>To build a <em>booster</em> for a given Magic™ set, we have to randomly select a
 card of the right <em>rarity</em> for each one of the <em>booster</em>&rsquo;s slots. Remember
 that each <em>booster</em> slot is an array of rarity alternative choices, so a
 card of any of those rarity levels may be choosen for that slot entry.</p>
 
 <p>Our task is now to rewrite the same sentence, only in SQL:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> booster.num,
-       booster.rarity,
-       card.name,
-       card.rarity,
-       card.cardtype
-  <span style="color:#00a">from</span> booster
-       <span style="color:#00a">join</span> <span style="color:#00a">set</span> <span style="color:#00a">using</span>(setid)
-       <span style="color:#00a">left</span> <span style="color:#00a">join</span> <span style="color:#00a">lateral</span>
-       (
-         <span style="color:#00a">select</span> card.name, card.rarity, cardtype.cardtype
-           <span style="color:#00a">from</span> card
-                <span style="color:#00a">join</span> cardtype <span style="color:#00a">using</span>(cardtypeid)
-          <span style="color:#00a">where</span> setid = booster.setid
-            <span style="color:#00a">and</span> card.rarity = <span style="color:#00a">any</span>(booster.rarity)
-       <span style="color:#00a">order</span> <span style="color:#00a">by</span> random()
-          <span style="color:#00a">limit</span> <span style="color:#099">1</span>
-       )
-       <span style="color:#00a">as</span> card
-       <span style="color:#00a">on</span> <span style="color:#00a">true</span>
- <span style="color:#00a">where</span> <span style="color:#00a">set</span>.code = :<span style="color:#a50">&#39;collection&#39;</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span>booster.num,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span>booster.rarity,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span>card.name,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span>card.rarity,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span>card.cardtype<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>booster<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span><span style="color:#00a">set</span><span style="color:#bbb"> </span><span style="color:#00a">using</span>(setid)<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">left</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span><span style="color:#00a">lateral</span><span style="color:#bbb">
+</span><span style="color:#bbb">       </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>card.name,<span style="color:#bbb"> </span>card.rarity,<span style="color:#bbb"> </span>cardtype.cardtype<span style="color:#bbb">
+</span><span style="color:#bbb">           </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>card<span style="color:#bbb">
+</span><span style="color:#bbb">                </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>cardtype<span style="color:#bbb"> </span><span style="color:#00a">using</span>(cardtypeid)<span style="color:#bbb">
+</span><span style="color:#bbb">          </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>setid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>booster.setid<span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>card.rarity<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">any</span>(booster.rarity)<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>random()<span style="color:#bbb">
+</span><span style="color:#bbb">          </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
+</span><span style="color:#bbb">       </span>)<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>card<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">on</span><span style="color:#bbb"> </span><span style="color:#00a">true</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#00a">set</span>.code<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>:<span style="color:#a50">&#39;collection&#39;</span>;</code></pre></div>
 <p>Compare to the query used before we normalized the data set, which had to
 <em>unnest</em> the booster definition in a first CTE with the
 <em>jsonb_array_elements_text</em> function, and also to capitalize the obtained

@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.79.0">
+    <meta name="generator" content="Hugo 0.85.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>PostgreSQL Data Types: Ranges</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -114,7 +114,6 @@ if (!doNotTrack) {
 	ga('send', 'pageview');
 }
 </script>
-
     
     
   </head>
@@ -304,7 +303,7 @@ if (!doNotTrack) {
       </time>
     
     <span style="float: right; width: 65%">
-      <i class="fa fa-clock-o"></i> 5 mins read
+      <i class="fa fa-clock-o"></i> 4 mins read
       
     </span>
     <span style="float: left; width: 35%">
@@ -498,47 +497,47 @@ range types.</p>
 used for my book <a href="https://theartofpostgresql.com">The Art of PostgreSQL</a>.
 Only missing from this book&rsquo;s pages is the transformation script that pivots
 the available <em>tsv</em> file into the more interesting format we use here:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;
-
-<span style="color:#00a">create</span> <span style="color:#00a">schema</span> <span style="color:#00a">if</span> <span style="color:#00a">not</span> <span style="color:#00a">exists</span> raw;
-
-<span style="color:#aaa;font-style:italic">-- Must be run as a Super User in your database instance
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">schema</span><span style="color:#bbb"> </span><span style="color:#00a">if</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">exists</span><span style="color:#bbb"> </span>raw;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#aaa;font-style:italic">-- Must be run as a Super User in your database instance
 </span><span style="color:#aaa;font-style:italic">-- create extension if not exists btree_gist;
-</span><span style="color:#aaa;font-style:italic"></span>
-<span style="color:#00a">drop</span> <span style="color:#00a">table</span> <span style="color:#00a">if</span> <span style="color:#00a">exists</span> raw.rates, rates;
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> raw.rates
- (
-  currency <span style="color:#0aa">text</span>,
-  <span style="color:#0aa">date</span>     <span style="color:#0aa">date</span>,
-  rate     <span style="color:#0aa">numeric</span>
- );
-
-<span style="color:#f00;background-color:#faa">\</span><span style="color:#00a">copy</span> raw.rates <span style="color:#00a">from</span> <span style="color:#a50">&#39;rates.csv&#39;</span> <span style="color:#00a">with</span> csv <span style="color:#00a">delimiter</span> <span style="color:#a50">&#39;;&#39;</span>
-
-<span style="color:#00a">create</span> <span style="color:#00a">table</span> rates
- (
-  currency <span style="color:#0aa">text</span>,
-  validity daterange,
-  rate     <span style="color:#0aa">numeric</span>,
-
-  exclude <span style="color:#00a">using</span> gist (currency <span style="color:#00a">with</span> =,
-                      validity <span style="color:#00a">with</span> &amp;&amp;)
- );
-
-<span style="color:#00a">insert</span> <span style="color:#00a">into</span> rates(currency, validity, rate)
-     <span style="color:#00a">select</span> currency,
-            daterange(<span style="color:#0aa">date</span>,
-                      lead(<span style="color:#0aa">date</span>) over(partition <span style="color:#00a">by</span> currency
-                                          <span style="color:#00a">order</span> <span style="color:#00a">by</span> <span style="color:#0aa">date</span>),
-                      <span style="color:#a50">&#39;[)&#39;</span>
-                     )
-            <span style="color:#00a">as</span> validity,
-            rate
-       <span style="color:#00a">from</span> raw.rates
-   <span style="color:#00a">order</span> <span style="color:#00a">by</span> <span style="color:#0aa">date</span>;
-
-<span style="color:#00a">commit</span>;</code></pre></div>
+</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">drop</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span><span style="color:#00a">if</span><span style="color:#bbb"> </span><span style="color:#00a">exists</span><span style="color:#bbb"> </span>raw.rates,<span style="color:#bbb"> </span>rates;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>raw.rates<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>currency<span style="color:#bbb"> </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#0aa">date</span><span style="color:#bbb">     </span><span style="color:#0aa">date</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>rate<span style="color:#bbb">     </span><span style="color:#0aa">numeric</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#f00;background-color:#faa">\</span><span style="color:#00a">copy</span><span style="color:#bbb"> </span>raw.rates<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;rates.csv&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">with</span><span style="color:#bbb"> </span>csv<span style="color:#bbb"> </span><span style="color:#00a">delimiter</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;;&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>rates<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>currency<span style="color:#bbb"> </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>validity<span style="color:#bbb"> </span>daterange,<span style="color:#bbb">
+</span><span style="color:#bbb">  </span>rate<span style="color:#bbb">     </span><span style="color:#0aa">numeric</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span>exclude<span style="color:#bbb"> </span><span style="color:#00a">using</span><span style="color:#bbb"> </span>gist<span style="color:#bbb"> </span>(currency<span style="color:#bbb"> </span><span style="color:#00a">with</span><span style="color:#bbb"> </span>=,<span style="color:#bbb">
+</span><span style="color:#bbb">                      </span>validity<span style="color:#bbb"> </span><span style="color:#00a">with</span><span style="color:#bbb"> </span>&amp;&amp;)<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>rates(currency,<span style="color:#bbb"> </span>validity,<span style="color:#bbb"> </span>rate)<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>currency,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>daterange(<span style="color:#0aa">date</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">                      </span>lead(<span style="color:#0aa">date</span>)<span style="color:#bbb"> </span>over(partition<span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>currency<span style="color:#bbb">
+</span><span style="color:#bbb">                                          </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">                      </span><span style="color:#a50">&#39;[)&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">                     </span>)<span style="color:#bbb">
+</span><span style="color:#bbb">            </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>validity,<span style="color:#bbb">
+</span><span style="color:#bbb">            </span>rate<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>raw.rates<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">commit</span>;</code></pre></div>
 <p>In this SQL script, we first create a target table for loading the CSV file.
 The file contains lines with a currency name, a date of publication, and a
 rate as a <em>numeric</em> value. Once the data is loaded into this table, we can
@@ -551,7 +550,7 @@ application, the <em>rates</em> table.</p>
 period, and uses an <a href="https://www.postgresql.org/docs/current/static/sql-createtable.html#SQL-CREATETABLE-EXCLUDE">exclusion
 constraint</a>
 that guarantees non-overlapping <em>validity</em> periods for any given <em>currency</em>:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">exclude <span style="color:#00a">using</span> gist (currency <span style="color:#00a">with</span> =, validity <span style="color:#00a">with</span> &amp;&amp;)</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">exclude<span style="color:#bbb"> </span><span style="color:#00a">using</span><span style="color:#bbb"> </span>gist<span style="color:#bbb"> </span>(currency<span style="color:#bbb"> </span><span style="color:#00a">with</span><span style="color:#bbb"> </span>=,<span style="color:#bbb"> </span>validity<span style="color:#bbb"> </span><span style="color:#00a">with</span><span style="color:#bbb"> </span>&amp;&amp;)</code></pre></div>
 <p>This expression reads: exclude any tuple where the currency is <em>=</em> to an
 existing currency in our table <em>AND</em> where the <em>validity</em> is overlapping
 with (<em>&amp;&amp;</em>) any existing validity in our table. This exclusion constraint is
@@ -571,11 +570,11 @@ rate is relevant from its publication until the next rate is published</em>.</p>
 <h2 id="querying-ranges">Querying Ranges</h2>
 
 <p>Here&rsquo;s how the data looks, with the following query targeting Euro rates:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">  <span style="color:#00a">select</span> currency, validity, rate
-    <span style="color:#00a">from</span> rates
-   <span style="color:#00a">where</span> currency = <span style="color:#a50">&#39;Euro&#39;</span>
-<span style="color:#00a">order</span> <span style="color:#00a">by</span> validity
-   <span style="color:#00a">limit</span> <span style="color:#099">10</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>currency,<span style="color:#bbb"> </span>validity,<span style="color:#bbb"> </span>rate<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>rates<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>currency<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;Euro&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>validity<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">10</span>;</code></pre></div>
 <p>We can see that the validity is a range of dates, and the standard output
 for this type is a closed range which includes the first entry and excludes
 the second one:</p>
@@ -596,10 +595,10 @@ the second one:</p>
 have at most a single rate available at any point in time, which allows an
 application needing the rate for a specific time to write the following
 query:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> rate
-  <span style="color:#00a">from</span> rates
- <span style="color:#00a">where</span> currency = <span style="color:#a50">&#39;Euro&#39;</span> 
-   <span style="color:#00a">and</span> validity @&gt; <span style="color:#0aa">date</span> <span style="color:#a50">&#39;2017-05-18&#39;</span>;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span>rate<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>rates<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>currency<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;Euro&#39;</span><span style="color:#bbb"> 
+</span><span style="color:#bbb">   </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>validity<span style="color:#bbb"> </span>@&gt;<span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;2017-05-18&#39;</span>;</code></pre></div>
 <p>The operator <em>@&gt;</em> reads <em>contains</em>, and PostgreSQL uses the exclusion
 constraint&rsquo;s index to solve that query efficiently:</p>
 <pre><code class="language-psql" data-lang="psql">   rate   

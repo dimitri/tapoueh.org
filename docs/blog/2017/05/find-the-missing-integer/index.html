@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.79.0">
+    <meta name="generator" content="Hugo 0.85.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Find The Missing Integer</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -120,7 +120,6 @@ if (!doNotTrack) {
 	ga('send', 'pageview');
 }
 </script>
-
     
     
   </head>
@@ -310,7 +309,7 @@ if (!doNotTrack) {
       </time>
     
     <span style="float: right; width: 65%">
-      <i class="fa fa-clock-o"></i> 9 mins read
+      <i class="fa fa-clock-o"></i> 8 mins read
       
     </span>
     <span style="float: left; width: 35%">
@@ -687,14 +686,14 @@ technique, and finally the <em>where not exists</em> technique.</p>
 
 <p>Let&rsquo;s first setup the data set with a <code>create table</code> then <code>delete</code>
 statement.</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">&gt; <span style="color:#00a">create</span> <span style="color:#00a">table</span> ints <span style="color:#00a">as</span>
-      <span style="color:#00a">select</span> i
-        <span style="color:#00a">from</span> generate_series(<span style="color:#099">1</span>,<span style="color:#099">100</span>) <span style="color:#00a">as</span> t(i);
-<span style="color:#00a">SELECT</span> <span style="color:#099">100</span>
-
-&gt; <span style="color:#00a">with</span> rnd(i) <span style="color:#00a">as</span> (<span style="color:#00a">select</span> (random()*<span style="color:#099">100</span>)::<span style="color:#0aa">int</span>)
-  <span style="color:#00a">delete</span> <span style="color:#00a">from</span> ints <span style="color:#00a">using</span> rnd <span style="color:#00a">where</span> ints.i = rnd.i;
-<span style="color:#00a">DELETE</span> <span style="color:#099">1</span></code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">&gt;<span style="color:#bbb"> </span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>ints<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>i<span style="color:#bbb">
+</span><span style="color:#bbb">        </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>generate_series(<span style="color:#099">1</span>,<span style="color:#099">100</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>t(i);<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">SELECT</span><span style="color:#bbb"> </span><span style="color:#099">100</span><span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span>&gt;<span style="color:#bbb"> </span><span style="color:#00a">with</span><span style="color:#bbb"> </span>rnd(i)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>(<span style="color:#00a">select</span><span style="color:#bbb"> </span>(random()*<span style="color:#099">100</span>)::<span style="color:#0aa">int</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">delete</span><span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>ints<span style="color:#bbb"> </span><span style="color:#00a">using</span><span style="color:#bbb"> </span>rnd<span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>ints.i<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>rnd.i;<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">DELETE</span><span style="color:#bbb"> </span><span style="color:#099">1</span></code></pre></div>
 <h2 id="the-sql-set-operations">The SQL set operations</h2>
 
 <p>The SQL standard
@@ -702,13 +701,13 @@ includes
 <a href="https://www.postgresql.org/docs/9.6/static/queries-union.html">SQL Set Operations</a>,
 which allow for combining query results and consider them as sets. The most
 known operation here is <em>union</em>. What we need today is <em>except</em>:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">&gt; <span style="color:#00a">select</span> i <span style="color:#00a">from</span> generate_series(<span style="color:#099">1</span>,<span style="color:#099">100</span>) <span style="color:#00a">as</span> t(i)
-  <span style="color:#00a">except</span>
-  <span style="color:#00a">select</span> i <span style="color:#00a">from</span> ints;
- i
-<span style="color:#aaa;font-style:italic">----
-</span><span style="color:#aaa;font-style:italic"></span> <span style="color:#099">55</span>
-(<span style="color:#099">1</span> <span style="color:#00a">row</span>)</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">&gt;<span style="color:#bbb"> </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>i<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>generate_series(<span style="color:#099">1</span>,<span style="color:#099">100</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>t(i)<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">except</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>i<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>ints;<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>i<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#aaa;font-style:italic">----
+</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb"> </span><span style="color:#099">55</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span>(<span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">row</span>)</code></pre></div>
 <p>The query plan is quite a direct mapping of how the query is written, you
 can obtain it with the command <code>explain (costs off) &lt;query here&gt;</code> and here&rsquo;s
 what we get:</p>
@@ -725,18 +724,18 @@ what we get:</p>
 
 <p>This technique is a <em>join</em> where you&rsquo;re interested into element that fail
 the join condition, and can be written as in the following form:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">&gt; <span style="color:#00a">select</span> series.i
-    <span style="color:#00a">from</span> ints
-         <span style="color:#00a">right</span> <span style="color:#00a">join</span> (<span style="color:#00a">select</span> i
-                       <span style="color:#00a">from</span> generate_series(<span style="color:#099">1</span>,<span style="color:#099">100</span>) t(i)
-                    ) series
-                 <span style="color:#00a">on</span> series.i = ints.i
-   <span style="color:#00a">where</span> ints.i <span style="color:#00a">is</span> <span style="color:#00a">null</span>;
-
- i
-<span style="color:#aaa;font-style:italic">----
-</span><span style="color:#aaa;font-style:italic"></span> <span style="color:#099">55</span>
-(<span style="color:#099">1</span> <span style="color:#00a">row</span>)</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">&gt;<span style="color:#bbb"> </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>series.i<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>ints<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">right</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>(<span style="color:#00a">select</span><span style="color:#bbb"> </span>i<span style="color:#bbb">
+</span><span style="color:#bbb">                       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>generate_series(<span style="color:#099">1</span>,<span style="color:#099">100</span>)<span style="color:#bbb"> </span>t(i)<span style="color:#bbb">
+</span><span style="color:#bbb">                    </span>)<span style="color:#bbb"> </span>series<span style="color:#bbb">
+</span><span style="color:#bbb">                 </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>series.i<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>ints.i<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>ints.i<span style="color:#bbb"> </span><span style="color:#00a">is</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>i<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#aaa;font-style:italic">----
+</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb"> </span><span style="color:#099">55</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span>(<span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">row</span>)</code></pre></div>
 <p>The SQL statement then might look complex because it&rsquo;s using a <em>right join</em>
 against a <em>subquery</em>. Remember that a <em>right join</em> is exactly the same thing
 as a <em>left join</em>, the only difference being that the <strong>reference relation</strong>
@@ -770,22 +769,22 @@ given the joining criteria, here <code>series.i = ints.i</code>. It means we fin
 the rows that don&rsquo;t exist in the <em>series</em> data source. If we <code>delete</code>
 another row in the <em>ints</em> table then we find all the missing entries by
 running the same query again:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">&gt; <span style="color:#00a">delete</span> <span style="color:#00a">from</span> ints <span style="color:#00a">where</span> i = (random()*<span style="color:#099">100</span>)::<span style="color:#0aa">int</span>;
-<span style="color:#00a">DELETE</span> <span style="color:#099">1</span>
-
-&gt; <span style="color:#00a">select</span> series.i
-    <span style="color:#00a">from</span> ints
-         <span style="color:#00a">right</span> <span style="color:#00a">join</span> (<span style="color:#00a">select</span> i
-                       <span style="color:#00a">from</span> generate_series(<span style="color:#099">1</span>,<span style="color:#099">100</span>) t(i)
-                    ) series
-                 <span style="color:#00a">on</span> series.i = ints.i
-   <span style="color:#00a">where</span> ints.i <span style="color:#00a">is</span> <span style="color:#00a">null</span>;
-
- i  
-<span style="color:#aaa;font-style:italic">----
-</span><span style="color:#aaa;font-style:italic"></span>  <span style="color:#099">6</span>
- <span style="color:#099">55</span>
-(<span style="color:#099">2</span> <span style="color:#00a">rows</span>)</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">&gt;<span style="color:#bbb"> </span><span style="color:#00a">delete</span><span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>ints<span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>i<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>(random()*<span style="color:#099">100</span>)::<span style="color:#0aa">int</span>;<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">DELETE</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span>&gt;<span style="color:#bbb"> </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>series.i<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>ints<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">right</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>(<span style="color:#00a">select</span><span style="color:#bbb"> </span>i<span style="color:#bbb">
+</span><span style="color:#bbb">                       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>generate_series(<span style="color:#099">1</span>,<span style="color:#099">100</span>)<span style="color:#bbb"> </span>t(i)<span style="color:#bbb">
+</span><span style="color:#bbb">                    </span>)<span style="color:#bbb"> </span>series<span style="color:#bbb">
+</span><span style="color:#bbb">                 </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>series.i<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>ints.i<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>ints.i<span style="color:#bbb"> </span><span style="color:#00a">is</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>;<span style="color:#bbb">
+</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span>i<span style="color:#bbb">  
+</span><span style="color:#bbb"></span><span style="color:#aaa;font-style:italic">----
+</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">  </span><span style="color:#099">6</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#099">55</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span>(<span style="color:#099">2</span><span style="color:#bbb"> </span><span style="color:#00a">rows</span>)</code></pre></div>
 <p>Also, if we were to deal with any other data type (that has an equality
 operator) then we could use the same query again and just happily find our
 missing elements.</p>
@@ -794,16 +793,16 @@ missing elements.</p>
 
 <p>Another way to solve our problem in SQL is using the <em>not exists</em>
 construction, as shown in the following example:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">&gt; <span style="color:#00a">select</span> i
-    <span style="color:#00a">from</span> generate_series(<span style="color:#099">1</span>,<span style="color:#099">100</span>) <span style="color:#00a">as</span> t(i)
-   <span style="color:#00a">where</span> <span style="color:#00a">not</span> <span style="color:#00a">exists</span> (<span style="color:#00a">select</span> <span style="color:#099">1</span>
-                       <span style="color:#00a">from</span> ints
-                      <span style="color:#00a">where</span> ints.i = t.i);
- i  
-<span style="color:#aaa;font-style:italic">----
-</span><span style="color:#aaa;font-style:italic"></span>  <span style="color:#099">6</span>
- <span style="color:#099">55</span>
-(<span style="color:#099">2</span> <span style="color:#00a">rows</span>)</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">&gt;<span style="color:#bbb"> </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>i<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>generate_series(<span style="color:#099">1</span>,<span style="color:#099">100</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>t(i)<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">exists</span><span style="color:#bbb"> </span>(<span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
+</span><span style="color:#bbb">                       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>ints<span style="color:#bbb">
+</span><span style="color:#bbb">                      </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>ints.i<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>t.i);<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>i<span style="color:#bbb">  
+</span><span style="color:#bbb"></span><span style="color:#aaa;font-style:italic">----
+</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">  </span><span style="color:#099">6</span><span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#099">55</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span>(<span style="color:#099">2</span><span style="color:#bbb"> </span><span style="color:#00a">rows</span>)</code></pre></div>
 <p>You might be surprised by the way this query is written. For each of our
 series from 1 to 100 we have a look into the <em>correlated subquery</em>
 introduced by the <code>not exists</code> SQL construct, and we keep only rows for
@@ -833,17 +832,17 @@ indexing.</p>
 items here. This operator is implemented by a different function for each
 data type. Let&rsquo;s have a look at some of the comparison operators for
 integers:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span> format(<span style="color:#a50">&#39;%s(%s,%s)&#39;</span>, o.oprname,
-                           lt.typname,
-                           rt.typname)
-       <span style="color:#00a">as</span> <span style="color:#00a">operator</span>,
-       oprcode::regprocedure <span style="color:#00a">as</span> <span style="color:#00a">function</span>
-  <span style="color:#00a">from</span> pg_operator o
-       <span style="color:#00a">join</span> pg_type rt <span style="color:#00a">on</span> o.oprright = rt.oid
-       <span style="color:#00a">join</span> pg_type lt <span style="color:#00a">on</span> o.oprleft = lt.oid
- <span style="color:#00a">where</span>     o.oprkind = <span style="color:#a50">&#39;b&#39;</span>
-       <span style="color:#00a">and</span> o.oprname = <span style="color:#a50">&#39;=&#39;</span>
-       <span style="color:#00a">and</span> lt.typname ~ <span style="color:#a50">&#39;int&#39;</span>;</code></pre></div><pre><code>         operator         │              function               
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span>format(<span style="color:#a50">&#39;%s(%s,%s)&#39;</span>,<span style="color:#bbb"> </span>o.oprname,<span style="color:#bbb">
+</span><span style="color:#bbb">                           </span>lt.typname,<span style="color:#bbb">
+</span><span style="color:#bbb">                           </span>rt.typname)<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">operator</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">       </span>oprcode::regprocedure<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">function</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pg_operator<span style="color:#bbb"> </span>o<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_type<span style="color:#bbb"> </span>rt<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>o.oprright<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>rt.oid<span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_type<span style="color:#bbb"> </span>lt<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>o.oprleft<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>lt.oid<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb">     </span>o.oprkind<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;b&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>o.oprname<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;=&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">       </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>lt.typname<span style="color:#bbb"> </span>~<span style="color:#bbb"> </span><span style="color:#a50">&#39;int&#39;</span>;</code></pre></div><pre><code>         operator         │              function               
 ══════════════════════════╪═════════════════════════════════════
  =(int4,int8)             │ int48eq(integer,bigint)
  =(int2,int2)             │ int2eq(smallint,smallint)

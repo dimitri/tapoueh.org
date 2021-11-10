@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.79.0">
+    <meta name="generator" content="Hugo 0.85.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Automated Setup for pgloader</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -123,7 +123,6 @@ if (!doNotTrack) {
 	ga('send', 'pageview');
 }
 </script>
-
     
     
   </head>
@@ -323,7 +322,7 @@ if (!doNotTrack) {
       </time>
     
     <span style="float: right; width: 65%">
-      <i class="fa fa-clock-o"></i> 5 mins read
+      <i class="fa fa-clock-o"></i> 4 mins read
       
     </span>
     <span style="float: left; width: 35%">
@@ -482,63 +481,63 @@ that data to feed
 load and where to find the data. What about generating the file from the
 database schema instead, using the query in
 <a href="generate-pgloader-config.sql">generate-pgloader-config.sql</a>:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span> reformat <span style="color:#00a">as</span> (
-   <span style="color:#00a">select</span> relname, attnum, attname, typname,
-          <span style="color:#00a">case</span> typname
-               <span style="color:#00a">when</span> <span style="color:#a50">&#39;timestamptz&#39;</span>
-               <span style="color:#00a">then</span> attname || <span style="color:#a50">&#39;:mynull:timestamp&#39;</span>
-               <span style="color:#00a">when</span> <span style="color:#a50">&#39;date&#39;</span>
-               <span style="color:#00a">then</span> attname || <span style="color:#a50">&#39;:mynull:date&#39;</span>
-           <span style="color:#00a">end</span> <span style="color:#00a">as</span> reformat
-      <span style="color:#00a">from</span> pg_class <span style="color:#00a">c</span>
-           <span style="color:#00a">join</span> pg_namespace n <span style="color:#00a">on</span> n.oid = <span style="color:#00a">c</span>.relnamespace
-           <span style="color:#00a">left</span> <span style="color:#00a">join</span> pg_attribute a <span style="color:#00a">on</span> <span style="color:#00a">c</span>.oid = a.attrelid
-           <span style="color:#00a">join</span> pg_type t <span style="color:#00a">on</span> t.oid = a.atttypid
-     <span style="color:#00a">where</span> <span style="color:#00a">c</span>.relkind = <span style="color:#a50">&#39;r&#39;</span>
-           <span style="color:#00a">and</span> attnum &gt; <span style="color:#099">0</span>
-           <span style="color:#00a">and</span> n.nspname = <span style="color:#a50">&#39;public&#39;</span>
-),
- config_reformat <span style="color:#00a">as</span> (
-  <span style="color:#00a">select</span> relname,
-	 <span style="color:#a50">&#39;[&#39;</span>||relname||<span style="color:#a50">&#39;]&#39;</span> || E<span style="color:#a50">&#39;\n&#39;</span> ||
-	 <span style="color:#a50">&#39;table = &#39;</span> || relname || E<span style="color:#a50">&#39; \n&#39;</span> ||
-	 <span style="color:#a50">&#39;filename = /path/to/csv/&#39;</span> || relname || E<span style="color:#a50">&#39;.csv\n&#39;</span> ||
-	 <span style="color:#a50">&#39;format = csv&#39;</span> || E<span style="color:#a50">&#39;\n&#39;</span> ||
-	 <span style="color:#a50">&#39;field_sep = \t&#39;</span> || E<span style="color:#a50">&#39;\n&#39;</span> ||
-	 <span style="color:#a50">&#39;columns = *&#39;</span> || E<span style="color:#a50">&#39; \n&#39;</span> ||
-         <span style="color:#a50">&#39;reformat = &#39;</span> || array_to_string(array_agg(reformat), <span style="color:#a50">&#39;, &#39;</span>)
-         || E<span style="color:#a50">&#39;\n&#39;</span> <span style="color:#00a">as</span> config
-    <span style="color:#00a">from</span> reformat
-   <span style="color:#00a">where</span> reformat <span style="color:#00a">is</span> <span style="color:#00a">not</span> <span style="color:#00a">null</span>
-<span style="color:#00a">group</span> <span style="color:#00a">by</span> relname
-),
- noreformat <span style="color:#00a">as</span> (
-   <span style="color:#00a">select</span> relname, bool_and(reformat <span style="color:#00a">is</span> <span style="color:#00a">null</span>) <span style="color:#00a">as</span> noreformating
-     <span style="color:#00a">from</span> reformat
- <span style="color:#00a">group</span> <span style="color:#00a">by</span> relname
-),
- config_noreformat <span style="color:#00a">as</span> (
-  <span style="color:#00a">select</span> relname,
-	 <span style="color:#a50">&#39;[&#39;</span>||relname||<span style="color:#a50">&#39;]&#39;</span> || E<span style="color:#a50">&#39;\n&#39;</span> ||
-	 <span style="color:#a50">&#39;table = &#39;</span> || relname || E<span style="color:#a50">&#39; \n&#39;</span> ||
-	 <span style="color:#a50">&#39;filename = /path/to/csv/&#39;</span> || relname || E<span style="color:#a50">&#39;.csv\n&#39;</span> ||
-	 <span style="color:#a50">&#39;format = csv&#39;</span> || E<span style="color:#a50">&#39;\n&#39;</span> ||
-	 <span style="color:#a50">&#39;field_sep = \t&#39;</span> || E<span style="color:#a50">&#39;\n&#39;</span> ||
-	 <span style="color:#a50">&#39;columns = *&#39;</span> || E<span style="color:#a50">&#39; \n&#39;</span>
-         || E<span style="color:#a50">&#39;\n&#39;</span> <span style="color:#00a">as</span> config
-    <span style="color:#00a">from</span> reformat <span style="color:#00a">join</span> noreformat <span style="color:#00a">using</span> (relname)
-   <span style="color:#00a">where</span> noreformating
-<span style="color:#00a">group</span> <span style="color:#00a">by</span> relname
-),
-allconfs <span style="color:#00a">as</span> (
-    <span style="color:#00a">select</span> relname, config <span style="color:#00a">from</span> config_reformat
- <span style="color:#00a">union</span> <span style="color:#00a">all</span>
-    <span style="color:#00a">select</span> relname, config <span style="color:#00a">from</span> config_noreformat
-)
-<span style="color:#00a">select</span> config
-  <span style="color:#00a">from</span> allconfs
- <span style="color:#00a">where</span> relname <span style="color:#00a">not</span> <span style="color:#00a">in</span> (<span style="color:#a50">&#39;tables&#39;</span>, <span style="color:#a50">&#39;wedont&#39;</span>, <span style="color:#a50">&#39;wantto&#39;</span>, <span style="color:#a50">&#39;load&#39;</span>)
- <span style="color:#00a">order</span> <span style="color:#00a">by</span> relname;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span><span style="color:#bbb"> </span>reformat<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>relname,<span style="color:#bbb"> </span>attnum,<span style="color:#bbb"> </span>attname,<span style="color:#bbb"> </span>typname,<span style="color:#bbb">
+</span><span style="color:#bbb">          </span><span style="color:#00a">case</span><span style="color:#bbb"> </span>typname<span style="color:#bbb">
+</span><span style="color:#bbb">               </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;timestamptz&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">               </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>attname<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39;:mynull:timestamp&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">               </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;date&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">               </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>attname<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39;:mynull:date&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">           </span><span style="color:#00a">end</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>reformat<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pg_class<span style="color:#bbb"> </span><span style="color:#00a">c</span><span style="color:#bbb">
+</span><span style="color:#bbb">           </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_namespace<span style="color:#bbb"> </span>n<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>n.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">c</span>.relnamespace<span style="color:#bbb">
+</span><span style="color:#bbb">           </span><span style="color:#00a">left</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_attribute<span style="color:#bbb"> </span>a<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span><span style="color:#00a">c</span>.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>a.attrelid<span style="color:#bbb">
+</span><span style="color:#bbb">           </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_type<span style="color:#bbb"> </span>t<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>t.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>a.atttypid<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#00a">c</span>.relkind<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;r&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">           </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>attnum<span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb">
+</span><span style="color:#bbb">           </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>n.nspname<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;public&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span>),<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>config_reformat<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>relname,<span style="color:#bbb">
+</span><span style="color:#bbb">	 </span><span style="color:#a50">&#39;[&#39;</span>||relname||<span style="color:#a50">&#39;]&#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>E<span style="color:#a50">&#39;\n&#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb">
+</span><span style="color:#bbb">	 </span><span style="color:#a50">&#39;table = &#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>relname<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>E<span style="color:#a50">&#39; \n&#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb">
+</span><span style="color:#bbb">	 </span><span style="color:#a50">&#39;filename = /path/to/csv/&#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>relname<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>E<span style="color:#a50">&#39;.csv\n&#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb">
+</span><span style="color:#bbb">	 </span><span style="color:#a50">&#39;format = csv&#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>E<span style="color:#a50">&#39;\n&#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb">
+</span><span style="color:#bbb">	 </span><span style="color:#a50">&#39;field_sep = \t&#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>E<span style="color:#a50">&#39;\n&#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb">
+</span><span style="color:#bbb">	 </span><span style="color:#a50">&#39;columns = *&#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>E<span style="color:#a50">&#39; \n&#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#a50">&#39;reformat = &#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>array_to_string(array_agg(reformat),<span style="color:#bbb"> </span><span style="color:#a50">&#39;, &#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">         </span>||<span style="color:#bbb"> </span>E<span style="color:#a50">&#39;\n&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>config<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>reformat<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>reformat<span style="color:#bbb"> </span><span style="color:#00a">is</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>relname<span style="color:#bbb">
+</span><span style="color:#bbb"></span>),<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>noreformat<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>relname,<span style="color:#bbb"> </span>bool_and(reformat<span style="color:#bbb"> </span><span style="color:#00a">is</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>noreformating<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>reformat<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>relname<span style="color:#bbb">
+</span><span style="color:#bbb"></span>),<span style="color:#bbb">
+</span><span style="color:#bbb"> </span>config_noreformat<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>relname,<span style="color:#bbb">
+</span><span style="color:#bbb">	 </span><span style="color:#a50">&#39;[&#39;</span>||relname||<span style="color:#a50">&#39;]&#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>E<span style="color:#a50">&#39;\n&#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb">
+</span><span style="color:#bbb">	 </span><span style="color:#a50">&#39;table = &#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>relname<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>E<span style="color:#a50">&#39; \n&#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb">
+</span><span style="color:#bbb">	 </span><span style="color:#a50">&#39;filename = /path/to/csv/&#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>relname<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>E<span style="color:#a50">&#39;.csv\n&#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb">
+</span><span style="color:#bbb">	 </span><span style="color:#a50">&#39;format = csv&#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>E<span style="color:#a50">&#39;\n&#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb">
+</span><span style="color:#bbb">	 </span><span style="color:#a50">&#39;field_sep = \t&#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>E<span style="color:#a50">&#39;\n&#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb">
+</span><span style="color:#bbb">	 </span><span style="color:#a50">&#39;columns = *&#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>E<span style="color:#a50">&#39; \n&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">         </span>||<span style="color:#bbb"> </span>E<span style="color:#a50">&#39;\n&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>config<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>reformat<span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>noreformat<span style="color:#bbb"> </span><span style="color:#00a">using</span><span style="color:#bbb"> </span>(relname)<span style="color:#bbb">
+</span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>noreformating<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>relname<span style="color:#bbb">
+</span><span style="color:#bbb"></span>),<span style="color:#bbb">
+</span><span style="color:#bbb"></span>allconfs<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>relname,<span style="color:#bbb"> </span>config<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>config_reformat<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">union</span><span style="color:#bbb"> </span><span style="color:#00a">all</span><span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>relname,<span style="color:#bbb"> </span>config<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>config_noreformat<span style="color:#bbb">
+</span><span style="color:#bbb"></span>)<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">select</span><span style="color:#bbb"> </span>config<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>allconfs<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>relname<span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">in</span><span style="color:#bbb"> </span>(<span style="color:#a50">&#39;tables&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;wedont&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;wantto&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;load&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>relname;</code></pre></div>
 <p>To work with the setup generated, you will have to prepend a global section
 for pgloader and to include a reformating module in python, that I named
 <a href="mynull.py">mynull.py</a>:</p>
@@ -553,14 +552,14 @@ for pgloader and to include a reformating module in python, that I named
 </span><span style="color:#a50">    But may contain the infamous all-zero date, where we want NULL.
 </span><span style="color:#a50">    &#34;&#34;&#34;</span>
     <span style="color:#00a">if</span> <span style="color:#0aa">input</span> == <span style="color:#a50">&#39;0000-00-00 00:00:00&#39;</span>:
-        <span style="color:#00a">return</span> None
+        <span style="color:#00a">return</span> <span style="color:#00a">None</span>
 
     <span style="color:#00a">return</span> <span style="color:#0aa">input</span>
 
 <span style="color:#00a">def</span> <span style="color:#0a0">date</span>(reject, <span style="color:#0aa">input</span>):
     <span style="color:#a50">&#34;&#34;&#34; date columns can also have &#39;0000-00-00&#39;&#34;&#34;&#34;</span>
     <span style="color:#00a">if</span> <span style="color:#0aa">input</span> == <span style="color:#a50">&#39;0000-00-00&#39;</span>:
-        <span style="color:#00a">return</span> None
+        <span style="color:#00a">return</span> <span style="color:#00a">None</span>
 
     <span style="color:#00a">return</span> <span style="color:#0aa">input</span></code></pre></div>
 <p>Now you can launch <code>pgloader</code> and profit!</p>

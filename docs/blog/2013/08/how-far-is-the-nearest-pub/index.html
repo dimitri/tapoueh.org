@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.79.0">
+    <meta name="generator" content="Hugo 0.85.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>How far is the nearest pub?</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -114,7 +114,6 @@ if (!doNotTrack) {
 	ga('send', 'pageview');
 }
 </script>
-
     
     
   </head>
@@ -304,7 +303,7 @@ if (!doNotTrack) {
       </time>
     
     <span style="float: right; width: 65%">
-      <i class="fa fa-clock-o"></i> 7 mins read
+      <i class="fa fa-clock-o"></i> 6 mins read
       
     </span>
     <span style="float: left; width: 35%">
@@ -495,17 +494,17 @@ extensions, one of those is
 named
 <a href="http://www.postgresql.org/docs/9.2/static/earthdistance.html">earthdistance</a> and
 is made to solve our problem. Time to try it!</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"># <span style="color:#00a">create</span> extension <span style="color:#00a">cube</span>;
-# <span style="color:#00a">create</span> extension earthdistance;</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">#<span style="color:#bbb"> </span><span style="color:#00a">create</span><span style="color:#bbb"> </span>extension<span style="color:#bbb"> </span><span style="color:#00a">cube</span>;<span style="color:#bbb">
+</span><span style="color:#bbb"></span>#<span style="color:#bbb"> </span><span style="color:#00a">create</span><span style="color:#bbb"> </span>extension<span style="color:#bbb"> </span>earthdistance;</code></pre></div>
 <p>Equiped with that extension we can now use its <code>&lt;@&gt;</code> operator and compute a
 distance in miles at the surface of the earth, given points as <em>(longitude,
 latitude)</em>. So I had to import our data set again with points in the right
 representation, then I could run this query:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">&gt;  <span style="color:#00a">select</span> id, name, pos,
-          round((pos &lt;@&gt; point(-<span style="color:#099">0</span>.<span style="color:#099">12</span>,<span style="color:#099">51</span>.<span style="color:#099">516</span>))::<span style="color:#0aa">numeric</span>, <span style="color:#099">3</span>) <span style="color:#00a">as</span> miles
-     <span style="color:#00a">from</span> pubnames
- <span style="color:#00a">order</span> <span style="color:#00a">by</span> pos &lt;-&gt; point(-<span style="color:#099">0</span>.<span style="color:#099">12</span>,<span style="color:#099">51</span>.<span style="color:#099">516</span>)
-    <span style="color:#00a">limit</span> <span style="color:#099">10</span>;</code></pre></div><pre><code class="language-psql" data-lang="psql">     id     |          name          |           pos           | miles 
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">&gt;<span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>id,<span style="color:#bbb"> </span>name,<span style="color:#bbb"> </span>pos,<span style="color:#bbb">
+</span><span style="color:#bbb">          </span>round((pos<span style="color:#bbb"> </span>&lt;@&gt;<span style="color:#bbb"> </span>point(-<span style="color:#099">0</span>.<span style="color:#099">12</span>,<span style="color:#099">51</span>.<span style="color:#099">516</span>))::<span style="color:#0aa">numeric</span>,<span style="color:#bbb"> </span><span style="color:#099">3</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>miles<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pubnames<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>pos<span style="color:#bbb"> </span>&lt;-&gt;<span style="color:#bbb"> </span>point(-<span style="color:#099">0</span>.<span style="color:#099">12</span>,<span style="color:#099">51</span>.<span style="color:#099">516</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">10</span>;</code></pre></div><pre><code class="language-psql" data-lang="psql">     id     |          name          |           pos           | miles 
 ------------+------------------------+-------------------------+-------
    21593238 | All Bar One            | (-0.1192746,51.5163499) | 0.039
    26848690 | The Shakespeare&#39;s Head | (-0.1194731,51.5167871) | 0.059
@@ -529,10 +528,10 @@ in <em>miles</em> didn&rsquo;t add that much to the query timing.</p>
 <p>Just as easily as we have
 <em>nearest</em> pubs we can also of course query for pubs
 <em>farthest</em> away from any location.</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">&gt;   <span style="color:#00a">select</span> name, round((pos &lt;@&gt; point(-<span style="color:#099">0</span>.<span style="color:#099">12</span>,<span style="color:#099">51</span>.<span style="color:#099">516</span>))::<span style="color:#0aa">numeric</span>, <span style="color:#099">3</span>) <span style="color:#00a">as</span> miles
-      <span style="color:#00a">from</span> pubnames
-  <span style="color:#00a">order</span> <span style="color:#00a">by</span> pos &lt;-&gt; point(-<span style="color:#099">0</span>.<span style="color:#099">12</span>,<span style="color:#099">51</span>.<span style="color:#099">516</span>) <span style="color:#00a">desc</span>
-     <span style="color:#00a">limit</span> <span style="color:#099">5</span>;</code></pre></div><pre><code class="language-psql" data-lang="psql">      name       |  miles  
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">&gt;<span style="color:#bbb">   </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>name,<span style="color:#bbb"> </span>round((pos<span style="color:#bbb"> </span>&lt;@&gt;<span style="color:#bbb"> </span>point(-<span style="color:#099">0</span>.<span style="color:#099">12</span>,<span style="color:#099">51</span>.<span style="color:#099">516</span>))::<span style="color:#0aa">numeric</span>,<span style="color:#bbb"> </span><span style="color:#099">3</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>miles<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pubnames<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>pos<span style="color:#bbb"> </span>&lt;-&gt;<span style="color:#bbb"> </span>point(-<span style="color:#099">0</span>.<span style="color:#099">12</span>,<span style="color:#099">51</span>.<span style="color:#099">516</span>)<span style="color:#bbb"> </span><span style="color:#00a">desc</span><span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">5</span>;</code></pre></div><pre><code class="language-psql" data-lang="psql">      name       |  miles  
 -----------------+---------
  Tig Bhric       | 440.194
  TP&#39;s            | 439.779
@@ -553,15 +552,15 @@ at
 <a href="https://github.com/dimitri/pubnames">https://github.com/dimitri/pubnames</a>
 was easy, and allowed to import those city names and locations in <em>0.087
 seconds of real time</em>, with the following schema:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"># <span style="color:#00a">create</span> <span style="color:#00a">table</span> <span style="color:#00a">if</span> <span style="color:#00a">not</span> <span style="color:#00a">exists</span> cities (id <span style="color:#0aa">bigint</span>, pos point, name <span style="color:#0aa">text</span>);
-# <span style="color:#00a">create</span> <span style="color:#00a">index</span> <span style="color:#00a">on</span> cities <span style="color:#00a">using</span> gist(pos);</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">#<span style="color:#bbb"> </span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span><span style="color:#00a">if</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">exists</span><span style="color:#bbb"> </span>cities<span style="color:#bbb"> </span>(id<span style="color:#bbb"> </span><span style="color:#0aa">bigint</span>,<span style="color:#bbb"> </span>pos<span style="color:#bbb"> </span>point,<span style="color:#bbb"> </span>name<span style="color:#bbb"> </span><span style="color:#0aa">text</span>);<span style="color:#bbb">
+</span><span style="color:#bbb"></span>#<span style="color:#bbb"> </span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">index</span><span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>cities<span style="color:#bbb"> </span><span style="color:#00a">using</span><span style="color:#bbb"> </span>gist(pos);</code></pre></div>
 <p>Now let&rsquo;s see where are those far away pubs:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">&gt;   <span style="color:#00a">select</span> name,
-          (<span style="color:#00a">select</span> name <span style="color:#00a">from</span> cities <span style="color:#00a">c</span> <span style="color:#00a">order</span> <span style="color:#00a">by</span> <span style="color:#00a">c</span>.pos &lt;-&gt; p.pos <span style="color:#00a">limit</span> <span style="color:#099">1</span>) <span style="color:#00a">as</span> city,
-          round((pos &lt;@&gt; point(-<span style="color:#099">0</span>.<span style="color:#099">12</span>,<span style="color:#099">51</span>.<span style="color:#099">516</span>))::<span style="color:#0aa">numeric</span>, <span style="color:#099">3</span>) <span style="color:#00a">as</span> miles
-     <span style="color:#00a">from</span> pubnames p
- <span style="color:#00a">order</span> <span style="color:#00a">by</span> pos &lt;-&gt; point(-<span style="color:#099">0</span>.<span style="color:#099">12</span>,<span style="color:#099">51</span>.<span style="color:#099">516</span>) <span style="color:#00a">desc</span>
-    <span style="color:#00a">limit</span> <span style="color:#099">5</span>;</code></pre></div><pre><code class="language-psql" data-lang="psql">      name       |  city  |  miles  
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">&gt;<span style="color:#bbb">   </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>name,<span style="color:#bbb">
+</span><span style="color:#bbb">          </span>(<span style="color:#00a">select</span><span style="color:#bbb"> </span>name<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>cities<span style="color:#bbb"> </span><span style="color:#00a">c</span><span style="color:#bbb"> </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">c</span>.pos<span style="color:#bbb"> </span>&lt;-&gt;<span style="color:#bbb"> </span>p.pos<span style="color:#bbb"> </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">1</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>city,<span style="color:#bbb">
+</span><span style="color:#bbb">          </span>round((pos<span style="color:#bbb"> </span>&lt;@&gt;<span style="color:#bbb"> </span>point(-<span style="color:#099">0</span>.<span style="color:#099">12</span>,<span style="color:#099">51</span>.<span style="color:#099">516</span>))::<span style="color:#0aa">numeric</span>,<span style="color:#bbb"> </span><span style="color:#099">3</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>miles<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pubnames<span style="color:#bbb"> </span>p<span style="color:#bbb">
+</span><span style="color:#bbb"> </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>pos<span style="color:#bbb"> </span>&lt;-&gt;<span style="color:#bbb"> </span>point(-<span style="color:#099">0</span>.<span style="color:#099">12</span>,<span style="color:#099">51</span>.<span style="color:#099">516</span>)<span style="color:#bbb"> </span><span style="color:#00a">desc</span><span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">5</span>;</code></pre></div><pre><code class="language-psql" data-lang="psql">      name       |  city  |  miles  
 -----------------+--------+---------
  Tig Bhric       | Galway | 440.194
  TP&#39;s            | Galway | 439.779
@@ -578,15 +577,15 @@ able to use
 the
 <a href="http://www.postgresql.org/docs/devel/static/queries-table-expressions.html#QUERIES-LATERAL">LATERAL</a> standard
 join construct, as in the following example:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">&gt;   <span style="color:#00a">select</span> <span style="color:#00a">c</span>.name <span style="color:#00a">as</span> city, p.name,
-           round((pos &lt;@&gt; point(-<span style="color:#099">0</span>.<span style="color:#099">12</span>,<span style="color:#099">51</span>.<span style="color:#099">516</span>))::<span style="color:#0aa">numeric</span>, <span style="color:#099">3</span>) <span style="color:#00a">as</span> miles
-      <span style="color:#00a">from</span> pubnames p,
-           <span style="color:#00a">lateral</span> (<span style="color:#00a">select</span> name
-                      <span style="color:#00a">from</span> cities <span style="color:#00a">c</span>
-                  <span style="color:#00a">order</span> <span style="color:#00a">by</span> <span style="color:#00a">c</span>.pos &lt;-&gt; p.pos
-                     <span style="color:#00a">limit</span> <span style="color:#099">1</span>) <span style="color:#00a">c</span>
-  <span style="color:#00a">order</span> <span style="color:#00a">by</span> pos &lt;-&gt; point(-<span style="color:#099">0</span>.<span style="color:#099">12</span>,<span style="color:#099">51</span>.<span style="color:#099">516</span>) <span style="color:#00a">desc</span>
-     <span style="color:#00a">limit</span> <span style="color:#099">5</span>;</code></pre></div><pre><code class="language-psql" data-lang="psql">  city  |      name       |  miles  
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">&gt;<span style="color:#bbb">   </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">c</span>.name<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>city,<span style="color:#bbb"> </span>p.name,<span style="color:#bbb">
+</span><span style="color:#bbb">           </span>round((pos<span style="color:#bbb"> </span>&lt;@&gt;<span style="color:#bbb"> </span>point(-<span style="color:#099">0</span>.<span style="color:#099">12</span>,<span style="color:#099">51</span>.<span style="color:#099">516</span>))::<span style="color:#0aa">numeric</span>,<span style="color:#bbb"> </span><span style="color:#099">3</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>miles<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pubnames<span style="color:#bbb"> </span>p,<span style="color:#bbb">
+</span><span style="color:#bbb">           </span><span style="color:#00a">lateral</span><span style="color:#bbb"> </span>(<span style="color:#00a">select</span><span style="color:#bbb"> </span>name<span style="color:#bbb">
+</span><span style="color:#bbb">                      </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>cities<span style="color:#bbb"> </span><span style="color:#00a">c</span><span style="color:#bbb">
+</span><span style="color:#bbb">                  </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">c</span>.pos<span style="color:#bbb"> </span>&lt;-&gt;<span style="color:#bbb"> </span>p.pos<span style="color:#bbb">
+</span><span style="color:#bbb">                     </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">1</span>)<span style="color:#bbb"> </span><span style="color:#00a">c</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>pos<span style="color:#bbb"> </span>&lt;-&gt;<span style="color:#bbb"> </span>point(-<span style="color:#099">0</span>.<span style="color:#099">12</span>,<span style="color:#099">51</span>.<span style="color:#099">516</span>)<span style="color:#bbb"> </span><span style="color:#00a">desc</span><span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">5</span>;</code></pre></div><pre><code class="language-psql" data-lang="psql">  city  |      name       |  miles  
 --------+-----------------+---------
  Galway | Tig Bhric       | 440.194
  Galway | TP&#39;s            | 439.779
@@ -605,18 +604,18 @@ time=0.016..0.016 rows=1 loops=27878)</code>, which means scanning the position
 index of the cities 27878 times (once per pubnames entry).</p>
 
 <p>It&rsquo;s possible to force the planner into doing it the obvious way though:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">&gt;   <span style="color:#00a">with</span> pubs <span style="color:#00a">as</span> (
-        <span style="color:#00a">select</span> name, pos,
-               round((pos &lt;@&gt; point(-<span style="color:#099">0</span>.<span style="color:#099">12</span>,<span style="color:#099">51</span>.<span style="color:#099">516</span>))::<span style="color:#0aa">numeric</span>, <span style="color:#099">3</span>) <span style="color:#00a">as</span> miles
-          <span style="color:#00a">from</span> pubnames
-      <span style="color:#00a">order</span> <span style="color:#00a">by</span> pos &lt;-&gt; point(-<span style="color:#099">0</span>.<span style="color:#099">12</span>,<span style="color:#099">51</span>.<span style="color:#099">516</span>) <span style="color:#00a">desc</span>
-         <span style="color:#00a">limit</span> <span style="color:#099">5</span>
-    )
-    <span style="color:#00a">select</span> <span style="color:#00a">c</span>.name <span style="color:#00a">as</span> city, p.name, p.miles
-      <span style="color:#00a">from</span> pubs p, <span style="color:#00a">lateral</span> (<span style="color:#00a">select</span> name
-                              <span style="color:#00a">from</span> cities <span style="color:#00a">c</span>
-                          <span style="color:#00a">order</span> <span style="color:#00a">by</span> <span style="color:#00a">c</span>.pos &lt;-&gt; p.pos
-                             <span style="color:#00a">limit</span> <span style="color:#099">1</span>) <span style="color:#00a">c</span>;</code></pre></div><pre><code class="language-psql" data-lang="psql">  city  |      name       |  miles  
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">&gt;<span style="color:#bbb">   </span><span style="color:#00a">with</span><span style="color:#bbb"> </span>pubs<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span><span style="color:#bbb">        </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>name,<span style="color:#bbb"> </span>pos,<span style="color:#bbb">
+</span><span style="color:#bbb">               </span>round((pos<span style="color:#bbb"> </span>&lt;@&gt;<span style="color:#bbb"> </span>point(-<span style="color:#099">0</span>.<span style="color:#099">12</span>,<span style="color:#099">51</span>.<span style="color:#099">516</span>))::<span style="color:#0aa">numeric</span>,<span style="color:#bbb"> </span><span style="color:#099">3</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>miles<span style="color:#bbb">
+</span><span style="color:#bbb">          </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pubnames<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>pos<span style="color:#bbb"> </span>&lt;-&gt;<span style="color:#bbb"> </span>point(-<span style="color:#099">0</span>.<span style="color:#099">12</span>,<span style="color:#099">51</span>.<span style="color:#099">516</span>)<span style="color:#bbb"> </span><span style="color:#00a">desc</span><span style="color:#bbb">
+</span><span style="color:#bbb">         </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">5</span><span style="color:#bbb">
+</span><span style="color:#bbb">    </span>)<span style="color:#bbb">
+</span><span style="color:#bbb">    </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">c</span>.name<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>city,<span style="color:#bbb"> </span>p.name,<span style="color:#bbb"> </span>p.miles<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pubs<span style="color:#bbb"> </span>p,<span style="color:#bbb"> </span><span style="color:#00a">lateral</span><span style="color:#bbb"> </span>(<span style="color:#00a">select</span><span style="color:#bbb"> </span>name<span style="color:#bbb">
+</span><span style="color:#bbb">                              </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>cities<span style="color:#bbb"> </span><span style="color:#00a">c</span><span style="color:#bbb">
+</span><span style="color:#bbb">                          </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">c</span>.pos<span style="color:#bbb"> </span>&lt;-&gt;<span style="color:#bbb"> </span>p.pos<span style="color:#bbb">
+</span><span style="color:#bbb">                             </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">1</span>)<span style="color:#bbb"> </span><span style="color:#00a">c</span>;</code></pre></div><pre><code class="language-psql" data-lang="psql">  city  |      name       |  miles  
 --------+-----------------+---------
  Galway | Tig Bhric       | 440.194
  Galway | TP&#39;s            | 439.779
@@ -631,16 +630,16 @@ Time: 76.467 ms</code></pre>
 <p>Let&rsquo;s now find which cities have the highest count of pubs, considering that
 a pub is affiliated to a city if it&rsquo;s within 5 miles of the single point we
 have as city location in our data set.</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">&gt;   <span style="color:#00a">select</span> <span style="color:#00a">c</span>.name, <span style="color:#00a">count</span>(cp)
-      <span style="color:#00a">from</span> cities <span style="color:#00a">c</span>,
-           <span style="color:#00a">lateral</span> (<span style="color:#00a">select</span> name
-                      <span style="color:#00a">from</span> pubnames p
-                     <span style="color:#00a">where</span> (p.pos &lt;@&gt; <span style="color:#00a">c</span>.pos) &lt; <span style="color:#099">5</span>
-                   )
-                   <span style="color:#00a">as</span> cp
-  <span style="color:#00a">group</span> <span style="color:#00a">by</span> <span style="color:#00a">c</span>.name
-  <span style="color:#00a">order</span> <span style="color:#00a">by</span> <span style="color:#00a">count</span>(cp) <span style="color:#00a">desc</span>
-  <span style="color:#00a">limit</span> <span style="color:#099">10</span>;</code></pre></div><pre><code class="language-psql" data-lang="psql">    name     | count 
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">&gt;<span style="color:#bbb">   </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">c</span>.name,<span style="color:#bbb"> </span><span style="color:#00a">count</span>(cp)<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>cities<span style="color:#bbb"> </span><span style="color:#00a">c</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">           </span><span style="color:#00a">lateral</span><span style="color:#bbb"> </span>(<span style="color:#00a">select</span><span style="color:#bbb"> </span>name<span style="color:#bbb">
+</span><span style="color:#bbb">                      </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pubnames<span style="color:#bbb"> </span>p<span style="color:#bbb">
+</span><span style="color:#bbb">                     </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>(p.pos<span style="color:#bbb"> </span>&lt;@&gt;<span style="color:#bbb"> </span><span style="color:#00a">c</span>.pos)<span style="color:#bbb"> </span>&lt;<span style="color:#bbb"> </span><span style="color:#099">5</span><span style="color:#bbb">
+</span><span style="color:#bbb">                   </span>)<span style="color:#bbb">
+</span><span style="color:#bbb">                   </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>cp<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">c</span>.name<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">count</span>(cp)<span style="color:#bbb"> </span><span style="color:#00a">desc</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">10</span>;</code></pre></div><pre><code class="language-psql" data-lang="psql">    name     | count 
 -------------+-------
  London      |  1388
  Westminster |  1383
@@ -665,17 +664,17 @@ address any other situation like that in the whole data set.</p>
 <p>And now what about the most popular pub names per city? Of course we want to
 normalize again our pub names here but only for counting: we still display
 all the names we did count.</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">&gt;   <span style="color:#00a">select</span> <span style="color:#00a">c</span>.name,
-           array_to_string(array_agg(<span style="color:#00a">distinct</span>(cp.name) <span style="color:#00a">order</span> <span style="color:#00a">by</span> cp.name), <span style="color:#a50">&#39;, &#39;</span>),
-           <span style="color:#00a">count</span>(*)
-      <span style="color:#00a">from</span> cities <span style="color:#00a">c</span>,
-           <span style="color:#00a">lateral</span> (<span style="color:#00a">select</span> name
-                      <span style="color:#00a">from</span> pubnames p
-                     <span style="color:#00a">where</span> (p.pos &lt;@&gt; <span style="color:#00a">c</span>.pos) &lt; <span style="color:#099">5</span>) <span style="color:#00a">as</span> cp
-     <span style="color:#00a">where</span> <span style="color:#00a">c</span>.name &lt;&gt; <span style="color:#a50">&#39;Westminster&#39;</span>
-  <span style="color:#00a">group</span> <span style="color:#00a">by</span> <span style="color:#00a">c</span>.name, <span style="color:#00a">replace</span>(<span style="color:#00a">replace</span>(cp.name, <span style="color:#a50">&#39;The &#39;</span>, <span style="color:#a50">&#39;&#39;</span>), <span style="color:#a50">&#39;And&#39;</span>, <span style="color:#a50">&#39;&amp;&#39;</span>)
-  <span style="color:#00a">order</span> <span style="color:#00a">by</span> <span style="color:#00a">count</span>(*) <span style="color:#00a">desc</span>
-     <span style="color:#00a">limit</span> <span style="color:#099">10</span>;</code></pre></div><pre><code class="language-psql" data-lang="psql">   name   |            array_to_string             | count 
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">&gt;<span style="color:#bbb">   </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">c</span>.name,<span style="color:#bbb">
+</span><span style="color:#bbb">           </span>array_to_string(array_agg(<span style="color:#00a">distinct</span>(cp.name)<span style="color:#bbb"> </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>cp.name),<span style="color:#bbb"> </span><span style="color:#a50">&#39;, &#39;</span>),<span style="color:#bbb">
+</span><span style="color:#bbb">           </span><span style="color:#00a">count</span>(*)<span style="color:#bbb">
+</span><span style="color:#bbb">      </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>cities<span style="color:#bbb"> </span><span style="color:#00a">c</span>,<span style="color:#bbb">
+</span><span style="color:#bbb">           </span><span style="color:#00a">lateral</span><span style="color:#bbb"> </span>(<span style="color:#00a">select</span><span style="color:#bbb"> </span>name<span style="color:#bbb">
+</span><span style="color:#bbb">                      </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pubnames<span style="color:#bbb"> </span>p<span style="color:#bbb">
+</span><span style="color:#bbb">                     </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>(p.pos<span style="color:#bbb"> </span>&lt;@&gt;<span style="color:#bbb"> </span><span style="color:#00a">c</span>.pos)<span style="color:#bbb"> </span>&lt;<span style="color:#bbb"> </span><span style="color:#099">5</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>cp<span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#00a">c</span>.name<span style="color:#bbb"> </span>&lt;&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;Westminster&#39;</span><span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">c</span>.name,<span style="color:#bbb"> </span><span style="color:#00a">replace</span>(<span style="color:#00a">replace</span>(cp.name,<span style="color:#bbb"> </span><span style="color:#a50">&#39;The &#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;&#39;</span>),<span style="color:#bbb"> </span><span style="color:#a50">&#39;And&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;&amp;&#39;</span>)<span style="color:#bbb">
+</span><span style="color:#bbb">  </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span><span style="color:#00a">desc</span><span style="color:#bbb">
+</span><span style="color:#bbb">     </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">10</span>;</code></pre></div><pre><code class="language-psql" data-lang="psql">   name   |            array_to_string             | count 
 ----------+----------------------------------------+-------
  London   | Prince of Wales, The Prince of Wales   |    15
  London   | All Bar One                            |    12
