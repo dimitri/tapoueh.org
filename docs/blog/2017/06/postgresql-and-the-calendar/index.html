@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.85.0">
+    <meta name="generator" content="Hugo 0.89.3">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>PostgreSQL and the calendar</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -160,7 +160,7 @@ if (!doNotTrack) {
   <div class="sidebar-container">
     
       <div class="sidebar-profile">
-        <a href="/#about">
+        <a href="/#about" aria-label="">
           <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
         </a>
         <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
@@ -173,7 +173,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/">
+      <a class="sidebar-button-link " href="/" title="Blog">
     
       <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
       
@@ -183,7 +183,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/about/">
+      <a class="sidebar-button-link " href="/about/" title="About">
     
       <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
       
@@ -193,7 +193,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/categories/yesql/">
+      <a class="sidebar-button-link " href="/categories/yesql/" title="YeSQL">
     
       <i class="sidebar-button-icon fa fa-lg fa-database"></i>
       
@@ -203,7 +203,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener" title="The Art of PostgreSQL">
     
       <i class="sidebar-button-icon fa fa-lg fa-book"></i>
       
@@ -217,7 +217,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener" title="GitHub">
     
       <i class="sidebar-button-icon fa fa-lg fa-github"></i>
       
@@ -227,7 +227,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener" title="Twitter">
     
       <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
       
@@ -237,7 +237,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/categories">
+      <a class="sidebar-button-link " href="/categories" title="Categories">
     
       <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
       
@@ -251,7 +251,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/index.xml">
+      <a class="sidebar-button-link " href="/index.xml" title="RSS">
     
       <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
       
@@ -273,7 +273,7 @@ if (!doNotTrack) {
     
       <div class="post-header main-content-wrap text-left">
   
-    <h1 class="post-title" itemprop="headline">
+    <h1 class="post-title">
       PostgreSQL and the calendar
     </h1>
   
@@ -372,20 +372,17 @@ common to think that calendar based computations are easy. That&rsquo;s until
 you&rsquo;ve tried to do it once. A very good read about how the current calendar
 came to be the way it is now is Erik&rsquo;s
 Naggum <a href="http://naggum.no/lugm-time.html">The Long, Painful History of Time</a>.</p>
-
 <p>Fortunately for us developpers we don&rsquo;t have to deal with managing calendar
 based computations ourselves: we can rely on PostgreSQL rich set
 of
 <a href="https://www.postgresql.org/docs/9.6/static/functions-datetime.html">Date/Time Functions and Operators</a> and
 <a href="https://www.postgresql.org/docs/9.6/static/functions-formatting.html">Data Type Formatting Functions</a> to
 do the job for us!</p>
-
 <p>So here&rsquo;s a SQL query that show cases PostgreSQL abilities when it comes to
 playing with calendar related data. This query started from a conversation
 about week numbers with friends. Week numbers sound easy, you begin with the
 first January each year, and every 7 days you increment the week number. You
 might even be able to code that as a modulo operation and be done.</p>
-
 <p>Well, except that weeks always begin on a Monday, and months and years
 don&rsquo;t, for crazy historical reasons. Really, we could simplify things down a
 lot. One proposal around is to have 13 months of 28 days (4 weeks) each
@@ -393,21 +390,18 @@ year, that amounts to 364 days. We&rsquo;re short of one day, maybe two for leap
 years: let&rsquo;s have that day off the calendar as an extra festivity day. Now
 everything would be very simple, every 1st of the month would be a Monday,
 always, for instance.</p>
-
 <p>Anyway, in the real world years don&rsquo;t always begin a Monday, so when do you
 count the first week of the year? PostgreSQL documentation tells us:</p>
-
 <blockquote>
 <p>By definition, ISO weeks start on Mondays and the first week of a year
 contains January 4 of that year. In other words, the first Thursday of a
 year is in week 1 of that year.</p>
 </blockquote>
-
 <p>Easy right? Now, rather than trying to compute that yourself in your code,
 let&rsquo;s see how to get a decade of week numbers for the first day of the year.
 And while at that, add in how many days that year will have in February, as
 well as other bits:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>::<span style="color:#0aa">date</span>,<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>::<span style="color:#0aa">date</span>,<span style="color:#bbb">
 </span><span style="color:#bbb">       </span><span style="color:#00a">extract</span>(<span style="color:#a50">&#39;isodow&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>dow,<span style="color:#bbb">
 </span><span style="color:#bbb">       </span>to_char(<span style="color:#0aa">date</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;dy&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">day</span>,<span style="color:#bbb">
 </span><span style="color:#bbb">       </span><span style="color:#00a">extract</span>(<span style="color:#a50">&#39;isoyear&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;iso year&#34;</span>,<span style="color:#bbb">
@@ -424,11 +418,11 @@ well as other bits:</p>
 </span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>generate_series(<span style="color:#0aa">date</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;2000-01-01&#39;</span>,<span style="color:#bbb">
 </span><span style="color:#bbb">                       </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;2010-01-01&#39;</span>,<span style="color:#bbb">
 </span><span style="color:#bbb">                       </span><span style="color:#0aa">interval</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;1 year&#39;</span>)<span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>t(<span style="color:#0aa">date</span>);</code></pre></div>
-<p>The <em>generate_series</em> function returns a set of items, here all the dates of
+</span><span style="color:#bbb">       </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>t(<span style="color:#0aa">date</span>);<span style="color:#bbb">
+</span></code></pre></div><p>The <em>generate_series</em> function returns a set of items, here all the dates of
 the first day of the years from the 2000&rsquo;s decade. For each of them we then
 compute several calendar based values:</p>
-<pre><code>    date    │ dow │ day │ iso year │ week │ feb │ year │ leap 
+<pre tabindex="0"><code>    date    │ dow │ day │ iso year │ week │ feb │ year │ leap 
 ════════════╪═════╪═════╪══════════╪══════╪═════╪══════╪══════
  2000-01-01 │   6 │ sat │     1999 │   52 │  29 │ 2000 │ t
  2001-01-01 │   1 │ mon │     2001 │    1 │  28 │ 2001 │ f
@@ -441,17 +435,15 @@ compute several calendar based values:</p>
  2008-01-01 │   2 │ tue │     2008 │    1 │  29 │ 2008 │ t
  2009-01-01 │   4 │ thu │     2009 │    1 │  28 │ 2009 │ f
  2010-01-01 │   5 │ fri │     2009 │   53 │  28 │ 2010 │ f
-(11 rows)</code></pre>
-<p>So by the ISO standard the first of January 2000 is part of week 52, 1999.
+(11 rows)
+</code></pre><p>So by the ISO standard the first of January 2000 is part of week 52, 1999.
 That&rsquo;s right. Also that year is a leap year. Well, 2000 I mean, not 1999.</p>
-
 <p>To conclude with our calendar fun, here&rsquo;s a very practical advice when you
 use dates in PostgreSQL: make good use of the <em>interval</em> data type when
 computing date ranges like for example monthly based reporting.</p>
-
 <p>If we want to display all the Formula One races for last quarter (from April
 the first, and a quarter lasts 3 month), I would use the following query:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#f00;background-color:#faa">\</span><span style="color:#00a">set</span><span style="color:#bbb"> </span>beginning<span style="color:#bbb"> </span><span style="color:#a50">&#39;2017-04-01&#39;</span><span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#f00;background-color:#faa">\</span><span style="color:#00a">set</span><span style="color:#bbb"> </span>beginning<span style="color:#bbb"> </span><span style="color:#a50">&#39;2017-04-01&#39;</span><span style="color:#bbb">
 </span><span style="color:#bbb"></span><span style="color:#f00;background-color:#faa">\</span><span style="color:#00a">set</span><span style="color:#bbb"> </span>months<span style="color:#bbb"> </span><span style="color:#099">3</span><span style="color:#bbb">
 </span><span style="color:#bbb">
 </span><span style="color:#bbb"></span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>,<span style="color:#bbb"> </span>name,<span style="color:#bbb"> </span>drivers.surname<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>winner<span style="color:#bbb">
@@ -462,13 +454,12 @@ the first, and a quarter lasts 3 month), I would use the following query:</p>
 </span><span style="color:#bbb">       </span><span style="color:#00a">left</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>drivers<span style="color:#bbb"> </span><span style="color:#00a">using</span>(driverid)<span style="color:#bbb">
 </span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span>&gt;=<span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span>:<span style="color:#a50">&#39;beginning&#39;</span><span style="color:#bbb">
 </span><span style="color:#bbb">   </span><span style="color:#00a">and</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span>&lt;<span style="color:#bbb">   </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span>:<span style="color:#a50">&#39;beginning&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">              </span>+<span style="color:#bbb"> </span>:months<span style="color:#bbb"> </span>*<span style="color:#bbb"> </span><span style="color:#0aa">interval</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;1 month&#39;</span>;</code></pre></div>
-<div class="alert info ">
+</span><span style="color:#bbb">              </span>+<span style="color:#bbb"> </span>:months<span style="color:#bbb"> </span>*<span style="color:#bbb"> </span><span style="color:#0aa">interval</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;1 month&#39;</span>;<span style="color:#bbb">
+</span></code></pre></div><div class="alert info ">
   <p>Read my article about <a href="/blog/2017/06/how-to-write-sql/">How to Write SQL</a>
 for more details about the <code>\set</code> feature of <em>psql</em> and how best to
 integrate such a query into your application&rsquo;s code.</p>
 </div>
-
 <p>As you can see the query is written with two input parameters: the date
 beginning the quarter and how many months we are interested into, in case we
 then want to do the same thing for a year or a semester. Thanks to using an
@@ -476,9 +467,8 @@ explicit range that includes the first date and <em>excludes</em> the closing da
 we don&rsquo;t have to compute the number of days of the closing month here.
 PostgreSQL is pretty good at that. Just refrain from using <em>between</em> which
 would include both dates in the range.</p>
-
 <p>And if you&rsquo;re curious here&rsquo;s the result:</p>
-<pre><code>    date    │         name          │  winner  
+<pre tabindex="0"><code>    date    │         name          │  winner  
 ════════════╪═══════════════════════╪══════════
  2017-04-09 │ Chinese Grand Prix    │ Hamilton
  2017-04-16 │ Bahrain Grand Prix    │ Vettel
@@ -487,19 +477,21 @@ would include both dates in the range.</p>
  2017-05-28 │ Monaco Grand Prix     │ Vettel
  2017-06-11 │ Canadian Grand Prix   │ Hamilton
  2017-06-25 │ Azerbaijan Grand Prix │ ¤
-(7 rows)</code></pre>
-<p>You can see that my local copy of
+(7 rows)
+</code></pre><p>You can see that my local copy of
 the <a href="http://ergast.com/mrd/">historical record of motor racing data</a> is not
 uptodate and we lack the information for the winner of the <em>Azerbaijan Grand
 Prix</em>. If you&rsquo;re curious about it, you can download a MySQL dump of the
 database and then import it into PostgreSQL thanks
 to <a href="http://pgloader.io">pgloader</a>:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ createdb f1db
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ createdb f1db
 $ pgloader mysql://root@localhost/f1db pgsql:///f1db
-$ psql -d f1db -c <span style="color:#a50">&#39;ALTER DATABASE f1db SET search_path TO f1db, public;&#39;</span></code></pre></div>
-<p>Have fun with SQL, and stop doing calendar based computations yourself: use
+$ psql -d f1db -c <span style="color:#a50">&#39;ALTER DATABASE f1db SET search_path TO f1db, public;&#39;</span>
+</code></pre></div><p>Have fun with SQL, and stop doing calendar based computations yourself: use
 an API you can trust such as PostgreSQL!</p>
               
+
+
             </div>
           </div>
           <div style="margin-top: 1em;">
@@ -603,6 +595,7 @@ an API you can trust such as PostgreSQL!</p>
                 <div id="disqus_thread">
   <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
 </div>
+
               
             
           </div>
@@ -706,7 +699,7 @@ an API you can trust such as PostgreSQL!</p>
     <div id="about">
   <div id="about-card">
     <div id="about-btn-close">
-      <i class="fa fa-remove"></i>
+      <i class="fa fa-times"></i>
     </div>
     
       <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
@@ -724,7 +717,7 @@ an API you can trust such as PostgreSQL!</p>
     
     
       <div id="about-card-location">
-        <i class="fa fa-map-marker"></i>
+        <i class="fa fa-map-marker-alt"></i>
         <br/>
         France
       </div>
@@ -744,30 +737,16 @@ an API you can trust such as PostgreSQL!</p>
 
 
     
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.1.0/highlight.min.js" integrity="sha512-z+/WWfyD5tccCukM4VvONpEtLmbAm5LDu7eKiyMQJ9m7OfPEDL7gENyDRL3Yfe8XAuGsS2fS4xSMnl6d30kqGQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
-
-
-<script src="/js/script-pcw6v3xilnxydl1vddzazdverrnn9ctynvnxgwho987mfyqkuylcb1nlt.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha512-uURl+ZXMBrF4AwGaWmEetzrd+J5/8NRkWAvJx5sbPSSuOb0bZLqf+tOzniObO00BjHa/dD7gub9oCGMLPQHtQA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 
-<script lang="javascript">
-window.onload = updateMinWidth;
-window.onresize = updateMinWidth;
-document.getElementById("sidebar").addEventListener("transitionend", updateMinWidth);
-function updateMinWidth() {
-  var sidebar = document.getElementById("sidebar");
-  var main = document.getElementById("main");
-  main.style.minWidth = "";
-  var w1 = getComputedStyle(main).getPropertyValue("min-width");
-  var w2 = getComputedStyle(sidebar).getPropertyValue("width");
-  var w3 = getComputedStyle(sidebar).getPropertyValue("left");
-  main.style.minWidth = `calc(${w1} - ${w2} - ${w3})`;
-}
-</script>
+<script src="https://tapoueh.org/js/script-yqzy9wdlzix4lbbwdnzvwx3egsne77earqmn73v9uno8aupuph8wfguccut.min.js"></script>
+
+
 
 <script>
 $(document).ready(function() {
@@ -780,33 +759,6 @@ $(document).ready(function() {
   });
 });
 </script>
-
-
-  
-    
-      <script>
-        var disqus_config = function () {
-          this.page.url = 'https:\/\/tapoueh.org\/blog\/2017\/06\/postgresql-and-the-calendar\/';
-          
-            this.page.identifier = '\/blog\/2017\/06\/postgresql-and-the-calendar\/'
-          
-        };
-        (function() {
-          
-          
-          if (window.location.hostname == "localhost") {
-            return;
-          }
-          var d = document, s = d.createElement('script');
-          var disqus_shortname = 'tapoueh';
-          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
-
-          s.setAttribute('data-timestamp', +new Date());
-          (d.head || d.body).appendChild(s);
-        })();
-      </script>
-    
-  
 
 
 

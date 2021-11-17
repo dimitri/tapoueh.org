@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.85.0">
+    <meta name="generator" content="Hugo 0.89.3">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Dynamic Triggers in PLpgSQL</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -148,7 +148,7 @@ if (!doNotTrack) {
   <div class="sidebar-container">
     
       <div class="sidebar-profile">
-        <a href="/#about">
+        <a href="/#about" aria-label="">
           <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
         </a>
         <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
@@ -161,7 +161,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/">
+      <a class="sidebar-button-link " href="/" title="Blog">
     
       <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
       
@@ -171,7 +171,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/about/">
+      <a class="sidebar-button-link " href="/about/" title="About">
     
       <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
       
@@ -181,7 +181,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/categories/yesql/">
+      <a class="sidebar-button-link " href="/categories/yesql/" title="YeSQL">
     
       <i class="sidebar-button-icon fa fa-lg fa-database"></i>
       
@@ -191,7 +191,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener" title="The Art of PostgreSQL">
     
       <i class="sidebar-button-icon fa fa-lg fa-book"></i>
       
@@ -205,7 +205,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener" title="GitHub">
     
       <i class="sidebar-button-icon fa fa-lg fa-github"></i>
       
@@ -215,7 +215,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener" title="Twitter">
     
       <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
       
@@ -225,7 +225,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/categories">
+      <a class="sidebar-button-link " href="/categories" title="Categories">
     
       <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
       
@@ -239,7 +239,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/index.xml">
+      <a class="sidebar-button-link " href="/index.xml" title="RSS">
     
       <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
       
@@ -271,7 +271,7 @@ if (!doNotTrack) {
           
             <div class="post-header main-content-wrap text-left">
   
-    <h1 class="post-title" itemprop="headline">
+    <h1 class="post-title">
       Dynamic Triggers in PLpgSQL
     </h1>
   
@@ -335,13 +335,12 @@ impossible. But I had a very bad night, being up from as soon as 3:30 am
 today, so that when a developer asked me about reusing the same trigger
 function code from more than one table and for a dynamic column name, I
 didn&rsquo;t remember about it being impossible.</p>
-
 <p>Here&rsquo;s what happens in such cases, after a long time on the problem (yes,
 overall, that&rsquo;s a slow day). Note that I&rsquo;m abusing the
 <code>(record_literal).*</code>
 notation a lot in there, and even the
 <code>(record_literal).column_name</code> too.</p>
-<pre><code>CREATE OR REPLACE FUNCTION public.update_timestamp()
+<pre tabindex="0"><code>CREATE OR REPLACE FUNCTION public.update_timestamp()
  RETURNS TRIGGER
  LANGUAGE plpgsql
 AS $f$
@@ -354,53 +353,55 @@ DECLARE
 BEGIN
     IF TG_NARGS != 1
     THEN
-        RAISE EXCEPTION &#39;Trigger public.update_timestamp() called with % args&#39;,
+        RAISE EXCEPTION 'Trigger public.update_timestamp() called with % args',
                          TG_NARGS;
     END IF;
 
     ts_column := TG_ARGV[0];
 
-    EXECUTE &#39;SELECT n.&#39; || ts_column
-         || &#39; FROM (SELECT (&#39; 
-         || quote_literal(OLD) || &#39;::&#39; || TG_RELID::regclass
-         || &#39;).*) as n&#39;
+    EXECUTE 'SELECT n.' || ts_column
+         || ' FROM (SELECT (' 
+         || quote_literal(OLD) || '::' || TG_RELID::regclass
+         || ').*) as n'
        INTO old_timestamp;
 
     -- build NEW record text
-    n := &#39;(&#39;;
+    n := '(';
     FOR attname IN
-      EXECUTE &#39;SELECT attname &#39;
-           || &#39;  FROM pg_class c left join pg_attribute a on a.attrelid = c.oid&#39;
-           || &#39; WHERE c.oid = $1 and attnum &gt; 0 order by attnum&#39;
+      EXECUTE 'SELECT attname '
+           || '  FROM pg_class c left join pg_attribute a on a.attrelid = c.oid'
+           || ' WHERE c.oid = $1 and attnum &gt; 0 order by attnum'
        USING TG_RELID
     LOOP
-        EXECUTE &#39;SELECT (&#39; || quote_literal(NEW) || &#39;::&#39; || TG_RELID::regclass || &#39;).&#39; || attname INTO v;
+        EXECUTE 'SELECT (' || quote_literal(NEW) || '::' || TG_RELID::regclass || ').' || attname INTO v;
 
-        IF n != &#39;(&#39; THEN n := n || &#39;,&#39;; END IF;
+        IF n != '(' THEN n := n || ','; END IF;
 
         IF attname = ts_column 
            AND v::timestamptz IS NOT DISTINCT FROM old_timestamp
         THEN
                 n := n || now();
         ELSE
-                n := n || COALESCE(v, &#39;&#39;);              
+                n := n || COALESCE(v, '');              
         END IF;
     END LOOP;
-    n := n || &#39;)&#39;;
+    n := n || ')';
 
-    EXECUTE &#39;SELECT ($1::&#39; || TG_RELID::regclass || &#39;).*&#39;
+    EXECUTE 'SELECT ($1::' || TG_RELID::regclass || ').*'
       INTO NEW
      USING n;
 
     RETURN NEW;
 END;
-$f$;</code></pre>
-<p>It&rsquo;s not pretty, and not fast. It&rsquo;s about
+$f$;
+</code></pre><p>It&rsquo;s not pretty, and not fast. It&rsquo;s about
 <code>2 ms</code> per call on a table with
 <code>15</code>
 columns, in some preliminary tests. But it sure was a nice challenge!</p>
 
               
+
+
             </div>
           </div>
           <div style="margin-top: 1em;">
@@ -494,6 +495,7 @@ columns, in some preliminary tests. But it sure was a nice challenge!</p>
                 <div id="disqus_thread">
   <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
 </div>
+
               
             
           </div>
@@ -597,7 +599,7 @@ columns, in some preliminary tests. But it sure was a nice challenge!</p>
     <div id="about">
   <div id="about-card">
     <div id="about-btn-close">
-      <i class="fa fa-remove"></i>
+      <i class="fa fa-times"></i>
     </div>
     
       <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
@@ -615,7 +617,7 @@ columns, in some preliminary tests. But it sure was a nice challenge!</p>
     
     
       <div id="about-card-location">
-        <i class="fa fa-map-marker"></i>
+        <i class="fa fa-map-marker-alt"></i>
         <br/>
         France
       </div>
@@ -635,30 +637,16 @@ columns, in some preliminary tests. But it sure was a nice challenge!</p>
 
 
     
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.1.0/highlight.min.js" integrity="sha512-z+/WWfyD5tccCukM4VvONpEtLmbAm5LDu7eKiyMQJ9m7OfPEDL7gENyDRL3Yfe8XAuGsS2fS4xSMnl6d30kqGQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
-
-
-<script src="/js/script-pcw6v3xilnxydl1vddzazdverrnn9ctynvnxgwho987mfyqkuylcb1nlt.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha512-uURl+ZXMBrF4AwGaWmEetzrd+J5/8NRkWAvJx5sbPSSuOb0bZLqf+tOzniObO00BjHa/dD7gub9oCGMLPQHtQA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 
-<script lang="javascript">
-window.onload = updateMinWidth;
-window.onresize = updateMinWidth;
-document.getElementById("sidebar").addEventListener("transitionend", updateMinWidth);
-function updateMinWidth() {
-  var sidebar = document.getElementById("sidebar");
-  var main = document.getElementById("main");
-  main.style.minWidth = "";
-  var w1 = getComputedStyle(main).getPropertyValue("min-width");
-  var w2 = getComputedStyle(sidebar).getPropertyValue("width");
-  var w3 = getComputedStyle(sidebar).getPropertyValue("left");
-  main.style.minWidth = `calc(${w1} - ${w2} - ${w3})`;
-}
-</script>
+<script src="https://tapoueh.org/js/script-yqzy9wdlzix4lbbwdnzvwx3egsne77earqmn73v9uno8aupuph8wfguccut.min.js"></script>
+
+
 
 <script>
 $(document).ready(function() {
@@ -671,33 +659,6 @@ $(document).ready(function() {
   });
 });
 </script>
-
-
-  
-    
-      <script>
-        var disqus_config = function () {
-          this.page.url = 'https:\/\/tapoueh.org\/blog\/2010\/11\/dynamic-triggers-in-plpgsql\/';
-          
-            this.page.identifier = '\/blog\/2010\/11\/dynamic-triggers-in-plpgsql\/'
-          
-        };
-        (function() {
-          
-          
-          if (window.location.hostname == "localhost") {
-            return;
-          }
-          var d = document, s = d.createElement('script');
-          var disqus_shortname = 'tapoueh';
-          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
-
-          s.setAttribute('data-timestamp', +new Date());
-          (d.head || d.body).appendChild(s);
-        })();
-      </script>
-    
-  
 
 
 

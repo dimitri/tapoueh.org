@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.85.0">
+    <meta name="generator" content="Hugo 0.89.3">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Querying the Catalog to plan an upgrade</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -145,7 +145,7 @@ if (!doNotTrack) {
   <div class="sidebar-container">
     
       <div class="sidebar-profile">
-        <a href="/#about">
+        <a href="/#about" aria-label="">
           <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
         </a>
         <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
@@ -158,7 +158,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/">
+      <a class="sidebar-button-link " href="/" title="Blog">
     
       <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
       
@@ -168,7 +168,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/about/">
+      <a class="sidebar-button-link " href="/about/" title="About">
     
       <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
       
@@ -178,7 +178,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/categories/yesql/">
+      <a class="sidebar-button-link " href="/categories/yesql/" title="YeSQL">
     
       <i class="sidebar-button-icon fa fa-lg fa-database"></i>
       
@@ -188,7 +188,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener" title="The Art of PostgreSQL">
     
       <i class="sidebar-button-icon fa fa-lg fa-book"></i>
       
@@ -202,7 +202,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener" title="GitHub">
     
       <i class="sidebar-button-icon fa fa-lg fa-github"></i>
       
@@ -212,7 +212,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener" title="Twitter">
     
       <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
       
@@ -222,7 +222,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/categories">
+      <a class="sidebar-button-link " href="/categories" title="Categories">
     
       <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
       
@@ -236,7 +236,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/index.xml">
+      <a class="sidebar-button-link " href="/index.xml" title="RSS">
     
       <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
       
@@ -268,7 +268,7 @@ if (!doNotTrack) {
           
             <div class="post-header main-content-wrap text-left">
   
-    <h1 class="post-title" itemprop="headline">
+    <h1 class="post-title">
       Querying the Catalog to plan an upgrade
     </h1>
   
@@ -343,32 +343,31 @@ rebuilding
 <em>interval</em>
 columns too. Now the question is, how to find out if any such beasts are in
 use in your database?</p>
-
 <p>It happens that
 <a href="http://www.postgresql.org/">PostgreSQL</a> is letting you know those things by querying its
 <a href="http://www.postgresql.org/docs/8.4/static/catalogs.html">system catalogs</a>. That might look hairy at first, but it&rsquo;s very worth getting
 used to those system tables. You could compare that to introspection and
 reflexive facilities of some programming languages, except much more useful,
 because you&rsquo;re reaching all the system at once. But, well, here it goes:</p>
-<pre><code>SELECT schemaname, tablename, relname, amname, indexdef
+<pre tabindex="0"><code>SELECT schemaname, tablename, relname, amname, indexdef
   FROM pg_indexes i 
-       JOIN pg_class c ON i.indexname = c.relname and c.relkind = &#39;i&#39; 
+       JOIN pg_class c ON i.indexname = c.relname and c.relkind = 'i' 
        JOIN pg_am am ON c.relam = am.oid
- WHERE amname = &#39;gist&#39;;</code></pre>
-<p>Now you could replace the
+ WHERE amname = 'gist';
+</code></pre><p>Now you could replace the
 <code>WHERE</code> clause with
 <code>WHERE amname IN ('gist', 'hash')</code>
 to check both conditions at once. What about pursuing the restriction on the
 <em>hash</em> indexes rebuild to schedule, as they should only get done to indexes on
 <code>interval</code> columns. Well let&rsquo;s try it:</p>
-<pre><code>SELECT schemaname, tablename, relname as indexname, amname, indclass
+<pre tabindex="0"><code>SELECT schemaname, tablename, relname as indexname, amname, indclass
   FROM pg_indexes i 
-       JOIN pg_class c on i.indexname = c.relname and c.relkind = &#39;i&#39; 
+       JOIN pg_class c on i.indexname = c.relname and c.relkind = 'i' 
        JOIN pg_am am on c.relam = am.oid 
        JOIN pg_index x on x.indexrelid = c.oid 
- WHERE amname in (&#39;btree&#39;, &#39;gist&#39;) 
-       and schemaname not in (&#39;pg_catalog&#39;, &#39;information_schema&#39;);</code></pre>
-<p>We&rsquo;re not there yet, because as you notice, the catalogs are somewhat
+ WHERE amname in ('btree', 'gist') 
+       and schemaname not in ('pg_catalog', 'information_schema');
+</code></pre><p>We&rsquo;re not there yet, because as you notice, the catalogs are somewhat
 optimized and not always in a normal form. That&rsquo;s good for the system&rsquo;s
 performance, but it makes querying a bit uneasy. What we want is to get from
 the
@@ -379,7 +378,6 @@ to an
 <code>interval</code> data even if the column is not of an
 <code>interval</code> type itself, so we
 have to find both cases.</p>
-
 <p>Well the
 <em>subtlety</em> applies after you know what an
 <a href="http://www.postgresql.org/docs/8.4/static/xindex.html">operator class</a> is:
@@ -391,35 +389,34 @@ need to know here is that an index will talk to an operator class to get to
 the data type, either the
 <em>column</em> data type or the index
 <em>storage</em> one.</p>
-<pre><code>SELECT schemaname, tablename, relname as indexname, amname, indclass, opcname, typname
+<pre tabindex="0"><code>SELECT schemaname, tablename, relname as indexname, amname, indclass, opcname, typname
   FROM pg_indexes i 
-       JOIN pg_class c on i.indexname = c.relname and c.relkind = &#39;i&#39; 
+       JOIN pg_class c on i.indexname = c.relname and c.relkind = 'i' 
        JOIN pg_am am on c.relam = am.oid 
        JOIN pg_index x on x.indexrelid = c.oid 
        JOIN pg_opclass o 
-         on string_to_array(x.indclass::text, &#39; &#39;)::oid[] @&gt; array[o.oid]::oid[]
+         on string_to_array(x.indclass::text, ' ')::oid[] @&gt; array[o.oid]::oid[]
        JOIN pg_type t on o.opckeytype = t.oid
-WHERE amname = &#39;hash&#39; and t.typname = &#39;interval&#39;
+WHERE amname = 'hash' and t.typname = 'interval'
 
 UNION ALL
 
 SELECT schemaname, tablename, relname as indexname, amname, indclass, opcname, typname
   FROM pg_indexes i 
-       JOIN pg_class c on i.indexname = c.relname and c.relkind = &#39;i&#39; 
+       JOIN pg_class c on i.indexname = c.relname and c.relkind = 'i' 
        JOIN pg_am am on c.relam = am.oid 
        JOIN pg_index x on x.indexrelid = c.oid 
        JOIN pg_opclass o 
-         on string_to_array(x.indclass::text, &#39; &#39;)::oid[] @&gt; array[o.oid]::oid[]
+         on string_to_array(x.indclass::text, ' ')::oid[] @&gt; array[o.oid]::oid[]
        JOIN pg_type t on o.opcintype = t.oid
-WHERE amname = &#39;hash&#39; and t.typname = &#39;interval&#39;;</code></pre>
-<p>Most certainly this query will return no row for you, as
+WHERE amname = 'hash' and t.typname = 'interval';
+</code></pre><p>Most certainly this query will return no row for you, as
 <em>hash</em> indexes are
 not widely used, mainly because they are not crash tolerant. For seeing some
 results you could remove the
 <code>amname</code> restriction of course, that would show
 the query is working, but don&rsquo;t forget to add the restriction back to plan
 for the upgrade!</p>
-
 <p>But hey, why walking the extra mile here, would you ask me? After all, in
 the second query we would already have had the information we needed should
 we added the
@@ -433,6 +430,8 @@ indexes that need your attention post upgrade. That last step is left as an
 exercise for the reader, though.</p>
 
               
+
+
             </div>
           </div>
           <div style="margin-top: 1em;">
@@ -528,6 +527,7 @@ exercise for the reader, though.</p>
                 <div id="disqus_thread">
   <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
 </div>
+
               
             
           </div>
@@ -631,7 +631,7 @@ exercise for the reader, though.</p>
     <div id="about">
   <div id="about-card">
     <div id="about-btn-close">
-      <i class="fa fa-remove"></i>
+      <i class="fa fa-times"></i>
     </div>
     
       <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
@@ -649,7 +649,7 @@ exercise for the reader, though.</p>
     
     
       <div id="about-card-location">
-        <i class="fa fa-map-marker"></i>
+        <i class="fa fa-map-marker-alt"></i>
         <br/>
         France
       </div>
@@ -669,30 +669,16 @@ exercise for the reader, though.</p>
 
 
     
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.1.0/highlight.min.js" integrity="sha512-z+/WWfyD5tccCukM4VvONpEtLmbAm5LDu7eKiyMQJ9m7OfPEDL7gENyDRL3Yfe8XAuGsS2fS4xSMnl6d30kqGQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
-
-
-<script src="/js/script-pcw6v3xilnxydl1vddzazdverrnn9ctynvnxgwho987mfyqkuylcb1nlt.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha512-uURl+ZXMBrF4AwGaWmEetzrd+J5/8NRkWAvJx5sbPSSuOb0bZLqf+tOzniObO00BjHa/dD7gub9oCGMLPQHtQA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 
-<script lang="javascript">
-window.onload = updateMinWidth;
-window.onresize = updateMinWidth;
-document.getElementById("sidebar").addEventListener("transitionend", updateMinWidth);
-function updateMinWidth() {
-  var sidebar = document.getElementById("sidebar");
-  var main = document.getElementById("main");
-  main.style.minWidth = "";
-  var w1 = getComputedStyle(main).getPropertyValue("min-width");
-  var w2 = getComputedStyle(sidebar).getPropertyValue("width");
-  var w3 = getComputedStyle(sidebar).getPropertyValue("left");
-  main.style.minWidth = `calc(${w1} - ${w2} - ${w3})`;
-}
-</script>
+<script src="https://tapoueh.org/js/script-yqzy9wdlzix4lbbwdnzvwx3egsne77earqmn73v9uno8aupuph8wfguccut.min.js"></script>
+
+
 
 <script>
 $(document).ready(function() {
@@ -705,33 +691,6 @@ $(document).ready(function() {
   });
 });
 </script>
-
-
-  
-    
-      <script>
-        var disqus_config = function () {
-          this.page.url = 'https:\/\/tapoueh.org\/blog\/2010\/08\/querying-the-catalog-to-plan-an-upgrade\/';
-          
-            this.page.identifier = '\/blog\/2010\/08\/querying-the-catalog-to-plan-an-upgrade\/'
-          
-        };
-        (function() {
-          
-          
-          if (window.location.hostname == "localhost") {
-            return;
-          }
-          var d = document, s = d.createElement('script');
-          var disqus_shortname = 'tapoueh';
-          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
-
-          s.setAttribute('data-timestamp', +new Date());
-          (d.head || d.body).appendChild(s);
-        })();
-      </script>
-    
-  
 
 
 

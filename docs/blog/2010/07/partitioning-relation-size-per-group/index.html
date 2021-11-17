@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.85.0">
+    <meta name="generator" content="Hugo 0.89.3">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Partitioning: relation size per “group”</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -145,7 +145,7 @@ if (!doNotTrack) {
   <div class="sidebar-container">
     
       <div class="sidebar-profile">
-        <a href="/#about">
+        <a href="/#about" aria-label="">
           <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
         </a>
         <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
@@ -158,7 +158,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/">
+      <a class="sidebar-button-link " href="/" title="Blog">
     
       <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
       
@@ -168,7 +168,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/about/">
+      <a class="sidebar-button-link " href="/about/" title="About">
     
       <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
       
@@ -178,7 +178,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/categories/yesql/">
+      <a class="sidebar-button-link " href="/categories/yesql/" title="YeSQL">
     
       <i class="sidebar-button-icon fa fa-lg fa-database"></i>
       
@@ -188,7 +188,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener" title="The Art of PostgreSQL">
     
       <i class="sidebar-button-icon fa fa-lg fa-book"></i>
       
@@ -202,7 +202,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener" title="GitHub">
     
       <i class="sidebar-button-icon fa fa-lg fa-github"></i>
       
@@ -212,7 +212,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener" title="Twitter">
     
       <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
       
@@ -222,7 +222,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/categories">
+      <a class="sidebar-button-link " href="/categories" title="Categories">
     
       <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
       
@@ -236,7 +236,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/index.xml">
+      <a class="sidebar-button-link " href="/index.xml" title="RSS">
     
       <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
       
@@ -268,7 +268,7 @@ if (!doNotTrack) {
           
             <div class="post-header main-content-wrap text-left">
   
-    <h1 class="post-title" itemprop="headline">
+    <h1 class="post-title">
       Partitioning: relation size per “group”
     </h1>
   
@@ -340,22 +340,21 @@ to see a single category
 <code>foo</code> containing the accumulated size of all the
 partitions underneath
 <code>foo</code>.</p>
-
 <p>Here we go:</p>
-<pre><code>select groupe, pg_size_pretty(sum(bytes)::bigint) as size, sum(bytes)
+<pre tabindex="0"><code>select groupe, pg_size_pretty(sum(bytes)::bigint) as size, sum(bytes)
   from (
 select relkind as k, nspname, relname, tablename, bytes,
-         case when relkind = &#39;r&#39; and relname ~ &#39;[0-9]{6}$&#39;
+         case when relkind = 'r' and relname ~ '[0-9]{6}$'
               then substring(relname from 1 for length(relname)-7)
 
-	      when relkind = &#39;i&#39; and  tablename ~ &#39;[0-9]{6}$&#39;
+	      when relkind = 'i' and  tablename ~ '[0-9]{6}$'
               then substring(tablename from 1 for length(tablename)-7)
 
-              else &#39;core&#39; 
+              else 'core' 
           end as groupe
   from (
   select nspname, relname,
-         case when relkind = &#39;i&#39;
+         case when relkind = 'i'
               then (select relname
                       from pg_index x 
                            join pg_class xc on x.indrelid = xc.oid
@@ -368,20 +367,19 @@ select relkind as k, nspname, relname, tablename, bytes,
          pg_total_relation_size(c.oid) as bytes,
 	 relkind
     from pg_class c join pg_namespace n on c.relnamespace = n.oid 
-   where c.relkind in (&#39;r&#39;, &#39;i&#39;) 
-         and nspname in (&#39;public&#39;, &#39;archive&#39;)
+   where c.relkind in ('r', 'i') 
+         and nspname in ('public', 'archive')
          and pg_total_relation_size(c.oid) &gt; 32 * 1024
 order by 5 desc
        ) as s
        ) as t
 group by 1
-order by 3 desc;</code></pre>
-<p>Note that by simply removing those last two lines here, you will get a
+order by 3 desc;
+</code></pre><p>Note that by simply removing those last two lines here, you will get a
 detailed view of the
 <em>indexes</em> and
 <em>tables</em> that are taking the most volume on
 disk at your place.</p>
-
 <p>Now, what about using
 <a href="http://www.postgresql.org/docs/8.4/static/functions-window.html">window functions</a> here so that we get some better
 detailed view of historic changes on each partition? With some evolution
@@ -389,17 +387,17 @@ figure in percentage from the previous partition of the same year,
 accumulated size per partition and per year, yearly sum, you name it. Here&rsquo;s
 another one you might want to try, ready for some tuning (schema name, table
 name, etc):</p>
-<pre><code>WITH s AS (
+<pre tabindex="0"><code>WITH s AS (
   select relname, 
          pg_relation_size(c.oid) as size,
          pg_total_relation_size(c.oid) as tsize,
-         substring(substring(relname from &#39;[0-9]{6}$&#39;) for 4)::bigint as year
+         substring(substring(relname from '[0-9]{6}$') for 4)::bigint as year
     from pg_class c 
          join pg_namespace n on n.oid = c.relnamespace 
-   where c.relkind = &#39;r&#39;
-     -- and n.nspname = &#39;public&#39;
-     -- and c.relname ~ &#39;stats&#39; 
-     and substring(substring(relname from &#39;[0-9]{6}$&#39;) for 4)::bigint &gt;= 2008
+   where c.relkind = 'r'
+     -- and n.nspname = 'public'
+     -- and c.relname ~ 'stats' 
+     and substring(substring(relname from '[0-9]{6}$') for 4)::bigint &gt;= 2008
 order by relname
 ),
      sy AS (
@@ -430,16 +428,18 @@ order by relname
 )
   SELECT relname, 
          pg_size_pretty(size) as size,
-         pg_size_pretty(tsize) as &#34;+indexes&#34;,
-         evol, yp as &#34;% annuel&#34;, rank,
+         pg_size_pretty(tsize) as &quot;+indexes&quot;,
+         evol, yp as &quot;% annuel&quot;, rank,
          pg_size_pretty(cumul) as cumul, year,
-         pg_size_pretty(ysize) as &#34;yearly sum&#34;, 
+         pg_size_pretty(ysize) as &quot;yearly sum&quot;, 
          pg_size_pretty((sum(size) over())::bigint) as total
     FROM syp
-ORDER BY relname;</code></pre>
-<p>Hope you&rsquo;ll find it useful, I certainly do!</p>
+ORDER BY relname;
+</code></pre><p>Hope you&rsquo;ll find it useful, I certainly do!</p>
 
               
+
+
             </div>
           </div>
           <div style="margin-top: 1em;">
@@ -535,6 +535,7 @@ ORDER BY relname;</code></pre>
                 <div id="disqus_thread">
   <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
 </div>
+
               
             
           </div>
@@ -638,7 +639,7 @@ ORDER BY relname;</code></pre>
     <div id="about">
   <div id="about-card">
     <div id="about-btn-close">
-      <i class="fa fa-remove"></i>
+      <i class="fa fa-times"></i>
     </div>
     
       <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
@@ -656,7 +657,7 @@ ORDER BY relname;</code></pre>
     
     
       <div id="about-card-location">
-        <i class="fa fa-map-marker"></i>
+        <i class="fa fa-map-marker-alt"></i>
         <br/>
         France
       </div>
@@ -676,30 +677,16 @@ ORDER BY relname;</code></pre>
 
 
     
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.1.0/highlight.min.js" integrity="sha512-z+/WWfyD5tccCukM4VvONpEtLmbAm5LDu7eKiyMQJ9m7OfPEDL7gENyDRL3Yfe8XAuGsS2fS4xSMnl6d30kqGQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
-
-
-<script src="/js/script-pcw6v3xilnxydl1vddzazdverrnn9ctynvnxgwho987mfyqkuylcb1nlt.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha512-uURl+ZXMBrF4AwGaWmEetzrd+J5/8NRkWAvJx5sbPSSuOb0bZLqf+tOzniObO00BjHa/dD7gub9oCGMLPQHtQA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 
-<script lang="javascript">
-window.onload = updateMinWidth;
-window.onresize = updateMinWidth;
-document.getElementById("sidebar").addEventListener("transitionend", updateMinWidth);
-function updateMinWidth() {
-  var sidebar = document.getElementById("sidebar");
-  var main = document.getElementById("main");
-  main.style.minWidth = "";
-  var w1 = getComputedStyle(main).getPropertyValue("min-width");
-  var w2 = getComputedStyle(sidebar).getPropertyValue("width");
-  var w3 = getComputedStyle(sidebar).getPropertyValue("left");
-  main.style.minWidth = `calc(${w1} - ${w2} - ${w3})`;
-}
-</script>
+<script src="https://tapoueh.org/js/script-yqzy9wdlzix4lbbwdnzvwx3egsne77earqmn73v9uno8aupuph8wfguccut.min.js"></script>
+
+
 
 <script>
 $(document).ready(function() {
@@ -712,33 +699,6 @@ $(document).ready(function() {
   });
 });
 </script>
-
-
-  
-    
-      <script>
-        var disqus_config = function () {
-          this.page.url = 'https:\/\/tapoueh.org\/blog\/2010\/07\/partitioning-relation-size-per-group\/';
-          
-            this.page.identifier = '\/blog\/2010\/07\/partitioning-relation-size-per-group\/'
-          
-        };
-        (function() {
-          
-          
-          if (window.location.hostname == "localhost") {
-            return;
-          }
-          var d = document, s = d.createElement('script');
-          var disqus_shortname = 'tapoueh';
-          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
-
-          s.setAttribute('data-timestamp', +new Date());
-          (d.head || d.body).appendChild(s);
-        })();
-      </script>
-    
-  
 
 
 

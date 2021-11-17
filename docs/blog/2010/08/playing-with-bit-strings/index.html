@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.85.0">
+    <meta name="generator" content="Hugo 0.89.3">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Playing with bit strings</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -145,7 +145,7 @@ if (!doNotTrack) {
   <div class="sidebar-container">
     
       <div class="sidebar-profile">
-        <a href="/#about">
+        <a href="/#about" aria-label="">
           <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
         </a>
         <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
@@ -158,7 +158,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/">
+      <a class="sidebar-button-link " href="/" title="Blog">
     
       <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
       
@@ -168,7 +168,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/about/">
+      <a class="sidebar-button-link " href="/about/" title="About">
     
       <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
       
@@ -178,7 +178,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/categories/yesql/">
+      <a class="sidebar-button-link " href="/categories/yesql/" title="YeSQL">
     
       <i class="sidebar-button-icon fa fa-lg fa-database"></i>
       
@@ -188,7 +188,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener" title="The Art of PostgreSQL">
     
       <i class="sidebar-button-icon fa fa-lg fa-book"></i>
       
@@ -202,7 +202,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener" title="GitHub">
     
       <i class="sidebar-button-icon fa fa-lg fa-github"></i>
       
@@ -212,7 +212,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener" title="Twitter">
     
       <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
       
@@ -222,7 +222,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/categories">
+      <a class="sidebar-button-link " href="/categories" title="Categories">
     
       <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
       
@@ -236,7 +236,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/index.xml">
+      <a class="sidebar-button-link " href="/index.xml" title="RSS">
     
       <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
       
@@ -268,7 +268,7 @@ if (!doNotTrack) {
           
             <div class="post-header main-content-wrap text-left">
   
-    <h1 class="post-title" itemprop="headline">
+    <h1 class="post-title">
       Playing with bit strings
     </h1>
   
@@ -335,38 +335,38 @@ to abuse
 <a href="http://www.postgresql.org/docs/8.4/interactive/datatype-bit.html">bit strings</a>. A solution to use them works fine, but the datatype is
 still missing some facilities, for example going from and to hexadecimal
 representation in text.</p>
-<pre><code>create or replace function hex_to_varbit(h text)
+<pre tabindex="0"><code>create or replace function hex_to_varbit(h text)
  returns varbit
  language sql
 as $$
-  select (&#39;X&#39; || $1)::varbit;
+  select ('X' || $1)::varbit;
 $$;
 
 create or replace function varbit_to_hex(b varbit)
  returns text
  language sql
 as $$
-  select array_to_string(array_agg(to_hex((b &lt;&lt; (32*o))::bit(32)::bigint)), &#39;&#39;)
+  select array_to_string(array_agg(to_hex((b &lt;&lt; (32*o))::bit(32)::bigint)), '')
     from (select b, generate_series(0, n-1) as o
             from (select $1, octet_length($1)/4) as t(b, n)) as x
-$$;</code></pre>
-<p>To understand the magic in the second function, let&rsquo;s walk through the tests
+$$;
+</code></pre><p>To understand the magic in the second function, let&rsquo;s walk through the tests
 one could do when wanting to grasp how things work in the
 <code>bitstring</code> world
 (using also some reading of the fine documentation, too).</p>
-<pre><code>=# select (&#39;101011001011100110010110&#39;::varbit &lt;&lt; 0)::bit(8);
+<pre tabindex="0"><code>=# select ('101011001011100110010110'::varbit &lt;&lt; 0)::bit(8);
    bit    
 ----------
  10101100
 (1 row)
 
-=# select (&#39;101011001011100110010110&#39;::varbit &lt;&lt; 8)::bit(8);
+=# select ('101011001011100110010110'::varbit &lt;&lt; 8)::bit(8);
    bit    
 ----------
  10111001
 (1 row)
 
-=# select (&#39;101011001011100110010110&#39;::varbit &lt;&lt; 16)::bit(8);
+=# select ('101011001011100110010110'::varbit &lt;&lt; 16)::bit(8);
    bit    
 ----------
  10010110
@@ -379,36 +379,36 @@ one could do when wanting to grasp how things work in the
  1 | 01001100110000101111100001011100 | 4cc2f85c
  2 | 11101101111011110110010101001111 | edef654f
  3 | 11001100110001001010010011011000 | ccc4a4d8
-(4 rows)</code></pre>
-<p>What do we get from that, will you ask? Let&rsquo;s see a little example:</p>
-<pre><code>=# select hex_to_varbit(md5(&#39;foo&#39;));
+(4 rows)
+</code></pre><p>What do we get from that, will you ask? Let&rsquo;s see a little example:</p>
+<pre tabindex="0"><code>=# select hex_to_varbit(md5('foo'));
                                                           hex_to_varbit                                                           
 ----------------------------------------------------------------------------------------------------------------------------------
  10101100101111010001100011011011010011001100001011111000010111001110110111101111011001010100111111001100110001001010010011011000
 (1 row)
 
-=# select md5(&#39;foo&#39;), varbit_to_hex(hex_to_varbit(md5(&#39;foo&#39;)));
+=# select md5('foo'), varbit_to_hex(hex_to_varbit(md5('foo')));
                md5                |          varbit_to_hex           
 ----------------------------------+----------------------------------
  acbd18db4cc2f85cedef654fccc4a4d8 | acbd18db4cc2f85cedef654fccc4a4d8
-(1 row)</code></pre>
-<p>Storing
+(1 row)
+</code></pre><p>Storing
 <code>varbits</code> rather than the
 <code>text</code> form of the
 <code>MD5</code> allows us to go from
 <code>6510 MB</code> down to
 <code>4976 MB</code> on a sample table containing 100 millions
 rows. We&rsquo;re targeting more that that, so that&rsquo;s a great win down here!</p>
-
 <p>In case you wonder, querying the main index on
 <code>varbit</code> rather than the one on
 <code>text</code> for a single result row, the cost of doing the conversion with
 <code>varbit_to_hex</code> seems to be around
 <code>28 µs</code>. We can afford it.</p>
-
 <p>Hope this helps!</p>
 
               
+
+
             </div>
           </div>
           <div style="margin-top: 1em;">
@@ -504,6 +504,7 @@ rows. We&rsquo;re targeting more that that, so that&rsquo;s a great win down her
                 <div id="disqus_thread">
   <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
 </div>
+
               
             
           </div>
@@ -607,7 +608,7 @@ rows. We&rsquo;re targeting more that that, so that&rsquo;s a great win down her
     <div id="about">
   <div id="about-card">
     <div id="about-btn-close">
-      <i class="fa fa-remove"></i>
+      <i class="fa fa-times"></i>
     </div>
     
       <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
@@ -625,7 +626,7 @@ rows. We&rsquo;re targeting more that that, so that&rsquo;s a great win down her
     
     
       <div id="about-card-location">
-        <i class="fa fa-map-marker"></i>
+        <i class="fa fa-map-marker-alt"></i>
         <br/>
         France
       </div>
@@ -645,30 +646,16 @@ rows. We&rsquo;re targeting more that that, so that&rsquo;s a great win down her
 
 
     
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.1.0/highlight.min.js" integrity="sha512-z+/WWfyD5tccCukM4VvONpEtLmbAm5LDu7eKiyMQJ9m7OfPEDL7gENyDRL3Yfe8XAuGsS2fS4xSMnl6d30kqGQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
-
-
-<script src="/js/script-pcw6v3xilnxydl1vddzazdverrnn9ctynvnxgwho987mfyqkuylcb1nlt.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha512-uURl+ZXMBrF4AwGaWmEetzrd+J5/8NRkWAvJx5sbPSSuOb0bZLqf+tOzniObO00BjHa/dD7gub9oCGMLPQHtQA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 
-<script lang="javascript">
-window.onload = updateMinWidth;
-window.onresize = updateMinWidth;
-document.getElementById("sidebar").addEventListener("transitionend", updateMinWidth);
-function updateMinWidth() {
-  var sidebar = document.getElementById("sidebar");
-  var main = document.getElementById("main");
-  main.style.minWidth = "";
-  var w1 = getComputedStyle(main).getPropertyValue("min-width");
-  var w2 = getComputedStyle(sidebar).getPropertyValue("width");
-  var w3 = getComputedStyle(sidebar).getPropertyValue("left");
-  main.style.minWidth = `calc(${w1} - ${w2} - ${w3})`;
-}
-</script>
+<script src="https://tapoueh.org/js/script-yqzy9wdlzix4lbbwdnzvwx3egsne77earqmn73v9uno8aupuph8wfguccut.min.js"></script>
+
+
 
 <script>
 $(document).ready(function() {
@@ -681,33 +668,6 @@ $(document).ready(function() {
   });
 });
 </script>
-
-
-  
-    
-      <script>
-        var disqus_config = function () {
-          this.page.url = 'https:\/\/tapoueh.org\/blog\/2010\/08\/playing-with-bit-strings\/';
-          
-            this.page.identifier = '\/blog\/2010\/08\/playing-with-bit-strings\/'
-          
-        };
-        (function() {
-          
-          
-          if (window.location.hostname == "localhost") {
-            return;
-          }
-          var d = document, s = d.createElement('script');
-          var disqus_shortname = 'tapoueh';
-          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
-
-          s.setAttribute('data-timestamp', +new Date());
-          (d.head || d.body).appendChild(s);
-        })();
-      </script>
-    
-  
 
 
 

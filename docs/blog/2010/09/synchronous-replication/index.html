@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.85.0">
+    <meta name="generator" content="Hugo 0.89.3">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Synchronous Replication</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -145,7 +145,7 @@ if (!doNotTrack) {
   <div class="sidebar-container">
     
       <div class="sidebar-profile">
-        <a href="/#about">
+        <a href="/#about" aria-label="">
           <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
         </a>
         <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
@@ -158,7 +158,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/">
+      <a class="sidebar-button-link " href="/" title="Blog">
     
       <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
       
@@ -168,7 +168,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/about/">
+      <a class="sidebar-button-link " href="/about/" title="About">
     
       <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
       
@@ -178,7 +178,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/categories/yesql/">
+      <a class="sidebar-button-link " href="/categories/yesql/" title="YeSQL">
     
       <i class="sidebar-button-icon fa fa-lg fa-database"></i>
       
@@ -188,7 +188,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener" title="The Art of PostgreSQL">
     
       <i class="sidebar-button-icon fa fa-lg fa-book"></i>
       
@@ -202,7 +202,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener" title="GitHub">
     
       <i class="sidebar-button-icon fa fa-lg fa-github"></i>
       
@@ -212,7 +212,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener" title="Twitter">
     
       <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
       
@@ -222,7 +222,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/categories">
+      <a class="sidebar-button-link " href="/categories" title="Categories">
     
       <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
       
@@ -236,7 +236,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/index.xml">
+      <a class="sidebar-button-link " href="/index.xml" title="RSS">
     
       <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
       
@@ -268,7 +268,7 @@ if (!doNotTrack) {
           
             <div class="post-header main-content-wrap text-left">
   
-    <h1 class="post-title" itemprop="headline">
+    <h1 class="post-title">
       Synchronous Replication
     </h1>
   
@@ -340,7 +340,6 @@ depending on what you need the
 acknowledges the
 <code>COMMIT</code>. Let&rsquo;s call that the
 <em>service level</em>.</p>
-
 <p>The part of the design that&rsquo;s not so easy is more interesting. Do we need to
 register standbys and have the
 <em>service level</em> setup per standby? Can we get
@@ -349,7 +348,6 @@ some more flexibility and have the
 basis? The idea here would be that the application knows which transactions
 are meant to be extra-safe and which are not, the same way that you can set
 <code>synchronous_commit to off</code> when dealing with web sessions, for example.</p>
-
 <p><em>Why choosing?</em> I hear you ask. Well, it&rsquo;s all about having more data safety,
 and a typical setup would contain an asynchronous reporting server and a
 local
@@ -358,7 +356,6 @@ pick the transaction based facility, we still want to be able to choose at
 setup time which server to failover to. Than means we don&rsquo;t want that much
 flexibility now, we want to know where the data is safe, we don&rsquo;t want to
 have to guess.</p>
-
 <p>Some way to solve that is to be able to setup a slave as being the failover
 one, or say, the
 <code>sync</code> one. Now, the detail that ruins it all is that we need
@@ -371,7 +368,6 @@ require that the service is still available (
 <code>COMMIT</code>) and some
 will require that the service is down: don&rsquo;t accept a new transaction if you
 can&rsquo;t make its data safe to the slave too.</p>
-
 <p>The answer would be to have the master arbitrate between what the
 transaction wants and what the slave is setup to provide, and what it&rsquo;s able
 to provide at the time of the transaction. Given a transaction with a
@@ -382,17 +378,14 @@ to provide at the time of the transaction. Given a transaction with a
 not have to wait, because there&rsquo;s no known slave able to offer the needed
 level. Or the
 <code>COMMIT</code> can not happen, for the very same reason.</p>
-
 <p>Then I think it all flows quite naturally from there, and while arbitrating
 the master could record which slave is currently offering what
 <em>service
 level</em>. And offering the information in a system view too, of course.</p>
-
 <p>The big question that&rsquo;s not answered in this proposal is how to setup that
 being unable to reach the wanted
 <em>service level</em> is an error or a
 warning?</p>
-
 <p>That too would need to be for the master to arbitrate based on a per standby
 and a per transaction setting, and in the general case it could be a
 <em>quorum</em>
@@ -406,7 +399,6 @@ transaction at the needed
 the quorum is reached, or is canceled as soon as the
 <em>timeout</em> is reached,
 whichever comes first.</p>
-
 <p>Such a model allows for very flexible setups, where each standby has a
 <em>weight</em> and offers a given
 <em>service level</em>, and each transaction waits until a
@@ -419,7 +411,6 @@ enough you can change it at any time, it&rsquo;s just a
 to be made, so my guess would be it ends up in the
 <em>feedback loop</em> between the
 standby and its master.</p>
-
 <p>The most appealing part of this proposal is that it doesn&rsquo;t look complex to
 implement, and should allow for highly flexible setups. Of course, the devil
 is in the details, and we&rsquo;re talking about latencies in the distributed
@@ -427,6 +418,8 @@ system here. That&rsquo;s also being discussed on the
 <a href="http://archives.postgresql.org/pgsql-hackers/">mailing list</a>.</p>
 
               
+
+
             </div>
           </div>
           <div style="margin-top: 1em;">
@@ -520,6 +513,7 @@ system here. That&rsquo;s also being discussed on the
                 <div id="disqus_thread">
   <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
 </div>
+
               
             
           </div>
@@ -623,7 +617,7 @@ system here. That&rsquo;s also being discussed on the
     <div id="about">
   <div id="about-card">
     <div id="about-btn-close">
-      <i class="fa fa-remove"></i>
+      <i class="fa fa-times"></i>
     </div>
     
       <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
@@ -641,7 +635,7 @@ system here. That&rsquo;s also being discussed on the
     
     
       <div id="about-card-location">
-        <i class="fa fa-map-marker"></i>
+        <i class="fa fa-map-marker-alt"></i>
         <br/>
         France
       </div>
@@ -661,30 +655,16 @@ system here. That&rsquo;s also being discussed on the
 
 
     
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.1.0/highlight.min.js" integrity="sha512-z+/WWfyD5tccCukM4VvONpEtLmbAm5LDu7eKiyMQJ9m7OfPEDL7gENyDRL3Yfe8XAuGsS2fS4xSMnl6d30kqGQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
-
-
-<script src="/js/script-pcw6v3xilnxydl1vddzazdverrnn9ctynvnxgwho987mfyqkuylcb1nlt.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha512-uURl+ZXMBrF4AwGaWmEetzrd+J5/8NRkWAvJx5sbPSSuOb0bZLqf+tOzniObO00BjHa/dD7gub9oCGMLPQHtQA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 
-<script lang="javascript">
-window.onload = updateMinWidth;
-window.onresize = updateMinWidth;
-document.getElementById("sidebar").addEventListener("transitionend", updateMinWidth);
-function updateMinWidth() {
-  var sidebar = document.getElementById("sidebar");
-  var main = document.getElementById("main");
-  main.style.minWidth = "";
-  var w1 = getComputedStyle(main).getPropertyValue("min-width");
-  var w2 = getComputedStyle(sidebar).getPropertyValue("width");
-  var w3 = getComputedStyle(sidebar).getPropertyValue("left");
-  main.style.minWidth = `calc(${w1} - ${w2} - ${w3})`;
-}
-</script>
+<script src="https://tapoueh.org/js/script-yqzy9wdlzix4lbbwdnzvwx3egsne77earqmn73v9uno8aupuph8wfguccut.min.js"></script>
+
+
 
 <script>
 $(document).ready(function() {
@@ -697,33 +677,6 @@ $(document).ready(function() {
   });
 });
 </script>
-
-
-  
-    
-      <script>
-        var disqus_config = function () {
-          this.page.url = 'https:\/\/tapoueh.org\/blog\/2010\/09\/synchronous-replication\/';
-          
-            this.page.identifier = '\/blog\/2010\/09\/synchronous-replication\/'
-          
-        };
-        (function() {
-          
-          
-          if (window.location.hostname == "localhost") {
-            return;
-          }
-          var d = document, s = d.createElement('script');
-          var disqus_shortname = 'tapoueh';
-          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
-
-          s.setAttribute('data-timestamp', +new Date());
-          (d.head || d.body).appendChild(s);
-        })();
-      </script>
-    
-  
 
 
 

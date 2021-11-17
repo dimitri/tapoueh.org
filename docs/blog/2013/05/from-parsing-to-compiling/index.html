@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.85.0">
+    <meta name="generator" content="Hugo 0.89.3">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>from Parsing to Compiling</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -154,7 +154,7 @@ if (!doNotTrack) {
   <div class="sidebar-container">
     
       <div class="sidebar-profile">
-        <a href="/#about">
+        <a href="/#about" aria-label="">
           <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
         </a>
         <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
@@ -167,7 +167,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/">
+      <a class="sidebar-button-link " href="/" title="Blog">
     
       <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
       
@@ -177,7 +177,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/about/">
+      <a class="sidebar-button-link " href="/about/" title="About">
     
       <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
       
@@ -187,7 +187,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/categories/yesql/">
+      <a class="sidebar-button-link " href="/categories/yesql/" title="YeSQL">
     
       <i class="sidebar-button-icon fa fa-lg fa-database"></i>
       
@@ -197,7 +197,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener" title="The Art of PostgreSQL">
     
       <i class="sidebar-button-icon fa fa-lg fa-book"></i>
       
@@ -211,7 +211,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener" title="GitHub">
     
       <i class="sidebar-button-icon fa fa-lg fa-github"></i>
       
@@ -221,7 +221,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener" title="Twitter">
     
       <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
       
@@ -231,7 +231,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/categories">
+      <a class="sidebar-button-link " href="/categories" title="Categories">
     
       <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
       
@@ -245,7 +245,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/index.xml">
+      <a class="sidebar-button-link " href="/index.xml" title="RSS">
     
       <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
       
@@ -267,7 +267,7 @@ if (!doNotTrack) {
     
       <div class="post-header main-content-wrap text-left">
   
-    <h1 class="post-title" itemprop="headline">
+    <h1 class="post-title">
       from Parsing to Compiling
     </h1>
   
@@ -336,9 +336,7 @@ if (!doNotTrack) {
 to design a <em>command language</em> for <a href="../../../pgsql/pgloader.html">pgloader</a>.
 While doing that, I unexpectedly stumbled accross a very nice <em>AHAH!</em>
 moment, and I now want to share it with you, dear reader.</p>
-
  
-
 
 
 
@@ -349,44 +347,40 @@ to first get a code API to expose the capabilities of the system, then
 somehow plug the <em>command language</em> into that API thanks to a <em>parser</em>. It
 turns out that doing so in <em>Common Lisp</em> is really easy, and that you can
 get a <em>compiler</em> for free too, while at it. Let&rsquo;s see about that.</p>
-
 <h1 id="a-very-simple-toy-example">A very simple toy example</h1>
-
 <p>In this newsgroup
 article
 <a href="https://groups.google.com/forum/?fromgroups=#!topic/comp.lang.lisp/JJxTBqf7scU">What is symbolic computation?</a>,
 <a href="http://informatimago.com/">Pascal Bourguignon</a> did propose a very simple
 piece of code:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp">(<span style="color:#0aa">defparameter</span> *additive-color-graph*
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp">(<span style="color:#0aa">defparameter</span> *additive-color-graph*
   &#39;((<span style="color:#a00">red</span>   (<span style="color:#a00">red</span> <span style="color:#a00">white</span>)   (<span style="color:#a00">green</span> <span style="color:#a00">yellow</span>) (<span style="color:#a00">blue</span> <span style="color:#a00">magenta</span>))
     (<span style="color:#a00">green</span> (<span style="color:#a00">red</span> <span style="color:#a00">yellow</span>)  (<span style="color:#a00">green</span> <span style="color:#a00">white</span>)  (<span style="color:#a00">blue</span> <span style="color:#a00">cyan</span>))
     (<span style="color:#a00">blue</span>  (<span style="color:#a00">red</span> <span style="color:#a00">magenta</span>) (<span style="color:#a00">green</span> <span style="color:#a00">cyan</span>)   (<span style="color:#a00">blue</span> <span style="color:#a00">white</span>))))
 
 (<span style="color:#0aa">defun</span> <span style="color:#a00">symbolic-color-add</span> (<span style="color:#a00">a</span> <span style="color:#a00">b</span>)
-  (<span style="color:#0a0">cadr</span> (<span style="color:#0a0">assoc</span> <span style="color:#a00">a</span> (<span style="color:#0a0">cdr</span> (<span style="color:#0a0">assoc</span> <span style="color:#a00">b</span> *additive-color-graph*)))))</code></pre></div>
-<p>This is an example of <em>symbolic computation</em>, and we&rsquo;re going to build a
+  (<span style="color:#0a0">cadr</span> (<span style="color:#0a0">assoc</span> <span style="color:#a00">a</span> (<span style="color:#0a0">cdr</span> (<span style="color:#0a0">assoc</span> <span style="color:#a00">b</span> *additive-color-graph*)))))
+</code></pre></div><p>This is an example of <em>symbolic computation</em>, and we&rsquo;re going to build a
 little <em>language</em> to express the data and the code. Not that we would need
 to build one, mind you, more in order to have a really simple example
 leading us to the <em>ahah</em> moment you&rsquo;re now waiting for.</p>
-
 <p>Before we dive into the main topic, you have to realize that the previous
 code example actually works: it&rsquo;s defining some data, using an implicit data
 structure composed by nesting lists together, and defines a function that
 knows how to sort out the data in that anonymous data structure so as to
 compound 2 colors together.</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp"><span style="color:#a00">TOY-PARSER&gt;</span> (<span style="color:#a00">symbolic-color-add</span> <span style="color:#00a">&#39;red</span> <span style="color:#00a">&#39;green</span>)
-<span style="color:#a00">YELLOW</span></code></pre></div>
-<h1 id="a-command-language-and-parser">A command language and parser</h1>
-
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp"><span style="color:#a00">TOY-PARSER&gt;</span> (<span style="color:#a00">symbolic-color-add</span> <span style="color:#00a">&#39;red</span> <span style="color:#00a">&#39;green</span>)
+<span style="color:#a00">YELLOW</span>
+</code></pre></div><h1 id="a-command-language-and-parser">A command language and parser</h1>
 <p>I decided to go with the following <em>language</em>:</p>
-<pre><code>color red   +red white    +green yellow  +blue magenta
+<pre tabindex="0"><code>color red   +red white    +green yellow  +blue magenta
 color green +red yellow   +green white   +blue cyan
 color blue  +red magenta  +green cyan    +blue white
 
-mix red and green</code></pre>
-<p>And here&rsquo;s how some of the parser looks like, using
+mix red and green
+</code></pre><p>And here&rsquo;s how some of the parser looks like, using
 the <a href="http://nikodemus.github.io/esrap/">esrap</a> <em>packrat</em> lib:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp">(<span style="color:#a00">defrule</span> <span style="color:#a00">color-name</span> (<span style="color:#0aa">and</span> <span style="color:#a00">whitespaces</span> (<span style="color:#0a0">+</span> (<span style="color:#0a0">alpha-char-p</span> <span style="color:#0a0;text-decoration:underline">character</span>)))
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp">(<span style="color:#a00">defrule</span> <span style="color:#a00">color-name</span> (<span style="color:#0aa">and</span> <span style="color:#a00">whitespaces</span> (<span style="color:#0a0">+</span> (<span style="color:#0a0">alpha-char-p</span> <span style="color:#0a0;text-decoration:underline">character</span>)))
   (<span style="color:#00a">:destructure</span> (<span style="color:#a00">ws</span> <span style="color:#a00">name</span>)
     (<span style="color:#00a">declare</span> (<span style="color:#00a">ignore</span> <span style="color:#a00">ws</span>))		<span style="color:#aaa;font-style:italic">; ignore whitespaces</span>
     <span style="color:#aaa;font-style:italic">;; CL symbols default to upper case.</span>
@@ -402,8 +396,8 @@ the <a href="http://nikodemus.github.io/esrap/">esrap</a> <em>packrat</em> lib:<
 (<span style="color:#a00">defrule</span> <span style="color:#a00">mix-two-colors</span> (<span style="color:#0aa">and</span> <span style="color:#a00">kw-mix</span> <span style="color:#a00">color-name</span> <span style="color:#a00">kw-and</span> <span style="color:#a00">color-name</span>)
   (<span style="color:#00a">:destructure</span> (<span style="color:#a00">mix</span> <span style="color:#a00">c1</span> <span style="color:#0aa">and</span> <span style="color:#a00">c2</span>)
     (<span style="color:#00a">declare</span> (<span style="color:#00a">ignore</span> <span style="color:#a00">mix</span> <span style="color:#0aa">and</span>))		<span style="color:#aaa;font-style:italic">; ignore keywords</span>
-    (<span style="color:#0a0;text-decoration:underline">list</span> <span style="color:#a00">c1</span> <span style="color:#a00">c2</span>)))</code></pre></div>
-
+    (<span style="color:#0a0;text-decoration:underline">list</span> <span style="color:#a00">c1</span> <span style="color:#a00">c2</span>)))
+</code></pre></div>
 
 
 <div class="figure fig50 right dim-margin" >
@@ -415,38 +409,34 @@ the <a href="http://nikodemus.github.io/esrap/">esrap</a> <em>packrat</em> lib:<
   
 </div>
 
-
 <p>Those <em>rules</em> are not the whole parser, go have a look at the project on
 github if you want to see the whole code, it&rsquo;s
 called <a href="https://github.com/dimitri/toy-parser">toy-parser</a> over there. The
 main idea here is to show that when we parse a line from our little
 language, we produce the simplest possible structured data: in lisp that&rsquo;s
 <em>symbols</em> and <em>lists</em>.</p>
-
 <p>The reason why it makes sense doing that is the next rule:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp">(<span style="color:#a00">defrule</span> <span style="color:#a00">program</span> (<span style="color:#0aa">and</span> <span style="color:#a00">colors</span> <span style="color:#a00">mix-two-colors</span>)
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp">(<span style="color:#a00">defrule</span> <span style="color:#a00">program</span> (<span style="color:#0aa">and</span> <span style="color:#a00">colors</span> <span style="color:#a00">mix-two-colors</span>)
   (<span style="color:#00a">:destructure</span> (<span style="color:#a00">graph</span> (<span style="color:#a00">c1</span> <span style="color:#a00">c2</span>))
     `(<span style="color:#0aa">lambda</span> ()
        (<span style="color:#00a">let</span> ((*additive-color-graph* <span style="color:#00a">&#39;,graph</span>))
-	 (<span style="color:#a00">symbolic-color-add</span> <span style="color:#00a">&#39;,c1</span> <span style="color:#00a">&#39;,c2</span>)))))</code></pre></div>
-<p>This rule is the complex one to bind them all. It&rsquo;s using a <em>quasiquote</em>, a
+	 (<span style="color:#a00">symbolic-color-add</span> <span style="color:#00a">&#39;,c1</span> <span style="color:#00a">&#39;,c2</span>)))))
+</code></pre></div><p>This rule is the complex one to bind them all. It&rsquo;s using a <em>quasiquote</em>, a
 basic lisp syntax element allowing the programmer to very easily produce
 data that looks exactly like code. Let&rsquo;s see how it goes with a very simple
 example:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp"><span style="color:#a00">TOY-PARSER&gt;</span> (<span style="color:#0a0">pprint</span> (<span style="color:#a00">parse</span> <span style="color:#00a">&#39;program</span>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp"><span style="color:#a00">TOY-PARSER&gt;</span> (<span style="color:#0a0">pprint</span> (<span style="color:#a00">parse</span> <span style="color:#00a">&#39;program</span>
                            <span style="color:#a50">&#34;color red +green yellow mix green and red&#34;</span>))
 
 (<span style="color:#a00">LAMBDA</span> <span style="color:#a00">NIL</span>
   (<span style="color:#a00">LET</span> ((*ADDITIVE-COLOR-GRAPH* &#39;((<span style="color:#a00">RED</span> (<span style="color:#a00">GREEN</span> <span style="color:#a00">YELLOW</span>)))))
     (<span style="color:#a00">SYMBOLIC-COLOR-ADD</span> <span style="color:#00a">&#39;RED</span> <span style="color:#00a">&#39;GREEN</span>)))
-<span style="color:#aaa;font-style:italic">; No value</span></code></pre></div>
-<p>The parser is producing structure (nested) data that really looks like lisp
+<span style="color:#aaa;font-style:italic">; No value</span>
+</code></pre></div><p>The parser is producing structure (nested) data that really looks like lisp
 code, right? So maybe we can just run that code&hellip;</p>
-
 <h1 id="what-about-a-compiler-now">What about a compiler now?</h1>
-
 <p>Let&rsquo;s see about actually running the code:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp"><span style="color:#a00">TOY-PARSER&gt;</span> (<span style="color:#00a">let*</span> ((<span style="color:#a00">code</span> <span style="color:#a50">&#34;color red +green yellow mix green and red&#34;</span>)
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp"><span style="color:#a00">TOY-PARSER&gt;</span> (<span style="color:#00a">let*</span> ((<span style="color:#a00">code</span> <span style="color:#a50">&#34;color red +green yellow mix green and red&#34;</span>)
 		   (<span style="color:#a00">program</span> (<span style="color:#a00">parse</span> <span style="color:#00a">&#39;program</span> <span style="color:#a00">code</span>)))
 	      (<span style="color:#0a0">compile</span> <span style="color:#a00">nil</span> <span style="color:#a00">program</span>))
 <span style="color:#f00;background-color:#faa">#</span><span style="color:#a00">&lt;Anonymous</span> <span style="color:#a00">Function</span> <span style="color:#099">#x3020027CF0EF</span><span style="color:#0a0">&gt;</span>
@@ -455,15 +445,14 @@ code, right? So maybe we can just run that code&hellip;</p>
 <span style="color:#a00">TOY-PARSER&gt;</span> (<span style="color:#00a">let*</span> ((<span style="color:#a00">code</span> <span style="color:#a50">&#34;color red +green yellow mix green and red&#34;</span>)
 		   (<span style="color:#a00">program</span> (<span style="color:#a00">parse</span> <span style="color:#00a">&#39;program</span> <span style="color:#a00">code</span>)))
 	      (<span style="color:#0a0">funcall</span> (<span style="color:#0a0">compile</span> <span style="color:#a00">nil</span> <span style="color:#a00">program</span>)))
-<span style="color:#a00">YELLOW</span></code></pre></div>
-<p>So we have a string reprensing code in our very little language, and a
+<span style="color:#a00">YELLOW</span>
+</code></pre></div><p>So we have a string reprensing code in our very little language, and a
 parser that knows how to produce a nested list of atoms that looks like lisp
 code. And as we have lisp, we can actually compile that code at run-time
 with the same compiler that we used to produce our parser, and we can then
 <code>funcall</code> that function we just built.</p>
-
 <p>Oh and the function is actually compiled down to native code, of course:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp"><span style="color:#a00">TOY-PARSER&gt;</span> (<span style="color:#00a">let*</span> ((<span style="color:#a00">code</span> <span style="color:#a50">&#34;color red +green yellow mix red and green&#34;</span>)
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp"><span style="color:#a00">TOY-PARSER&gt;</span> (<span style="color:#00a">let*</span> ((<span style="color:#a00">code</span> <span style="color:#a50">&#34;color red +green yellow mix red and green&#34;</span>)
 		   (<span style="color:#a00">program</span> (<span style="color:#a00">parse</span> <span style="color:#00a">&#39;program</span> <span style="color:#a00">code</span>))
 		   (<span style="color:#a00">func</span>    (<span style="color:#0a0">compile</span> <span style="color:#a00">nil</span> <span style="color:#a00">program</span>)))
 	      (<span style="color:#0aa">time</span> (<span style="color:#0aa">loop</span> <span style="color:#a00">repeat</span> <span style="color:#099">1000</span> <span style="color:#0aa">do</span> (<span style="color:#0a0">funcall</span> <span style="color:#a00">func</span>))))
@@ -473,16 +462,14 @@ with the same compiler that we used to produce our parser, and we can then
 <span style="color:#a00">During</span> <span style="color:#a00">that</span> <span style="color:#a00">period,</span> <span style="color:#0aa">and</span> <span style="color:#a00">with</span> <span style="color:#099">4</span> <span style="color:#a00">available</span> <span style="color:#a00">CPU</span> <span style="color:#a00">cores,</span>
      <span style="color:#099">105</span> <span style="color:#a00">microseconds</span> (<span style="color:#099">0.000105</span> <span style="color:#a00">seconds</span>) <span style="color:#a00">were</span> <span style="color:#a00">spent</span> <span style="color:#a00">in</span> <span style="color:#a00">user</span> <span style="color:#a00">mode</span>
       <span style="color:#099">13</span> <span style="color:#a00">microseconds</span> (<span style="color:#099">0.000013</span> <span style="color:#a00">seconds</span>) <span style="color:#a00">were</span> <span style="color:#a00">spent</span> <span style="color:#a00">in</span> <span style="color:#a00">system</span> <span style="color:#a00">mode</span>
-<span style="color:#a00">NIL</span></code></pre></div>
-<p>Yeah, it took the whole of
+<span style="color:#a00">NIL</span>
+</code></pre></div><p>Yeah, it took the whole of
 <code>108 microseconds</code> to actually run the code
 generated by our own
 <em>parser</em>
 <strong>a thousand times</strong>, on my laptop. I can believe
 it&rsquo;s been compiled to native code, that seems like the right ballpark.</p>
-
 <h1 id="conclusion">Conclusion</h1>
-
 <p>The
 <a href="https://github.com/dimitri/toy-parser">toy-parser</a> code is there on
 <em>GitHub</em> and you can actually load it using
@@ -490,10 +477,11 @@ it&rsquo;s been compiled to native code, that seems like the right ballpark.</p>
 <code>~/quicklisp/local-projects/</code> then
 <code>(ql:quickload &quot;toy-parser&quot;)</code>, and play with it in
 <code>(in-package :toy-parser)</code>.</p>
-
 <p>The only thing I still want to say here is this: can your programming
 language of choice make it that easy?</p>
               
+
+
             </div>
           </div>
           <div style="margin-top: 1em;">
@@ -585,6 +573,7 @@ language of choice make it that easy?</p>
                 <div id="disqus_thread">
   <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
 </div>
+
               
             
           </div>
@@ -688,7 +677,7 @@ language of choice make it that easy?</p>
     <div id="about">
   <div id="about-card">
     <div id="about-btn-close">
-      <i class="fa fa-remove"></i>
+      <i class="fa fa-times"></i>
     </div>
     
       <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
@@ -706,7 +695,7 @@ language of choice make it that easy?</p>
     
     
       <div id="about-card-location">
-        <i class="fa fa-map-marker"></i>
+        <i class="fa fa-map-marker-alt"></i>
         <br/>
         France
       </div>
@@ -726,30 +715,16 @@ language of choice make it that easy?</p>
 
 
     
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.1.0/highlight.min.js" integrity="sha512-z+/WWfyD5tccCukM4VvONpEtLmbAm5LDu7eKiyMQJ9m7OfPEDL7gENyDRL3Yfe8XAuGsS2fS4xSMnl6d30kqGQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
-
-
-<script src="/js/script-pcw6v3xilnxydl1vddzazdverrnn9ctynvnxgwho987mfyqkuylcb1nlt.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha512-uURl+ZXMBrF4AwGaWmEetzrd+J5/8NRkWAvJx5sbPSSuOb0bZLqf+tOzniObO00BjHa/dD7gub9oCGMLPQHtQA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 
-<script lang="javascript">
-window.onload = updateMinWidth;
-window.onresize = updateMinWidth;
-document.getElementById("sidebar").addEventListener("transitionend", updateMinWidth);
-function updateMinWidth() {
-  var sidebar = document.getElementById("sidebar");
-  var main = document.getElementById("main");
-  main.style.minWidth = "";
-  var w1 = getComputedStyle(main).getPropertyValue("min-width");
-  var w2 = getComputedStyle(sidebar).getPropertyValue("width");
-  var w3 = getComputedStyle(sidebar).getPropertyValue("left");
-  main.style.minWidth = `calc(${w1} - ${w2} - ${w3})`;
-}
-</script>
+<script src="https://tapoueh.org/js/script-yqzy9wdlzix4lbbwdnzvwx3egsne77earqmn73v9uno8aupuph8wfguccut.min.js"></script>
+
+
 
 <script>
 $(document).ready(function() {
@@ -762,33 +737,6 @@ $(document).ready(function() {
   });
 });
 </script>
-
-
-  
-    
-      <script>
-        var disqus_config = function () {
-          this.page.url = 'https:\/\/tapoueh.org\/blog\/2013\/05\/from-parsing-to-compiling\/';
-          
-            this.page.identifier = '\/blog\/2013\/05\/from-parsing-to-compiling\/'
-          
-        };
-        (function() {
-          
-          
-          if (window.location.hostname == "localhost") {
-            return;
-          }
-          var d = document, s = d.createElement('script');
-          var disqus_shortname = 'tapoueh';
-          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
-
-          s.setAttribute('data-timestamp', +new Date());
-          (d.head || d.body).appendChild(s);
-        })();
-      </script>
-    
-  
 
 
 

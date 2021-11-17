@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.85.0">
+    <meta name="generator" content="Hugo 0.89.3">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Happy Numbers</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -148,7 +148,7 @@ if (!doNotTrack) {
   <div class="sidebar-container">
     
       <div class="sidebar-profile">
-        <a href="/#about">
+        <a href="/#about" aria-label="">
           <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
         </a>
         <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
@@ -161,7 +161,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/">
+      <a class="sidebar-button-link " href="/" title="Blog">
     
       <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
       
@@ -171,7 +171,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/about/">
+      <a class="sidebar-button-link " href="/about/" title="About">
     
       <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
       
@@ -181,7 +181,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/categories/yesql/">
+      <a class="sidebar-button-link " href="/categories/yesql/" title="YeSQL">
     
       <i class="sidebar-button-icon fa fa-lg fa-database"></i>
       
@@ -191,7 +191,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener" title="The Art of PostgreSQL">
     
       <i class="sidebar-button-icon fa fa-lg fa-book"></i>
       
@@ -205,7 +205,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener" title="GitHub">
     
       <i class="sidebar-button-icon fa fa-lg fa-github"></i>
       
@@ -215,7 +215,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener" title="Twitter">
     
       <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
       
@@ -225,7 +225,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/categories">
+      <a class="sidebar-button-link " href="/categories" title="Categories">
     
       <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
       
@@ -239,7 +239,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/index.xml">
+      <a class="sidebar-button-link " href="/index.xml" title="RSS">
     
       <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
       
@@ -271,7 +271,7 @@ if (!doNotTrack) {
           
             <div class="post-header main-content-wrap text-left">
   
-    <h1 class="post-title" itemprop="headline">
+    <h1 class="post-title">
       Happy Numbers
     </h1>
   
@@ -330,9 +330,7 @@ if (!doNotTrack) {
           
           <div class="post-content markdown" itemprop="articleBody">
             <div class="main-content-wrap">
-              
-
-<p>After discovering the excellent
+              <p>After discovering the excellent
 <a href="http://gwene.org/">Gwene</a> service, which allows you to subscribe
 to
 <em>newsgroups</em> to read
@@ -345,33 +343,30 @@ read this nice article about
 fits well an interview style question, so I first solved it yesterday
 evening in
 <a href="http://www.gnu.org/software/emacs/emacs-lisp-intro/html_node/List-Processing.html#List-Processing">Emacs Lisp</a> as that&rsquo;s the language I use the most those days.</p>
-
 <blockquote>
 <p>A happy number is defined by the following process. Starting with any
-  positive integer, replace the number by the sum of the squares of its
-  digits, and repeat the process until the number equals 1 (where it will
-  stay), or it loops endlessly in a cycle which does not include 1. Those
-  numbers for which this process ends in 1 are happy numbers, while those
-  that do not end in 1 are unhappy numbers (or sad numbers).</p>
+positive integer, replace the number by the sum of the squares of its
+digits, and repeat the process until the number equals 1 (where it will
+stay), or it loops endlessly in a cycle which does not include 1. Those
+numbers for which this process ends in 1 are happy numbers, while those
+that do not end in 1 are unhappy numbers (or sad numbers).</p>
 </blockquote>
-
 <p>Now, what about implementing the same in pure
 <code>SQL</code>, for more fun? Now that&rsquo;s
 interesting! After all, we didn&rsquo;t get
 <code>WITH RECURSIVE</code> for tree traversal
 only,
 <a href="http://archives.postgresql.org/message-id/e08cc0400911042333o5361b21cu2c9438f82b1e55ce@mail.gmail.com">did we</a>?</p>
-
 <p>Unfortunately, we need a little helper function first, if only to ease the
 reading of the recursive query. I didn&rsquo;t try to inline it, but here it goes:</p>
-<pre><code>create or replace function digits(x bigint)
+<pre tabindex="0"><code>create or replace function digits(x bigint)
   returns setof int
   language sql
 as $$
   select substring($1::text from i for 1)::int
     from generate_series(1, length($1::text)) as t(i)
-$$;</code></pre>
-<p>That was easy: it will output one row per digit of the input number — and
+$$;
+</code></pre><p>That was easy: it will output one row per digit of the input number — and
 rather than resorting to powers of ten and divisions and remainders, we do
 use plain old text representation and
 <code>substring</code>. Now, to the real
@@ -379,8 +374,8 @@ problem. If you&rsquo;re read what is an happy number and already did read the
 fine manual about
 <a href="http://www.postgresql.org/docs/8.4/interactive/queries-with.html">Recursive Query Evaluation</a>, it should be quite easy to
 read the following:</p>
-<pre><code>with recursive happy(n, seen) as (
-    select 7::bigint, &#39;{}&#39;::bigint[]
+<pre tabindex="0"><code>with recursive happy(n, seen) as (
+    select 7::bigint, '{}'::bigint[]
   union all
     select sum(d*d), h.seen || sum(d*d)
       from (select n, digits(n) as d, seen
@@ -400,8 +395,8 @@ read the following:</p>
    1 | {49,97,130,10,1}
 (6 rows)
 
-Time: 1.238 ms</code></pre>
-<p>That shows how it works for some
+Time: 1.238 ms
+</code></pre><p>That shows how it works for some
 <em>happy</em> number, and it&rsquo;s easy to test for a
 non-happy one, like for example
 <code>17</code>. The query won&rsquo;t cycle thanks to the
@@ -414,12 +409,12 @@ recursive query will have
 <code>n = 1</code>. Let&rsquo;s expand this knowledge
 into a proper function (because we want to be able to have the number we
 test for happiness as an argument):</p>
-<pre><code>create or replace function happy(x bigint)
+<pre tabindex="0"><code>create or replace function happy(x bigint)
   returns boolean
   language sql
 as $$
 with recursive happy(n, seen) as (
-    select $1, &#39;{}&#39;::bigint[]
+    select $1, '{}'::bigint[]
   union all
     select sum(d*d), h.seen || sum(d*d)
       from (select n, digits(n) as d, seen
@@ -432,8 +427,8 @@ with recursive happy(n, seen) as (
     from happy
 order by array_length(seen, 1) desc nulls last
    limit 1
-$$;</code></pre>
-<p>We need the
+$$;
+</code></pre><p>We need the
 <code>desc nulls last</code> trick in the
 <code>order by</code> because the
 <code>array_length()</code>
@@ -443,7 +438,7 @@ return all and any number as unhappy on the grounds that the query result
 contains a line
 <code>input, {}</code>. Let&rsquo;s now play the same tricks as in the puzzle
 article:</p>
-<pre><code>=# select array_agg(x) as happy
+<pre tabindex="0"><code>=# select array_agg(x) as happy
      from generate_series(1, 50) as t(x)
     where happy(x);
               happy
@@ -465,8 +460,8 @@ Time: 24.527 ms
  Total runtime: 3651.534 ms
 (3 rows)
 
-Time: 3652.178 ms</code></pre>
-<p>(Yes, I tricked the
+Time: 3652.178 ms
+</code></pre><p>(Yes, I tricked the
 <code>EXPLAIN ANALYZE</code> output so that it fits on the page width
 here). For what it&rsquo;s worth, finding the first
 <code>10000</code> happy numbers in
@@ -474,18 +469,17 @@ here). For what it&rsquo;s worth, finding the first
 Lisp</em> on the same laptop takes
 <code>2830 ms</code>, also running a recursive version of
 the code.</p>
-
 <h2 id="update-the-emacs-lisp-version-inline">Update, the Emacs Lisp version, inline:</h2>
-<pre><code>(defun happy? (&amp;optional n seen)
-  &#34;return true when n is a happy number&#34;
+<pre tabindex="0"><code>(defun happy? (&amp;optional n seen)
+  &quot;return true when n is a happy number&quot;
   (interactive)
   (let* ((number    (or n (read-from-minibuffer
-			   &#34;Is this number happy: &#34;)))
+			   &quot;Is this number happy: &quot;)))
 	 (digits    (mapcar
-		     &#39;string-to-int
-		     (subseq (split-string number &#34;&#34;) 1 -1)))
+		     'string-to-int
+		     (subseq (split-string number &quot;&quot;) 1 -1)))
 	 (squares   (mapcar (lambda (x) (* x x)) digits))
-	 (happiness (apply &#39;+ squares)))
+	 (happiness (apply '+ squares)))
     (cond ((eq 1 happiness)      t)
 	  ((memq happiness seen) nil)
 	  (t
@@ -493,17 +487,20 @@ the code.</p>
 		   (push happiness seen))))))
 
 (defun find-happy-numbers (&amp;optional limit)
-  &#34;find all happy numbers from 1 to limit&#34;
+  &quot;find all happy numbers from 1 to limit&quot;
   (interactive)
   (let ((count (or limit
                    (read-from-minibuffer
-		    &#34;List of happy numbers from 1 to: &#34;)))
+		    &quot;List of happy numbers from 1 to: &quot;)))
 	happy)
     (dotimes (n (string-to-int count))
       (when (happy? (number-to-string (1+ n)))
 	(push (1+ n) happy)))
-    (nreverse happy)))</code></pre>
+    (nreverse happy)))
+</code></pre>
               
+
+
             </div>
           </div>
           <div style="margin-top: 1em;">
@@ -599,6 +596,7 @@ the code.</p>
                 <div id="disqus_thread">
   <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
 </div>
+
               
             
           </div>
@@ -702,7 +700,7 @@ the code.</p>
     <div id="about">
   <div id="about-card">
     <div id="about-btn-close">
-      <i class="fa fa-remove"></i>
+      <i class="fa fa-times"></i>
     </div>
     
       <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
@@ -720,7 +718,7 @@ the code.</p>
     
     
       <div id="about-card-location">
-        <i class="fa fa-map-marker"></i>
+        <i class="fa fa-map-marker-alt"></i>
         <br/>
         France
       </div>
@@ -740,30 +738,16 @@ the code.</p>
 
 
     
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.1.0/highlight.min.js" integrity="sha512-z+/WWfyD5tccCukM4VvONpEtLmbAm5LDu7eKiyMQJ9m7OfPEDL7gENyDRL3Yfe8XAuGsS2fS4xSMnl6d30kqGQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
-
-
-<script src="/js/script-pcw6v3xilnxydl1vddzazdverrnn9ctynvnxgwho987mfyqkuylcb1nlt.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha512-uURl+ZXMBrF4AwGaWmEetzrd+J5/8NRkWAvJx5sbPSSuOb0bZLqf+tOzniObO00BjHa/dD7gub9oCGMLPQHtQA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 
-<script lang="javascript">
-window.onload = updateMinWidth;
-window.onresize = updateMinWidth;
-document.getElementById("sidebar").addEventListener("transitionend", updateMinWidth);
-function updateMinWidth() {
-  var sidebar = document.getElementById("sidebar");
-  var main = document.getElementById("main");
-  main.style.minWidth = "";
-  var w1 = getComputedStyle(main).getPropertyValue("min-width");
-  var w2 = getComputedStyle(sidebar).getPropertyValue("width");
-  var w3 = getComputedStyle(sidebar).getPropertyValue("left");
-  main.style.minWidth = `calc(${w1} - ${w2} - ${w3})`;
-}
-</script>
+<script src="https://tapoueh.org/js/script-yqzy9wdlzix4lbbwdnzvwx3egsne77earqmn73v9uno8aupuph8wfguccut.min.js"></script>
+
+
 
 <script>
 $(document).ready(function() {
@@ -776,33 +760,6 @@ $(document).ready(function() {
   });
 });
 </script>
-
-
-  
-    
-      <script>
-        var disqus_config = function () {
-          this.page.url = 'https:\/\/tapoueh.org\/blog\/2010\/08\/happy-numbers\/';
-          
-            this.page.identifier = '\/blog\/2010\/08\/happy-numbers\/'
-          
-        };
-        (function() {
-          
-          
-          if (window.location.hostname == "localhost") {
-            return;
-          }
-          var d = document, s = d.createElement('script');
-          var disqus_shortname = 'tapoueh';
-          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
-
-          s.setAttribute('data-timestamp', +new Date());
-          (d.head || d.body).appendChild(s);
-        })();
-      </script>
-    
-  
 
 
 

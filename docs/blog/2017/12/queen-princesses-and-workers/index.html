@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.85.0">
+    <meta name="generator" content="Hugo 0.89.3">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Queen, Princesses, and Workers</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -166,7 +166,7 @@ if (!doNotTrack) {
   <div class="sidebar-container">
     
       <div class="sidebar-profile">
-        <a href="/#about">
+        <a href="/#about" aria-label="">
           <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
         </a>
         <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
@@ -179,7 +179,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/">
+      <a class="sidebar-button-link " href="/" title="Blog">
     
       <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
       
@@ -189,7 +189,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/about/">
+      <a class="sidebar-button-link " href="/about/" title="About">
     
       <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
       
@@ -199,7 +199,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/categories/yesql/">
+      <a class="sidebar-button-link " href="/categories/yesql/" title="YeSQL">
     
       <i class="sidebar-button-icon fa fa-lg fa-database"></i>
       
@@ -209,7 +209,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener" title="The Art of PostgreSQL">
     
       <i class="sidebar-button-icon fa fa-lg fa-book"></i>
       
@@ -223,7 +223,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener" title="GitHub">
     
       <i class="sidebar-button-icon fa fa-lg fa-github"></i>
       
@@ -233,7 +233,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener" title="Twitter">
     
       <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
       
@@ -243,7 +243,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/categories">
+      <a class="sidebar-button-link " href="/categories" title="Categories">
     
       <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
       
@@ -257,7 +257,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/index.xml">
+      <a class="sidebar-button-link " href="/index.xml" title="RSS">
     
       <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
       
@@ -279,7 +279,7 @@ if (!doNotTrack) {
     
       <div class="post-header main-content-wrap text-left">
   
-    <h1 class="post-title" itemprop="headline">
+    <h1 class="post-title">
       Queen, Princesses, and Workers
     </h1>
   
@@ -378,7 +378,6 @@ Replication</a>
 with the terms <em>Primary</em> and <em>Standby</em>, and the even more generic term
 <em>Replica</em> is used in contexts when only the data flow is considered, rather
 than the particular role of a node.</p>
-
  
 
 
@@ -529,14 +528,11 @@ than the particular role of a node.</p>
 </div>
 
 
-
 <h2 id="multi-nodes-architectures-and-roles">Multi-Nodes Architectures and Roles</h2>
-
 <p>In current Production Architectures we often have to deal with multi-nodes
 systems. It always begins with High-Availability concerns: what if my main
 database server gets hit by a meteorite and is then unable to handle any
 processing at all?</p>
-
 <p>Also, when dealing with a <em>database server</em>, the availability isn&rsquo;t just
 about the service. The data is needed too, otherwise we might have to
 declare bankruptcy. So we need a mecanism to have the <strong>data</strong> available at
@@ -544,178 +540,167 @@ all times. The only way to ensure that is by implementing <em>online backups</em
 and <em>Point In Time Recovery</em> archiving, when using PostgreSQL. With other
 data systems, the terminology might be different, the concepts will be the
 same.</p>
-
 <p>Now with backups and <strong>automated recovery</strong> in place, in case when our
 primary PostgreSQL server crashes then the plan is simple:</p>
-
 <ol>
-<li><p>Get a new PostgreSQL server online.</p></li>
-
-<li><p>Run the automated recovery job on this new server.</p></li>
-
-<li><p>Open the service again.</p></li>
+<li>
+<p>Get a new PostgreSQL server online.</p>
+</li>
+<li>
+<p>Run the automated recovery job on this new server.</p>
+</li>
+<li>
+<p>Open the service again.</p>
+</li>
 </ol>
-
 <p>The second step here might take quite some time, depending on how much
 volume needs to be transfered over the network. While the transfering and
 recovering are happening, the service is unavailable…</p>
-
 <h2 id="high-availability">High-Availability</h2>
-
 <p>In order to reduce the maintenance window at the time when we replace the
 <em>primary</em> PostgreSQL server, we might want to have a <em>secondary</em> server
 ready to serve. When using PostgreSQL, it&rsquo;s as easy as implementing <em>Hot
 Standby</em> in between two servers, and <em>promoting the standby</em> in case the
 primary server isn&rsquo;t available anymore.</p>
-
 <blockquote>
 <p>Do you know why it&rsquo;s called <strong>Hot-Standby</strong>?</p>
-
+</blockquote>
+<blockquote>
 <p>That&rsquo;s because not only the standy server is open to read-only queries,
 but also at the time when the promotion of the standby to being the new
 primary occurs, the read-only queries that are currently running aren&rsquo;t
 affected by the promotion.</p>
 </blockquote>
-
 <p>So now we have multiple PostgreSQL nodes in production, or a multi-node
 architecture, with well defined roles:</p>
-
 <ol>
-<li><p>The <em>primary</em> server handles all the traffic.</p></li>
-
-<li><p>The <em>secondary</em> server replays the write-traffic and is ready to take
- over the whole production traffic in case we need to halt the <em>primary</em>.</p></li>
-
-<li><p>We might have more than one <em>secondary</em> server, even in a cascading
- setup. Which is very useful in multi-datacenters setup, or multiple
- Availability Zones cases.</p></li>
+<li>
+<p>The <em>primary</em> server handles all the traffic.</p>
+</li>
+<li>
+<p>The <em>secondary</em> server replays the write-traffic and is ready to take
+over the whole production traffic in case we need to halt the <em>primary</em>.</p>
+</li>
+<li>
+<p>We might have more than one <em>secondary</em> server, even in a cascading
+setup. Which is very useful in multi-datacenters setup, or multiple
+Availability Zones cases.</p>
+</li>
 </ol>
-
 <p>Now, in this setup, every <em>secondary</em> server accepts read-only queries.</p>
-
 <figure><img src="/img/sr-hs-2s.png"/>
 </figure>
 
-
 <h2 id="load-balancing">Load-Balancing</h2>
-
 <p>Having several <em>secondary</em> servers up-to-date or lagging less than a second
 behind the <em>primary</em> server, it&rsquo;s tempting to use them for the <em>reporting</em>
 activities.</p>
-
 <p>One thing leading to another, the <em>secondary</em> servers soon enough receive
 quite an important read-only traffic:</p>
-
 <ul>
-<li><p>The nightly batches for business reporting (D-1 and the like).</p></li>
-
-<li><p>Those other business exports (for customers, invoicing, finance, etc).</p></li>
-
-<li><p>Some end-user traffic that&rsquo;s know to be read-only.</p></li>
+<li>
+<p>The nightly batches for business reporting (D-1 and the like).</p>
+</li>
+<li>
+<p>Those other business exports (for customers, invoicing, finance, etc).</p>
+</li>
+<li>
+<p>Some end-user traffic that&rsquo;s know to be read-only.</p>
+</li>
 </ul>
-
 <p>And then someday the default for the end-user facing production traffic is
 to hit one of the <em>secondary</em> servers. The <em>primary</em> server is left to deal
 with only the write traffic, or as close as possible to that.</p>
-
 <blockquote>
 <p>Hint: when doing <em>write-then-read</em> within the same end-user activity,
 always do that on the same database connection. That&rsquo;s the only proper way
 to avoid data inconsistencies where the correctness of your processing
 depends on the lag of the secondary systems.</p>
 </blockquote>
-
 <h2 id="mixed-architectures">Mixed Architectures</h2>
-
 <p>And our production systems implement a Mixed Architecture, where hopefully
 the role of every part of the system is well known, and clearly labeled.
 Let&rsquo;s see about that:</p>
-
 <ol>
-<li><p>The <em>primary</em> server handles all the writes and is known as the <em>single
- source of truth</em> of the architecture, both by the operators and the
- application code.</p></li>
-
-<li><p>A couple of <em>secondary</em> servers are used to implement High-Availability
- and take over on the <em>primary</em> role when this is needed.</p></li>
-
-<li><p>A bunch of <em>secondary</em> servers are used to implement Load-Balancing and
- serve read-only traffic that comes either from background activities
- (such as mighly batches, exports, and reportings) or directly serving
- user-facing activities.</p></li>
+<li>
+<p>The <em>primary</em> server handles all the writes and is known as the <em>single
+source of truth</em> of the architecture, both by the operators and the
+application code.</p>
+</li>
+<li>
+<p>A couple of <em>secondary</em> servers are used to implement High-Availability
+and take over on the <em>primary</em> role when this is needed.</p>
+</li>
+<li>
+<p>A bunch of <em>secondary</em> servers are used to implement Load-Balancing and
+serve read-only traffic that comes either from background activities
+(such as mighly batches, exports, and reportings) or directly serving
+user-facing activities.</p>
+</li>
 </ol>
-
 <p>Oopsie. I think we have a problem in our choice of terminology now. When
 dealing with a <em>secondary</em> server, it could either be a <em>primary redundancy</em>
 or a load-balancing node.</p>
-
 <figure><img src="/img/lb-2dc.png"/>
 </figure>
 
-
 <h2 id="queen-princesses-and-workers">Queen, Princesses, and Workers</h2>
-
 <p>My proposal to clarify the situation is to use a well-known terminology,
 taken from the bees. In a bee hive, we can see different roles that are well
 defined:</p>
-
 <ul>
-<li><p>The <a href="https://en.wikipedia.org/wiki/Queen_bee">Queen Bee</a></p>
-
+<li>
+<p>The <a href="https://en.wikipedia.org/wiki/Queen_bee">Queen Bee</a></p>
 <p>In any bee hive, there is a single Queen. Her role is clearly defined
 (she serves as the reproducer, and that&rsquo;s it), and only one Bee at a
-time in the Hive (or colony) is allowed this role.</p></li>
-
-<li><p>The princess</p>
-
+time in the Hive (or colony) is allowed this role.</p>
+</li>
+<li>
+<p>The princess</p>
 <p>In the <a href="https://en.wikipedia.org/wiki/Queen_bee">Queen Bee</a> Wikipedia
 article, we read:</p>
-
 <blockquote>
 <p>As the queen ages her pheromone output diminishes. A queen bee that
 becomes old, or is diseased or failing, is replaced by the workers in
 a procedure known as &ldquo;supersedure&rdquo;.</p>
 </blockquote>
-
 <p>To replace the Queen Bee you need a special kind of bee, raised in a
 Queen Cell and fed with Royal Jelly. So when it&rsquo;s time to <em>supersedure</em>
 the Queen, the candidates are clearly identified.</p>
-
 <p>In the bee terminology we don&rsquo;t use the term princess. On the other
 hand, everyone knows that a Princess is only raised to be a Queen
 someday. Not that every Princess is going to have the opportunity, mind
-you.</p></li>
-
-<li><p>The <a href="https://en.wikipedia.org/wiki/Worker_bee">Worker Bees</a></p>
-
+you.</p>
+</li>
+<li>
+<p>The <a href="https://en.wikipedia.org/wiki/Worker_bee">Worker Bees</a></p>
 <p>Their role is pretty clear: they do all the work that needs to be done
 in the hive, except for the role of the Queen, which they assist in
-several ways.</p></li>
+several ways.</p>
+</li>
 </ul>
-
 <h2 id="conclusion">Conclusion</h2>
-
 <p>As a conclusion, I think that the Bee terminology is a better one in for
 Multi-Nodes Architectures. The goal of a terminology is dual. First, the
 choice of vocabulary will have an impact on how you think about the world
 around you, so picking positive and warm-feelings words has an impact.
 Second, in mixed architectures, it&rsquo;s important that everybody has a shared
 understanding of the role of each server:</p>
-
 <ul>
-<li><p>The Queen is the source of truth and handles all the write traffic.</p></li>
-
-<li><p>A Princess is maintained so as to be able to take-over the Queen when
-needed, usually when it dies or becomes unable to sustain the workload.</p></li>
-
-<li><p>Workers do everything else.</p></li>
+<li>
+<p>The Queen is the source of truth and handles all the write traffic.</p>
+</li>
+<li>
+<p>A Princess is maintained so as to be able to take-over the Queen when
+needed, usually when it dies or becomes unable to sustain the workload.</p>
+</li>
+<li>
+<p>Workers do everything else.</p>
+</li>
 </ul>
-
 <p>Will you use this terminology on your next Architecture diagrams?</p>
-
 <figure><img src="/img/lb-2dc-qpw.png"/>
 </figure>
-
 
 <p>This terminology makes our understanding and expectations clearer. Now it&rsquo;s
 easy for everybody to understand that the <strong>Queen</strong> is expected to be unique
@@ -724,6 +709,8 @@ be able to take-over within as small a maintenance window as possible, in
 case something happens to the Queen. And finally, the <strong>Workers</strong> are
 expected to be doing the heavy work.</p>
               
+
+
             </div>
           </div>
           <div style="margin-top: 1em;">
@@ -827,6 +814,7 @@ expected to be doing the heavy work.</p>
                 <div id="disqus_thread">
   <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
 </div>
+
               
             
           </div>
@@ -930,7 +918,7 @@ expected to be doing the heavy work.</p>
     <div id="about">
   <div id="about-card">
     <div id="about-btn-close">
-      <i class="fa fa-remove"></i>
+      <i class="fa fa-times"></i>
     </div>
     
       <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
@@ -948,7 +936,7 @@ expected to be doing the heavy work.</p>
     
     
       <div id="about-card-location">
-        <i class="fa fa-map-marker"></i>
+        <i class="fa fa-map-marker-alt"></i>
         <br/>
         France
       </div>
@@ -968,30 +956,16 @@ expected to be doing the heavy work.</p>
 
 
     
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.1.0/highlight.min.js" integrity="sha512-z+/WWfyD5tccCukM4VvONpEtLmbAm5LDu7eKiyMQJ9m7OfPEDL7gENyDRL3Yfe8XAuGsS2fS4xSMnl6d30kqGQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
-
-
-<script src="/js/script-pcw6v3xilnxydl1vddzazdverrnn9ctynvnxgwho987mfyqkuylcb1nlt.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha512-uURl+ZXMBrF4AwGaWmEetzrd+J5/8NRkWAvJx5sbPSSuOb0bZLqf+tOzniObO00BjHa/dD7gub9oCGMLPQHtQA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 
-<script lang="javascript">
-window.onload = updateMinWidth;
-window.onresize = updateMinWidth;
-document.getElementById("sidebar").addEventListener("transitionend", updateMinWidth);
-function updateMinWidth() {
-  var sidebar = document.getElementById("sidebar");
-  var main = document.getElementById("main");
-  main.style.minWidth = "";
-  var w1 = getComputedStyle(main).getPropertyValue("min-width");
-  var w2 = getComputedStyle(sidebar).getPropertyValue("width");
-  var w3 = getComputedStyle(sidebar).getPropertyValue("left");
-  main.style.minWidth = `calc(${w1} - ${w2} - ${w3})`;
-}
-</script>
+<script src="https://tapoueh.org/js/script-yqzy9wdlzix4lbbwdnzvwx3egsne77earqmn73v9uno8aupuph8wfguccut.min.js"></script>
+
+
 
 <script>
 $(document).ready(function() {
@@ -1004,33 +978,6 @@ $(document).ready(function() {
   });
 });
 </script>
-
-
-  
-    
-      <script>
-        var disqus_config = function () {
-          this.page.url = 'https:\/\/tapoueh.org\/blog\/2017\/12\/queen-princesses-and-workers\/';
-          
-            this.page.identifier = '\/blog\/2017\/12\/queen-princesses-and-workers\/'
-          
-        };
-        (function() {
-          
-          
-          if (window.location.hostname == "localhost") {
-            return;
-          }
-          var d = document, s = d.createElement('script');
-          var disqus_shortname = 'tapoueh';
-          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
-
-          s.setAttribute('data-timestamp', +new Date());
-          (d.head || d.body).appendChild(s);
-        })();
-      </script>
-    
-  
 
 
 

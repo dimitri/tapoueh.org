@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.85.0">
+    <meta name="generator" content="Hugo 0.89.3">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Regexp performances and Finite Automata</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -151,7 +151,7 @@ if (!doNotTrack) {
   <div class="sidebar-container">
     
       <div class="sidebar-profile">
-        <a href="/#about">
+        <a href="/#about" aria-label="">
           <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
         </a>
         <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
@@ -164,7 +164,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/">
+      <a class="sidebar-button-link " href="/" title="Blog">
     
       <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
       
@@ -174,7 +174,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/about/">
+      <a class="sidebar-button-link " href="/about/" title="About">
     
       <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
       
@@ -184,7 +184,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/categories/yesql/">
+      <a class="sidebar-button-link " href="/categories/yesql/" title="YeSQL">
     
       <i class="sidebar-button-icon fa fa-lg fa-database"></i>
       
@@ -194,7 +194,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener" title="The Art of PostgreSQL">
     
       <i class="sidebar-button-icon fa fa-lg fa-book"></i>
       
@@ -208,7 +208,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener" title="GitHub">
     
       <i class="sidebar-button-icon fa fa-lg fa-github"></i>
       
@@ -218,7 +218,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener" title="Twitter">
     
       <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
       
@@ -228,7 +228,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/categories">
+      <a class="sidebar-button-link " href="/categories" title="Categories">
     
       <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
       
@@ -242,7 +242,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/index.xml">
+      <a class="sidebar-button-link " href="/index.xml" title="RSS">
     
       <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
       
@@ -274,7 +274,7 @@ if (!doNotTrack) {
           
             <div class="post-header main-content-wrap text-left">
   
-    <h1 class="post-title" itemprop="headline">
+    <h1 class="post-title">
       Regexp performances and Finite Automata
     </h1>
   
@@ -339,12 +339,10 @@ want different in the
 <code>API</code> so far is how they set developers mind
 into using
 <a href="http://www.regular-expressions.info/">regexp</a>. You know the quote, don&rsquo;t you?</p>
-
 <blockquote>
 <p>Some people, when confronted with a problem, think “I know, I&rsquo;ll use regular
 expressions.” Now they have two problems.</p>
 </blockquote>
-
 <p>That said, some situations require the use of
 <em>regexp</em> — or are so much
 simpler to solve using them than the maintenance hell you&rsquo;re building here
@@ -352,9 +350,9 @@ ain&rsquo;t that big a drag. The given expressiveness is hard to match with any
 other solution, to the point I sometime use them in my code (well I use
 <a href="http://www.emacswiki.org/emacs/rx">rx</a>
 to lower the burden sometime, just see this example).</p>
-<pre><code>(rx bol (zero-or-more blank) (one-or-more digit) &#34;:&#34;)
-&#34;^[[:blank:]]*[[:digit:]]+:&#34;</code></pre>
-<p>The thing you might want to know about
+<pre tabindex="0"><code>(rx bol (zero-or-more blank) (one-or-more digit) &quot;:&quot;)
+&quot;^[[:blank:]]*[[:digit:]]+:&quot;
+</code></pre><p>The thing you might want to know about
 <em>regexp</em> is that computing them is an
 heavy task usually involving
 <em>parsing</em> their representation,
@@ -369,7 +367,6 @@ writing of this article is my reaction to reading
 <a href="http://swtch.com/~rsc/regexp/regexp1.html">Regular Expression Matching Can Be Simple And Fast</a> (but is slow in Java,
 Perl, PHP, Python, Ruby, &hellip;), a very interesting article — see the
 benchmarks in there.</p>
-
 <p>The bulk of it is that we find mainly two categories of
 <em>regexp</em> engine in the
 wild, those that are using
@@ -382,13 +379,11 @@ it&rsquo;s the
 <code>~*</code>
 <a href="http://www.postgresql.org/docs/9.0/interactive/functions-matching.html">operators</a>. The implementation here is based on
 <a href="http://www.arglist.com/regex/">Henry Spencer</a>&rsquo;s work, which the aforementioned article says</p>
-
 <blockquote>
 <p>became very widely used, eventually serving as the basis for the slow
 regular expression implementations mentioned earlier: Perl, PCRE, Python,
 and so on.</p>
 </blockquote>
-
 <p>Having a look at the actual implementation shows that indeed, current
 PostgreSQL code for
 <em>regexp</em> matching uses intermediate representations of
@@ -398,7 +393,7 @@ them as
 would be, and I didn&rsquo;t have the time it would take to check it against the
 proposed one from the
 <em>simple and fast</em> article.</p>
-<pre><code>postgresql/src/backend/regex
+<pre tabindex="0"><code>postgresql/src/backend/regex
   -rw-r--r--   1 dim  staff   4362 Sep 25 20:59 COPYRIGHT
   -rw-r--r--   1 dim  staff    614 Sep 25 20:59 Makefile
   -rw-r--r--   1 dim  staff  28217 Sep 25 20:59 re_syntax.n
@@ -411,8 +406,8 @@ proposed one from the
   -rw-r--r--   1 dim  staff  17368 Sep 25 20:59 rege_dfa.c
   -rw-r--r--   1 dim  staff   3627 Sep 25 20:59 regerror.c
   -rw-r--r--   1 dim  staff  27664 Sep 25 20:59 regexec.c
-  -rw-r--r--   1 dim  staff   2122 Sep 25 20:59 regfree.c</code></pre>
-<p>So all in all, I&rsquo;ll continue avoiding
+  -rw-r--r--   1 dim  staff   2122 Sep 25 20:59 regfree.c
+</code></pre><p>So all in all, I&rsquo;ll continue avoiding
 <em>regexp</em> as much as I currently do, and
 will maintain my tendency to using
 <a href="http://www.gnu.org/manual/gawk/gawk.html">awk</a> when I need them on files (it allows
@@ -422,6 +417,8 @@ command line). And as far as resorting to using
 concerned, it seems that the code here is already about topnotch. Once more.</p>
 
               
+
+
             </div>
           </div>
           <div style="margin-top: 1em;">
@@ -515,6 +512,7 @@ concerned, it seems that the code here is already about topnotch. Once more.</p>
                 <div id="disqus_thread">
   <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
 </div>
+
               
             
           </div>
@@ -618,7 +616,7 @@ concerned, it seems that the code here is already about topnotch. Once more.</p>
     <div id="about">
   <div id="about-card">
     <div id="about-btn-close">
-      <i class="fa fa-remove"></i>
+      <i class="fa fa-times"></i>
     </div>
     
       <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
@@ -636,7 +634,7 @@ concerned, it seems that the code here is already about topnotch. Once more.</p>
     
     
       <div id="about-card-location">
-        <i class="fa fa-map-marker"></i>
+        <i class="fa fa-map-marker-alt"></i>
         <br/>
         France
       </div>
@@ -656,30 +654,16 @@ concerned, it seems that the code here is already about topnotch. Once more.</p>
 
 
     
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.1.0/highlight.min.js" integrity="sha512-z+/WWfyD5tccCukM4VvONpEtLmbAm5LDu7eKiyMQJ9m7OfPEDL7gENyDRL3Yfe8XAuGsS2fS4xSMnl6d30kqGQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
-
-
-<script src="/js/script-pcw6v3xilnxydl1vddzazdverrnn9ctynvnxgwho987mfyqkuylcb1nlt.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha512-uURl+ZXMBrF4AwGaWmEetzrd+J5/8NRkWAvJx5sbPSSuOb0bZLqf+tOzniObO00BjHa/dD7gub9oCGMLPQHtQA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 
-<script lang="javascript">
-window.onload = updateMinWidth;
-window.onresize = updateMinWidth;
-document.getElementById("sidebar").addEventListener("transitionend", updateMinWidth);
-function updateMinWidth() {
-  var sidebar = document.getElementById("sidebar");
-  var main = document.getElementById("main");
-  main.style.minWidth = "";
-  var w1 = getComputedStyle(main).getPropertyValue("min-width");
-  var w2 = getComputedStyle(sidebar).getPropertyValue("width");
-  var w3 = getComputedStyle(sidebar).getPropertyValue("left");
-  main.style.minWidth = `calc(${w1} - ${w2} - ${w3})`;
-}
-</script>
+<script src="https://tapoueh.org/js/script-yqzy9wdlzix4lbbwdnzvwx3egsne77earqmn73v9uno8aupuph8wfguccut.min.js"></script>
+
+
 
 <script>
 $(document).ready(function() {
@@ -692,33 +676,6 @@ $(document).ready(function() {
   });
 });
 </script>
-
-
-  
-    
-      <script>
-        var disqus_config = function () {
-          this.page.url = 'https:\/\/tapoueh.org\/blog\/2010\/09\/regexp-performances-and-finite-automata\/';
-          
-            this.page.identifier = '\/blog\/2010\/09\/regexp-performances-and-finite-automata\/'
-          
-        };
-        (function() {
-          
-          
-          if (window.location.hostname == "localhost") {
-            return;
-          }
-          var d = document, s = d.createElement('script');
-          var disqus_shortname = 'tapoueh';
-          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
-
-          s.setAttribute('data-timestamp', +new Date());
-          (d.head || d.body).appendChild(s);
-        })();
-      </script>
-    
-  
 
 
 

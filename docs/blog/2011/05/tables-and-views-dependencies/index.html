@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.85.0">
+    <meta name="generator" content="Hugo 0.89.3">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Tables and Views dependencies</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -145,7 +145,7 @@ if (!doNotTrack) {
   <div class="sidebar-container">
     
       <div class="sidebar-profile">
-        <a href="/#about">
+        <a href="/#about" aria-label="">
           <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
         </a>
         <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
@@ -158,7 +158,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/">
+      <a class="sidebar-button-link " href="/" title="Blog">
     
       <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
       
@@ -168,7 +168,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/about/">
+      <a class="sidebar-button-link " href="/about/" title="About">
     
       <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
       
@@ -178,7 +178,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/categories/yesql/">
+      <a class="sidebar-button-link " href="/categories/yesql/" title="YeSQL">
     
       <i class="sidebar-button-icon fa fa-lg fa-database"></i>
       
@@ -188,7 +188,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener" title="The Art of PostgreSQL">
     
       <i class="sidebar-button-icon fa fa-lg fa-book"></i>
       
@@ -202,7 +202,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener" title="GitHub">
     
       <i class="sidebar-button-icon fa fa-lg fa-github"></i>
       
@@ -212,7 +212,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener" title="Twitter">
     
       <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
       
@@ -222,7 +222,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/categories">
+      <a class="sidebar-button-link " href="/categories" title="Categories">
     
       <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
       
@@ -236,7 +236,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/index.xml">
+      <a class="sidebar-button-link " href="/index.xml" title="RSS">
     
       <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
       
@@ -258,7 +258,7 @@ if (!doNotTrack) {
     
       <div class="post-header main-content-wrap text-left">
   
-    <h1 class="post-title" itemprop="headline">
+    <h1 class="post-title">
       Tables and Views dependencies
     </h1>
   
@@ -333,12 +333,10 @@ can&rsquo;t because such and such <em>views</em> depend on the column. The basic
 deal with that is to copy paste from the error message the names of the
 views involved, then prepare a script wherein you first <em>DROP VIEW</em> then
 <em>ALTER TABLE</em> and finally <em>CREATE VIEW</em> again, all in the same transaction.</p>
-
 <p>So you have to copy paste also the view definitions.  With large view
 definitions, it quickly gets cumbersome to do so.  Well when you&rsquo;re working
 on operations, you have to bear in mind that cumbersome is a synonym for
 <em>error prone</em>, in fact — so you want another solution if possible.</p>
-
 <p>Oh, and the other drawback of this solution is that
 <code>ALTER TABLE</code> will first
 take a
@@ -346,7 +344,6 @@ take a
 lock acquisition will queue behind current activity on the table, which
 means waiting for a fairly long time and damaging the service quality on a
 moderately loaded server.</p>
-
 <p>It&rsquo;s possible to abuse
 the
 <a href="http://www.postgresql.org/docs/current/static/catalogs.html">system catalogs</a> in
@@ -354,7 +351,7 @@ order to find all <em>views</em> that depend on a given table, too. For that, yo
 have to play with <code>pg_depend</code> and you have to know that internally, a <em>view</em>
 is in fact a <em>rewrite rule</em>. Then here&rsquo;s how to produce the two scripts that
 we need:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">=#<span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">\</span>t<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">=#<span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">\</span>t<span style="color:#bbb">
 </span><span style="color:#bbb"></span>Showing<span style="color:#bbb"> </span><span style="color:#00a">only</span><span style="color:#bbb"> </span>tuples.<span style="color:#bbb">
 </span><span style="color:#bbb">
 </span><span style="color:#bbb"></span>=#<span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">\</span>o<span style="color:#bbb"> </span>/tmp/<span style="color:#00a">drop</span>.<span style="color:#00a">sql</span><span style="color:#bbb">
@@ -376,8 +373,8 @@ we need:</p>
 </span><span style="color:#bbb">           </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>classid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;pg_rewrite&#39;</span>::regclass<span style="color:#bbb">
 </span><span style="color:#bbb">           </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>pg_get_viewdef(r.ev_class,<span style="color:#bbb"> </span><span style="color:#00a">true</span>)<span style="color:#bbb"> </span>~<span style="color:#bbb"> </span><span style="color:#a50">&#39;COLUMN_NAME&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>x;<span style="color:#bbb">
 </span><span style="color:#bbb">
-</span><span style="color:#bbb"></span>=#<span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">\</span>o</code></pre></div>
-<p>Replace
+</span><span style="color:#bbb"></span>=#<span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">\</span>o<span style="color:#bbb">
+</span></code></pre></div><p>Replace
 <code>SCHEMA.TABLENAME</code> and
 <code>COLUMN_NAME</code> with your targets here and the
 first query should give you one row per candidate view.  Well if you&rsquo;re not
@@ -385,7 +382,6 @@ using the
 <code>\o</code> trick, that is — if you do, check out the generated file
 instead, with
 <code>\! cat /tmp/drop.sql</code> for example.</p>
-
 <p>Please note that this catalog query is not accurate, as it will select as a
 candidate any view that will by chance both depend on the target table and
 contain the
@@ -396,12 +392,13 @@ just accept that you might
 <code>DROP</code> then
 <code>CREATE</code> again more
 <em>views</em> than need be.</p>
-
 <p>If you need some more details about the <code>\t \o</code> sequence you might be
 interested in this older article
 about <a href="/blog/2010/02/resetting-sequences.-all-of-them-please/">resetting sequences</a>.</p>
 
               
+
+
             </div>
           </div>
           <div style="margin-top: 1em;">
@@ -497,6 +494,7 @@ about <a href="/blog/2010/02/resetting-sequences.-all-of-them-please/">resetting
                 <div id="disqus_thread">
   <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
 </div>
+
               
             
           </div>
@@ -600,7 +598,7 @@ about <a href="/blog/2010/02/resetting-sequences.-all-of-them-please/">resetting
     <div id="about">
   <div id="about-card">
     <div id="about-btn-close">
-      <i class="fa fa-remove"></i>
+      <i class="fa fa-times"></i>
     </div>
     
       <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
@@ -618,7 +616,7 @@ about <a href="/blog/2010/02/resetting-sequences.-all-of-them-please/">resetting
     
     
       <div id="about-card-location">
-        <i class="fa fa-map-marker"></i>
+        <i class="fa fa-map-marker-alt"></i>
         <br/>
         France
       </div>
@@ -638,30 +636,16 @@ about <a href="/blog/2010/02/resetting-sequences.-all-of-them-please/">resetting
 
 
     
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.1.0/highlight.min.js" integrity="sha512-z+/WWfyD5tccCukM4VvONpEtLmbAm5LDu7eKiyMQJ9m7OfPEDL7gENyDRL3Yfe8XAuGsS2fS4xSMnl6d30kqGQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
-
-
-<script src="/js/script-pcw6v3xilnxydl1vddzazdverrnn9ctynvnxgwho987mfyqkuylcb1nlt.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha512-uURl+ZXMBrF4AwGaWmEetzrd+J5/8NRkWAvJx5sbPSSuOb0bZLqf+tOzniObO00BjHa/dD7gub9oCGMLPQHtQA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 
-<script lang="javascript">
-window.onload = updateMinWidth;
-window.onresize = updateMinWidth;
-document.getElementById("sidebar").addEventListener("transitionend", updateMinWidth);
-function updateMinWidth() {
-  var sidebar = document.getElementById("sidebar");
-  var main = document.getElementById("main");
-  main.style.minWidth = "";
-  var w1 = getComputedStyle(main).getPropertyValue("min-width");
-  var w2 = getComputedStyle(sidebar).getPropertyValue("width");
-  var w3 = getComputedStyle(sidebar).getPropertyValue("left");
-  main.style.minWidth = `calc(${w1} - ${w2} - ${w3})`;
-}
-</script>
+<script src="https://tapoueh.org/js/script-yqzy9wdlzix4lbbwdnzvwx3egsne77earqmn73v9uno8aupuph8wfguccut.min.js"></script>
+
+
 
 <script>
 $(document).ready(function() {
@@ -674,33 +658,6 @@ $(document).ready(function() {
   });
 });
 </script>
-
-
-  
-    
-      <script>
-        var disqus_config = function () {
-          this.page.url = 'https:\/\/tapoueh.org\/blog\/2011\/05\/tables-and-views-dependencies\/';
-          
-            this.page.identifier = '\/blog\/2011\/05\/tables-and-views-dependencies\/'
-          
-        };
-        (function() {
-          
-          
-          if (window.location.hostname == "localhost") {
-            return;
-          }
-          var d = document, s = d.createElement('script');
-          var disqus_shortname = 'tapoueh';
-          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
-
-          s.setAttribute('data-timestamp', +new Date());
-          (d.head || d.body).appendChild(s);
-        })();
-      </script>
-    
-  
 
 
 

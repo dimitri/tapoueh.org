@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.85.0">
+    <meta name="generator" content="Hugo 0.89.3">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>PostgreSQL Concurrency: Isolation and Locking</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -35,7 +35,6 @@
 system. It&rsquo;s even the world&rsquo;s most advanced open source one of them. As
 such, as its core, Postgres solves concurrent access to a set of data and
 maintains consistency while allowing concurrent operations.
-
 This article is a primer on PostgreSQL Isolation and Locking properties and
 behaviors. You might be interested into the previous article in the series:
 PostgreSQL Concurrency: Data Modification
@@ -44,7 +43,6 @@ Language.">
 system. It&rsquo;s even the world&rsquo;s most advanced open source one of them. As
 such, as its core, Postgres solves concurrent access to a set of data and
 maintains consistency while allowing concurrent operations.
-
 This article is a primer on PostgreSQL Isolation and Locking properties and
 behaviors. You might be interested into the previous article in the series:
 PostgreSQL Concurrency: Data Modification
@@ -59,7 +57,6 @@ Language.">
 system. It&rsquo;s even the world&rsquo;s most advanced open source one of them. As
 such, as its core, Postgres solves concurrent access to a set of data and
 maintains consistency while allowing concurrent operations.
-
 This article is a primer on PostgreSQL Isolation and Locking properties and
 behaviors. You might be interested into the previous article in the series:
 PostgreSQL Concurrency: Data Modification
@@ -169,7 +166,7 @@ if (!doNotTrack) {
   <div class="sidebar-container">
     
       <div class="sidebar-profile">
-        <a href="/#about">
+        <a href="/#about" aria-label="">
           <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
         </a>
         <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
@@ -182,7 +179,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/">
+      <a class="sidebar-button-link " href="/" title="Blog">
     
       <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
       
@@ -192,7 +189,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/about/">
+      <a class="sidebar-button-link " href="/about/" title="About">
     
       <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
       
@@ -202,7 +199,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/categories/yesql/">
+      <a class="sidebar-button-link " href="/categories/yesql/" title="YeSQL">
     
       <i class="sidebar-button-icon fa fa-lg fa-database"></i>
       
@@ -212,7 +209,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener" title="The Art of PostgreSQL">
     
       <i class="sidebar-button-icon fa fa-lg fa-book"></i>
       
@@ -226,7 +223,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener" title="GitHub">
     
       <i class="sidebar-button-icon fa fa-lg fa-github"></i>
       
@@ -236,7 +233,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener">
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener" title="Twitter">
     
       <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
       
@@ -246,7 +243,7 @@ if (!doNotTrack) {
 
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/categories">
+      <a class="sidebar-button-link " href="/categories" title="Categories">
     
       <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
       
@@ -260,7 +257,7 @@ if (!doNotTrack) {
       
   <li class="sidebar-button">
     
-      <a class="sidebar-button-link " href="/index.xml">
+      <a class="sidebar-button-link " href="/index.xml" title="RSS">
     
       <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
       
@@ -282,7 +279,7 @@ if (!doNotTrack) {
     
       <div class="post-header main-content-wrap text-left">
   
-    <h1 class="post-title" itemprop="headline">
+    <h1 class="post-title">
       PostgreSQL Concurrency: Isolation and Locking
     </h1>
   
@@ -367,12 +364,10 @@ if (!doNotTrack) {
 system. It&rsquo;s even the world&rsquo;s most advanced open source one of them. As
 such, as its core, Postgres solves concurrent access to a set of data and
 maintains consistency while allowing concurrent operations.</p>
-
 <p>This article is a primer on PostgreSQL Isolation and Locking properties and
 behaviors. You might be interested into the previous article in the series:
 <a href="/blog/2018/06/postgresql-concurrency-data-modification-language/">PostgreSQL Concurrency: Data Modification
 Language</a>.</p>
-
  
 
 
@@ -500,19 +495,15 @@ Language</a>.</p>
 </div>
 
 
-
 <h2 id="isolation-and-locking">Isolation and Locking</h2>
-
 <p>The main feature of any database system is its implementation of concurrency
 and full respect of the system&rsquo;s constraints and properties when multiple
 transactions are modifying the state of the system at the same time.</p>
-
 <p>PostgreSQL is fully <em>ACID</em> compliant and implements <em>transactions isolation</em>
 so that your application&rsquo;s concurrency can be dealt with gracefully.
 Concurrency is a tricky and complex problem, and concurrency issues are
 often hard to reproduce. That&rsquo;s why it&rsquo;s best to rely on existing solutions
 for handling concurrency rather than rolling your own.</p>
-
 <p>Dealing with concurrency issues in programming languages usually involves
 proper declaration and use of <em>lock</em>, <em>mutex</em>, and <em>semaphore</em> facilities
 which make a clever use of <em>atomic</em> operations as supported by your CPU, and
@@ -521,20 +512,15 @@ as Java offer <em>synchronized</em> blocks that in turn make use of previously
 listed low-level features. Other programming languages such as Erlang only
 implement <em>message passing</em> facilities, and handle concurrency internally
 (in a <em>mailbox</em> system) so that you don&rsquo;t have to.</p>
-
 <p>SQL is a declarative programming language, where our role as developers is
 to declare our intention: the result we want to achieve. The implementation
 is then tasked with implementing our command and making it right in every
 detail, including concurrency behavior.</p>
-
 <p>PostgreSQL implementation of the concurrency behavior is dependable and
 allows some user control in terms of locking aspects of your queries.</p>
-
 <hr />
-
 <figure class="right"><a href="https://theartofpostgresql.com"><img src="/img/TAOP_Book_Cover_200x260.png"/></a>
 </figure>
-
 
 <p>This article is extracted from my book <a href="https://theartofpostgresql.com">The Art of
 PostgreSQL</a>, which teaches SQL to developers
@@ -542,30 +528,23 @@ so that they may replace thousands of lines of code with very simple
 queries. The book has a full chapter about <em>Data Manipulation and
 Concurrency Control</em> in PostgreSQL, including caching with materialized
 views, check it out!</p>
-
 <hr />
-
 <h2 id="transactions-and-isolation">Transactions and Isolation</h2>
-
 <p>Given the <em>ACID</em> properties, a transaction must be <em>Isolated</em> from other
 concurrent transactions running in the system. It is possible to choose the
 level of isolation from the concurrent activity, depending on your use case.</p>
-
 <p>A simple use case for isolation is <em>online backups</em>. The backup application
 for PostgreSQL is <em>pg_dump</em>, and the role of this application is to take a
 snapshot of your whole database and export it to a backup file. This
 requires that <em>pg_dump</em> reads are completely isolated from any concurrent
 write activity in the system, and this is obtained with the isolation level
 <em>repeatable read</em> or <em>serializable</em> as described next.</p>
-
 <p>From PostgreSQL version 9.1 onward, <em>pg_dump</em> uses the isolation level
 <em>serializable</em>. It used to be <em>repeatable read</em> until SSI implementation…
 more on that later.</p>
-
 <p><a href="https://www.postgresql.org/docs/current/static/transaction-iso.html">Transaction
 isolation</a>
 is defined by the SQL standard and implemented in PostgreSQL:</p>
-
 <blockquote>
 <p>The SQL standard defines four levels of transaction isolation. The most
 strict is Serializable, which is defined by the standard in a paragraph
@@ -579,158 +558,141 @@ level. (This is hardly surprising &ndash; if the effect of the transactions
 must be consistent with having been run one at a time, how could you see
 any phenomena caused by interactions?)</p>
 </blockquote>
-
 <p>Still quoting the PostgreSQL documentation, here are the phenomena which are
 prohibited at various levels are:</p>
-
 <ul>
-<li><p>Dirty read</p>
-
+<li>
+<p>Dirty read</p>
 <p>A transaction reads data written by a concurrent uncommitted
-transaction.</p></li>
-
-<li><p>Nonrepeatable read</p>
-
+transaction.</p>
+</li>
+<li>
+<p>Nonrepeatable read</p>
 <p>A transaction re-reads data it has previously read and finds that data
 has been modified by another transaction (that committed since the
-initial read).</p></li>
-
-<li><p>Phantom read</p>
-
+initial read).</p>
+</li>
+<li>
+<p>Phantom read</p>
 <p>A transaction re-executes a query returning a set of rows that satisfy a
 search condition and finds that the set of rows satisfying the condition
-has changed due to another recently committed transaction.</p></li>
-
-<li><p>Serialization anomaly</p>
-
+has changed due to another recently committed transaction.</p>
+</li>
+<li>
+<p>Serialization anomaly</p>
 <p>The result of successfully committing a group of transactions is
 inconsistent with all possible orderings of running those transactions
-one at a time.</p></li>
+one at a time.</p>
+</li>
 </ul>
-
 <p>There are four isolation levels defined by the standard: <em>read uncommitted</em>,
 <em>read committed</em>, <em>repeatable read</em>, and <em>serializable</em>. PostgreSQL doesn&rsquo;t
 implement <em>read uncommitted</em>, which allows <em>dirty reads</em>, and instead
 defaults to <em>read committed</em>.</p>
-
 <p>The definition of those isolation levels says that <em>read committed</em>
 disallows <em>dirty read</em> anomalies, <em>repeatable read</em> disallows <em>dirty read</em>
 and <em>nonrepeatable read</em>, and <em>serializable</em> disallows all anomalies.</p>
-
 <p>PostgreSQL also disallows <em>phantom read</em> from <em>repeatable read</em> isolation
 level.</p>
-
 <h2 id="about-ssi">About SSI</h2>
-
 <p>PostgreSQL&rsquo;s implementation of <em>serializable</em> is an amazing work. It is
 described in details at the PostgreSQL wiki page entitled
 <a href="https://wiki.postgresql.org/wiki/Serializable">Serializable</a>, and the wiki
 page <a href="https://wiki.postgresql.org/wiki/SSI">SSI</a> contains more details about
 how to use it.</p>
-
 <p>It took about 20 years for the research community to come up with a
 satisfying mathematical model for implementing <em>serializable snapshot
 isolation</em> in an efficient way, and then a single year for that major
 progress to be included in PostgreSQL!</p>
-
 <h2 id="concurrent-updates-and-isolation">Concurrent Updates and Isolation</h2>
-
 <p>In our <em>tweet</em> model of an application, we can have a look at handling
 <em>retweets</em>, which is a <em>counter</em> field in the <em>tweet.message</em> table.</p>
-
 <div class="alert success ">
   <p>The application model for Tweeting is introduced in the first article of
 this series:<a href="/blog/2018/06/postgresql-concurrency-data-modification-language/">PostgreSQL Concurrency: Data Modification
 Language</a>.</p>
 </div>
-
 <p>Here&rsquo;s how to make a <em>retweet</em> in our model:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">update</span><span style="color:#bbb"> </span>tweet.message<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">update</span><span style="color:#bbb"> </span>tweet.message<span style="color:#bbb">
 </span><span style="color:#bbb">   </span><span style="color:#00a">set</span><span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
-</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>messageid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#099">1</span>;</code></pre></div>
-<p>Now, what happens if two users are doing that at the same time?</p>
-
+</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>messageid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#099">1</span>;<span style="color:#bbb">
+</span></code></pre></div><p>Now, what happens if two users are doing that at the same time?</p>
 <p>To better understand what <em>at the same time</em> means here, we can write the
 query extended with manual transaction control, as PostgreSQL will do when
 sent a single command without an explicit transaction:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;<span style="color:#bbb">
 </span><span style="color:#bbb">
 </span><span style="color:#bbb">   </span><span style="color:#00a">update</span><span style="color:#bbb"> </span>tweet.message<span style="color:#bbb">
 </span><span style="color:#bbb">      </span><span style="color:#00a">set</span><span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
 </span><span style="color:#bbb">    </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>messageid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#099">1</span>;<span style="color:#bbb">
 </span><span style="color:#bbb"></span>returning<span style="color:#bbb"> </span>messageid,<span style="color:#bbb"> </span>rts;<span style="color:#bbb">
 </span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">commit</span>;</code></pre></div>
-<p>Now, rather than doing this query, we open a <em>psql</em> prompt and send in:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;<span style="color:#bbb">
+</span><span style="color:#bbb"></span><span style="color:#00a">commit</span>;<span style="color:#bbb">
+</span></code></pre></div><p>Now, rather than doing this query, we open a <em>psql</em> prompt and send in:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;<span style="color:#bbb">
 </span><span style="color:#bbb">
 </span><span style="color:#bbb">   </span><span style="color:#00a">update</span><span style="color:#bbb"> </span>tweet.message<span style="color:#bbb">
 </span><span style="color:#bbb">      </span><span style="color:#00a">set</span><span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
 </span><span style="color:#bbb">    </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>messageid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span>returning<span style="color:#bbb"> </span>messageid,<span style="color:#bbb"> </span>rts;</code></pre></div>
-<p>We get the following result now:</p>
-<pre><code class="language-psql" data-lang="psql"> messageid │ rts 
+</span><span style="color:#bbb"></span>returning<span style="color:#bbb"> </span>messageid,<span style="color:#bbb"> </span>rts;<span style="color:#bbb">
+</span></code></pre></div><p>We get the following result now:</p>
+<pre tabindex="0"><code class="language-psql" data-lang="psql"> messageid │ rts 
 ═══════════╪═════
          1 │   2
-(1 row)</code></pre>
-<p>The transaction remains open (it&rsquo;s <em>idle in transaction</em>) and waits for us
+(1 row)
+</code></pre><p>The transaction remains open (it&rsquo;s <em>idle in transaction</em>) and waits for us
 to do something else, or maybe <em>commit</em> or <em>rollback</em> the transaction.</p>
-
 <p>Now, open a second <em>psql</em> prompt and send in the exact same query. This time
 the <em>update</em> doesn&rsquo;t return. There&rsquo;s no way it could: the first transaction
 is not done yet and is working on the row where <em>messageid = 1</em>. Until the
 first transaction is done, no concurrent activity can take place on this
 specific row.</p>
-
 <p>So we go back to the first prompt and <em>commit</em>.</p>
-
 <p>Then what happens depends on the <em>isolation level</em> required. Here we have
 the default isolation level <em>read committed</em>, and at the second prompt the
 <em>update</em> command is unlocked and proceeds to immediately return:</p>
-<pre><code class="language-psql" data-lang="psql"> messageid │ rts 
+<pre tabindex="0"><code class="language-psql" data-lang="psql"> messageid │ rts 
 ═══════════╪═════
          1 │   3
-(1 row)</code></pre>
-<p>Now for the following examples, we need to review our <em>psql</em> setting for the
+(1 row)
+</code></pre><p>Now for the following examples, we need to review our <em>psql</em> setting for the
 <em>ON_ERROR_ROLLBACK</em> feature. When set to <em>true</em> or <em>interactive</em>, then
 <em>psql</em> issues
 <a href="https://www.postgresql.org/docs/current/static/sql-rollback-to.html">savepoints</a>
 to protect each outer transaction state, and that will hide what we&rsquo;re
 showing next. Type the following command to momentarily disable this helpful
 setting, so that we can see what really happens:</p>
-<pre><code>\set ON_ERROR_ROLLBACK off</code></pre>
-<p>If we pick the isolation level <em>repeatable read</em>, with the following syntax:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">start</span><span style="color:#bbb"> </span><span style="color:#00a">transaction</span><span style="color:#bbb"> </span><span style="color:#00a">isolation</span><span style="color:#bbb"> </span><span style="color:#00a">level</span><span style="color:#bbb"> </span><span style="color:#00a">repeatable</span><span style="color:#bbb"> </span><span style="color:#00a">read</span>;<span style="color:#bbb">
+<pre tabindex="0"><code>\set ON_ERROR_ROLLBACK off
+</code></pre><p>If we pick the isolation level <em>repeatable read</em>, with the following syntax:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">start</span><span style="color:#bbb"> </span><span style="color:#00a">transaction</span><span style="color:#bbb"> </span><span style="color:#00a">isolation</span><span style="color:#bbb"> </span><span style="color:#00a">level</span><span style="color:#bbb"> </span><span style="color:#00a">repeatable</span><span style="color:#bbb"> </span><span style="color:#00a">read</span>;<span style="color:#bbb">
 </span><span style="color:#bbb">
 </span><span style="color:#bbb">   </span><span style="color:#00a">update</span><span style="color:#bbb"> </span>tweet.message<span style="color:#bbb">
 </span><span style="color:#bbb">      </span><span style="color:#00a">set</span><span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
 </span><span style="color:#bbb">    </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>messageid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span>returning<span style="color:#bbb"> </span>messageid,<span style="color:#bbb"> </span>rts;</code></pre></div>
-<p>Again, we leave the transaction open, switch to a second prompt and do the
+</span><span style="color:#bbb"></span>returning<span style="color:#bbb"> </span>messageid,<span style="color:#bbb"> </span>rts;<span style="color:#bbb">
+</span></code></pre></div><p>Again, we leave the transaction open, switch to a second prompt and do the
 same thing, and only then — while the second update is waiting for the first
 transaction to finish — commit the first transactions. What we get this time
 is this:</p>
-<pre><code class="language-psql" data-lang="psql">ERROR:  could not serialize access due to concurrent update
+<pre tabindex="0"><code class="language-psql" data-lang="psql">ERROR:  could not serialize access due to concurrent update
 
 yesql!# commit;
-ROLLBACK</code></pre>
-<p>Also notice that even if we ask for a <em>COMMIT</em>, what we get is a <em>ROLLBACK</em>.
+ROLLBACK
+</code></pre><p>Also notice that even if we ask for a <em>COMMIT</em>, what we get is a <em>ROLLBACK</em>.
 Once an error occurs in a transaction, in PostgreSQL, the transaction can&rsquo;t
 commit anymore.</p>
-
 <p>When using the isolation level <em>serializable</em>, the same behavior as for
 <em>repeatable read</em> is observed, with exactly the same error message exactly.</p>
-
 <h2 id="conclusion">Conclusion</h2>
-
 <p>PostgreSQL is an advanced RDBMS, with a solid foundation. The main service
 PostgreSQL implements to its users is a correct handling of concurrent
 operations. In the SQL model, that means handling both transactions and
 isolation levels.</p>
-
 <p>The next article in this series is going to show how to model your database
 schema to make it a better fit for high concurrent updates, stay tuned!</p>
               
+
+
             </div>
           </div>
           <div style="margin-top: 1em;">
@@ -830,6 +792,7 @@ schema to make it a better fit for high concurrent updates, stay tuned!</p>
                 <div id="disqus_thread">
   <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
 </div>
+
               
             
           </div>
@@ -933,7 +896,7 @@ schema to make it a better fit for high concurrent updates, stay tuned!</p>
     <div id="about">
   <div id="about-card">
     <div id="about-btn-close">
-      <i class="fa fa-remove"></i>
+      <i class="fa fa-times"></i>
     </div>
     
       <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
@@ -951,7 +914,7 @@ schema to make it a better fit for high concurrent updates, stay tuned!</p>
     
     
       <div id="about-card-location">
-        <i class="fa fa-map-marker"></i>
+        <i class="fa fa-map-marker-alt"></i>
         <br/>
         France
       </div>
@@ -971,30 +934,16 @@ schema to make it a better fit for high concurrent updates, stay tuned!</p>
 
 
     
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js" integrity="sha256-/BfiIkHlHoVihZdc6TFuj7MmJ0TWcWsMXkeDFwhi0zw=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.1.0/highlight.min.js" integrity="sha512-z+/WWfyD5tccCukM4VvONpEtLmbAm5LDu7eKiyMQJ9m7OfPEDL7gENyDRL3Yfe8XAuGsS2fS4xSMnl6d30kqGQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.7/js/jquery.fancybox.min.js" integrity="sha256-GEAnjcTqVP+vBp3SSc8bEDQqvWAZMiHyUSIorrWwH50=" crossorigin="anonymous"></script>
-
-
-<script src="/js/script-pcw6v3xilnxydl1vddzazdverrnn9ctynvnxgwho987mfyqkuylcb1nlt.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha512-uURl+ZXMBrF4AwGaWmEetzrd+J5/8NRkWAvJx5sbPSSuOb0bZLqf+tOzniObO00BjHa/dD7gub9oCGMLPQHtQA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 
-<script lang="javascript">
-window.onload = updateMinWidth;
-window.onresize = updateMinWidth;
-document.getElementById("sidebar").addEventListener("transitionend", updateMinWidth);
-function updateMinWidth() {
-  var sidebar = document.getElementById("sidebar");
-  var main = document.getElementById("main");
-  main.style.minWidth = "";
-  var w1 = getComputedStyle(main).getPropertyValue("min-width");
-  var w2 = getComputedStyle(sidebar).getPropertyValue("width");
-  var w3 = getComputedStyle(sidebar).getPropertyValue("left");
-  main.style.minWidth = `calc(${w1} - ${w2} - ${w3})`;
-}
-</script>
+<script src="https://tapoueh.org/js/script-yqzy9wdlzix4lbbwdnzvwx3egsne77earqmn73v9uno8aupuph8wfguccut.min.js"></script>
+
+
 
 <script>
 $(document).ready(function() {
@@ -1007,33 +956,6 @@ $(document).ready(function() {
   });
 });
 </script>
-
-
-  
-    
-      <script>
-        var disqus_config = function () {
-          this.page.url = 'https:\/\/tapoueh.org\/blog\/2018\/07\/postgresql-concurrency-isolation-and-locking\/';
-          
-            this.page.identifier = '\/blog\/2018\/07\/postgresql-concurrency-isolation-and-locking\/'
-          
-        };
-        (function() {
-          
-          
-          if (window.location.hostname == "localhost") {
-            return;
-          }
-          var d = document, s = d.createElement('script');
-          var disqus_shortname = 'tapoueh';
-          s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
-
-          s.setAttribute('data-timestamp', +new Date());
-          (d.head || d.body).appendChild(s);
-        })();
-      </script>
-    
-  
 
 
 
