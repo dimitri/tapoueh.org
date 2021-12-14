@@ -1,0 +1,1118 @@
+
+
+  
+    
+  
+
+
+  
+
+
+
+
+  
+
+
+  
+
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Hugo 0.89.3">
+    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
+    <title>Postgres HA: roles are dynamic</title>
+    <meta name="author" content="Dimitri Fontaine">
+    <meta name="keywords" content="">
+
+    <link rel="icon" href="/favicon.ico">
+    
+
+    
+    <meta name="description" content="High-Availability comes with some impact on your architecture choices, in
+particular when applied to RDBMS such as Postgres. One such impact is the
+idea of a failover. When implementing database HA, it is usually expected
+that both the service and the data are maintained available in the face of
+operational faults. The most common way to implement resilience includes
+automated (or manual) failover, where a new primary is elected among a list
+of standby nodes.
+In other words, as soon as Postgres High-Availability is implemented, the
+roles of your Postgres nodes are dynamic. The fact that a given node is a
+primary or a standby at any given point in time ceases to be relevant to
+understanding your architecture. In fact, the only thing that&rsquo;s now given
+about the role of a node is that it will change. Otherwise you don&rsquo;t have
+failover capability, and then, you probably don&rsquo;t have HA in the first
+place, right?
+In this article we are going to try and understand what having dynamic roles
+for Postgres nodes in a HA system means.">
+    <meta property="og:description" content="High-Availability comes with some impact on your architecture choices, in
+particular when applied to RDBMS such as Postgres. One such impact is the
+idea of a failover. When implementing database HA, it is usually expected
+that both the service and the data are maintained available in the face of
+operational faults. The most common way to implement resilience includes
+automated (or manual) failover, where a new primary is elected among a list
+of standby nodes.
+In other words, as soon as Postgres High-Availability is implemented, the
+roles of your Postgres nodes are dynamic. The fact that a given node is a
+primary or a standby at any given point in time ceases to be relevant to
+understanding your architecture. In fact, the only thing that&rsquo;s now given
+about the role of a node is that it will change. Otherwise you don&rsquo;t have
+failover capability, and then, you probably don&rsquo;t have HA in the first
+place, right?
+In this article we are going to try and understand what having dynamic roles
+for Postgres nodes in a HA system means.">
+    <meta property="og:type" content="blog">
+    <meta property="og:title" content="Postgres HA: roles are dynamic">
+    <meta property="og:url" content="https://tapoueh.org/blog/2021/12/postgres-ha-roles-are-dynamic/">
+    <meta property="og:site_name" content="The Art of PostgreSQL">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Postgres HA: roles are dynamic">
+    <meta name="twitter:description" content="High-Availability comes with some impact on your architecture choices, in
+particular when applied to RDBMS such as Postgres. One such impact is the
+idea of a failover. When implementing database HA, it is usually expected
+that both the service and the data are maintained available in the face of
+operational faults. The most common way to implement resilience includes
+automated (or manual) failover, where a new primary is elected among a list
+of standby nodes.
+In other words, as soon as Postgres High-Availability is implemented, the
+roles of your Postgres nodes are dynamic. The fact that a given node is a
+primary or a standby at any given point in time ceases to be relevant to
+understanding your architecture. In fact, the only thing that&rsquo;s now given
+about the role of a node is that it will change. Otherwise you don&rsquo;t have
+failover capability, and then, you probably don&rsquo;t have HA in the first
+place, right?
+In this article we are going to try and understand what having dynamic roles
+for Postgres nodes in a HA system means.">
+    
+      <meta name="twitter:creator" content="@tapoueh">
+    
+    
+
+    
+    
+
+    
+      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
+    
+
+    
+      <meta property="og:image" content="https://tapoueh.org/img/redundanzen_500x500px.png">
+    
+    
+      <meta property="og:image" content="https://tapoueh.org/img/rajendra-biswal-8_wAKXgPxE0-unsplash.jpg">
+    
+    
+
+    
+
+    
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
+    
+    
+    <link rel="stylesheet" href="/css/style-jsjn0006wyhpyzivf6yceb31gvpjatbcs3qzjvlumobfnugccvobqwxnnaj8.min.css" />
+    
+    
+      <link rel="stylesheet" href="https://tapoueh.org/css/dim.css">
+    
+      <link rel="stylesheet" href="https://tapoueh.org/css/nav.css">
+    
+
+    
+      
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-47059482-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+    
+    
+  </head>
+
+  <body>
+    <div id="blog">
+      <header id="header" data-behavior="5">
+  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+  <div class="navbar-collapse collapse header-title" id="navigation">
+    <ul class="nav navbar-nav navbar-right">
+      
+      <li class="dropdown">
+        
+        <a style="color: black;" href="/" alt="blog"><i class="sidebar-button-icon fa fa-lg fa-home"></i></a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a style="color: black;" href="/conf/" alt="talks"><i class="sidebar-button-icon fa fa-lg fa-microphone"></i></a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a style="color: black;" href="https://twitter.com/tapoueh" alt="Twitter"><i class="sidebar-button-icon fa fa-lg fa-twitter"></i></a>
+        
+      </li>
+      
+      <li class="dropdown">
+        
+        <a style="color: black;" href="http://theartofpostgresql.com" alt="The Art Of PostgreSQL"><i class="sidebar-button-icon fa fa-lg fa-book"></i></a>
+        
+      </li>
+      
+    </ul>
+  </div>
+
+  
+    
+      <a class="header-right-icon "
+         href="https://theartofpostgresql.com/" target="_blank">
+    
+    
+      <i class="fa fa-lg fa-book"></i>
+    
+    
+    </a>
+  
+</header>
+
+      <nav id="sidebar" data-behavior="5">
+  <div class="sidebar-container">
+    
+      <div class="sidebar-profile">
+        <a href="/#about" aria-label="">
+          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+        </a>
+        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
+        
+          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
+        
+      </div>
+    
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/" title="Blog">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
+      
+      <span class="sidebar-button-desc">Blog</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/about/" title="About">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
+      
+      <span class="sidebar-button-desc">About</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories/yesql/" title="YeSQL">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-database"></i>
+      
+      <span class="sidebar-button-desc">YeSQL</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener" title="The Art of PostgreSQL">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
+      
+      <span class="sidebar-button-desc">The Art of PostgreSQL</span>
+    </a>
+  </li>
+
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener" title="GitHub">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+      
+      <span class="sidebar-button-desc">GitHub</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener" title="Twitter">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+      
+      <span class="sidebar-button-desc">Twitter</span>
+    </a>
+  </li>
+
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/categories" title="Categories">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+      
+      <span class="sidebar-button-desc">Categories</span>
+    </a>
+  </li>
+
+
+    </ul>
+    <ul class="sidebar-buttons">
+      
+  <li class="sidebar-button">
+    
+      <a class="sidebar-button-link " href="/index.xml" title="RSS">
+    
+      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+      
+      <span class="sidebar-button-desc">RSS</span>
+    </a>
+  </li>
+
+
+    </ul>
+  </div>
+</nav>
+
+      
+  <div class="post-header-cover
+              text-left
+              post-header-cover--partial"
+       style="background-image:url('/img/rajendra-biswal-8_wAKXgPxE0-unsplash.jpg')"
+       data-behavior="5">
+    
+      <div class="post-header main-content-wrap text-left">
+  
+    <h1 class="post-title">
+      Postgres HA: roles are dynamic
+    </h1>
+  
+  
+  <div class="postShorten-meta post-meta">
+    
+      <time itemprop="datePublished" datetime="2021-12-14T22:36:36&#43;01:00">
+        <span style="float: left; width: 35%">
+          <i class="fa fa-calendar"></i> 
+  
+  
+  
+  
+    Tuesday 14 Dec 2021
+  
+
+        </span>
+      </time>
+    
+    <span style="float: right; width: 65%">
+      <i class="fa fa-clock-o"></i> 12 mins read
+      
+    </span>
+    <span style="float: left; width: 35%">
+      <i class="fa fa-bookmark"></i> 
+  
+  
+    <span></span>
+    
+      <a class="category-link" href="/categories/postgresql">PostgreSQL</a>, 
+    
+      <a class="category-link" href="/categories/yesql">YeSQL</a>
+    
+  
+
+    </span>
+    <div>
+      <p>
+        
+        
+        
+        
+        <a href="/tags/failover/">
+          <i class="fa fa-tag"></i> Failover
+        </a>
+        
+        
+        
+        <a href="/tags/pg_auto_failover/">
+          <i class="fa fa-tag"></i> pg_auto_failover
+        </a>
+        
+        
+        
+        <a href="/tags/ha/">
+          <i class="fa fa-tag"></i> HA
+        </a>
+        
+        
+      </p>
+    </div>
+  </div>
+
+
+</div>
+    
+  </div>
+
+
+      <div id="main" data-behavior="5"
+        class="hasCover
+               hasCoverMetaIn
+               ">
+        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
+          
+          
+          <div class="post-content markdown" itemprop="articleBody">
+            <div class="main-content-wrap">
+              <p>High-Availability comes with some impact on your architecture choices, in
+particular when applied to RDBMS such as Postgres. One such impact is the
+idea of a failover. When implementing database HA, it is usually expected
+that both the service and the data are maintained available in the face of
+operational faults. The most common way to implement resilience includes
+automated (or manual) failover, where a new primary is elected among a list
+of standby nodes.</p>
+<p>In other words, as soon as Postgres High-Availability is implemented, the
+roles of your Postgres nodes are dynamic. The fact that a given node is a
+primary or a standby at any given point in time ceases to be relevant to
+understanding your architecture. In fact, the only thing that&rsquo;s now given
+about the role of a node is that it will change. Otherwise you don&rsquo;t have
+failover capability, and then, you probably don&rsquo;t have HA in the first
+place, right?</p>
+<p>In this article we are going to try and understand what having dynamic roles
+for Postgres nodes in a HA system means.</p>
+ 
+
+
+
+
+<div class="table-of-contents toc bd-callout">
+    
+    <h4 class="text-muted">Table of Contents</h4>
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2021/12/postgres-ha-roles-are-dynamic/#postgres-ha-setup-nodes-and-roles">
+                    Postgres HA setup: nodes and roles
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2021/12/postgres-ha-roles-are-dynamic/#roles-are-dynamic">
+                    Roles are dynamic
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                    <ul class="toc-h2">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2021/12/postgres-ha-roles-are-dynamic/#capacity-planning">
+                    Capacity planning
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                    <ul class="toc-h2">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2021/12/postgres-ha-roles-are-dynamic/#long-term-maintenance-of-production-systems">
+                    Long term maintenance of production systems
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                    <ul class="toc-h2">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2021/12/postgres-ha-roles-are-dynamic/#load-balancing">
+                    Load Balancing
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                    <ul class="toc-h2">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2021/12/postgres-ha-roles-are-dynamic/#application-side-ha-and-connection-pooling">
+                    Application side HA and Connection Pooling
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                    <ul class="toc-h2">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2021/12/postgres-ha-roles-are-dynamic/#disaster-recovery-setup">
+                    Disaster Recovery Setup
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+                    </ul>
+                
+            
+        
+    
+        
+        
+            
+                
+                
+                
+                    <ul class="toc-h1">
+                
+                
+                
+                
+                <li>
+                  <a href="/blog/2021/12/postgres-ha-roles-are-dynamic/#automated-failover-and-ha-tooling">
+                    Automated Failover and HA tooling
+                  </a>
+                </li>
+                
+                
+                    </ul>
+                
+            
+        
+    
+</div>
+
+
+<h2 id="postgres-ha-setup-nodes-and-roles">Postgres HA setup: nodes and roles</h2>
+<p>Postgres instances default to being independent primary nodes. When
+provisionning a standby node a specific setup is required, that depends on
+Postgres version. Starting with Postgres 12 a <code>standby.signal</code> file is
+required, and before that it used to be the <code>recovery.conf</code> file.</p>
+<p>Some of the Postgres configuration file settings only apply to the recovery
+mechanisms that are used either when doing PITR or when running a standby
+node. Those settings used to be managed in their own configuration file, and
+from Postgres 12 onwards those settings can be set in the main
+<code>postgresql.conf</code> file.</p>
+<p>So with recent versions of Postgres, the exact same <code>postgresql.conf</code> can be
+shipped to all the nodes. The presence of the <code>standby.conf</code> file determines
+if a node is asked to start as a primary node or as a standby node.</p>
+<p>Reversing that choice is not easy with Postgres. In most cases <code>pg_rewind</code>
+is necessary, and that in turn requires that the instance was shutdown
+properly.</p>
+<p>With that we can see that in Postgres core itself the idea that an instance
+role should be dynamic is not well ingrained in the software. That&rsquo;s the
+first reason why a failover management software is needed.</p>
+<h2 id="roles-are-dynamic">Roles are dynamic</h2>
+<p>When implementing Postgres HA, the only reason why standby nodes are
+provisionned and deployed is so that they may be elected as a primary if
+needed. So by definition, the role of a specific node is dynamic. A node
+could be a server, a VM, a pod, a container, or maybe even something else.</p>
+<figure><a href="https://pg-auto-failover.readthedocs.io/en/master/intro.html"><img src="/img/arch-single-standby.svg"/></a>
+</figure>
+
+<p>At the initial provisioning stage, one node must be selected as the current
+primary, and that&rsquo;s where we run <code>pg_ctl initdb</code>. Other nodes in the same
+<em>cluster</em> — or <em>formation</em>, as the <em>cluster</em> name is overloaded in the
+Postgres glossary already — are going to be standby nodes and initialised
+using <code>pg_basebackup</code>, typically.</p>
+<p>Then if the current primary node fails or becomes unavailable for a long
+enough time to trigger a topology change, one of the standby nodes should be
+promoted to be the new primary. It is possible to use <code>pg_ctl promote</code> to
+implement this step, and the Postgres setup must also be edited so that a
+further restart down the line allows the node to restart as a primary still.</p>
+<p>Also the other standby nodes must be reconfigured to use the new primary as
+their upstream replication source. Editing the <code>primary_conninfo</code> setting in
+Postgres requires a restart until Postgres 12 included, and can be changed
+with a reload starting with Postgres 13.</p>
+<p>When the former primary node gets back to being available — maybe that was
+just a spurious reboot after all, or a maintenance operation that didn&rsquo;t go
+by the book, as it happens sometimes — well then it may re-join the
+<em>formation</em> as a standby to the current primary. For that to happen it&rsquo;s
+necessary to use <code>pg_rewind</code>, and in some cases even this tool will fail to
+re-join. In that case it might be necessary to resort to using
+<code>pg_basebackup</code> or another means (such as restoring a backup) to fetch a
+full copy of PGDATA all over again.</p>
+<p>When all of those options are implemented correctly in some automation
+layer, then we have Postgres nodes with actual dynamic roles, rather than
+just the architectural concept that roles should be dynamic.</p>
+<p>To get started with a failover automation that implements the notion of
+dynamic roles, I recommend playing with
+<a href="https://pg-auto-failover.readthedocs.io/en/master/intro.html#single-standby-architecture">pg_auto_failover</a>.
+Disclaimer: I am the main developer of this tool, so that I know it well
+enough to trust it with failover orchestration in production.</p>
+<p>Now here is a short list of points that may seem obvious to veterans of HA
+system design, or to those of you with memories of production outages. It
+might be still good to go over some of the basics to help readers new to HA
+planning getting started.</p>
+<h3 id="capacity-planning">Capacity planning</h3>
+<p>As outlined before, the only reason why we provision and maintain standby
+nodes in an HA system is for those nodes to take over the primary role when
+the current primary node is not available. Not only will that situation
+happen, but also we are deploying standby nodes as a way to plan for our
+production to tolerate such a fault.</p>
+<p>After all High Availability is mostly just a fancy way to say Fault
+Tolerance, and in many cases it boils down to Business Continuity.</p>
+<p>So if the standby nodes are being provisioned with the single purpose of
+taking over the primary role, then the nodes must be as close as possible in
+specifications to the current primary. Each one of the HA standby nodes is
+expected to become a primary node sometime, so it must have the capacity to
+handle whatever workload the current primary is handling.</p>
+<p>It means in particular that you want the standby nodes to have the following
+properties identical to the primary:</p>
+<ul>
+<li>CPU power (number of sockets, cores, speed of each of them, bus speed, etc)</li>
+<li>RAM specifications, bus speed, access latency, amount of RAM</li>
+<li>Disk space available for the data set</li>
+<li>Network bandwith and latency to the application nodes</li>
+<li>Same configuration (kernel, file systems, Postgres tuning, etc)</li>
+<li>Same security rules (firewall, Postgres HBA, etc)</li>
+<li>And probably more elements should be added to this list to make it comprehensive.</li>
+</ul>
+<p>We can stress out the Postgres HBA file in that list. Connection privileges
+must be opened in the same way for the application to be able to connect to
+the new primary when a failover has happened, of course, and also the other
+standby that you may have must be able to connect to the new primary too.</p>
+<p>When listed here in an article that focuses on High Availability roles and
+their dynamic nature, I certainly hope all of this sounds obvious. Well, as
+obvious as it sounds, the most recent on-call situation I was involved in
+where things went wrong because the newly elected primary was not comparable
+to the former primary node, and then the application workload was slowed
+down a lot&hellip; was last week.</p>
+<p>So while I agree that it sounds as obvious as preventing <em>File System is
+Full</em> on your database instances and their WAL subsystem, well, we still
+have to talk about it apparently.</p>
+<h3 id="long-term-maintenance-of-production-systems">Long term maintenance of production systems</h3>
+<p>Production systems are sometimes referred to as “legacy systems”, and they
+tend to require some maintenance and even hardware upgrades after a while.
+Nowadays, the “hardware upgrade” might be as easy as an automated deploy of
+a new fleet of newer spec nodes (VMs, pods, containers, what have you).</p>
+<p>Still, when upgrading the capabitilies of the system, then we have to deal
+with an heterogeous set of nodes. What then? How do we respect the previous
+constraints about every node in the HA system being able to provide with the
+same capacity, to handle the same load?</p>
+<p>When using pg_auto_failover to for implementing your Postgres HA systems,
+simply make sure that any node that has a non-zero <a href="https://pg-auto-failover.readthedocs.io/en/master/architecture-multi-standby.html#candidate-priority">candidate
+priority</a>
+is capable of running your actual production workload.</p>
+<p>When upgrading your nodes to more powerful and capable systems, simply
+adjust the <em>candidate priority</em> of the older nodes to zero when the new
+nodes are ready, so that pg_auto_failover will refrain from putting the
+lesser capable systems in production as primary nodes.</p>
+<p>And also remember that you can use <a href="https://pg-auto-failover.readthedocs.io/en/master/ref/pg_autoctl_perform_promotion.html">pg_autoctl perform
+promotion</a>
+to smoothly switch over to a new primary when it&rsquo;s ready to take over. Then
+it is also possible to use <a href="https://pg-auto-failover.readthedocs.io/en/master/ref/pg_autoctl_drop_node.html">pg_autoctl drop
+node</a>
+on the previous generation of nodes to implement their end-of-life cycle.</p>
+<h3 id="load-balancing">Load Balancing</h3>
+<p>Because proper standby nodes are as expensive as the current primary node, a
+negociation might arise where those nodes somehow need to pull their own
+weight. Being available when the current primary isn&rsquo;t anymore doesn&rsquo;t cut
+it.</p>
+<p>The cost of the standby nodes should be compared to the cost of an
+interruption of the current primary for the business, possibly for a long
+time while it&rsquo;s being rebuilt from pieces — hardware, new VMs that need
+provisioning from restoring backups, etc. A common alternative consists of
+comparing the price of operating the standby nodes with the fact that most
+of their processing capabilities are unused.</p>
+<p>As a result, some of the production load might be distributed to the almost
+idle standby nodes. In the case when a single standby is part of the
+production system, and when some of the workload is routed to it, such as
+batches and reporting queries and other analytics or at least read-only SQL
+traffic, it looks like a good use of expensive resources.</p>
+<p>Now, when the current primary becomes faulty, then the secondary is elected
+and promoted as expected&hellip; and now as a single node it must be capable of
+handling both the primary workload and also the reporting read-only standby
+traffic.</p>
+<p>In many cases that won&rsquo;t fly. If your application have an easy way to turn
+off the read-only traffic for a while, the duration when all you have left
+is a single Postgres node, then it might still be a good trade-off. It&rsquo;s not
+often that I see that kind of sophistication in the wild though.</p>
+<p>The approach I generally see is where monitoring and observability is used
+to somehow “ensure” that a single node would be able to take on the entire
+workload. Well okay then&hellip; but why handling the load-balancing complexities
+in that case?</p>
+<p>Finally, when using pg_auto_failover to manage your Postgres nodes, setting
+the <a href="https://pg-auto-failover.readthedocs.io/en/master/architecture-multi-standby.html#candidate-priority">candidate
+priority</a>
+of some of the standby nodes while still allowing them to participate in the
+replication quorum might be a good trade-off. The nodes can now participate
+in the data safety of your HA system while never being elected as the new
+primary. See our <a href="https://pg-auto-failover.readthedocs.io/en/master/architecture-multi-standby.html#sample-architecture-with-three-standby-nodes-one-async">sample architecture with three standby nodes, one
+async</a>
+documentation for more details.</p>
+<h3 id="application-side-ha-and-connection-pooling">Application side HA and Connection Pooling</h3>
+<p>Another aspect of Postgres HA and failovers that needs to be part of this
+article is the client-side aspect of HA. For an application to benefit from
+server-side fault tolerance, it must be ready to lose its connections to the
+current primary (when this one fails) and reconnect to the new primary (when
+that one is ready).</p>
+<p>The Postgres technology is named “Hot Standby” because at promotion time the
+current connections and read-only traffic is allowed to continue. That&rsquo;s a
+very nice feature which in this context means that the application may
+connect early to the newly elected primary without causing too much trouble.</p>
+<p>Then, in order to avoid the whole <em>connection lost</em> thing, in some cases an
+external connection pooler can be used. Those pieces of infrastructure can
+usually be reloaded online with the new primary node as the connection
+target.</p>
+<p>There is a catch though: an SQL connection (or session really) is stateful.
+SQL provides session level objects and features such as prepared statements,
+temporary tables, cursors, or LISTEN/NOTIFY. So if you&rsquo;re using any of the
+session level SQL features then reconnecting to the new primary node can not
+be made transparently. The application is going to expect some kind of state
+from its SQL connection, and will not find it again.</p>
+<blockquote>
+<p>I didn&rsquo;t provide an exhaustive list of the session level SQL features
+here. <a href="https://www.pgbouncer.org/features.html">pgbouncer features</a>
+documentation page maintains one if you need to read it.</p>
+</blockquote>
+<p>So the idea that for Postgres HA the roles are dynamic must find its way up
+to your application code.</p>
+<h3 id="disaster-recovery-setup">Disaster Recovery Setup</h3>
+<p>Finally, implementing Postgres High Availability requires implementing
+availability of the data whatever happens. This is achieved via the notion
+of an “archive”, which is documented as a concept in Postgres itself.</p>
+<p>While it is possible to implement archiving using the provided Postgres
+hooks and some scripting around, please consider using one of the proven
+robust implementations for archiving. The classic projects that people keep
+saying some good things about even after running them in production for a
+while are <a href="https://wal-g.readthedocs.io">WAL-G</a>, its predecessor
+<a href="https://github.com/wal-e/wal-e">WAL-E</a>, then
+<a href="https://pgbackrest.org">pgbackrest</a>, and then
+<a href="https://pgbarman.org">barman</a>.</p>
+<p>Using those projects it is possible to implement a Postgres archive either
+on a local storage facility — maybe using the Open Source solution
+<a href="https://min.io">min.io</a> and its Cloud Storage compatible API — or on a
+Cloud Storage of your choice.</p>
+<p>When browsing the docs and prototyping your Disaster Recovery Setup, make
+sure to understand what happens during and after a failover. In my
+experience, the Open Source products I listed above to implement DR entirely
+miss the point; at least in the docs. Again, the only thing that is known
+for sure about the current primary node is that down the road, the primary
+role is going to be assigned to another node in the system.</p>
+<p>Make sure your DR setup knows about this. They&rsquo;re not good at documenting
+the steps that need to be implemented, if any, when this happens. That&rsquo;s
+unfortunate, and I wish this would change. If you&rsquo;re reading this and
+contribute to any of the DR systems I listed, can you think about how to
+cover the point that any node that participates in some HA system must have
+a dynamic role?</p>
+<h2 id="automated-failover-and-ha-tooling">Automated Failover and HA tooling</h2>
+<p>While it is possible to implement HA yourself from scratch, the planning for
+a full failover with minimal (and controlled) data loss and fast enough
+service failover is ridden with traps that are not easy to foresee, so it&rsquo;s
+advised to use a software that&rsquo;s known to have taken care of the proper
+steps for you.</p>
+<p>As the main author and contributor to
+<a href="https://pg-auto-failover.readthedocs.io/en/master/intro.html#single-standby-architecture">pg_auto_failover</a>,
+that&rsquo;s the software I trust and recommend.</p>
+<p>The notion that roles are dynamic is a strong focus of the whole design of
+pg_auto_failover. In particular the current primary is not assumed, it&rsquo;s an
+information that is maintained through the life time of a formation — that&rsquo;s
+<a href="https://pg-auto-failover.readthedocs.io/en/master/architecture.html#pg-auto-failover-glossary">pg_auto_failover
+glossary</a>
+for what some people may be used to name a <em>cluster</em>.</p>
+<p>Remember that the entire application stack must be designed for the node
+roles to be dynamic in nature if you need some kind of Fault Tolerance.</p>
+              
+
+
+            </div>
+          </div>
+          <div style="margin-top: 1em;">
+ <a href="https://theartofpostgresql.com" alt="The Art of PostgreSQL">
+  <img src="/img/taopg-cta.jpg" style="width:90%; height: auto; margin-left: 5%">
+ </a>
+</div>
+
+          <div id="post-footer" class="post-footer main-content-wrap">
+            
+              
+                
+                
+                  <div class="post-footer-tags">
+                    <span class="text-color-light text-small"></span><br/>
+                    
+  <a class="tag tag--primary tag--small" href="/tags/postgresql/">PostgreSQL</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/failover/">Failover</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/pg_auto_failover/">pg_auto_failover</a>
+
+  <a class="tag tag--primary tag--small" href="/tags/ha/">HA</a>
+
+                  </div>
+                
+              
+            
+            <div class="post-actions-wrap">
+ <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2021/11/an-introduction-to-the-pg_auto_failover-project/" data-tooltip="An introduction to the pg_auto_failover project">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2021%2f12%2fpostgres-ha-roles-are-dynamic%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2021%2f12%2fpostgres-ha-roles-are-dynamic%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=Postgres%20HA%3a%20roles%20are%20dynamic with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2021%2f12%2fpostgres-ha-roles-are-dynamic%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+            
+              
+                <div id="disqus_thread">
+  <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+
+              
+            
+          </div>
+        </article>
+        <footer id="footer" class="main-content-wrap">
+  <span class="copyrights">
+    &copy; 2021 Dimitri Fontaine. 
+  </span>
+</footer>
+
+      </div>
+      <div id="bottom-bar" class="post-bottom-bar" data-behavior="5">
+        <div class="post-actions-wrap">
+ <nav>
+    <ul class="post-actions post-action-nav">
+      
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--disabled">
+          
+            <i class="fa fa-angle-left"></i>
+            <span class="hide-xs hide-sm text-small icon-ml"></span>
+          </a>
+        </li>
+        <li class="post-action">
+          
+            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2021/11/an-introduction-to-the-pg_auto_failover-project/" data-tooltip="An introduction to the pg_auto_failover project">
+          
+            <span class="hide-xs hide-sm text-small icon-mr"></span>
+            <i class="fa fa-angle-right"></i>
+          </a>
+        </li>
+      
+    </ul>
+  </nav>
+  <ul class="post-actions post-action-share">
+    
+      <li class="post-action hide-lg hide-md hide-sm">
+        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
+          <i class="fa fa-share-alt"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2021%2f12%2fpostgres-ha-roles-are-dynamic%2f">
+          <i class="fa fa-google-plus"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2021%2f12%2fpostgres-ha-roles-are-dynamic%2f">
+          <i class="fa fa-facebook-official"></i>
+        </a>
+      </li>
+      <li class="post-action hide-xs">
+        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=Postgres%20HA%3a%20roles%20are%20dynamic with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2021%2f12%2fpostgres-ha-roles-are-dynamic%2f">
+          <i class="fa fa-twitter"></i>
+        </a>
+      </li>
+    
+    
+      <li class="post-action">
+        <a class="post-action-btn btn btn--default" href="#disqus_thread">
+          <i class="fa fa-comment-o"></i>
+        </a>
+      </li>
+    
+    <li class="post-action">
+      
+        <a class="post-action-btn btn btn--default" href="#table-of-contents">
+      
+        <i class="fa fa-list"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+      </div>
+      <div id="share-options-bar" class="share-options-bar" data-behavior="5">
+  <ul class="share-options">
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2021%2f12%2fpostgres-ha-roles-are-dynamic%2f">
+        <i class="fa fa-google-plus"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2021%2f12%2fpostgres-ha-roles-are-dynamic%2f">
+        <i class="fa fa-facebook-official"></i><span></span>
+      </a>
+    </li>
+    <li class="share-option">
+      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=Postgres%20HA%3a%20roles%20are%20dynamic with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2021%2f12%2fpostgres-ha-roles-are-dynamic%2f">
+        <i class="fa fa-twitter"></i><span></span>
+      </a>
+    </li>
+  </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
+    </div>
+    
+    <div id="about">
+  <div id="about-card">
+    <div id="about-btn-close">
+      <i class="fa fa-times"></i>
+    </div>
+    
+      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
+    
+    <h4 id="about-card-name">Dimitri Fontaine</h4>
+    
+      <div id="about-card-bio">PostgreSQL Major Contributor</div>
+    
+    
+      <div id="about-card-job">
+        <i class="fa fa-briefcase"></i>
+        <br/>
+        Open Source Software Engineer
+      </div>
+    
+    
+      <div id="about-card-location">
+        <i class="fa fa-map-marker-alt"></i>
+        <br/>
+        France
+      </div>
+    
+  </div>
+</div>
+
+    
+
+    
+  
+    
+      
+      <div id="cover" style="background-image:url('https://tapoueh.org/images/mayan-calendar.jpg');"></div>
+    
+  
+
+
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.1.0/highlight.min.js" integrity="sha512-z+/WWfyD5tccCukM4VvONpEtLmbAm5LDu7eKiyMQJ9m7OfPEDL7gENyDRL3Yfe8XAuGsS2fS4xSMnl6d30kqGQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha512-uURl+ZXMBrF4AwGaWmEetzrd+J5/8NRkWAvJx5sbPSSuOb0bZLqf+tOzniObO00BjHa/dD7gub9oCGMLPQHtQA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+
+<script src="https://tapoueh.org/js/script-yqzy9wdlzix4lbbwdnzvwx3egsne77earqmn73v9uno8aupuph8wfguccut.min.js"></script>
+
+
+
+<script>
+$(document).ready(function() {
+  hljs.configure({ classPrefix: '', useBR: false });
+  $('pre.code-highlight > code, pre > code').each(function(i, block) {
+    if (!$(this).hasClass('codeblock')) {
+      $(this).addClass('codeblock');
+    }
+    hljs.highlightBlock(block);
+  });
+});
+</script>
+
+
+
+
+    
+  </body>
+</html>
+
