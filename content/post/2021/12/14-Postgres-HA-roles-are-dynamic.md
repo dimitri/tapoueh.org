@@ -61,7 +61,7 @@ first reason why a failover management software is needed.
 ## Roles are dynamic
 
 When implementing Postgres HA, the only reason why standby nodes are
-provisionned and deployed is so that they may be elected as a primary if
+provisioned and deployed is so that they may be elected as a primary if
 needed. So by definition, the role of a specific node is dynamic. A node
 could be a server, a VM, a pod, a container, or maybe even something else.
 
