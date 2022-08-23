@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.89.3">
+    <meta name="generator" content="Hugo 0.101.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>PostgreSQL Data Types: an intro</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -318,7 +318,7 @@ if (!doNotTrack) {
       </time>
     
     <span style="float: right; width: 65%">
-      <i class="fa fa-clock-o"></i> 7 mins read
+      <i class="fa fa-clock-o"></i> 8 mins read
       
     </span>
     <span style="float: left; width: 35%">
@@ -494,25 +494,25 @@ PostgreSQL data types, and we open the journey with <code>boolean</code>.</p>
 <p>PostgreSQL comes with a long list of data types. The following query limits
 the types to the ones directly interesting to someone who is an application
 developer, and still it lists 72 data types:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span>nspname,<span style="color:#bbb"> </span>typname<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb">      </span>pg_type<span style="color:#bbb"> </span>t<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_namespace<span style="color:#bbb"> </span>n<span style="color:#bbb">
-</span><span style="color:#bbb">           </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>n.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>t.typnamespace<span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>nspname<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;pg_catalog&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">     </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>typname<span style="color:#bbb"> </span>!~<span style="color:#bbb"> </span><span style="color:#a50">&#39;(^_|^pg_|^reg|_handler$)&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>nspname,<span style="color:#bbb"> </span>typname;<span style="color:#bbb">
-</span></code></pre></div><p>Let&rsquo;s take only a sample of those with the help of the <em>TABLESAMPLE</em> feature
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">select</span><span style="color:#bbb"> </span>nspname,<span style="color:#bbb"> </span>typname<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb">      </span>pg_type<span style="color:#bbb"> </span>t<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_namespace<span style="color:#bbb"> </span>n<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">           </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>n.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>t.typnamespace<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>nspname<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;pg_catalog&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>typname<span style="color:#bbb"> </span>!~<span style="color:#bbb"> </span><span style="color:#a50">&#39;(^_|^pg_|^reg|_handler$)&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>nspname,<span style="color:#bbb"> </span>typname;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>Let&rsquo;s take only a sample of those with the help of the <em>TABLESAMPLE</em> feature
 of PostgreSQL, documented in the <a href="https://www.postgresql.org/docs/current/static/sql-select.html#SQL-FROM">select SQL
 from</a>
 page of the documentation:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span>nspname,<span style="color:#bbb"> </span>typname<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb">      </span>pg_type<span style="color:#bbb"> </span>t<span style="color:#bbb"> </span>TABLESAMPLE<span style="color:#bbb"> </span>bernoulli(<span style="color:#099">20</span>)<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_namespace<span style="color:#bbb"> </span>n<span style="color:#bbb">
-</span><span style="color:#bbb">           </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>n.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>t.typnamespace<span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>nspname<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;pg_catalog&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">     </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>typname<span style="color:#bbb"> </span>!~<span style="color:#bbb"> </span><span style="color:#a50">&#39;(^_|^pg_|^reg|_handler$)&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>nspname,<span style="color:#bbb"> </span>typname;<span style="color:#bbb">
-</span></code></pre></div><p>In this run here&rsquo;s what I get as a random sample of about 20% of the
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">select</span><span style="color:#bbb"> </span>nspname,<span style="color:#bbb"> </span>typname<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb">      </span>pg_type<span style="color:#bbb"> </span>t<span style="color:#bbb"> </span>TABLESAMPLE<span style="color:#bbb"> </span>bernoulli(<span style="color:#099">20</span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_namespace<span style="color:#bbb"> </span>n<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">           </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>n.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>t.typnamespace<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>nspname<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;pg_catalog&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>typname<span style="color:#bbb"> </span>!~<span style="color:#bbb"> </span><span style="color:#a50">&#39;(^_|^pg_|^reg|_handler$)&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>nspname,<span style="color:#bbb"> </span>typname;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>In this run here&rsquo;s what I get as a random sample of about 20% of the
 available PostgreSQL types. If you run the same query again, you will have a
 different result set:</p>
 <pre tabindex="0"><code class="language-psql" data-lang="psql">  nspname   │    typname    
@@ -537,17 +537,17 @@ different result set:</p>
 the usual TRUE and FALSE values. That gives us <em><strong>three-valued logic</strong></em>.
 Where that&rsquo;s very different from other languages None or NULL is when
 comparing values. Let&rsquo;s have a look at the SQL NULL truth table:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span>a::<span style="color:#0aa">text</span>,<span style="color:#bbb"> </span>b::<span style="color:#0aa">text</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">       </span>(a=b)::<span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;a=b&#34;</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">       </span>format(<span style="color:#a50">&#39;%s = %s&#39;</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">              </span>coalesce(a::<span style="color:#0aa">text</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;null&#39;</span>),<span style="color:#bbb">
-</span><span style="color:#bbb">              </span>coalesce(b::<span style="color:#0aa">text</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;null&#39;</span>))<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>op,<span style="color:#bbb">
-</span><span style="color:#bbb">       </span>format(<span style="color:#a50">&#39;is %s&#39;</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">              </span>coalesce((a=b)::<span style="color:#0aa">text</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;null&#39;</span>))<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">result</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>(<span style="color:#00a">values</span>(<span style="color:#00a">true</span>),<span style="color:#bbb"> </span>(<span style="color:#00a">false</span>),<span style="color:#bbb"> </span>(<span style="color:#00a">null</span>))<span style="color:#bbb"> </span>v1(a)<span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#00a">cross</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb">
-</span><span style="color:#bbb">       </span>(<span style="color:#00a">values</span>(<span style="color:#00a">true</span>),<span style="color:#bbb"> </span>(<span style="color:#00a">false</span>),<span style="color:#bbb"> </span>(<span style="color:#00a">null</span>))<span style="color:#bbb"> </span>v2(b);<span style="color:#bbb">
-</span></code></pre></div><p>As you can see <em>cross join</em> is very useful for producing a truth table. It
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">select</span><span style="color:#bbb"> </span>a::<span style="color:#0aa">text</span>,<span style="color:#bbb"> </span>b::<span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>(a=b)::<span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;a=b&#34;</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>format(<span style="color:#a50">&#39;%s = %s&#39;</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span>coalesce(a::<span style="color:#0aa">text</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;null&#39;</span>),<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span>coalesce(b::<span style="color:#0aa">text</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;null&#39;</span>))<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>op,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>format(<span style="color:#a50">&#39;is %s&#39;</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span>coalesce((a=b)::<span style="color:#0aa">text</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;null&#39;</span>))<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">result</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>(<span style="color:#00a">values</span>(<span style="color:#00a">true</span>),<span style="color:#bbb"> </span>(<span style="color:#00a">false</span>),<span style="color:#bbb"> </span>(<span style="color:#00a">null</span>))<span style="color:#bbb"> </span>v1(a)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">cross</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>(<span style="color:#00a">values</span>(<span style="color:#00a">true</span>),<span style="color:#bbb"> </span>(<span style="color:#00a">false</span>),<span style="color:#bbb"> </span>(<span style="color:#00a">null</span>))<span style="color:#bbb"> </span>v2(b);<span style="color:#bbb">
+</span></span></span></code></pre></div><p>As you can see <em>cross join</em> is very useful for producing a truth table. It
 implements a Cartesian product over our columns, here listing the first
 value of <em>a</em> (<em>true</em>) with every value of <em>b</em> in order (<em>true</em>, then
 <em>false</em>, then NULL), then again with the second value of <em>a</em> (<em>false</em>) and
@@ -584,14 +584,14 @@ the same thing as NULL.</p>
 can use those operators and forget about Boolean comparisons returning
 NULL.</p>
 <p>We can even easily obtain the <em>truth table</em> from a SQL query directly:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span>a::<span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">left</span>,<span style="color:#bbb"> </span>b::<span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">right</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">       </span>(a<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>b)::<span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;=&#34;</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">       </span>(a<span style="color:#bbb"> </span>&lt;&gt;<span style="color:#bbb"> </span>b)::<span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;&lt;&gt;&#34;</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">       </span>(a<span style="color:#bbb"> </span><span style="color:#00a">is</span><span style="color:#bbb"> </span><span style="color:#00a">distinct</span><span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>b)::<span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;is distinct&#34;</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">       </span>(a<span style="color:#bbb"> </span><span style="color:#00a">is</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">distinct</span><span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>b)::<span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;is not distinct from&#34;</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb">            </span>(<span style="color:#00a">values</span>(<span style="color:#00a">true</span>),(<span style="color:#00a">false</span>),(<span style="color:#00a">null</span>))<span style="color:#bbb"> </span>t1(a)<span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#00a">cross</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>(<span style="color:#00a">values</span>(<span style="color:#00a">true</span>),(<span style="color:#00a">false</span>),(<span style="color:#00a">null</span>))<span style="color:#bbb"> </span>t2(b);<span style="color:#bbb">
-</span></code></pre></div><p>With this complete result this time:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">select</span><span style="color:#bbb"> </span>a::<span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">left</span>,<span style="color:#bbb"> </span>b::<span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">right</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>(a<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>b)::<span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;=&#34;</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>(a<span style="color:#bbb"> </span>&lt;&gt;<span style="color:#bbb"> </span>b)::<span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;&lt;&gt;&#34;</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>(a<span style="color:#bbb"> </span><span style="color:#00a">is</span><span style="color:#bbb"> </span><span style="color:#00a">distinct</span><span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>b)::<span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;is distinct&#34;</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>(a<span style="color:#bbb"> </span><span style="color:#00a">is</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">distinct</span><span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>b)::<span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;is not distinct from&#34;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb">            </span>(<span style="color:#00a">values</span>(<span style="color:#00a">true</span>),(<span style="color:#00a">false</span>),(<span style="color:#00a">null</span>))<span style="color:#bbb"> </span>t1(a)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">cross</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>(<span style="color:#00a">values</span>(<span style="color:#00a">true</span>),(<span style="color:#00a">false</span>),(<span style="color:#00a">null</span>))<span style="color:#bbb"> </span>t2(b);<span style="color:#bbb">
+</span></span></span></code></pre></div><p>With this complete result this time:</p>
 <pre tabindex="0"><code class="language-psql" data-lang="psql"> left  │ right │   =   │  &lt;&gt;   │ is distinct │ is not distinct from 
 ═══════╪═══════╪═══════╪═══════╪═════════════╪══════════════════════
  true  │ true  │ true  │ false │ false       │ true
@@ -608,19 +608,19 @@ NULL.</p>
 <h2 id="boolean-aggregates">Boolean Aggregates</h2>
 <p>You can have tuple attributes as Booleans too, and PostgreSQL includes
 specific aggregates for them:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">year</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">         </span>format(<span style="color:#a50">&#39;%s %s&#39;</span>,<span style="color:#bbb"> </span>forename,<span style="color:#bbb"> </span>surname)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>name,<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>ran,<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#00a">position</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#099">1</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>won,<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#00a">position</span><span style="color:#bbb"> </span><span style="color:#00a">is</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>finished,<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">sum</span>(points)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>points<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb">      </span>races<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>results<span style="color:#bbb"> </span><span style="color:#00a">using</span>(raceid)<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>drivers<span style="color:#bbb"> </span><span style="color:#00a">using</span>(driverid)<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">year</span>,<span style="color:#bbb"> </span>drivers.driverid<span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">having</span><span style="color:#bbb"> </span>bool_and(<span style="color:#00a">position</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#099">1</span>)<span style="color:#bbb"> </span><span style="color:#00a">is</span><span style="color:#bbb"> </span><span style="color:#00a">true</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">year</span>,<span style="color:#bbb"> </span>points<span style="color:#bbb"> </span><span style="color:#00a">desc</span>;<span style="color:#bbb">
-</span></code></pre></div><p>In this query, we show the <em>bool_and()</em> aggregates that returns true when
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">year</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span>format(<span style="color:#a50">&#39;%s %s&#39;</span>,<span style="color:#bbb"> </span>forename,<span style="color:#bbb"> </span>surname)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>name,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>ran,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#00a">position</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#099">1</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>won,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#00a">position</span><span style="color:#bbb"> </span><span style="color:#00a">is</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>finished,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">sum</span>(points)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>points<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb">      </span>races<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>results<span style="color:#bbb"> </span><span style="color:#00a">using</span>(raceid)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>drivers<span style="color:#bbb"> </span><span style="color:#00a">using</span>(driverid)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">year</span>,<span style="color:#bbb"> </span>drivers.driverid<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">having</span><span style="color:#bbb"> </span>bool_and(<span style="color:#00a">position</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#099">1</span>)<span style="color:#bbb"> </span><span style="color:#00a">is</span><span style="color:#bbb"> </span><span style="color:#00a">true</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">year</span>,<span style="color:#bbb"> </span>points<span style="color:#bbb"> </span><span style="color:#00a">desc</span>;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>In this query, we show the <em>bool_and()</em> aggregates that returns true when
 all the Boolean input values are true. Like every <em>aggregate</em> it silently
 bypasses NULL by default, so in our expression of <em>bool_and(position = 1)</em>
 we will filter F1 drivers who won all the races they finished in a specific
@@ -630,9 +630,9 @@ season.</p>
 for MySQL only. Once you have a local copy, use
 <a href="https://pgloader.io">pgloader</a> to have the data set in PostgreSQL, it&rsquo;s a
 single command line (once you have created a <em>f1db</em> database):</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ createdb f1db
-$ pgloader mysql://root@localhost/f1db pgsql:///f1db
-</code></pre></div></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ createdb f1db
+</span></span><span style="display:flex;"><span>$ pgloader mysql://root@localhost/f1db pgsql:///f1db
+</span></span></code></pre></div></p>
 </div>
 <p>And here&rsquo;s the result of our query:</p>
 <pre tabindex="0"><code class="language-psql" data-lang="psql"> year │        name         │ ran │ won │ finished │ points 
@@ -692,9 +692,17 @@ it out!</p>
 
             </div>
           </div>
-          <div style="margin-top: 1em;">
- <a href="https://theartofpostgresql.com" alt="The Art of PostgreSQL">
-  <img src="/img/taopg-cta.jpg" style="width:90%; height: auto; margin-left: 5%">
+          
+
+
+
+
+
+<div style="margin-top: 1em;">
+ <script async src="//tinder.thrivecart.com/embed/v1/thrivecart.js"></script>
+ <a data-thrivecart-account="theartofpostgresql" data-thrivecart-tpl="v2" data-thrivecart-product="18" class="thrivecart-button ">
+  <img src="https://spark.thrivecart.com/0x0/https%3A%2F%2Fthrivecart.s3.amazonaws.com%2Fuser_assets%2FNABJ5K7H%2Fproducts%2F18%2Ftaopg-cta-1661268188.jpg"
+       style="width:90%; height: auto; margin-left: 5%"/>
  </a>
 </div>
 
@@ -794,7 +802,7 @@ it out!</p>
         </article>
         <footer id="footer" class="main-content-wrap">
   <span class="copyrights">
-    &copy; 2021 Dimitri Fontaine. 
+    &copy; 2022 Dimitri Fontaine. 
   </span>
 </footer>
 

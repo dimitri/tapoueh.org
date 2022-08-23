@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.89.3">
+    <meta name="generator" content="Hugo 0.101.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>PostgreSQL Data Types: Date and Time Processing</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -297,7 +297,7 @@ if (!doNotTrack) {
       </time>
     
     <span style="float: right; width: 65%">
-      <i class="fa fa-clock-o"></i> 7 mins read
+      <i class="fa fa-clock-o"></i> 8 mins read
       
     </span>
     <span style="float: left; width: 35%">
@@ -533,12 +533,12 @@ PostgreSQL and pgloader project history have been loaded into the
 some post-processing — properly splitting up the commit&rsquo;s subjects and
 escaping its content. Here&rsquo;s for example the most recent commit registered
 in our local <em>commitlog</em> table:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>project,<span style="color:#bbb"> </span>hash,<span style="color:#bbb"> </span>author,<span style="color:#bbb"> </span>ats,<span style="color:#bbb"> </span>committer,<span style="color:#bbb"> </span>cts,<span style="color:#bbb"> </span>subject<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>commitlog<span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>project<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;postgres&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>ats<span style="color:#bbb"> </span><span style="color:#00a">desc</span><span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">1</span>;<span style="color:#bbb">
-</span></code></pre></div><p>The column names <em>ats</em> and <em>cts</em> respectively stand for <em>author commit
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>project,<span style="color:#bbb"> </span>hash,<span style="color:#bbb"> </span>author,<span style="color:#bbb"> </span>ats,<span style="color:#bbb"> </span>committer,<span style="color:#bbb"> </span>cts,<span style="color:#bbb"> </span>subject<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>commitlog<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>project<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;postgres&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>ats<span style="color:#bbb"> </span><span style="color:#00a">desc</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">1</span>;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>The column names <em>ats</em> and <em>cts</em> respectively stand for <em>author commit
 timestamp</em> and <em>committer commit timestamp</em>, and the <em>subject</em> is the first
 line of the commit message, as per the <em>git log</em> format <em>%s</em>.</p>
 <p>To get the most recent entry from a table we <em>order by</em> dates in
@@ -555,13 +555,13 @@ subject   │ Fix bogus affix-merging code.
 </code></pre><h2 id="time-based-statistics">Time based statistics</h2>
 <p>With timestamps, we can compute time-based reporting, such as how many
 commits each project received each year in their whole history:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">extract</span>(<span style="color:#00a">year</span><span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>ats)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">year</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span>project<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;postgres&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>postgres,<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span>project<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;pgloader&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>pgloader<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>commitlog<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">year</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">year</span>;<span style="color:#bbb">
-</span></code></pre></div><p>As we have only loaded two projects in our <em>commitlog</em> table, the output is
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">extract</span>(<span style="color:#00a">year</span><span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>ats)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">year</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span>project<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;postgres&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>postgres,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span>project<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;pgloader&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>pgloader<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>commitlog<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">year</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">year</span>;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>As we have only loaded two projects in our <em>commitlog</em> table, the output is
 better with a <em>pivot</em> query. We can see more than 20 years of sustained
 activity for the PostgreSQL project, and a less active project for pgloader:</p>
 <pre tabindex="0"><code class="language-psql" data-lang="psql"> year │ postgres │ pgloader 
@@ -593,16 +593,16 @@ activity for the PostgreSQL project, and a less active project for pgloader:</p>
 </code></pre><p>We can also build a reporting on the repartition of commits by weekday from
 the beginning of the project, in order to guess if contributors are working
 on the project on the job only, or mostly during their free time (weekend).</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">extract</span>(isodow<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>ats)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>dow,<span style="color:#bbb">
-</span><span style="color:#bbb">         </span>to_char(ats,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Day&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">day</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>commits,<span style="color:#bbb">
-</span><span style="color:#bbb">         </span>round(<span style="color:#099">100</span>.<span style="color:#099">0</span>*<span style="color:#00a">count</span>(*)/<span style="color:#00a">sum</span>(<span style="color:#00a">count</span>(*))<span style="color:#bbb"> </span>over(),<span style="color:#bbb"> </span><span style="color:#099">2</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>pct,<span style="color:#bbb">
-</span><span style="color:#bbb">         </span>repeat(<span style="color:#a50">&#39;■&#39;</span>,<span style="color:#bbb"> </span>(<span style="color:#099">100</span>*<span style="color:#00a">count</span>(*)/<span style="color:#00a">sum</span>(<span style="color:#00a">count</span>(*))<span style="color:#bbb"> </span>over())::<span style="color:#0aa">int</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>hist<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>commitlog<span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>project<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;postgres&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>dow,<span style="color:#bbb"> </span><span style="color:#00a">day</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>dow;<span style="color:#bbb">
-</span></code></pre></div><p>It seems that our PostgreSQL committers tend to work whenever they feel like
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">extract</span>(isodow<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>ats)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>dow,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span>to_char(ats,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Day&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">day</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>commits,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span>round(<span style="color:#099">100</span>.<span style="color:#099">0</span>*<span style="color:#00a">count</span>(*)/<span style="color:#00a">sum</span>(<span style="color:#00a">count</span>(*))<span style="color:#bbb"> </span>over(),<span style="color:#bbb"> </span><span style="color:#099">2</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>pct,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span>repeat(<span style="color:#a50">&#39;■&#39;</span>,<span style="color:#bbb"> </span>(<span style="color:#099">100</span>*<span style="color:#00a">count</span>(*)/<span style="color:#00a">sum</span>(<span style="color:#00a">count</span>(*))<span style="color:#bbb"> </span>over())::<span style="color:#0aa">int</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>hist<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>commitlog<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>project<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;postgres&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>dow,<span style="color:#bbb"> </span><span style="color:#00a">day</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>dow;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>It seems that our PostgreSQL committers tend to work whenever they feel like
 it, but less so on the weekend. The project&rsquo;s lucky enough to have a solid
 team of committers being paid to work on PostgreSQL:</p>
 <pre tabindex="0"><code class="language-psql" data-lang="psql"> dow │    day    │ commits │  pct  │       hist       
@@ -618,23 +618,23 @@ team of committers being paid to work on PostgreSQL:</p>
 </code></pre><h2 id="time-differences-and-percentiles">Time Differences and Percentiles</h2>
 <p>Another report we can build compares the author commit timestamp with the
 committer commit timestamp. Those are different, but by how much?</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span><span style="color:#bbb"> </span>perc_arrays<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span>(<span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>project,<span style="color:#bbb">
-</span><span style="color:#bbb">              </span><span style="color:#00a">avg</span>(cts-ats)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>average,<span style="color:#bbb">
-</span><span style="color:#bbb">              </span>percentile_cont(<span style="color:#0aa">array</span>[<span style="color:#099">0</span>.<span style="color:#099">5</span>,<span style="color:#bbb"> </span><span style="color:#099">0</span>.<span style="color:#099">9</span>,<span style="color:#bbb"> </span><span style="color:#099">0</span>.<span style="color:#099">95</span>,<span style="color:#bbb"> </span><span style="color:#099">0</span>.<span style="color:#099">99</span>])<span style="color:#bbb">
-</span><span style="color:#bbb">                 </span>within<span style="color:#bbb"> </span><span style="color:#00a">group</span>(<span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>cts-ats)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>parr<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>commitlog<span style="color:#bbb">
-</span><span style="color:#bbb">        </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>ats<span style="color:#bbb"> </span>&lt;&gt;<span style="color:#bbb"> </span>cts<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>project<span style="color:#bbb">
-</span><span style="color:#bbb">  </span>)<span style="color:#bbb">
-</span><span style="color:#bbb"> </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>project,<span style="color:#bbb"> </span>average,<span style="color:#bbb">
-</span><span style="color:#bbb">        </span>parr[<span style="color:#099">1</span>]<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>median,<span style="color:#bbb">
-</span><span style="color:#bbb">        </span>parr[<span style="color:#099">2</span>]<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;%90th&#34;</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">        </span>parr[<span style="color:#099">3</span>]<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;%95th&#34;</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">        </span>parr[<span style="color:#099">4</span>]<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;%99th&#34;</span><span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>perc_arrays;<span style="color:#bbb">
-</span></code></pre></div><p>Here&rsquo;s a detailed output of the time difference statistics, per project:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">with</span><span style="color:#bbb"> </span>perc_arrays<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>project,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#00a">avg</span>(cts-ats)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>average,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span>percentile_cont(<span style="color:#0aa">array</span>[<span style="color:#099">0</span>.<span style="color:#099">5</span>,<span style="color:#bbb"> </span><span style="color:#099">0</span>.<span style="color:#099">9</span>,<span style="color:#bbb"> </span><span style="color:#099">0</span>.<span style="color:#099">95</span>,<span style="color:#bbb"> </span><span style="color:#099">0</span>.<span style="color:#099">99</span>])<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                 </span>within<span style="color:#bbb"> </span><span style="color:#00a">group</span>(<span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>cts-ats)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>parr<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>commitlog<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>ats<span style="color:#bbb"> </span>&lt;&gt;<span style="color:#bbb"> </span>cts<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>project<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>project,<span style="color:#bbb"> </span>average,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>parr[<span style="color:#099">1</span>]<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>median,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>parr[<span style="color:#099">2</span>]<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;%90th&#34;</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>parr[<span style="color:#099">3</span>]<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;%95th&#34;</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>parr[<span style="color:#099">4</span>]<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;%99th&#34;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>perc_arrays;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>Here&rsquo;s a detailed output of the time difference statistics, per project:</p>
 <pre tabindex="0"><code class="language-psql" data-lang="psql">─[ RECORD 1 ]─────────────────────────────────────
 project │ pgloader
 average │ @ 4 days 12 hours 43 mins 10.220859 secs
@@ -653,17 +653,17 @@ median  │ @ 2 mins 11 secs
 <p>Reporting is a strong use case for SQL. Application will also send more
 classic queries. We can show the commits for the PostgreSQL project for the
 12th of April 2018:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#f00;background-color:#faa">\</span><span style="color:#00a">set</span><span style="color:#bbb"> </span><span style="color:#00a">day</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;2018-04-12&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>ats::time,<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">substring</span>(hash<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">for</span><span style="color:#bbb"> </span><span style="color:#099">8</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>hash,<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">substring</span>(subject<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">for</span><span style="color:#bbb"> </span><span style="color:#099">40</span>)<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39;…&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>subject<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>commitlog<span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>project<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;postgres&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">     </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>ats<span style="color:#bbb"> </span>&gt;=<span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span>:<span style="color:#a50">&#39;day&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">     </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>ats<span style="color:#bbb">  </span>&lt;<span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span>:<span style="color:#a50">&#39;day&#39;</span><span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#0aa">interval</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;1 day&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>ats;<span style="color:#bbb">
-</span></code></pre></div><p>It&rsquo;s tempting to use the <em>between</em> SQL operator, but we would then have to
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#f00;background-color:#faa">\</span><span style="color:#00a">set</span><span style="color:#bbb"> </span><span style="color:#00a">day</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;2018-04-12&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>ats::time,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">substring</span>(hash<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">for</span><span style="color:#bbb"> </span><span style="color:#099">8</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>hash,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">substring</span>(subject<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">for</span><span style="color:#bbb"> </span><span style="color:#099">40</span>)<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39;…&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>subject<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>commitlog<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>project<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;postgres&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>ats<span style="color:#bbb"> </span>&gt;=<span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span>:<span style="color:#a50">&#39;day&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>ats<span style="color:#bbb">  </span>&lt;<span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span>:<span style="color:#a50">&#39;day&#39;</span><span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#0aa">interval</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;1 day&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>ats;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>It&rsquo;s tempting to use the <em>between</em> SQL operator, but we would then have to
 remember that <em>between</em> includes both its lower and upper bound and we would
 then have to compute the upper bound as the very last instant of the day.
 Using explicit <em>greater than or equal</em> and <em>less than</em> operators makes it
@@ -691,17 +691,17 @@ functions</a>
 are available in PostgreSQL. In the previous query, although we chose to
 <em>cast</em> our timestamp with time zone entry down to a <em>time</em> value, we could
 have chosen another representation thanks to the <em>to_char</em> function:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">set</span><span style="color:#bbb"> </span>lc_time<span style="color:#bbb"> </span><span style="color:#00a">to</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;fr_FR&#39;</span>;<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>to_char(ats,<span style="color:#bbb"> </span><span style="color:#a50">&#39;TMDay TMDD TMMonth, HHam&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>time,<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">substring</span>(hash<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">for</span><span style="color:#bbb"> </span><span style="color:#099">8</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>hash,<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">substring</span>(subject<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">for</span><span style="color:#bbb"> </span><span style="color:#099">40</span>)<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39;…&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>subject<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>commitlog<span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>project<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;postgres&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">     </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>ats<span style="color:#bbb"> </span>&gt;=<span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span>:<span style="color:#a50">&#39;day&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">     </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>ats<span style="color:#bbb">  </span>&lt;<span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span>:<span style="color:#a50">&#39;day&#39;</span><span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#0aa">interval</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;1 day&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>ats;<span style="color:#bbb">
-</span></code></pre></div><p>And this time we have a French localized output for the time value:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">set</span><span style="color:#bbb"> </span>lc_time<span style="color:#bbb"> </span><span style="color:#00a">to</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;fr_FR&#39;</span>;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>to_char(ats,<span style="color:#bbb"> </span><span style="color:#a50">&#39;TMDay TMDD TMMonth, HHam&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>time,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">substring</span>(hash<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">for</span><span style="color:#bbb"> </span><span style="color:#099">8</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>hash,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">substring</span>(subject<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">for</span><span style="color:#bbb"> </span><span style="color:#099">40</span>)<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39;…&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>subject<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>commitlog<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>project<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;postgres&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>ats<span style="color:#bbb"> </span>&gt;=<span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span>:<span style="color:#a50">&#39;day&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>ats<span style="color:#bbb">  </span>&lt;<span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span>:<span style="color:#a50">&#39;day&#39;</span><span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#0aa">interval</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;1 day&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>ats;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>And this time we have a French localized output for the time value:</p>
 <pre tabindex="0"><code class="language-psql" data-lang="psql">         time         │   hash   │                  subject                  
 ══════════════════════╪══════════╪═══════════════════════════════════════════
  Jeudi 12 Avril, 12am │ d1e90792 │ Ignore nextOid when replaying an ONLINE …
@@ -750,9 +750,17 @@ it out!</p>
 
             </div>
           </div>
-          <div style="margin-top: 1em;">
- <a href="https://theartofpostgresql.com" alt="The Art of PostgreSQL">
-  <img src="/img/taopg-cta.jpg" style="width:90%; height: auto; margin-left: 5%">
+          
+
+
+
+
+
+<div style="margin-top: 1em;">
+ <script async src="//tinder.thrivecart.com/embed/v1/thrivecart.js"></script>
+ <a data-thrivecart-account="theartofpostgresql" data-thrivecart-tpl="v2" data-thrivecart-product="18" class="thrivecart-button ">
+  <img src="https://spark.thrivecart.com/0x0/https%3A%2F%2Fthrivecart.s3.amazonaws.com%2Fuser_assets%2FNABJ5K7H%2Fproducts%2F18%2Ftaopg-cta-1661268188.jpg"
+       style="width:90%; height: auto; margin-left: 5%"/>
  </a>
 </div>
 
@@ -858,7 +866,7 @@ it out!</p>
         </article>
         <footer id="footer" class="main-content-wrap">
   <span class="copyrights">
-    &copy; 2021 Dimitri Fontaine. 
+    &copy; 2022 Dimitri Fontaine. 
   </span>
 </footer>
 

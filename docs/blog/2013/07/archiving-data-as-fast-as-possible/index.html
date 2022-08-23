@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.89.3">
+    <meta name="generator" content="Hugo 0.101.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Archiving data as fast as possible</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -373,13 +373,13 @@ about aims to move data out of a table (that&rsquo;s a
 the destination (
 <em>archiving</em>) table, and that&rsquo;s an
 <code>INSERT</code>:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">WITH</span><span style="color:#bbb"> </span>archive<span style="color:#bbb"> </span><span style="color:#00a">AS</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">DELETE</span><span style="color:#bbb"> </span><span style="color:#00a">FROM</span><span style="color:#bbb"> </span><span style="color:#00a">source</span><span style="color:#bbb"> </span><span style="color:#00a">WHERE</span><span style="color:#bbb"> </span>...<span style="color:#bbb">
-</span><span style="color:#bbb"> </span>RETURNING<span style="color:#bbb"> </span>s.id<span style="color:#bbb">
-</span><span style="color:#bbb"></span>)<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">INSERT</span><span style="color:#bbb"> </span><span style="color:#00a">INTO</span><span style="color:#bbb"> </span>target(id,<span style="color:#bbb"> </span>counter)<span style="color:#bbb">
-</span><span style="color:#bbb">     </span><span style="color:#00a">SELECT</span><span style="color:#bbb"> </span>*<span style="color:#bbb"> </span><span style="color:#00a">FROM</span><span style="color:#bbb"> </span>archive;<span style="color:#bbb">
-</span></code></pre></div><p>That&rsquo;s probably the most efficient way to move data around in PostgreSQL
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">WITH</span><span style="color:#bbb"> </span>archive<span style="color:#bbb"> </span><span style="color:#00a">AS</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">DELETE</span><span style="color:#bbb"> </span><span style="color:#00a">FROM</span><span style="color:#bbb"> </span><span style="color:#00a">source</span><span style="color:#bbb"> </span><span style="color:#00a">WHERE</span><span style="color:#bbb"> </span>...<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>RETURNING<span style="color:#bbb"> </span>s.id<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">INSERT</span><span style="color:#bbb"> </span><span style="color:#00a">INTO</span><span style="color:#bbb"> </span>target(id,<span style="color:#bbb"> </span>counter)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">SELECT</span><span style="color:#bbb"> </span>*<span style="color:#bbb"> </span><span style="color:#00a">FROM</span><span style="color:#bbb"> </span>archive;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>That&rsquo;s probably the most efficient way to move data around in PostgreSQL
 when the source and target tables are within the same database. If not, then
 I can&rsquo;t wait to play with the
 <a href="http://www.postgresql.org/docs/9.3/static/postgres-fdw.html">Postgres Foreign Data Wrapper</a> in 9.3, that
@@ -402,23 +402,23 @@ to
 <em>lag</em> in
 between the Hot Standby you&rsquo;re interested into and the primary server by
 running that query periodically:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span>pg_current_xlog_location()<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">current</span>,<span style="color:#bbb"> </span>replay_location<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>replay<span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pg_stat_replication<span style="color:#bbb">
-</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>application_name<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;standby-name&#39;</span>;<span style="color:#bbb">
-</span></code></pre></div><p>Be aware that any replication client that you use will show up in the
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">select</span><span style="color:#bbb"> </span>pg_current_xlog_location()<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">current</span>,<span style="color:#bbb"> </span>replay_location<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>replay<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pg_stat_replication<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>application_name<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;standby-name&#39;</span>;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>Be aware that any replication client that you use will show up in the
 <code>pg_stat_replication</code> view, and that includes
 <a href="http://www.postgresql.org/docs/current/static/app-pgbasebackup.html">pg_basebackup</a> and
 <a href="http://www.postgresql.org/docs/current/static/app-pgreceivexlog.html">pg_receivexlog</a>:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb"> </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>application_name,<span style="color:#bbb"> </span>pg_current_xlog_location(),<span style="color:#bbb">
-</span><span style="color:#bbb">        </span>sent_location,<span style="color:#bbb"> </span>replay_location<span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pg_stat_replication;<span style="color:#bbb">
-</span><span style="color:#bbb">   
-</span><span style="color:#bbb"> </span>application_name<span style="color:#bbb"> </span>|<span style="color:#bbb"> </span>pg_current_xlog_location<span style="color:#bbb"> </span>|<span style="color:#bbb"> </span>sent_location<span style="color:#bbb">  </span>|<span style="color:#bbb"> </span>replay_location<span style="color:#bbb"> 
-</span><span style="color:#bbb"></span><span style="color:#aaa;font-style:italic">------------------+--------------------------+----------------+-----------------
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb"> </span>pg_receivexlog<span style="color:#bbb">   </span>|<span style="color:#bbb"> </span><span style="color:#099">18</span>C85/<span style="color:#099">55</span>DCA900<span style="color:#bbb">           </span>|<span style="color:#bbb"> </span><span style="color:#099">18</span>C85/<span style="color:#099">55</span>DAEC20<span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">{</span><span style="color:#00a">NULL</span><span style="color:#f00;background-color:#faa">}</span><span style="color:#bbb">
-</span><span style="color:#bbb"> </span>standby-name<span style="color:#bbb">     </span>|<span style="color:#bbb"> </span><span style="color:#099">18</span>C85/<span style="color:#099">55</span>DCA900<span style="color:#bbb">           </span>|<span style="color:#bbb"> </span><span style="color:#099">18</span>C85/<span style="color:#099">55</span>DCA900<span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#099">18</span>C76/<span style="color:#099">4</span>B327D0<span style="color:#bbb">
-</span><span style="color:#bbb"></span>(<span style="color:#099">2</span><span style="color:#bbb"> </span>lignes)<span style="color:#bbb">
-</span></code></pre></div><p>Then in between loops of running the
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>application_name,<span style="color:#bbb"> </span>pg_current_xlog_location(),<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>sent_location,<span style="color:#bbb"> </span>replay_location<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pg_stat_replication;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>application_name<span style="color:#bbb"> </span>|<span style="color:#bbb"> </span>pg_current_xlog_location<span style="color:#bbb"> </span>|<span style="color:#bbb"> </span>sent_location<span style="color:#bbb">  </span>|<span style="color:#bbb"> </span>replay_location<span style="color:#bbb"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#aaa;font-style:italic">------------------+--------------------------+----------------+-----------------
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb"> </span>pg_receivexlog<span style="color:#bbb">   </span>|<span style="color:#bbb"> </span><span style="color:#099">18</span>C85/<span style="color:#099">55</span>DCA900<span style="color:#bbb">           </span>|<span style="color:#bbb"> </span><span style="color:#099">18</span>C85/<span style="color:#099">55</span>DAEC20<span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">{</span><span style="color:#00a">NULL</span><span style="color:#f00;background-color:#faa">}</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>standby-name<span style="color:#bbb">     </span>|<span style="color:#bbb"> </span><span style="color:#099">18</span>C85/<span style="color:#099">55</span>DCA900<span style="color:#bbb">           </span>|<span style="color:#bbb"> </span><span style="color:#099">18</span>C85/<span style="color:#099">55</span>DCA900<span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#099">18</span>C76/<span style="color:#099">4</span>B327D0<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>(<span style="color:#099">2</span><span style="color:#bbb"> </span>lignes)<span style="color:#bbb">
+</span></span></span></code></pre></div><p>Then in between loops of running the
 <code>WITH archive AS (DELETE ...) INSERT</code>
 query, when the lag is higher than your arbitrary threshold, just pause
 until it&rsquo;s back under control. That part I&rsquo;ve implemented with a very simple
@@ -428,20 +428,20 @@ buzy loop around the previous query and a 1 second wait.</p>
 replicate its implementation in your client application code, it&rsquo;s simple
 enough to do so. Here&rsquo;s a
 <a href="/tags/common-lisp">Common Lisp</a> version of it:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp">(<span style="color:#0aa">defun</span> <span style="color:#a00">pg-xlog-location-diff</span> (<span style="color:#a00">loc1</span> <span style="color:#a00">loc2</span>)
-  <span style="color:#a50">&#34;Compute the difference between WAL locations as WAL bytes.
-</span><span style="color:#a50">
-</span><span style="color:#a50">   Locations are expected with the XLOG position format 163A8/210598E8.
-</span><span style="color:#a50">   Computation from PostgreSQL sources of pg_xlog_location_diff as in
-</span><span style="color:#a50">   src/backend/access/transam/xlogfuncs.c &#34;</span>
-  (<span style="color:#00a">flet</span> ((<span style="color:#a00">parse-location</span> (<span style="color:#a00">pos</span>)
-	   (<span style="color:#00a">let</span> ((<span style="color:#a00">shift</span> #.(<span style="color:#0a0">expt</span> <span style="color:#099">2</span> <span style="color:#099">32</span>)))
-	     (<span style="color:#0aa">destructuring-bind</span> (<span style="color:#a00">hi</span> <span style="color:#a00">lo</span>)
-		 (<span style="color:#a00">split-sequence:split-sequence</span> <span style="color:#a50">#\/</span> <span style="color:#a00">pos</span>)
-	       (<span style="color:#0a0">+</span> (<span style="color:#0a0">*</span> <span style="color:#a00">shift</span> (<span style="color:#0a0">parse-integer</span> <span style="color:#a00">hi</span> <span style="color:#00a">:radix</span> <span style="color:#099">16</span>))
-		  (<span style="color:#0a0">parse-integer</span> <span style="color:#a00">lo</span> <span style="color:#00a">:radix</span> <span style="color:#099">16</span>))))))
-    (<span style="color:#0a0">-</span> (<span style="color:#a00">parse-location</span> <span style="color:#a00">loc1</span>) (<span style="color:#a00">parse-location</span> <span style="color:#a00">loc2</span>))))
-</code></pre></div><p>Exercice for the reader: write a PL version of it with your PL of choice.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-lisp" data-lang="lisp"><span style="display:flex;"><span>(<span style="color:#0aa">defun</span> <span style="color:#a00">pg-xlog-location-diff</span> (<span style="color:#a00">loc1</span> <span style="color:#a00">loc2</span>)
+</span></span><span style="display:flex;"><span>  <span style="color:#a50">&#34;Compute the difference between WAL locations as WAL bytes.
+</span></span></span><span style="display:flex;"><span><span style="color:#a50">
+</span></span></span><span style="display:flex;"><span><span style="color:#a50">   Locations are expected with the XLOG position format 163A8/210598E8.
+</span></span></span><span style="display:flex;"><span><span style="color:#a50">   Computation from PostgreSQL sources of pg_xlog_location_diff as in
+</span></span></span><span style="display:flex;"><span><span style="color:#a50">   src/backend/access/transam/xlogfuncs.c &#34;</span>
+</span></span><span style="display:flex;"><span>  (<span style="color:#00a">flet</span> ((<span style="color:#a00">parse-location</span> (<span style="color:#a00">pos</span>)
+</span></span><span style="display:flex;"><span>	   (<span style="color:#00a">let</span> ((<span style="color:#a00">shift</span> #.(<span style="color:#0a0">expt</span> <span style="color:#099">2</span> <span style="color:#099">32</span>)))
+</span></span><span style="display:flex;"><span>	     (<span style="color:#0aa">destructuring-bind</span> (<span style="color:#a00">hi</span> <span style="color:#a00">lo</span>)
+</span></span><span style="display:flex;"><span>		 (<span style="color:#a00">split-sequence:split-sequence</span> <span style="color:#a50">#\/</span> <span style="color:#a00">pos</span>)
+</span></span><span style="display:flex;"><span>	       (<span style="color:#0a0">+</span> (<span style="color:#0a0">*</span> <span style="color:#a00">shift</span> (<span style="color:#0a0">parse-integer</span> <span style="color:#a00">hi</span> <span style="color:#00a">:radix</span> <span style="color:#099">16</span>))
+</span></span><span style="display:flex;"><span>		  (<span style="color:#0a0">parse-integer</span> <span style="color:#a00">lo</span> <span style="color:#00a">:radix</span> <span style="color:#099">16</span>))))))
+</span></span><span style="display:flex;"><span>    (<span style="color:#0a0">-</span> (<span style="color:#a00">parse-location</span> <span style="color:#a00">loc1</span>) (<span style="color:#a00">parse-location</span> <span style="color:#a00">loc2</span>))))
+</span></span></code></pre></div><p>Exercice for the reader: write a PL version of it with your PL of choice.</p>
 <h2 id="update">Update</h2>
 <p>Reading that article,
 <a href="http://psoos.blogspot.fr/">Bernd Helmle</a> tells me that he&rsquo;s already done the
@@ -454,9 +454,17 @@ PostgreSQL, and you can find it at
 
             </div>
           </div>
-          <div style="margin-top: 1em;">
- <a href="https://theartofpostgresql.com" alt="The Art of PostgreSQL">
-  <img src="/img/taopg-cta.jpg" style="width:90%; height: auto; margin-left: 5%">
+          
+
+
+
+
+
+<div style="margin-top: 1em;">
+ <script async src="//tinder.thrivecart.com/embed/v1/thrivecart.js"></script>
+ <a data-thrivecart-account="theartofpostgresql" data-thrivecart-tpl="v2" data-thrivecart-product="18" class="thrivecart-button ">
+  <img src="https://spark.thrivecart.com/0x0/https%3A%2F%2Fthrivecart.s3.amazonaws.com%2Fuser_assets%2FNABJ5K7H%2Fproducts%2F18%2Ftaopg-cta-1661268188.jpg"
+       style="width:90%; height: auto; margin-left: 5%"/>
  </a>
 </div>
 
@@ -556,7 +564,7 @@ PostgreSQL, and you can find it at
         </article>
         <footer id="footer" class="main-content-wrap">
   <span class="copyrights">
-    &copy; 2021 Dimitri Fontaine. 
+    &copy; 2022 Dimitri Fontaine. 
   </span>
 </footer>
 

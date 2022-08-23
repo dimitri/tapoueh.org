@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.89.3">
+    <meta name="generator" content="Hugo 0.101.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>PostgreSQL HyperLogLog</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -501,19 +501,19 @@ for
 <code>debian</code> and the result should appear soon in a distro near you.</p>
 <p>Then you also need to keep your data in some table, straight from the
 documentation we can use that schema:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#aaa;font-style:italic">-- Create the destination table
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#00a">CREATE</span><span style="color:#bbb"> </span><span style="color:#00a">TABLE</span><span style="color:#bbb"> </span>daily_uniques<span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#0aa">DATE</span><span style="color:#bbb">            </span><span style="color:#0aa">DATE</span><span style="color:#bbb"> </span><span style="color:#00a">UNIQUE</span>,<span style="color:#bbb">
-</span><span style="color:#bbb"></span>users<span style="color:#bbb">           </span>hll<span style="color:#bbb">
-</span><span style="color:#bbb"></span>);<span style="color:#bbb">
-</span></code></pre></div><p>Then to add some data for which you want to know the
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#aaa;font-style:italic">-- Create the destination table
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#00a">CREATE</span><span style="color:#bbb"> </span><span style="color:#00a">TABLE</span><span style="color:#bbb"> </span>daily_uniques<span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#0aa">DATE</span><span style="color:#bbb">            </span><span style="color:#0aa">DATE</span><span style="color:#bbb"> </span><span style="color:#00a">UNIQUE</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>users<span style="color:#bbb">           </span>hll<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>);<span style="color:#bbb">
+</span></span></span></code></pre></div><p>Then to add some data for which you want to know the
 <em>cardinality</em> of, it&rsquo;s as
 simple as in the following
 <code>UPDATE</code> statement:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">UPDATE</span><span style="color:#bbb"> </span>daily_uniques<span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">SET</span><span style="color:#bbb"> </span>users<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>hll_add(users,<span style="color:#bbb"> </span>hll_hash_text(<span style="color:#a50">&#39;123.123.123.123&#39;</span>))<span style="color:#bbb">
-</span><span style="color:#bbb"> </span><span style="color:#00a">WHERE</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">current_date</span>;<span style="color:#bbb">
-</span></code></pre></div><p>So in our example what you see is that we want to decipher how many unique
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">UPDATE</span><span style="color:#bbb"> </span>daily_uniques<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">SET</span><span style="color:#bbb"> </span>users<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>hll_add(users,<span style="color:#bbb"> </span>hll_hash_text(<span style="color:#a50">&#39;123.123.123.123&#39;</span>))<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">WHERE</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">current_date</span>;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>So in our example what you see is that we want to decipher how many unique
 IP addresses we saw, and we do that by first creating a
 <em>hash</em> of that source
 data then calling
@@ -585,16 +585,16 @@ new values to add to our current
 <em>HyperLogLog</em> hash entry, and I can&rsquo;t resist
 to show off one of the most awesome PostgreSQL features here:
 <em>writable CTE</em>.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">WITH</span><span style="color:#bbb"> </span>hll(agg)<span style="color:#bbb"> </span><span style="color:#00a">AS</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">SELECT</span><span style="color:#bbb"> </span>hll_add_agg(hll_hash_text(value))<span style="color:#bbb"> </span><span style="color:#00a">FROM</span><span style="color:#bbb"> </span>new_batch<span style="color:#bbb">
-</span><span style="color:#bbb"></span>)<span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">UPDATE</span><span style="color:#bbb"> </span>daily_uniques<span style="color:#bbb">
-</span><span style="color:#bbb">     </span><span style="color:#00a">SET</span><span style="color:#bbb"> </span>users<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">CASE</span><span style="color:#bbb"> </span><span style="color:#00a">WHEN</span><span style="color:#bbb"> </span>hll.agg<span style="color:#bbb"> </span><span style="color:#00a">IS</span><span style="color:#bbb"> </span><span style="color:#00a">NULL</span><span style="color:#bbb"> </span><span style="color:#00a">THEN</span><span style="color:#bbb"> </span>users<span style="color:#bbb">
-</span><span style="color:#bbb">                      </span><span style="color:#00a">ELSE</span><span style="color:#bbb"> </span>hll_union(users,<span style="color:#bbb"> </span>hll.agg)<span style="color:#bbb">
-</span><span style="color:#bbb">                  </span><span style="color:#00a">END</span><span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">FROM</span><span style="color:#bbb"> </span>hll<span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">WHERE</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">current_date</span>;<span style="color:#bbb">
-</span></code></pre></div><p>That&rsquo;s how you protect against an empty set being turned into a
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">WITH</span><span style="color:#bbb"> </span>hll(agg)<span style="color:#bbb"> </span><span style="color:#00a">AS</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">SELECT</span><span style="color:#bbb"> </span>hll_add_agg(hll_hash_text(value))<span style="color:#bbb"> </span><span style="color:#00a">FROM</span><span style="color:#bbb"> </span>new_batch<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">UPDATE</span><span style="color:#bbb"> </span>daily_uniques<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">SET</span><span style="color:#bbb"> </span>users<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">CASE</span><span style="color:#bbb"> </span><span style="color:#00a">WHEN</span><span style="color:#bbb"> </span>hll.agg<span style="color:#bbb"> </span><span style="color:#00a">IS</span><span style="color:#bbb"> </span><span style="color:#00a">NULL</span><span style="color:#bbb"> </span><span style="color:#00a">THEN</span><span style="color:#bbb"> </span>users<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                      </span><span style="color:#00a">ELSE</span><span style="color:#bbb"> </span>hll_union(users,<span style="color:#bbb"> </span>hll.agg)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                  </span><span style="color:#00a">END</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">FROM</span><span style="color:#bbb"> </span>hll<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">WHERE</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">current_date</span>;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>That&rsquo;s how you protect against an empty set being turned into a
 <code>NULL</code>. I
 think the real fix would need to be included in
 <code>postgresql-hll</code> itself, in
@@ -608,23 +608,23 @@ explanation of it).</p>
 <code>postgresql-hll</code> on the production system, we were able to get some
 good looking numbers from our
 <code>daily_uniques</code> table:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span><span style="color:#bbb"> </span>stats<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>,<span style="color:#bbb"> </span>#users<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>daily,<span style="color:#bbb"> </span>#hll_union_agg(users)<span style="color:#bbb"> </span>over()<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>total<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>daily_uniques<span style="color:#bbb">
-</span><span style="color:#bbb"></span>)<span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">         </span>round(daily)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>daily,<span style="color:#bbb">
-</span><span style="color:#bbb">         </span>round((daily/total*<span style="color:#099">100</span>)::<span style="color:#0aa">numeric</span>,<span style="color:#bbb"> </span><span style="color:#099">2</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>percent<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>stats<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>;<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#0aa">date</span><span style="color:#bbb">    </span>|<span style="color:#bbb"> </span>daily<span style="color:#bbb">  </span>|<span style="color:#bbb"> </span>percent<span style="color:#bbb"> 
-</span><span style="color:#bbb"></span><span style="color:#aaa;font-style:italic">------------+--------+---------
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb"> </span><span style="color:#099">2013</span>-<span style="color:#099">02</span>-<span style="color:#099">22</span><span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#099">401677</span><span style="color:#bbb"> </span>|<span style="color:#bbb">   </span><span style="color:#099">25</span>.<span style="color:#099">19</span><span style="color:#bbb">
-</span><span style="color:#bbb"> </span><span style="color:#099">2013</span>-<span style="color:#099">02</span>-<span style="color:#099">23</span><span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#099">660187</span><span style="color:#bbb"> </span>|<span style="color:#bbb">   </span><span style="color:#099">41</span>.<span style="color:#099">41</span><span style="color:#bbb">
-</span><span style="color:#bbb"> </span><span style="color:#099">2013</span>-<span style="color:#099">02</span>-<span style="color:#099">24</span><span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#099">869980</span><span style="color:#bbb"> </span>|<span style="color:#bbb">   </span><span style="color:#099">54</span>.<span style="color:#099">56</span><span style="color:#bbb">
-</span><span style="color:#bbb"> </span><span style="color:#099">2013</span>-<span style="color:#099">02</span>-<span style="color:#099">25</span><span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#099">154996</span><span style="color:#bbb"> </span>|<span style="color:#bbb">    </span><span style="color:#099">9</span>.<span style="color:#099">72</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span>(<span style="color:#099">4</span><span style="color:#bbb"> </span><span style="color:#00a">rows</span>)<span style="color:#bbb">
-</span></code></pre></div><p>I coulnd&rsquo;t resist to show off two of my favorite SQL constructs in that
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">with</span><span style="color:#bbb"> </span>stats<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>,<span style="color:#bbb"> </span>#users<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>daily,<span style="color:#bbb"> </span>#hll_union_agg(users)<span style="color:#bbb"> </span>over()<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>total<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>daily_uniques<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span>round(daily)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>daily,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span>round((daily/total*<span style="color:#099">100</span>)::<span style="color:#0aa">numeric</span>,<span style="color:#bbb"> </span><span style="color:#099">2</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>percent<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>stats<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#0aa">date</span><span style="color:#bbb">    </span>|<span style="color:#bbb"> </span>daily<span style="color:#bbb">  </span>|<span style="color:#bbb"> </span>percent<span style="color:#bbb"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#aaa;font-style:italic">------------+--------+---------
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb"> </span><span style="color:#099">2013</span>-<span style="color:#099">02</span>-<span style="color:#099">22</span><span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#099">401677</span><span style="color:#bbb"> </span>|<span style="color:#bbb">   </span><span style="color:#099">25</span>.<span style="color:#099">19</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#099">2013</span>-<span style="color:#099">02</span>-<span style="color:#099">23</span><span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#099">660187</span><span style="color:#bbb"> </span>|<span style="color:#bbb">   </span><span style="color:#099">41</span>.<span style="color:#099">41</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#099">2013</span>-<span style="color:#099">02</span>-<span style="color:#099">24</span><span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#099">869980</span><span style="color:#bbb"> </span>|<span style="color:#bbb">   </span><span style="color:#099">54</span>.<span style="color:#099">56</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#099">2013</span>-<span style="color:#099">02</span>-<span style="color:#099">25</span><span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#099">154996</span><span style="color:#bbb"> </span>|<span style="color:#bbb">    </span><span style="color:#099">9</span>.<span style="color:#099">72</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>(<span style="color:#099">4</span><span style="color:#bbb"> </span><span style="color:#00a">rows</span>)<span style="color:#bbb">
+</span></span></span></code></pre></div><p>I coulnd&rsquo;t resist to show off two of my favorite SQL constructs in that
 example query here, which are the
 <a href="http://www.postgresql.org/docs/9.2/static/queries-with.html">Common Table Expressions</a> (or CTE) and
 <a href="http://www.postgresql.org/docs/9.2/static/tutorial-window.html">window functions</a>. If that
@@ -679,9 +679,17 @@ the feature.</p>
 
             </div>
           </div>
-          <div style="margin-top: 1em;">
- <a href="https://theartofpostgresql.com" alt="The Art of PostgreSQL">
-  <img src="/img/taopg-cta.jpg" style="width:90%; height: auto; margin-left: 5%">
+          
+
+
+
+
+
+<div style="margin-top: 1em;">
+ <script async src="//tinder.thrivecart.com/embed/v1/thrivecart.js"></script>
+ <a data-thrivecart-account="theartofpostgresql" data-thrivecart-tpl="v2" data-thrivecart-product="18" class="thrivecart-button ">
+  <img src="https://spark.thrivecart.com/0x0/https%3A%2F%2Fthrivecart.s3.amazonaws.com%2Fuser_assets%2FNABJ5K7H%2Fproducts%2F18%2Ftaopg-cta-1661268188.jpg"
+       style="width:90%; height: auto; margin-left: 5%"/>
  </a>
 </div>
 
@@ -779,7 +787,7 @@ the feature.</p>
         </article>
         <footer id="footer" class="main-content-wrap">
   <span class="copyrights">
-    &copy; 2021 Dimitri Fontaine. 
+    &copy; 2022 Dimitri Fontaine. 
   </span>
 </footer>
 

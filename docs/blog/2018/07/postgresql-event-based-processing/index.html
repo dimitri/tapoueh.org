@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.89.3">
+    <meta name="generator" content="Hugo 0.101.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>PostgreSQL Event Based Processing</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -355,7 +355,7 @@ if (!doNotTrack) {
       </time>
     
     <span style="float: right; width: 65%">
-      <i class="fa fa-clock-o"></i> 7 mins read
+      <i class="fa fa-clock-o"></i> 9 mins read
       
     </span>
     <span style="float: left; width: 35%">
@@ -602,85 +602,85 @@ then the transaction is aborted.</p>
 <p>A classic example of an event driven processing with a trigger in our
 context is to update the counters of <em>rts</em> and <em>favs</em> each time there&rsquo;s a
 related insert in the <em>tweet.activity</em> table.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>twcache.daily_counters<span style="color:#bbb">
-</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">day</span><span style="color:#bbb">     </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">   </span>rts<span style="color:#bbb">     </span><span style="color:#0aa">bigint</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">   </span>de_rts<span style="color:#bbb">  </span><span style="color:#0aa">bigint</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">   </span>favs<span style="color:#bbb">    </span><span style="color:#0aa">bigint</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">   </span>de_favs<span style="color:#bbb"> </span><span style="color:#0aa">bigint</span><span style="color:#bbb">
-</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">or</span><span style="color:#bbb"> </span><span style="color:#00a">replace</span><span style="color:#bbb"> </span><span style="color:#00a">function</span><span style="color:#bbb"> </span>twcache.tg_update_daily_counters<span style="color:#bbb"> </span>()<span style="color:#bbb">
-</span><span style="color:#bbb"> </span><span style="color:#00a">returns</span><span style="color:#bbb"> </span><span style="color:#00a">trigger</span><span style="color:#bbb">
-</span><span style="color:#bbb"> </span><span style="color:#00a">language</span><span style="color:#bbb"> </span>plpgsql<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">$$</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">declare</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">begin</span><span style="color:#bbb">
-</span><span style="color:#bbb">      </span><span style="color:#00a">update</span><span style="color:#bbb"> </span>twcache.daily_counters<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">set</span><span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">                        </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
-</span><span style="color:#bbb">                        </span><span style="color:#00a">else</span><span style="color:#bbb"> </span>rts<span style="color:#bbb">
-</span><span style="color:#bbb">                    </span><span style="color:#00a">end</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">             </span>de_rts<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-rt&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">                        </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>de_rts<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
-</span><span style="color:#bbb">                        </span><span style="color:#00a">else</span><span style="color:#bbb"> </span>de_rts<span style="color:#bbb">
-</span><span style="color:#bbb">                    </span><span style="color:#00a">end</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">             </span>favs<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;fav&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">                         </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>favs<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
-</span><span style="color:#bbb">                         </span><span style="color:#00a">else</span><span style="color:#bbb"> </span>favs<span style="color:#bbb">
-</span><span style="color:#bbb">                     </span><span style="color:#00a">end</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">             </span>de_favs<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-fav&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">                         </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>de_favs<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
-</span><span style="color:#bbb">                         </span><span style="color:#00a">else</span><span style="color:#bbb"> </span>de_favs<span style="color:#bbb">
-</span><span style="color:#bbb">                     </span><span style="color:#00a">end</span><span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>daily_counters.<span style="color:#00a">day</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">current_date</span>;<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">if</span><span style="color:#bbb"> </span><span style="color:#00a">NOT</span><span style="color:#bbb"> </span><span style="color:#00a">FOUND</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">then</span><span style="color:#bbb">
-</span><span style="color:#bbb">      </span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>twcache.daily_counters(<span style="color:#00a">day</span>,<span style="color:#bbb"> </span>rts,<span style="color:#bbb"> </span>de_rts,<span style="color:#bbb"> </span>favs,<span style="color:#bbb"> </span>de_favs)<span style="color:#bbb">
-</span><span style="color:#bbb">           </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">current_date</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">                  </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">                       </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">else</span><span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb">
-</span><span style="color:#bbb">                    </span><span style="color:#00a">end</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">                  </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-rt&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">                       </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">else</span><span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb">
-</span><span style="color:#bbb">                   </span><span style="color:#00a">end</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">                  </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;fav&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">                       </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">else</span><span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb">
-</span><span style="color:#bbb">                   </span><span style="color:#00a">end</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">                  </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-fav&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">                       </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">else</span><span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb">
-</span><span style="color:#bbb">                   </span><span style="color:#00a">end</span>;<span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">end</span><span style="color:#bbb"> </span><span style="color:#00a">if</span>;<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">RETURN</span><span style="color:#bbb"> </span><span style="color:#00a">NULL</span>;<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">end</span>;<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#f00;background-color:#faa">$$</span>;<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">CREATE</span><span style="color:#bbb"> </span><span style="color:#00a">TRIGGER</span><span style="color:#bbb"> </span>update_daily_counters<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">AFTER</span><span style="color:#bbb"> </span><span style="color:#00a">INSERT</span><span style="color:#bbb">
-</span><span style="color:#bbb">            </span><span style="color:#00a">ON</span><span style="color:#bbb"> </span>tweet.activity<span style="color:#bbb">
-</span><span style="color:#bbb">      </span><span style="color:#00a">FOR</span><span style="color:#bbb"> </span><span style="color:#00a">EACH</span><span style="color:#bbb"> </span><span style="color:#00a">ROW</span><span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#00a">EXECUTE</span><span style="color:#bbb"> </span><span style="color:#00a">PROCEDURE</span><span style="color:#bbb"> </span>twcache.tg_update_daily_counters();<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>tweet.activity(messageid,<span style="color:#bbb"> </span>action)<span style="color:#bbb">
-</span><span style="color:#bbb">     </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#099">7</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>),<span style="color:#bbb">
-</span><span style="color:#bbb">            </span>(<span style="color:#099">7</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;fav&#39;</span>),<span style="color:#bbb">
-</span><span style="color:#bbb">            </span>(<span style="color:#099">7</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-fav&#39;</span>),<span style="color:#bbb">
-</span><span style="color:#bbb">            </span>(<span style="color:#099">8</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>),<span style="color:#bbb">
-</span><span style="color:#bbb">            </span>(<span style="color:#099">8</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>),<span style="color:#bbb">
-</span><span style="color:#bbb">            </span>(<span style="color:#099">8</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>),<span style="color:#bbb">
-</span><span style="color:#bbb">            </span>(<span style="color:#099">8</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-rt&#39;</span>),<span style="color:#bbb">
-</span><span style="color:#bbb">            </span>(<span style="color:#099">8</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>);<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">day</span>,<span style="color:#bbb"> </span>rts,<span style="color:#bbb"> </span>de_rts,<span style="color:#bbb"> </span>favs,<span style="color:#bbb"> </span>de_favs<span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>twcache.daily_counters;<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">rollback</span>;<span style="color:#bbb">
-</span></code></pre></div><p>Again, we don&rsquo;t really want to have that trigger in our setup, so the
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">begin</span>;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>twcache.daily_counters<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">day</span><span style="color:#bbb">     </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>rts<span style="color:#bbb">     </span><span style="color:#0aa">bigint</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>de_rts<span style="color:#bbb">  </span><span style="color:#0aa">bigint</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>favs<span style="color:#bbb">    </span><span style="color:#0aa">bigint</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>de_favs<span style="color:#bbb"> </span><span style="color:#0aa">bigint</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">or</span><span style="color:#bbb"> </span><span style="color:#00a">replace</span><span style="color:#bbb"> </span><span style="color:#00a">function</span><span style="color:#bbb"> </span>twcache.tg_update_daily_counters<span style="color:#bbb"> </span>()<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">returns</span><span style="color:#bbb"> </span><span style="color:#00a">trigger</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">language</span><span style="color:#bbb"> </span>plpgsql<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">$$</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">declare</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">begin</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#00a">update</span><span style="color:#bbb"> </span>twcache.daily_counters<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">set</span><span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                        </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                        </span><span style="color:#00a">else</span><span style="color:#bbb"> </span>rts<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                    </span><span style="color:#00a">end</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">             </span>de_rts<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-rt&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                        </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>de_rts<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                        </span><span style="color:#00a">else</span><span style="color:#bbb"> </span>de_rts<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                    </span><span style="color:#00a">end</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">             </span>favs<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;fav&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                         </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>favs<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                         </span><span style="color:#00a">else</span><span style="color:#bbb"> </span>favs<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                     </span><span style="color:#00a">end</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">             </span>de_favs<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-fav&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                         </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>de_favs<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                         </span><span style="color:#00a">else</span><span style="color:#bbb"> </span>de_favs<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                     </span><span style="color:#00a">end</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>daily_counters.<span style="color:#00a">day</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">current_date</span>;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">if</span><span style="color:#bbb"> </span><span style="color:#00a">NOT</span><span style="color:#bbb"> </span><span style="color:#00a">FOUND</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">then</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>twcache.daily_counters(<span style="color:#00a">day</span>,<span style="color:#bbb"> </span>rts,<span style="color:#bbb"> </span>de_rts,<span style="color:#bbb"> </span>favs,<span style="color:#bbb"> </span>de_favs)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">           </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">current_date</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                  </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                       </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">else</span><span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                    </span><span style="color:#00a">end</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                  </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-rt&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                       </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">else</span><span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                   </span><span style="color:#00a">end</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                  </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;fav&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                       </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">else</span><span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                   </span><span style="color:#00a">end</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                  </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-fav&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                       </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">else</span><span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                   </span><span style="color:#00a">end</span>;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">end</span><span style="color:#bbb"> </span><span style="color:#00a">if</span>;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">RETURN</span><span style="color:#bbb"> </span><span style="color:#00a">NULL</span>;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">end</span>;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#f00;background-color:#faa">$$</span>;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">CREATE</span><span style="color:#bbb"> </span><span style="color:#00a">TRIGGER</span><span style="color:#bbb"> </span>update_daily_counters<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">AFTER</span><span style="color:#bbb"> </span><span style="color:#00a">INSERT</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#00a">ON</span><span style="color:#bbb"> </span>tweet.activity<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#00a">FOR</span><span style="color:#bbb"> </span><span style="color:#00a">EACH</span><span style="color:#bbb"> </span><span style="color:#00a">ROW</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">EXECUTE</span><span style="color:#bbb"> </span><span style="color:#00a">PROCEDURE</span><span style="color:#bbb"> </span>twcache.tg_update_daily_counters();<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>tweet.activity(messageid,<span style="color:#bbb"> </span>action)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#099">7</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>),<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>(<span style="color:#099">7</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;fav&#39;</span>),<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>(<span style="color:#099">7</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-fav&#39;</span>),<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>(<span style="color:#099">8</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>),<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>(<span style="color:#099">8</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>),<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>(<span style="color:#099">8</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>),<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>(<span style="color:#099">8</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-rt&#39;</span>),<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>(<span style="color:#099">8</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>);<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">day</span>,<span style="color:#bbb"> </span>rts,<span style="color:#bbb"> </span>de_rts,<span style="color:#bbb"> </span>favs,<span style="color:#bbb"> </span>de_favs<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>twcache.daily_counters;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">rollback</span>;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>Again, we don&rsquo;t really want to have that trigger in our setup, so the
 transaction ends with a <em>ROLLBACK</em>. It&rsquo;s also a good way to try in-progress
 development in <em>psql</em> in an interactive fashion, and fix all the bugs and
 syntax errors until it all works.</p>
@@ -771,73 +771,73 @@ anti-pattern.</p>
 <p>Here&rsquo;s a modern way to fix the problem with the previous trigger
 implementation, this time applied to a per-message counter of <em>retweet</em> and
 <em>favorite</em> actions:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>twcache.counters<span style="color:#bbb">
-</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span><span style="color:#bbb">   </span>messageid<span style="color:#bbb">  </span><span style="color:#0aa">bigint</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>tweet.message(messageid),<span style="color:#bbb">
-</span><span style="color:#bbb">   </span>rts<span style="color:#bbb">        </span><span style="color:#0aa">bigint</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">   </span>favs<span style="color:#bbb">       </span><span style="color:#0aa">bigint</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">unique</span>(messageid)<span style="color:#bbb">
-</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">or</span><span style="color:#bbb"> </span><span style="color:#00a">replace</span><span style="color:#bbb"> </span><span style="color:#00a">function</span><span style="color:#bbb"> </span>twcache.tg_update_counters<span style="color:#bbb"> </span>()<span style="color:#bbb">
-</span><span style="color:#bbb"> </span><span style="color:#00a">returns</span><span style="color:#bbb"> </span><span style="color:#00a">trigger</span><span style="color:#bbb">
-</span><span style="color:#bbb"> </span><span style="color:#00a">language</span><span style="color:#bbb"> </span>plpgsql<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">$$</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">declare</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">begin</span><span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>twcache.counters(messageid,<span style="color:#bbb"> </span>rts,<span style="color:#bbb"> </span>favs)<span style="color:#bbb">
-</span><span style="color:#bbb">        </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.messageid,<span style="color:#bbb">
-</span><span style="color:#bbb">               </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">else</span><span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb"> </span><span style="color:#00a">end</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">               </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;fav&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">else</span><span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb"> </span><span style="color:#00a">end</span><span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>conflict<span style="color:#bbb"> </span>(messageid)<span style="color:#bbb">
-</span><span style="color:#bbb">     </span><span style="color:#00a">do</span><span style="color:#bbb"> </span><span style="color:#00a">update</span><span style="color:#bbb">
-</span><span style="color:#bbb">           </span><span style="color:#00a">set</span><span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">                          </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>counters.rts<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">                          </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-rt&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">                          </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>counters.rts<span style="color:#bbb"> </span>-<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">                          </span><span style="color:#00a">else</span><span style="color:#bbb"> </span>counters.rts<span style="color:#bbb">
-</span><span style="color:#bbb">                      </span><span style="color:#00a">end</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">               </span>favs<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;fav&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">                           </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>counters.favs<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">                           </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-fav&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">                           </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>counters.favs<span style="color:#bbb"> </span>-<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">                           </span><span style="color:#00a">else</span><span style="color:#bbb"> </span>counters.favs<span style="color:#bbb">
-</span><span style="color:#bbb">                       </span><span style="color:#00a">end</span><span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>counters.messageid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.messageid;<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">RETURN</span><span style="color:#bbb"> </span><span style="color:#00a">NULL</span>;<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">end</span>;<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#f00;background-color:#faa">$$</span>;<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">CREATE</span><span style="color:#bbb"> </span><span style="color:#00a">TRIGGER</span><span style="color:#bbb"> </span>update_counters<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">AFTER</span><span style="color:#bbb"> </span><span style="color:#00a">INSERT</span><span style="color:#bbb">
-</span><span style="color:#bbb">            </span><span style="color:#00a">ON</span><span style="color:#bbb"> </span>tweet.activity<span style="color:#bbb">
-</span><span style="color:#bbb">      </span><span style="color:#00a">FOR</span><span style="color:#bbb"> </span><span style="color:#00a">EACH</span><span style="color:#bbb"> </span><span style="color:#00a">ROW</span><span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#00a">EXECUTE</span><span style="color:#bbb"> </span><span style="color:#00a">PROCEDURE</span><span style="color:#bbb"> </span>twcache.tg_update_counters();<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>tweet.activity(messageid,<span style="color:#bbb"> </span>action)<span style="color:#bbb">
-</span><span style="color:#bbb">     </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#099">7</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>),<span style="color:#bbb">
-</span><span style="color:#bbb">            </span>(<span style="color:#099">7</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;fav&#39;</span>),<span style="color:#bbb">
-</span><span style="color:#bbb">            </span>(<span style="color:#099">7</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-fav&#39;</span>),<span style="color:#bbb">
-</span><span style="color:#bbb">            </span>(<span style="color:#099">8</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>),<span style="color:#bbb">
-</span><span style="color:#bbb">            </span>(<span style="color:#099">8</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>),<span style="color:#bbb">
-</span><span style="color:#bbb">            </span>(<span style="color:#099">8</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>),<span style="color:#bbb">
-</span><span style="color:#bbb">            </span>(<span style="color:#099">8</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-rt&#39;</span>),<span style="color:#bbb">
-</span><span style="color:#bbb">            </span>(<span style="color:#099">8</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>);<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">select</span><span style="color:#bbb"> </span>messageid,<span style="color:#bbb"> </span>rts,<span style="color:#bbb"> </span>favs<span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>twcache.counters;<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">rollback</span>;<span style="color:#bbb">
-</span></code></pre></div><p>And here&rsquo;s the result of running that file in <em>psql</em>, either from the
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">begin</span>;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>twcache.counters<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>messageid<span style="color:#bbb">  </span><span style="color:#0aa">bigint</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>tweet.message(messageid),<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>rts<span style="color:#bbb">        </span><span style="color:#0aa">bigint</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>favs<span style="color:#bbb">       </span><span style="color:#0aa">bigint</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">unique</span>(messageid)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">or</span><span style="color:#bbb"> </span><span style="color:#00a">replace</span><span style="color:#bbb"> </span><span style="color:#00a">function</span><span style="color:#bbb"> </span>twcache.tg_update_counters<span style="color:#bbb"> </span>()<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">returns</span><span style="color:#bbb"> </span><span style="color:#00a">trigger</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">language</span><span style="color:#bbb"> </span>plpgsql<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">$$</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">declare</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">begin</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>twcache.counters(messageid,<span style="color:#bbb"> </span>rts,<span style="color:#bbb"> </span>favs)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.messageid,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">               </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">else</span><span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb"> </span><span style="color:#00a">end</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">               </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;fav&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">else</span><span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb"> </span><span style="color:#00a">end</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>conflict<span style="color:#bbb"> </span>(messageid)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">do</span><span style="color:#bbb"> </span><span style="color:#00a">update</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">           </span><span style="color:#00a">set</span><span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                          </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>counters.rts<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                          </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-rt&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                          </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>counters.rts<span style="color:#bbb"> </span>-<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                          </span><span style="color:#00a">else</span><span style="color:#bbb"> </span>counters.rts<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                      </span><span style="color:#00a">end</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">               </span>favs<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;fav&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                           </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>counters.favs<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                           </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-fav&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                           </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>counters.favs<span style="color:#bbb"> </span>-<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                           </span><span style="color:#00a">else</span><span style="color:#bbb"> </span>counters.favs<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                       </span><span style="color:#00a">end</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>counters.messageid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.messageid;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">RETURN</span><span style="color:#bbb"> </span><span style="color:#00a">NULL</span>;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">end</span>;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#f00;background-color:#faa">$$</span>;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">CREATE</span><span style="color:#bbb"> </span><span style="color:#00a">TRIGGER</span><span style="color:#bbb"> </span>update_counters<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">AFTER</span><span style="color:#bbb"> </span><span style="color:#00a">INSERT</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#00a">ON</span><span style="color:#bbb"> </span>tweet.activity<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#00a">FOR</span><span style="color:#bbb"> </span><span style="color:#00a">EACH</span><span style="color:#bbb"> </span><span style="color:#00a">ROW</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">EXECUTE</span><span style="color:#bbb"> </span><span style="color:#00a">PROCEDURE</span><span style="color:#bbb"> </span>twcache.tg_update_counters();<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>tweet.activity(messageid,<span style="color:#bbb"> </span>action)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#099">7</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>),<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>(<span style="color:#099">7</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;fav&#39;</span>),<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>(<span style="color:#099">7</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-fav&#39;</span>),<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>(<span style="color:#099">8</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>),<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>(<span style="color:#099">8</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>),<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>(<span style="color:#099">8</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>),<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>(<span style="color:#099">8</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-rt&#39;</span>),<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>(<span style="color:#099">8</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>);<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">select</span><span style="color:#bbb"> </span>messageid,<span style="color:#bbb"> </span>rts,<span style="color:#bbb"> </span>favs<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>twcache.counters;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">rollback</span>;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>And here&rsquo;s the result of running that file in <em>psql</em>, either from the
 command line with <em>psql -f</em> or with the interactive <code>\i &lt;path/to/file.sql</code>
 command:</p>
 <pre tabindex="0"><code class="language-psql" data-lang="psql">BEGIN
@@ -882,9 +882,17 @@ a complete client example, in Go.</p>
 
             </div>
           </div>
-          <div style="margin-top: 1em;">
- <a href="https://theartofpostgresql.com" alt="The Art of PostgreSQL">
-  <img src="/img/taopg-cta.jpg" style="width:90%; height: auto; margin-left: 5%">
+          
+
+
+
+
+
+<div style="margin-top: 1em;">
+ <script async src="//tinder.thrivecart.com/embed/v1/thrivecart.js"></script>
+ <a data-thrivecart-account="theartofpostgresql" data-thrivecart-tpl="v2" data-thrivecart-product="18" class="thrivecart-button ">
+  <img src="https://spark.thrivecart.com/0x0/https%3A%2F%2Fthrivecart.s3.amazonaws.com%2Fuser_assets%2FNABJ5K7H%2Fproducts%2F18%2Ftaopg-cta-1661268188.jpg"
+       style="width:90%; height: auto; margin-left: 5%"/>
  </a>
 </div>
 
@@ -984,7 +992,7 @@ a complete client example, in Go.</p>
         </article>
         <footer id="footer" class="main-content-wrap">
   <span class="copyrights">
-    &copy; 2021 Dimitri Fontaine. 
+    &copy; 2022 Dimitri Fontaine. 
   </span>
 </footer>
 

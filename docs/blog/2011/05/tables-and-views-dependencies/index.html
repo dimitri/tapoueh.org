@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.89.3">
+    <meta name="generator" content="Hugo 0.101.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Tables and Views dependencies</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -279,7 +279,7 @@ if (!doNotTrack) {
       </time>
     
     <span style="float: right; width: 65%">
-      <i class="fa fa-clock-o"></i> 2 mins read
+      <i class="fa fa-clock-o"></i> 3 mins read
       
     </span>
     <span style="float: left; width: 35%">
@@ -351,30 +351,30 @@ order to find all <em>views</em> that depend on a given table, too. For that, yo
 have to play with <code>pg_depend</code> and you have to know that internally, a <em>view</em>
 is in fact a <em>rewrite rule</em>. Then here&rsquo;s how to produce the two scripts that
 we need:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">=#<span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">\</span>t<span style="color:#bbb">
-</span><span style="color:#bbb"></span>Showing<span style="color:#bbb"> </span><span style="color:#00a">only</span><span style="color:#bbb"> </span>tuples.<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span>=#<span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">\</span>o<span style="color:#bbb"> </span>/tmp/<span style="color:#00a">drop</span>.<span style="color:#00a">sql</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span>=#<span style="color:#bbb"> </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;DROP VIEW &#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>views<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39;;&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>(<span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">distinct</span>(r.ev_class::regclass)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>views<span style="color:#bbb">
-</span><span style="color:#bbb">            </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pg_depend<span style="color:#bbb"> </span>d<span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_rewrite<span style="color:#bbb"> </span>r<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>r.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>d.objid<span style="color:#bbb"> 
-</span><span style="color:#bbb">           </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>refclassid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;pg_class&#39;</span>::regclass<span style="color:#bbb">
-</span><span style="color:#bbb">             </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>refobjid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;SCHEMA.TABLENAME&#39;</span>::regclass<span style="color:#bbb">
-</span><span style="color:#bbb">             </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>classid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;pg_rewrite&#39;</span>::regclass<span style="color:#bbb"> 
-</span><span style="color:#bbb">             </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>pg_get_viewdef(r.ev_class,<span style="color:#bbb"> </span><span style="color:#00a">true</span>)<span style="color:#bbb"> </span>~<span style="color:#bbb"> </span><span style="color:#a50">&#39;COLUMN_NAME&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>x;<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span>=#<span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">\</span>o<span style="color:#bbb"> </span>/tmp/<span style="color:#00a">create</span>.<span style="color:#00a">sql</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span>=#<span style="color:#bbb"> </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;CREATE VIEW &#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>views<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>E<span style="color:#a50">&#39; AS \n&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">       </span>||<span style="color:#bbb"> </span>pg_get_viewdef(views,<span style="color:#bbb"> </span><span style="color:#00a">true</span>)<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39;;&#39;</span><span style="color:#bbb"> 
-</span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>(<span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">distinct</span>(r.ev_class::regclass)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>views<span style="color:#bbb"> 
-</span><span style="color:#bbb">          </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pg_depend<span style="color:#bbb"> </span>d<span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_rewrite<span style="color:#bbb"> </span>r<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>r.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>d.objid<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>refclassid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;pg_class&#39;</span>::regclass<span style="color:#bbb">
-</span><span style="color:#bbb">           </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>refobjid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;SCHEMA.TABLENAME&#39;</span>::regclass<span style="color:#bbb">
-</span><span style="color:#bbb">           </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>classid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;pg_rewrite&#39;</span>::regclass<span style="color:#bbb">
-</span><span style="color:#bbb">           </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>pg_get_viewdef(r.ev_class,<span style="color:#bbb"> </span><span style="color:#00a">true</span>)<span style="color:#bbb"> </span>~<span style="color:#bbb"> </span><span style="color:#a50">&#39;COLUMN_NAME&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>x;<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span>=#<span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">\</span>o<span style="color:#bbb">
-</span></code></pre></div><p>Replace
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>=#<span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">\</span>t<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>Showing<span style="color:#bbb"> </span><span style="color:#00a">only</span><span style="color:#bbb"> </span>tuples.<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>=#<span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">\</span>o<span style="color:#bbb"> </span>/tmp/<span style="color:#00a">drop</span>.<span style="color:#00a">sql</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>=#<span style="color:#bbb"> </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;DROP VIEW &#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>views<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39;;&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>(<span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">distinct</span>(r.ev_class::regclass)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>views<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pg_depend<span style="color:#bbb"> </span>d<span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_rewrite<span style="color:#bbb"> </span>r<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>r.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>d.objid<span style="color:#bbb"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">           </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>refclassid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;pg_class&#39;</span>::regclass<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">             </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>refobjid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;SCHEMA.TABLENAME&#39;</span>::regclass<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">             </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>classid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;pg_rewrite&#39;</span>::regclass<span style="color:#bbb"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">             </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>pg_get_viewdef(r.ev_class,<span style="color:#bbb"> </span><span style="color:#00a">true</span>)<span style="color:#bbb"> </span>~<span style="color:#bbb"> </span><span style="color:#a50">&#39;COLUMN_NAME&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>x;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>=#<span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">\</span>o<span style="color:#bbb"> </span>/tmp/<span style="color:#00a">create</span>.<span style="color:#00a">sql</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>=#<span style="color:#bbb"> </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;CREATE VIEW &#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>views<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>E<span style="color:#a50">&#39; AS \n&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>||<span style="color:#bbb"> </span>pg_get_viewdef(views,<span style="color:#bbb"> </span><span style="color:#00a">true</span>)<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39;;&#39;</span><span style="color:#bbb"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>(<span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">distinct</span>(r.ev_class::regclass)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>views<span style="color:#bbb"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pg_depend<span style="color:#bbb"> </span>d<span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_rewrite<span style="color:#bbb"> </span>r<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>r.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>d.objid<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>refclassid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;pg_class&#39;</span>::regclass<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">           </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>refobjid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;SCHEMA.TABLENAME&#39;</span>::regclass<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">           </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>classid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;pg_rewrite&#39;</span>::regclass<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">           </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>pg_get_viewdef(r.ev_class,<span style="color:#bbb"> </span><span style="color:#00a">true</span>)<span style="color:#bbb"> </span>~<span style="color:#bbb"> </span><span style="color:#a50">&#39;COLUMN_NAME&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>x;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>=#<span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">\</span>o<span style="color:#bbb">
+</span></span></span></code></pre></div><p>Replace
 <code>SCHEMA.TABLENAME</code> and
 <code>COLUMN_NAME</code> with your targets here and the
 first query should give you one row per candidate view.  Well if you&rsquo;re not
@@ -401,9 +401,17 @@ about <a href="/blog/2010/02/resetting-sequences.-all-of-them-please/">resetting
 
             </div>
           </div>
-          <div style="margin-top: 1em;">
- <a href="https://theartofpostgresql.com" alt="The Art of PostgreSQL">
-  <img src="/img/taopg-cta.jpg" style="width:90%; height: auto; margin-left: 5%">
+          
+
+
+
+
+
+<div style="margin-top: 1em;">
+ <script async src="//tinder.thrivecart.com/embed/v1/thrivecart.js"></script>
+ <a data-thrivecart-account="theartofpostgresql" data-thrivecart-tpl="v2" data-thrivecart-product="18" class="thrivecart-button ">
+  <img src="https://spark.thrivecart.com/0x0/https%3A%2F%2Fthrivecart.s3.amazonaws.com%2Fuser_assets%2FNABJ5K7H%2Fproducts%2F18%2Ftaopg-cta-1661268188.jpg"
+       style="width:90%; height: auto; margin-left: 5%"/>
  </a>
 </div>
 
@@ -501,7 +509,7 @@ about <a href="/blog/2010/02/resetting-sequences.-all-of-them-please/">resetting
         </article>
         <footer id="footer" class="main-content-wrap">
   <span class="copyrights">
-    &copy; 2021 Dimitri Fontaine. 
+    &copy; 2022 Dimitri Fontaine. 
   </span>
 </footer>
 

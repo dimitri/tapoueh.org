@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.89.3">
+    <meta name="generator" content="Hugo 0.101.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Find the number of the longest continuously rising days for a stock</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -333,7 +333,7 @@ if (!doNotTrack) {
       </time>
     
     <span style="float: right; width: 65%">
-      <i class="fa fa-clock-o"></i> 16 mins read
+      <i class="fa fa-clock-o"></i> 17 mins read
       
     </span>
     <span style="float: left; width: 35%">
@@ -780,8 +780,8 @@ PostgreSQL</a> and in the article <a href="https://opensource.com/article/17/12/
 PostgreSQL to streamline Python
 code</a> published
 at <a href="http://opensource.com">http://opensource.com</a>. Here&rsquo;s what the <code>factbook</code> table looks like:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">table</span><span style="color:#bbb"> </span>factbook<span style="color:#bbb"> </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">10</span>;<span style="color:#bbb">
-</span></code></pre></div><p>The <code>TABLE</code> command is standard SQL and included in PostgreSQL of course,
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">table</span><span style="color:#bbb"> </span>factbook<span style="color:#bbb"> </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">10</span>;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>The <code>TABLE</code> command is standard SQL and included in PostgreSQL of course,
 and an easy way to quickly see what&rsquo;s a data model all about. In our case,
 we have the <em>date</em> and <em>dollars</em> columns, and some more:</p>
 <pre tabindex="0"><code> year │    date    │   shares   │ trades  │   dollars   
@@ -804,24 +804,24 @@ continuously rising days for a stock, by looking at the dollars column.</p>
 is rising. This involves comparing the current row&rsquo;s <em>dollars</em> with the next
 row&rsquo;s <em>dollars</em>. That is easily done with a <a href="/tags/window-functions/">Window
 Function</a> as in the following example:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">         </span>to_char(<span style="color:#bbb">
-</span><span style="color:#bbb">           </span>lag(dollars,<span style="color:#bbb"> </span><span style="color:#099">1</span>)<span style="color:#bbb"> </span>over(<span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>),<span style="color:#bbb">
-</span><span style="color:#bbb">           </span><span style="color:#a50">&#39;L99G999G999G999&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">         </span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;dollars previous day&#34;</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">         </span>to_char(dollars,<span style="color:#bbb"> </span><span style="color:#a50">&#39;L99G999G999G999&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>dollars,<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb">   </span>dollars<span style="color:#bbb">
-</span><span style="color:#bbb">                   </span>-<span style="color:#bbb"> </span>lag(dollars,<span style="color:#bbb"> </span><span style="color:#099">1</span>)<span style="color:#bbb"> </span>over(<span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>)<span style="color:#bbb">
-</span><span style="color:#bbb">                   </span>&lt;<span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb">
-</span><span style="color:#bbb">              </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;-&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">              </span><span style="color:#00a">else</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;+&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">          </span><span style="color:#00a">end</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>diff<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>factbook<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">5</span>;<span style="color:#bbb">
-</span></code></pre></div><p>The <code>lag(dollars, 1) over(order by date)</code> SQL window function expression
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span>to_char(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">           </span>lag(dollars,<span style="color:#bbb"> </span><span style="color:#099">1</span>)<span style="color:#bbb"> </span>over(<span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>),<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">           </span><span style="color:#a50">&#39;L99G999G999G999&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;dollars previous day&#34;</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span>to_char(dollars,<span style="color:#bbb"> </span><span style="color:#a50">&#39;L99G999G999G999&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>dollars,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb">   </span>dollars<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                   </span>-<span style="color:#bbb"> </span>lag(dollars,<span style="color:#bbb"> </span><span style="color:#099">1</span>)<span style="color:#bbb"> </span>over(<span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                   </span>&lt;<span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;-&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#00a">else</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;+&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#00a">end</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>diff<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>factbook<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">5</span>;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>The <code>lag(dollars, 1) over(order by date)</code> SQL window function expression
 gives us the amount of dollars for the previous day. It&rsquo;s then easy to
 compare that number with the current&rsquo;s one and output a <code>+</code> if the stock is
 rising, or a <code>-</code> if it&rsquo;s lowering:</p>
@@ -843,51 +843,51 @@ that follow each-other in a row.</p>
 computed <em>diff</em> column changes, either from <code>+</code> to <code>-</code> or the other way
 around, from <code>-</code> to <code>+</code>. This kind of lookup to the next value is done with
 a <em>self-join</em> in SQL, and can be implemented in the following way:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span><span style="color:#bbb"> </span>diffs<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span>(<span style="color:#bbb">
-</span><span style="color:#bbb">     </span><span style="color:#aaa;font-style:italic">--
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">     </span><span style="color:#aaa;font-style:italic">-- compute if the current stock is raising or lowering
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">     </span><span style="color:#aaa;font-style:italic">--
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>,<span style="color:#bbb"> </span>dollars,<span style="color:#bbb">
-</span><span style="color:#bbb">            </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb">   </span>dollars<span style="color:#bbb">
-</span><span style="color:#bbb">                      </span>-<span style="color:#bbb"> </span>lag(dollars,<span style="color:#bbb"> </span><span style="color:#099">1</span>)<span style="color:#bbb"> </span>over(<span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>)<span style="color:#bbb">
-</span><span style="color:#bbb">                      </span>&lt;<span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb">
-</span><span style="color:#bbb">                 </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;-&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">                 </span><span style="color:#00a">else</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;+&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">             </span><span style="color:#00a">end</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>diff<span style="color:#bbb">
-</span><span style="color:#bbb">          </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>factbook<span style="color:#bbb">
-</span><span style="color:#bbb">      </span><span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span><span style="color:#00a">is</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span>)<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">select</span><span style="color:#bbb"> </span>diffs.diff,<span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#00a">min</span>(diffs.<span style="color:#0aa">date</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">start</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">       </span>diff_change.<span style="color:#0aa">date</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">end</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>days<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>diffs<span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#00a">left</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span><span style="color:#00a">lateral</span><span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- 
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- for each row of our &#34;diffs&#34; relation, compute the next
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- day at which the stock change direction is changing, that is
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- where a + becomes a - or the other way round
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- 
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span>(<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb">
-</span><span style="color:#bbb">           </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>diffs<span style="color:#bbb"> </span>d2<span style="color:#bbb">
-</span><span style="color:#bbb">          </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>d2.<span style="color:#0aa">date</span><span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span>diffs.<span style="color:#0aa">date</span><span style="color:#bbb">
-</span><span style="color:#bbb">            </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>d2.diff<span style="color:#bbb"> </span>&lt;&gt;<span style="color:#bbb"> </span>diffs.diff<span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb">
-</span><span style="color:#bbb">          </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
-</span><span style="color:#bbb">       </span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>diff_change<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span><span style="color:#00a">true</span><span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#aaa;font-style:italic">--
-</span><span style="color:#aaa;font-style:italic">-- we group by the date where the +/- change occurs
-</span><span style="color:#aaa;font-style:italic">-- and count how many rows share that value
-</span><span style="color:#aaa;font-style:italic">--
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>diffs.diff,<span style="color:#bbb"> </span>diff_change.<span style="color:#0aa">date</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">having</span><span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span><span style="color:#099">4</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>days<span style="color:#bbb"> </span><span style="color:#00a">desc</span>,<span style="color:#bbb"> </span><span style="color:#00a">start</span>;<span style="color:#bbb">
-</span></code></pre></div><p>In this query, we first compute the differences in between the current and
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">with</span><span style="color:#bbb"> </span>diffs<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#aaa;font-style:italic">--
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">     </span><span style="color:#aaa;font-style:italic">-- compute if the current stock is raising or lowering
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">     </span><span style="color:#aaa;font-style:italic">--
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>,<span style="color:#bbb"> </span>dollars,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb">   </span>dollars<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                      </span>-<span style="color:#bbb"> </span>lag(dollars,<span style="color:#bbb"> </span><span style="color:#099">1</span>)<span style="color:#bbb"> </span>over(<span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                      </span>&lt;<span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                 </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;-&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                 </span><span style="color:#00a">else</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;+&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">             </span><span style="color:#00a">end</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>diff<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>factbook<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span><span style="color:#00a">is</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">select</span><span style="color:#bbb"> </span>diffs.diff,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">min</span>(diffs.<span style="color:#0aa">date</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">start</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>diff_change.<span style="color:#0aa">date</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">end</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>days<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>diffs<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">left</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span><span style="color:#00a">lateral</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- 
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- for each row of our &#34;diffs&#34; relation, compute the next
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- day at which the stock change direction is changing, that is
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- where a + becomes a - or the other way round
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- 
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">           </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>diffs<span style="color:#bbb"> </span>d2<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>d2.<span style="color:#0aa">date</span><span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span>diffs.<span style="color:#0aa">date</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>d2.diff<span style="color:#bbb"> </span>&lt;&gt;<span style="color:#bbb"> </span>diffs.diff<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>diff_change<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span><span style="color:#00a">true</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#aaa;font-style:italic">--
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic">-- we group by the date where the +/- change occurs
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic">-- and count how many rows share that value
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic">--
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>diffs.diff,<span style="color:#bbb"> </span>diff_change.<span style="color:#0aa">date</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">having</span><span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span><span style="color:#099">4</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>days<span style="color:#bbb"> </span><span style="color:#00a">desc</span>,<span style="color:#bbb"> </span><span style="color:#00a">start</span>;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>In this query, we first compute the differences in between the current and
 the next row, as in the previous section of this article. Equiped with that
 in the common table expression <em>diffs</em>, we may now find the previous date
 when there&rsquo;s a change of direction in the stock value.</p>
@@ -927,54 +927,54 @@ SQL query that answers the question we are tasked with in the first place:</p>
 <blockquote>
 <p>Find the number of the longest continuously rising days for a stock.</p>
 </blockquote>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span><span style="color:#bbb"> </span>diffs<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span>(<span style="color:#bbb">
-</span><span style="color:#bbb">     </span><span style="color:#aaa;font-style:italic">--
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">     </span><span style="color:#aaa;font-style:italic">-- compute if the current stock is raising or lowering
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">     </span><span style="color:#aaa;font-style:italic">--
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>,<span style="color:#bbb"> </span>dollars,<span style="color:#bbb">
-</span><span style="color:#bbb">            </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb">   </span>dollars<span style="color:#bbb">
-</span><span style="color:#bbb">                      </span>-<span style="color:#bbb"> </span>lag(dollars,<span style="color:#bbb"> </span><span style="color:#099">1</span>)<span style="color:#bbb"> </span>over(<span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>)<span style="color:#bbb">
-</span><span style="color:#bbb">                      </span>&lt;<span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb">
-</span><span style="color:#bbb">                 </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;-&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">                 </span><span style="color:#00a">else</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;+&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">             </span><span style="color:#00a">end</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>diff<span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>factbook<span style="color:#bbb">
-</span><span style="color:#bbb">      </span><span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span><span style="color:#00a">is</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span>)<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>days<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>diffs<span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#00a">left</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span><span style="color:#00a">lateral</span><span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- 
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- for each row of our &#34;diffs&#34; relation, compute the next
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- day at which the stock change direction is changing, that is
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- where a + becomes a - or the other way round
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- 
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span>(<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb">
-</span><span style="color:#bbb">           </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>diffs<span style="color:#bbb"> </span>d2<span style="color:#bbb">
-</span><span style="color:#bbb">          </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>d2.<span style="color:#0aa">date</span><span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span>diffs.<span style="color:#0aa">date</span><span style="color:#bbb">
-</span><span style="color:#bbb">            </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>d2.diff<span style="color:#bbb"> </span>&lt;&gt;<span style="color:#bbb"> </span>diffs.diff<span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb">
-</span><span style="color:#bbb">          </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
-</span><span style="color:#bbb">       </span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>diff_change<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span><span style="color:#00a">true</span><span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>diffs.diff<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;+&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#aaa;font-style:italic">--
-</span><span style="color:#aaa;font-style:italic">-- we group by the date where the +/- change occurs
-</span><span style="color:#aaa;font-style:italic">-- and count how many rows share that value
-</span><span style="color:#aaa;font-style:italic">--
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>diff_change.<span style="color:#0aa">date</span><span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#aaa;font-style:italic">--
-</span><span style="color:#aaa;font-style:italic">-- and we only keep the longest continuously rising number of days
-</span><span style="color:#aaa;font-style:italic">--
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>days<span style="color:#bbb"> </span><span style="color:#00a">desc</span><span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">1</span>;<span style="color:#bbb">
-</span></code></pre></div><p>The answer is the following, straight to the point, without any extra
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">with</span><span style="color:#bbb"> </span>diffs<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#aaa;font-style:italic">--
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">     </span><span style="color:#aaa;font-style:italic">-- compute if the current stock is raising or lowering
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">     </span><span style="color:#aaa;font-style:italic">--
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>,<span style="color:#bbb"> </span>dollars,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb">   </span>dollars<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                      </span>-<span style="color:#bbb"> </span>lag(dollars,<span style="color:#bbb"> </span><span style="color:#099">1</span>)<span style="color:#bbb"> </span>over(<span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                      </span>&lt;<span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                 </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;-&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                 </span><span style="color:#00a">else</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;+&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">             </span><span style="color:#00a">end</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>diff<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>factbook<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span><span style="color:#00a">is</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>days<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>diffs<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">left</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span><span style="color:#00a">lateral</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- 
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- for each row of our &#34;diffs&#34; relation, compute the next
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- day at which the stock change direction is changing, that is
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- where a + becomes a - or the other way round
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- 
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">           </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>diffs<span style="color:#bbb"> </span>d2<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>d2.<span style="color:#0aa">date</span><span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span>diffs.<span style="color:#0aa">date</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>d2.diff<span style="color:#bbb"> </span>&lt;&gt;<span style="color:#bbb"> </span>diffs.diff<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>diff_change<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span><span style="color:#00a">true</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>diffs.diff<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;+&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#aaa;font-style:italic">--
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic">-- we group by the date where the +/- change occurs
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic">-- and count how many rows share that value
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic">--
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>diff_change.<span style="color:#0aa">date</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#aaa;font-style:italic">--
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic">-- and we only keep the longest continuously rising number of days
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic">--
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>days<span style="color:#bbb"> </span><span style="color:#00a">desc</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">1</span>;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>The answer is the following, straight to the point, without any extra
 information:</p>
 <pre tabindex="0"><code> days 
 ══════
@@ -991,55 +991,55 @@ to start with the last day from our table. That&rsquo;s easy enough.</p>
 <p>Then we fetch the day before from there, and see if its sock has risen, in
 which case we increment our computed <em>day</em> column to reflect the situation,
 and repeat the operation as long as we have days:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span><span style="color:#bbb"> </span><span style="color:#00a">recursive</span><span style="color:#bbb"> </span>raising<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span>(<span style="color:#bbb">
-</span><span style="color:#bbb">   </span>(<span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- 
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- start with the most recent date in our dataset
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- and prepare our recursive computed data: series
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- of increasing dollars values and number of days 
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- in a row of seeing an increase
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">--
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">   </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>,<span style="color:#bbb"> </span>dollars,<span style="color:#bbb"> </span><span style="color:#0aa">array</span>[dollars]<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>series,<span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>days<span style="color:#bbb">
-</span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>factbook<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span><span style="color:#00a">is</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb">
-</span><span style="color:#bbb"> </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span><span style="color:#00a">desc</span><span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
-</span><span style="color:#bbb">   </span>)<span style="color:#bbb">
-</span><span style="color:#bbb">   
-</span><span style="color:#bbb">   </span><span style="color:#00a">union</span><span style="color:#bbb"> </span><span style="color:#00a">all</span><span style="color:#bbb">
-</span><span style="color:#bbb">    
-</span><span style="color:#bbb">  </span>(<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#aaa;font-style:italic">--
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">         </span><span style="color:#aaa;font-style:italic">-- fetch the previous day of factbook data and compute
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">         </span><span style="color:#aaa;font-style:italic">-- the new series/days values depending on the value of
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">         </span><span style="color:#aaa;font-style:italic">-- the previous factbook day compared to the value of the
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">         </span><span style="color:#aaa;font-style:italic">-- current day in raising
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">         </span><span style="color:#aaa;font-style:italic">--
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>factbook.<span style="color:#0aa">date</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">            </span>factbook.dollars,<span style="color:#bbb">
-</span><span style="color:#bbb">            </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span>raising.dollars<span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span>factbook.dollars<span style="color:#bbb">
-</span><span style="color:#bbb">                 </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#0aa">array</span>[factbook.dollars]<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>raising.series<span style="color:#bbb">
-</span><span style="color:#bbb">                 </span><span style="color:#00a">else</span><span style="color:#bbb"> </span><span style="color:#0aa">array</span>[factbook.dollars]<span style="color:#bbb">
-</span><span style="color:#bbb">             </span><span style="color:#00a">end</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>series,<span style="color:#bbb">
-</span><span style="color:#bbb">            </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span>raising.dollars<span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span>factbook.dollars<span style="color:#bbb">
-</span><span style="color:#bbb">                 </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>days<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
-</span><span style="color:#bbb">                 </span><span style="color:#00a">else</span><span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb">
-</span><span style="color:#bbb">             </span><span style="color:#00a">end</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>days<span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>factbook<span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>raising<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>factbook.<span style="color:#0aa">date</span><span style="color:#bbb"> </span>&lt;<span style="color:#bbb"> </span>raising.<span style="color:#0aa">date</span><span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span><span style="color:#00a">desc</span><span style="color:#bbb">
-</span><span style="color:#bbb">      </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span>)<span style="color:#bbb">
-</span><span style="color:#bbb"></span>)<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#aaa;font-style:italic">--
-</span><span style="color:#aaa;font-style:italic">-- display only the interesting part of the recursive
-</span><span style="color:#aaa;font-style:italic">-- query results:
-</span><span style="color:#aaa;font-style:italic">--
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>days,<span style="color:#bbb"> </span><span style="color:#0aa">date</span>,<span style="color:#bbb"> </span>series<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>raising<span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>days<span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span><span style="color:#099">4</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>days<span style="color:#bbb"> </span><span style="color:#00a">desc</span>;<span style="color:#bbb">
-</span></code></pre></div><p>And the query shows interesting information that&rsquo;s not asked for, such as
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">with</span><span style="color:#bbb"> </span><span style="color:#00a">recursive</span><span style="color:#bbb"> </span>raising<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- 
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- start with the most recent date in our dataset
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- and prepare our recursive computed data: series
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- of increasing dollars values and number of days 
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">-- in a row of seeing an increase
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">       </span><span style="color:#aaa;font-style:italic">--
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">   </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>,<span style="color:#bbb"> </span>dollars,<span style="color:#bbb"> </span><span style="color:#0aa">array</span>[dollars]<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>series,<span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>days<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>factbook<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span><span style="color:#00a">is</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span><span style="color:#00a">desc</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">union</span><span style="color:#bbb"> </span><span style="color:#00a">all</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#aaa;font-style:italic">--
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">         </span><span style="color:#aaa;font-style:italic">-- fetch the previous day of factbook data and compute
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">         </span><span style="color:#aaa;font-style:italic">-- the new series/days values depending on the value of
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">         </span><span style="color:#aaa;font-style:italic">-- the previous factbook day compared to the value of the
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">         </span><span style="color:#aaa;font-style:italic">-- current day in raising
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">         </span><span style="color:#aaa;font-style:italic">--
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>factbook.<span style="color:#0aa">date</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>factbook.dollars,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span>raising.dollars<span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span>factbook.dollars<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                 </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#0aa">array</span>[factbook.dollars]<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>raising.series<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                 </span><span style="color:#00a">else</span><span style="color:#bbb"> </span><span style="color:#0aa">array</span>[factbook.dollars]<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">             </span><span style="color:#00a">end</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>series,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span>raising.dollars<span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span>factbook.dollars<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                 </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>days<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                 </span><span style="color:#00a">else</span><span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">             </span><span style="color:#00a">end</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>days<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>factbook<span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>raising<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>factbook.<span style="color:#0aa">date</span><span style="color:#bbb"> </span>&lt;<span style="color:#bbb"> </span>raising.<span style="color:#0aa">date</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span><span style="color:#00a">desc</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#aaa;font-style:italic">--
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic">-- display only the interesting part of the recursive
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic">-- query results:
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic">--
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>days,<span style="color:#bbb"> </span><span style="color:#0aa">date</span>,<span style="color:#bbb"> </span>series<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>raising<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>days<span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span><span style="color:#099">4</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>days<span style="color:#bbb"> </span><span style="color:#00a">desc</span>;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>And the query shows interesting information that&rsquo;s not asked for, such as
 the series of <em>dollars</em> values that have been registered to the number of
 days we&rsquo;re looking for:</p>
 <pre tabindex="0"><code> days │    date    │                                              series                                               
@@ -1058,54 +1058,54 @@ only returns the number 7 that we want to find here.</p>
 <h2 id="a-python-implementation">A Python Implementation</h2>
 <p>A very classic implementation of the problem at hand in Python would look
 like the following script:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-Python" data-lang="Python"><span style="color:#aaa;font-style:italic">#! /usr/bin/env python3</span>
-
-<span style="color:#00a">import</span> <span style="color:#0aa;text-decoration:underline">psycopg2</span>
-<span style="color:#00a">from</span> <span style="color:#0aa;text-decoration:underline">collections</span> <span style="color:#00a">import</span> namedtuple
-
-Record = namedtuple(<span style="color:#a50">&#39;Record&#39;</span>, <span style="color:#a50">&#39;date days&#39;</span>)
-PGCONNSTRING = <span style="color:#a50">&#34;dbname=appdev application_name=cont&#34;</span>
-
-<span style="color:#00a">def</span> <span style="color:#0a0">cont</span>():
-    <span style="color:#a50">&#34;Fetch data from the factbook table&#34;</span>
-
-    conn = psycopg2.connect(PGCONNSTRING)
-    curs = conn.cursor()
-    sql = <span style="color:#a50">&#34;&#34;&#34;
-</span><span style="color:#a50">  SELECT date, dollars
-</span><span style="color:#a50">    FROM factbook
-</span><span style="color:#a50">   WHERE date is not null
-</span><span style="color:#a50">ORDER BY date
-</span><span style="color:#a50">&#34;&#34;&#34;</span>
-    curs.execute(sql)
-
-    previous_date = <span style="color:#00a">None</span>
-    previous_dollars = <span style="color:#00a">None</span>
-
-    current = Record(date=<span style="color:#00a">None</span>, days=<span style="color:#099">0</span>)
-    best = Record(date=<span style="color:#00a">None</span>, days=<span style="color:#099">0</span>)
-
-    <span style="color:#00a">for</span> date, dollars <span style="color:#00a">in</span> curs.fetchall():
-        <span style="color:#00a">if</span> previous_dollars:
-            <span style="color:#00a">if</span> dollars &gt; previous_dollars:
-                current = Record(current.date, current.days + <span style="color:#099">1</span>)
-                <span style="color:#00a">if</span> current.days &gt; best.days:
-                    best = Record(current.date, current.days)
-            <span style="color:#00a">else</span>:
-                current = Record(date, <span style="color:#099">0</span>)
-        <span style="color:#00a">else</span>:
-            current = Record(date, <span style="color:#099">0</span>)
-
-        previous_date, previous_dollars = date, dollars
-
-    <span style="color:#00a">return</span> best
-
-<span style="color:#00a">if</span> __name__ == <span style="color:#a50">&#39;__main__&#39;</span>:
-    rising = cont()
-
-    <span style="color:#0aa">print</span>(<span style="color:#a50">&#34;Continuously rising days: </span><span style="color:#a50">%d</span><span style="color:#a50"> days from </span><span style="color:#a50">%s</span><span style="color:#a50">&#34;</span> % (rising.days,
-                                                         rising.date))
-</code></pre></div><p>Running the code gives us the following result, as expected:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-Python" data-lang="Python"><span style="display:flex;"><span><span style="color:#aaa;font-style:italic">#! /usr/bin/env python3</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#00a">import</span> <span style="color:#0aa;text-decoration:underline">psycopg2</span>
+</span></span><span style="display:flex;"><span><span style="color:#00a">from</span> <span style="color:#0aa;text-decoration:underline">collections</span> <span style="color:#00a">import</span> namedtuple
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Record = namedtuple(<span style="color:#a50">&#39;Record&#39;</span>, <span style="color:#a50">&#39;date days&#39;</span>)
+</span></span><span style="display:flex;"><span>PGCONNSTRING = <span style="color:#a50">&#34;dbname=appdev application_name=cont&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#00a">def</span> <span style="color:#0a0">cont</span>():
+</span></span><span style="display:flex;"><span>    <span style="color:#a50">&#34;Fetch data from the factbook table&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    conn = psycopg2.connect(PGCONNSTRING)
+</span></span><span style="display:flex;"><span>    curs = conn.cursor()
+</span></span><span style="display:flex;"><span>    sql = <span style="color:#a50">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#a50">  SELECT date, dollars
+</span></span></span><span style="display:flex;"><span><span style="color:#a50">    FROM factbook
+</span></span></span><span style="display:flex;"><span><span style="color:#a50">   WHERE date is not null
+</span></span></span><span style="display:flex;"><span><span style="color:#a50">ORDER BY date
+</span></span></span><span style="display:flex;"><span><span style="color:#a50">&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    curs.execute(sql)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    previous_date = <span style="color:#00a">None</span>
+</span></span><span style="display:flex;"><span>    previous_dollars = <span style="color:#00a">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    current = Record(date=<span style="color:#00a">None</span>, days=<span style="color:#099">0</span>)
+</span></span><span style="display:flex;"><span>    best = Record(date=<span style="color:#00a">None</span>, days=<span style="color:#099">0</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#00a">for</span> date, dollars <span style="color:#00a">in</span> curs.fetchall():
+</span></span><span style="display:flex;"><span>        <span style="color:#00a">if</span> previous_dollars:
+</span></span><span style="display:flex;"><span>            <span style="color:#00a">if</span> dollars &gt; previous_dollars:
+</span></span><span style="display:flex;"><span>                current = Record(current.date, current.days + <span style="color:#099">1</span>)
+</span></span><span style="display:flex;"><span>                <span style="color:#00a">if</span> current.days &gt; best.days:
+</span></span><span style="display:flex;"><span>                    best = Record(current.date, current.days)
+</span></span><span style="display:flex;"><span>            <span style="color:#00a">else</span>:
+</span></span><span style="display:flex;"><span>                current = Record(date, <span style="color:#099">0</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#00a">else</span>:
+</span></span><span style="display:flex;"><span>            current = Record(date, <span style="color:#099">0</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        previous_date, previous_dollars = date, dollars
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#00a">return</span> best
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#00a">if</span> __name__ == <span style="color:#a50">&#39;__main__&#39;</span>:
+</span></span><span style="display:flex;"><span>    rising = cont()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0aa">print</span>(<span style="color:#a50">&#34;Continuously rising days: </span><span style="color:#a50">%d</span><span style="color:#a50"> days from </span><span style="color:#a50">%s</span><span style="color:#a50">&#34;</span> % (rising.days,
+</span></span><span style="display:flex;"><span>                                                         rising.date))
+</span></span></code></pre></div><p>Running the code gives us the following result, as expected:</p>
 <pre tabindex="0"><code>Continuously rising days: 7 days from 2017-07-14
 </code></pre><p>The only bits that might be not the simplest possible implementation of the
 problem set is that I chose to keep track of not only the number of days but
@@ -1128,13 +1128,13 @@ data type, SQL can’t express the algorithm.</p>
 <p>Well the way to express the algorithm in SQL is to describe the result we
 are interested into, and for that here we can use the simple ORDER BY and
 LIMIT clauses of the language:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">explain</span><span style="color:#bbb"> </span>(<span style="color:#00a">analyze</span>,<span style="color:#bbb"> </span><span style="color:#00a">verbose</span>,<span style="color:#bbb"> </span>buffers)<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>,<span style="color:#bbb"> </span>dollars<span style="color:#bbb">
-</span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>factbook<span style="color:#bbb">
-</span><span style="color:#bbb"> </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>dollars<span style="color:#bbb"> </span><span style="color:#00a">desc</span><span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">10</span>;<span style="color:#bbb">
-</span></code></pre></div><p>Now, we don&rsquo;t get to specify <strong>how</strong> the data is going to be retrieved by
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">explain</span><span style="color:#bbb"> </span>(<span style="color:#00a">analyze</span>,<span style="color:#bbb"> </span><span style="color:#00a">verbose</span>,<span style="color:#bbb"> </span>buffers)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>,<span style="color:#bbb"> </span>dollars<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>factbook<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>dollars<span style="color:#bbb"> </span><span style="color:#00a">desc</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">10</span>;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>Now, we don&rsquo;t get to specify <strong>how</strong> the data is going to be retrieved by
 our SQL engine. Of course, We can trust PostgreSQL to do the Right Thing™
 here for us, as we can see in full details thanks to the previous EXPLAIN
 (ANALYZE, VERBOSE, BUFFERS) command. It gives the following result:</p>
@@ -1181,43 +1181,43 @@ compare with the Python implementation of the Top-N algorithm:</p>
 <p>In Python, implementing a Top-N heapsort can be done using the
 <a href="https://docs.python.org/3/library/heapq.html">heapq</a> standard library, as
 in the following code:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-Python" data-lang="Python"><span style="color:#aaa;font-style:italic">#! /usr/bin/env python3</span>
-
-<span style="color:#00a">import</span> <span style="color:#0aa;text-decoration:underline">psycopg2</span>
-<span style="color:#00a">import</span> <span style="color:#0aa;text-decoration:underline">heapq</span>
-<span style="color:#00a">import</span> <span style="color:#0aa;text-decoration:underline">sys</span>
-
-PGCONNSTRING = <span style="color:#a50">&#34;dbname=appdev application_name=cont&#34;</span>
-
-
-<span style="color:#00a">def</span> <span style="color:#0a0">top</span>(n):
-    <span style="color:#a50">&#34;Fetch data from the factbook table&#34;</span>
-
-    conn = psycopg2.connect(PGCONNSTRING)
-    curs = conn.cursor()
-    sql = <span style="color:#a50">&#34;&#34;&#34;
-</span><span style="color:#a50">  SELECT date, dollars
-</span><span style="color:#a50">    FROM factbook
-</span><span style="color:#a50">   WHERE date is not null
-</span><span style="color:#a50">&#34;&#34;&#34;</span>
-    curs.execute(sql)
-
-    topn = [(<span style="color:#099">0</span>, <span style="color:#00a">None</span>) <span style="color:#00a">for</span> i <span style="color:#00a">in</span> <span style="color:#0aa">range</span>(n)]
-    heapq.heapify(topn)
-
-    <span style="color:#00a">for</span> date, dollars <span style="color:#00a">in</span> curs.fetchall():
-        heapq.heappushpop(topn, (dollars, date))
-
-    <span style="color:#00a">return</span> topn
-
-
-<span style="color:#00a">if</span> __name__ == <span style="color:#a50">&#39;__main__&#39;</span>:
-    n = <span style="color:#0aa">int</span>(sys.argv[<span style="color:#099">1</span>])
-    topn = top(n)
-
-    <span style="color:#00a">for</span> dollars, date <span style="color:#00a">in</span> heapq.nlargest(n, topn):
-        <span style="color:#0aa">print</span>(<span style="color:#a50">&#34;</span><span style="color:#a50">%s</span><span style="color:#a50">: </span><span style="color:#a50">%s</span><span style="color:#a50">&#34;</span> % (date, dollars))
-</code></pre></div><p>The implementation is pretty straightforward, with the trick of using the
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-Python" data-lang="Python"><span style="display:flex;"><span><span style="color:#aaa;font-style:italic">#! /usr/bin/env python3</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#00a">import</span> <span style="color:#0aa;text-decoration:underline">psycopg2</span>
+</span></span><span style="display:flex;"><span><span style="color:#00a">import</span> <span style="color:#0aa;text-decoration:underline">heapq</span>
+</span></span><span style="display:flex;"><span><span style="color:#00a">import</span> <span style="color:#0aa;text-decoration:underline">sys</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>PGCONNSTRING = <span style="color:#a50">&#34;dbname=appdev application_name=cont&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#00a">def</span> <span style="color:#0a0">top</span>(n):
+</span></span><span style="display:flex;"><span>    <span style="color:#a50">&#34;Fetch data from the factbook table&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    conn = psycopg2.connect(PGCONNSTRING)
+</span></span><span style="display:flex;"><span>    curs = conn.cursor()
+</span></span><span style="display:flex;"><span>    sql = <span style="color:#a50">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#a50">  SELECT date, dollars
+</span></span></span><span style="display:flex;"><span><span style="color:#a50">    FROM factbook
+</span></span></span><span style="display:flex;"><span><span style="color:#a50">   WHERE date is not null
+</span></span></span><span style="display:flex;"><span><span style="color:#a50">&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    curs.execute(sql)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    topn = [(<span style="color:#099">0</span>, <span style="color:#00a">None</span>) <span style="color:#00a">for</span> i <span style="color:#00a">in</span> <span style="color:#0aa">range</span>(n)]
+</span></span><span style="display:flex;"><span>    heapq.heapify(topn)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#00a">for</span> date, dollars <span style="color:#00a">in</span> curs.fetchall():
+</span></span><span style="display:flex;"><span>        heapq.heappushpop(topn, (dollars, date))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#00a">return</span> topn
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#00a">if</span> __name__ == <span style="color:#a50">&#39;__main__&#39;</span>:
+</span></span><span style="display:flex;"><span>    n = <span style="color:#0aa">int</span>(sys.argv[<span style="color:#099">1</span>])
+</span></span><span style="display:flex;"><span>    topn = top(n)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#00a">for</span> dollars, date <span style="color:#00a">in</span> heapq.nlargest(n, topn):
+</span></span><span style="display:flex;"><span>        <span style="color:#0aa">print</span>(<span style="color:#a50">&#34;</span><span style="color:#a50">%s</span><span style="color:#a50">: </span><span style="color:#a50">%s</span><span style="color:#a50">&#34;</span> % (date, dollars))
+</span></span></code></pre></div><p>The implementation is pretty straightforward, with the trick of using the
 Python function <code>heappushpop</code> that requires an that we initialize a dummy
 top-n result structure before looping over the result set.</p>
 <pre tabindex="0"><code>2014-12-19: 124663932012
@@ -1294,9 +1294,17 @@ right choices in terms of your application&rsquo;s architecture.</p>
 
             </div>
           </div>
-          <div style="margin-top: 1em;">
- <a href="https://theartofpostgresql.com" alt="The Art of PostgreSQL">
-  <img src="/img/taopg-cta.jpg" style="width:90%; height: auto; margin-left: 5%">
+          
+
+
+
+
+
+<div style="margin-top: 1em;">
+ <script async src="//tinder.thrivecart.com/embed/v1/thrivecart.js"></script>
+ <a data-thrivecart-account="theartofpostgresql" data-thrivecart-tpl="v2" data-thrivecart-product="18" class="thrivecart-button ">
+  <img src="https://spark.thrivecart.com/0x0/https%3A%2F%2Fthrivecart.s3.amazonaws.com%2Fuser_assets%2FNABJ5K7H%2Fproducts%2F18%2Ftaopg-cta-1661268188.jpg"
+       style="width:90%; height: auto; margin-left: 5%"/>
  </a>
 </div>
 
@@ -1400,7 +1408,7 @@ right choices in terms of your application&rsquo;s architecture.</p>
         </article>
         <footer id="footer" class="main-content-wrap">
   <span class="copyrights">
-    &copy; 2021 Dimitri Fontaine. 
+    &copy; 2022 Dimitri Fontaine. 
   </span>
 </footer>
 

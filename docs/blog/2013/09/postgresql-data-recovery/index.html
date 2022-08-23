@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.89.3">
+    <meta name="generator" content="Hugo 0.101.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>PostgreSQL data recovery</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -533,7 +533,7 @@ $ pg_controldata
 $ xlogdump /archives/000000010000000000000009
 $ pg_resetxlog -f -l 1,9,19 -x 2126 -o 16667 $PGDATA
 $ cat &gt; $PGDATA/recovery.conf &lt;&lt;EOF
-restore_command = 'gunzip -c /archives/%f.gz &gt; &quot;%p&quot;'
+restore_command = &#39;gunzip -c /archives/%f.gz &gt; &#34;%p&#34;&#39;
 EOF
 $ pg_ctl start
 </code></pre><p>Using the transaction data we get from reading the first archive log file we
@@ -552,8 +552,8 @@ Common Lisp
 <em>REPL</em> open on my laptop, the easier for me to switch from decimal
 representation of the
 <em>database system identifier</em> was so:</p>
-<pre tabindex="0"><code>(format nil &quot;~,,' ,2:x&quot; 5923145491842547187)
-&quot;52 33 3D 71 52 3B 3D F3&quot;
+<pre tabindex="0"><code>(format nil &#34;~,,&#39; ,2:x&#34; 5923145491842547187)
+&#34;52 33 3D 71 52 3B 3D F3&#34;
 </code></pre><p>Paying attention to the byte order means that you need to edit the control
 file&rsquo;s first 8 bytes in reverse:
 <code>F3 3D 3B 52 71 3D 33 52</code>. But in our case,
@@ -660,7 +660,7 @@ committed, so that we can see the data, we can use the following command
 line:</p>
 <pre tabindex="0"><code>for c in 0000 0001 0002 0003 0004 0005 0006 0007 0008 0009 000A 000B 000C
 do
-    dd if=/dev/zero bs=256k count=1 | tr '\0' 'U' &gt; $c
+    dd if=/dev/zero bs=256k count=1 | tr &#39;\0&#39; &#39;U&#39; &gt; $c
 done
 </code></pre><center>
 
@@ -723,7 +723,7 @@ the new command and create the databases we need with the
 internally stored, and we can ask the system where that file is:</p>
 <pre tabindex="0"><code>select oid, relname, pg_relation_filenode(oid)
   from pg_class
- where relname = 'pg_database';
+ where relname = &#39;pg_database&#39;;
  oid  |   relname   | pg_relation_filenode 
 ------+-------------+----------------------
  1262 | pg_database |                12319
@@ -741,8 +741,8 @@ that&rsquo;s pretty impressive. But suddenly it didn&rsquo;t work anymore&hellip
 <code>psql</code> call would be fine, but the
 second one would always complain with an error you might have never seen in
 the field. I sure didn&rsquo;t before.</p>
-<pre tabindex="0"><code>FATAL:  database &quot;dbname&quot; does not exists
-DETAIL:  Database OID 17838 now seems to belong to &quot;otherdbname&quot;
+<pre tabindex="0"><code>FATAL:  database &#34;dbname&#34; does not exists
+DETAIL:  Database OID 17838 now seems to belong to &#34;otherdbname&#34;
 </code></pre><p>Part of PostgreSQL startup is building up some caches, and for that it&rsquo;s
 using indexes. And we might have made a mistake, or the index is corrupted,
 but apparently there&rsquo;s a mismatch somewhere.</p>
@@ -790,7 +790,7 @@ commit
 <a href="http://www.postgresql.org/">PostgreSQL</a> and have that marvellous
 <em><strong>production ready</strong></em> system avoid any system indexes, for dealing with cases
 where you have reasons to think those are corrupted&hellip; or plain missing.</p>
-<pre tabindex="0"><code>$ pg_ctl start -o &quot;-P&quot;
+<pre tabindex="0"><code>$ pg_ctl start -o &#34;-P&#34;
 $ cat &gt; $PGDATA/postgresql.conf &lt;&lt;EOF
 	enable_indexscan = off
 	enable_bitmapscan = off
@@ -952,7 +952,7 @@ End with a backslash and a period on a line by itself.
 figure out the OID we need?</p>
 <pre tabindex="0"><code># select c.oid, relname, relnamespace, nspname
     from pg_class c left join pg_namespace n on n.oid = c.relnamespace
-   where relname = 'bar';
+   where relname = &#39;bar&#39;;
   oid  | relname | relnamespace | nspname 
 -------+---------+--------------+---------
  16446 | bar     |        16443 | 
@@ -1023,25 +1023,25 @@ backups? and automated recovery tests?</p>
 That relation is used for default expressions attached to columns, as we can
 see in the following example, taken on a working database server:</p>
 <pre tabindex="0"><code># \d a
-                         Table &quot;public.a&quot;
+                         Table &#34;public.a&#34;
  Column |  Type   |                   Modifiers                    
 --------+---------+------------------------------------------------
- id     | integer | not null default nextval('a_id_seq'::regclass)
+ id     | integer | not null default nextval(&#39;a_id_seq&#39;::regclass)
  f1     | text    | 
 Indexes:
-    &quot;a_pkey&quot; PRIMARY KEY, btree (id)
+    &#34;a_pkey&#34; PRIMARY KEY, btree (id)
 
 #  select adrelid, adnum, adsrc
      from pg_attrdef
-    where adrelid = 'public.a'::regclass;
+    where adrelid = &#39;public.a&#39;::regclass;
  adrelid | adnum |             adsrc             
 ---------+-------+-------------------------------
-   16411 |     1 | nextval('a_id_seq'::regclass)
+   16411 |     1 | nextval(&#39;a_id_seq&#39;::regclass)
 (1 row)
 
 # select attnum, atthasdef
     from pg_attribute
-   where     attrelid = 'public.a'::regclass
+   where     attrelid = &#39;public.a&#39;::regclass
          and atthasdef;
  attnum | atthasdef 
 --------+-----------
@@ -1053,7 +1053,7 @@ use that system again. Given that, what we can do here is just ignore the
 default expression of the columns, by directly updating the catalogs:</p>
 <pre tabindex="0"><code># update pg_attribute
      set atthasdef = false
-   where attrelid = 'my_namespace.bar';
+   where attrelid = &#39;my_namespace.bar&#39;;
 </code></pre><h3 id="copy-the-data-out-now">COPY the data out! now!</h3>
 <p>At this point we are now able to actually run the
 <code>COPY</code> command to store the
@@ -1124,9 +1124,17 @@ replicated that to the standby.</p>
 
             </div>
           </div>
-          <div style="margin-top: 1em;">
- <a href="https://theartofpostgresql.com" alt="The Art of PostgreSQL">
-  <img src="/img/taopg-cta.jpg" style="width:90%; height: auto; margin-left: 5%">
+          
+
+
+
+
+
+<div style="margin-top: 1em;">
+ <script async src="//tinder.thrivecart.com/embed/v1/thrivecart.js"></script>
+ <a data-thrivecart-account="theartofpostgresql" data-thrivecart-tpl="v2" data-thrivecart-product="18" class="thrivecart-button ">
+  <img src="https://spark.thrivecart.com/0x0/https%3A%2F%2Fthrivecart.s3.amazonaws.com%2Fuser_assets%2FNABJ5K7H%2Fproducts%2F18%2Ftaopg-cta-1661268188.jpg"
+       style="width:90%; height: auto; margin-left: 5%"/>
  </a>
 </div>
 
@@ -1224,7 +1232,7 @@ replicated that to the standby.</p>
         </article>
         <footer id="footer" class="main-content-wrap">
   <span class="copyrights">
-    &copy; 2021 Dimitri Fontaine. 
+    &copy; 2022 Dimitri Fontaine. 
   </span>
 </footer>
 

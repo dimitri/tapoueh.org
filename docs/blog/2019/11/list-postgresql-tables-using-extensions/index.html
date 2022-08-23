@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.89.3">
+    <meta name="generator" content="Hugo 0.101.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>List PostgreSQL tables using extensions</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -370,39 +370,39 @@ schemas that are using a data type which is provided by an extension.</p>
 catalog to find the data types provided by installed extensions, and then
 scans through <code>pg_depend</code> again to find tables that have attributes
 depending on those data types.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span><span style="color:#bbb"> </span>etypes<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
-</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>classid::regclass,<span style="color:#bbb">
-</span><span style="color:#bbb">         </span>objid,<span style="color:#bbb">
-</span><span style="color:#bbb">         </span>deptype,<span style="color:#bbb">
-</span><span style="color:#bbb">         </span>e.extname<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pg_depend<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_extension<span style="color:#bbb"> </span>e<span style="color:#bbb">
-</span><span style="color:#bbb">           </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>refclassid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;pg_extension&#39;</span>::regclass<span style="color:#bbb">
-</span><span style="color:#bbb">          </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>refobjid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>e.oid<span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>classid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;pg_type&#39;</span>::regclass<span style="color:#bbb">
-</span><span style="color:#bbb"> </span>)<span style="color:#bbb">
-</span><span style="color:#bbb"> </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>etypes.extname,<span style="color:#bbb">
-</span><span style="color:#bbb">        </span>etypes.objid::regtype<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">type</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">        </span>n.nspname<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">schema</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">        </span><span style="color:#00a">c</span>.relname<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">table</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">        </span>attname<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">column</span><span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pg_depend<span style="color:#bbb">
-</span><span style="color:#bbb">  
-</span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>etypes<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>etypes.classid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>pg_depend.refclassid<span style="color:#bbb">
-</span><span style="color:#bbb">        </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>etypes.objid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>pg_depend.refobjid<span style="color:#bbb">
-</span><span style="color:#bbb">        
-</span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_class<span style="color:#bbb"> </span><span style="color:#00a">c</span><span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span><span style="color:#00a">c</span>.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>pg_depend.objid<span style="color:#bbb">
-</span><span style="color:#bbb">       
-</span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_namespace<span style="color:#bbb"> </span>n<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>n.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">c</span>.relnamespace<span style="color:#bbb">
-</span><span style="color:#bbb">       
-</span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_attribute<span style="color:#bbb"> </span>attr<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>attr.attrelid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>pg_depend.objid<span style="color:#bbb">
-</span><span style="color:#bbb">        </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>attr.attnum<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>pg_depend.objsubid<span style="color:#bbb">
-</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>pg_depend.classid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;pg_class&#39;</span>::regclass;<span style="color:#bbb">
-</span></code></pre></div><p>Here, the result is quite simple:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">with</span><span style="color:#bbb"> </span>etypes<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>classid::regclass,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span>objid,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span>deptype,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span>e.extname<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pg_depend<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_extension<span style="color:#bbb"> </span>e<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">           </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>refclassid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;pg_extension&#39;</span>::regclass<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>refobjid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>e.oid<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>classid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;pg_type&#39;</span>::regclass<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>etypes.extname,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>etypes.objid::regtype<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">type</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>n.nspname<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">schema</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#00a">c</span>.relname<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">table</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>attname<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">column</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pg_depend<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>etypes<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>etypes.classid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>pg_depend.refclassid<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>etypes.objid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>pg_depend.refobjid<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_class<span style="color:#bbb"> </span><span style="color:#00a">c</span><span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span><span style="color:#00a">c</span>.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>pg_depend.objid<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_namespace<span style="color:#bbb"> </span>n<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>n.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">c</span>.relnamespace<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_attribute<span style="color:#bbb"> </span>attr<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>attr.attrelid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>pg_depend.objid<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>attr.attnum<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>pg_depend.objsubid<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>pg_depend.classid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;pg_class&#39;</span>::regclass;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>Here, the result is quite simple:</p>
 <pre tabindex="0"><code> extname │   type    │ schema  │  table  │  column  
 ─────────┼───────────┼─────────┼─────────┼──────────
  ip4r    │ ipaddress │ tweet   │ visitor │ ipaddr
@@ -421,9 +421,17 @@ feedback about that, so let&rsquo;s try and improve things!</p>
 
             </div>
           </div>
-          <div style="margin-top: 1em;">
- <a href="https://theartofpostgresql.com" alt="The Art of PostgreSQL">
-  <img src="/img/taopg-cta.jpg" style="width:90%; height: auto; margin-left: 5%">
+          
+
+
+
+
+
+<div style="margin-top: 1em;">
+ <script async src="//tinder.thrivecart.com/embed/v1/thrivecart.js"></script>
+ <a data-thrivecart-account="theartofpostgresql" data-thrivecart-tpl="v2" data-thrivecart-product="18" class="thrivecart-button ">
+  <img src="https://spark.thrivecart.com/0x0/https%3A%2F%2Fthrivecart.s3.amazonaws.com%2Fuser_assets%2FNABJ5K7H%2Fproducts%2F18%2Ftaopg-cta-1661268188.jpg"
+       style="width:90%; height: auto; margin-left: 5%"/>
  </a>
 </div>
 
@@ -523,7 +531,7 @@ feedback about that, so let&rsquo;s try and improve things!</p>
         </article>
         <footer id="footer" class="main-content-wrap">
   <span class="copyrights">
-    &copy; 2021 Dimitri Fontaine. 
+    &copy; 2022 Dimitri Fontaine. 
   </span>
 </footer>
 

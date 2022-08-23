@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.89.3">
+    <meta name="generator" content="Hugo 0.101.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Modeling for Concurrency</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -492,43 +492,43 @@ while the previous model looks correct with respect to <em>normal forms</em> —
 counters are dependent on the message&rsquo;s key — we know that concurrent
 activity is going to be hard to handle in production.</p>
 <p>So here&rsquo;s a smarter version of the <em>activity</em> parts of the database model:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">type</span><span style="color:#bbb"> </span>tweet.action_t<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>enum(<span style="color:#a50">&#39;rt&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;fav&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-rt&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-fav&#39;</span>);<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>tweet.activity<span style="color:#bbb">
-</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span><span style="color:#bbb">  </span>id<span style="color:#bbb">          </span>bigserial<span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">  </span>messageid<span style="color:#bbb">   </span><span style="color:#0aa">bigint</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>tweet.message(messageid),<span style="color:#bbb">
-</span><span style="color:#bbb">  </span>datetime<span style="color:#bbb">    </span>timestamptz<span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">default</span><span style="color:#bbb"> </span>now(),<span style="color:#bbb">
-</span><span style="color:#bbb">  </span>action<span style="color:#bbb">      </span>tweet.action_t<span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">unique</span>(messageid,<span style="color:#bbb"> </span>datetime,<span style="color:#bbb"> </span>action)<span style="color:#bbb">
-</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">commit</span>;<span style="color:#bbb">
-</span></code></pre></div><p>In this version, the counters have disappeared, replaced by a full record of
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">begin</span>;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">type</span><span style="color:#bbb"> </span>tweet.action_t<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>enum(<span style="color:#a50">&#39;rt&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;fav&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-rt&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-fav&#39;</span>);<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>tweet.activity<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>id<span style="color:#bbb">          </span>bigserial<span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>messageid<span style="color:#bbb">   </span><span style="color:#0aa">bigint</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>tweet.message(messageid),<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>datetime<span style="color:#bbb">    </span>timestamptz<span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">default</span><span style="color:#bbb"> </span>now(),<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>action<span style="color:#bbb">      </span>tweet.action_t<span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">unique</span>(messageid,<span style="color:#bbb"> </span>datetime,<span style="color:#bbb"> </span>action)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">commit</span>;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>In this version, the counters have disappeared, replaced by a full record of
 the base information needed to compute them. We now have an <em>activity</em> list
 with a denormalized <em>ENUM</em> for possible actions.</p>
 <p>To get the <em>rts</em> and <em>favs</em> counters back from this schema, we count lines
 in the <em>activity</em> records associated with a given <em>messageid</em>:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb">   </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span>action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>)<span style="color:#bbb">
-</span><span style="color:#bbb">         </span>-<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span>action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-rt&#39;</span>)<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>rts,<span style="color:#bbb">
-</span><span style="color:#bbb">           </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span>action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;fav&#39;</span>)<span style="color:#bbb">
-</span><span style="color:#bbb">         </span>-<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span>action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-fav&#39;</span>)<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>favs<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>tweet.activity<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>tweet.message<span style="color:#bbb"> </span><span style="color:#00a">using</span>(messageid)<span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>messageid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>:id;<span style="color:#bbb">
-</span></code></pre></div><p>Reading the current counter value has become quite complex when compared to
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb">   </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span>action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span>-<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span>action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-rt&#39;</span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>rts,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">           </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span>action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;fav&#39;</span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span>-<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>filter(<span style="color:#00a">where</span><span style="color:#bbb"> </span>action<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-fav&#39;</span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>favs<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>tweet.activity<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>tweet.message<span style="color:#bbb"> </span><span style="color:#00a">using</span>(messageid)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>messageid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>:id;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>Reading the current counter value has become quite complex when compared to
 just adding a column to your query output list. On the other hand, when
 adding a <em>rt</em> or a <em>fav</em> action to a message, we transform the SQL:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">update</span><span style="color:#bbb"> </span>tweet.message<span style="color:#bbb"> </span><span style="color:#00a">set</span><span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>+<span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>messageid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>:id;<span style="color:#bbb">
-</span></code></pre></div><p>This is what we use instead:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>tweet.activity(messageid,<span style="color:#bbb"> </span>action)<span style="color:#bbb"> </span><span style="color:#00a">values</span>(:id,<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>);<span style="color:#bbb">
-</span></code></pre></div><p>The reason why replacing an <em>update</em> with an <em>insert</em> is interesting is
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">update</span><span style="color:#bbb"> </span>tweet.message<span style="color:#bbb"> </span><span style="color:#00a">set</span><span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>rts<span style="color:#bbb"> </span>+<span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>messageid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>:id;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>This is what we use instead:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>tweet.activity(messageid,<span style="color:#bbb"> </span>action)<span style="color:#bbb"> </span><span style="color:#00a">values</span>(:id,<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>);<span style="color:#bbb">
+</span></span></span></code></pre></div><p>The reason why replacing an <em>update</em> with an <em>insert</em> is interesting is
 concurrency behavior and locking. In the first version, retweeting has to
 wait until all concurrent retweets are done, and the business model wants to
 sustain as many concurrent activities on the same small set of messages as
@@ -549,78 +549,78 @@ precise down to the microsecond.</p>
 <p>This kind of made-up <em>unique</em> constraint means we now have these errors to
 deal with:</p>
 <pre tabindex="0"><code>Error: Database error 23505: duplicate key value violates unique     ⏎
-  constraint &quot;activity_messageid_datetime_action_key&quot;
+  constraint &#34;activity_messageid_datetime_action_key&#34;
 DETAIL: Key (messageid, datetime, action)                            ⏎
            =(2, 2017-09-19 18:00:03.831818+02, rt) already exists.
 </code></pre><p>The best course of action here is to do this:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">    </span><span style="color:#00a">alter</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>tweet.activity<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">drop</span><span style="color:#bbb"> </span><span style="color:#00a">constraint</span><span style="color:#bbb"> </span>activity_messageid_datetime_action_key;<span style="color:#bbb">
-</span></code></pre></div><p>Now we can properly compare the concurrency scaling of the <em>insert</em> and the
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">alter</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>tweet.activity<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">drop</span><span style="color:#bbb"> </span><span style="color:#00a">constraint</span><span style="color:#bbb"> </span>activity_messageid_datetime_action_key;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>Now we can properly compare the concurrency scaling of the <em>insert</em> and the
 <em>update</em> based version. In case you might be curious about it, here&rsquo;s the
 testing code that&rsquo;s been used:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp">(<span style="color:#0aa">defpackage</span> <span style="color:#00a">#:concurrency</span>
-  (<span style="color:#00a">:use</span> <span style="color:#00a">#:cl</span> <span style="color:#00a">#:appdev</span>)
-  (<span style="color:#00a">:import-from</span> <span style="color:#00a">#:lparallel</span>
-                <span style="color:#00a">#:*kernel*</span>
-                <span style="color:#00a">#:make-kernel</span> <span style="color:#00a">#:make-channel</span>
-                <span style="color:#00a">#:submit-task</span> <span style="color:#00a">#:receive-result</span>
-                <span style="color:#00a">#:kernel-worker-index</span>)
-  (<span style="color:#00a">:import-from</span> <span style="color:#00a">#:cl-postgres-error</span>
-                <span style="color:#00a">#:database-error</span>)
-  (<span style="color:#00a">:export</span>      <span style="color:#00a">#:*connspec*</span>
-                <span style="color:#00a">#:concurrency-test</span>))
-
-(<span style="color:#0aa">in-package</span> <span style="color:#00a">#:concurrency</span>)
-
-(<span style="color:#0aa">defparameter</span> *connspec* &#39;(<span style="color:#a50">&#34;appdev&#34;</span> <span style="color:#a50">&#34;dim&#34;</span> <span style="color:#a00">nil</span> <span style="color:#a50">&#34;localhost&#34;</span>))
-
-(<span style="color:#0aa">defparameter</span> *insert-rt*
-  <span style="color:#a50">&#34;insert into tweet.activity(messageid, action) values($1, &#39;rt&#39;)&#34;</span>)
-
-(<span style="color:#0aa">defparameter</span> *update-rt*
-  <span style="color:#a50">&#34;update tweet.message set rts = coalesce(rts, 0) + 1 where messageid = $1&#34;</span>)
-
-(<span style="color:#0aa">defun</span> <span style="color:#a00">concurrency-test</span> (<span style="color:#a00">workers</span> <span style="color:#a00">retweets</span> <span style="color:#a00">messageid</span>
-                         <span style="color:#00a">&amp;optional</span> (<span style="color:#a00">connspec</span> *connspec*))
-  (<span style="color:#0a0">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;Starting benchmark for updates~%&#34;</span>)
-  (<span style="color:#a00">with-timing</span> (<span style="color:#a00">rts</span> <span style="color:#a00">seconds</span>)
-      (<span style="color:#a00">run-workers</span> <span style="color:#a00">workers</span> <span style="color:#a00">retweets</span> <span style="color:#a00">messageid</span> *update-rt* <span style="color:#a00">connspec</span>)
-    (<span style="color:#0a0">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;Updating took ~f seconds, did ~d rts~%&#34;</span> <span style="color:#a00">seconds</span> <span style="color:#a00">rts</span>))
-
-  (<span style="color:#0a0">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;~%&#34;</span>)
-
-  (<span style="color:#0a0">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;Starting benchmark for inserts~%&#34;</span>)
-  (<span style="color:#a00">with-timing</span> (<span style="color:#a00">rts</span> <span style="color:#a00">seconds</span>)
-      (<span style="color:#a00">run-workers</span> <span style="color:#a00">workers</span> <span style="color:#a00">retweets</span> <span style="color:#a00">messageid</span> *insert-rt* <span style="color:#a00">connspec</span>)
-    (<span style="color:#0a0">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;Inserting took ~f seconds, did ~d rts~%&#34;</span> <span style="color:#a00">seconds</span> <span style="color:#a00">rts</span>)))
-
-(<span style="color:#0aa">defun</span> <span style="color:#a00">run-workers</span> (<span style="color:#a00">workers</span> <span style="color:#a00">retweets</span> <span style="color:#a00">messageid</span> <span style="color:#a00">sql</span>
-                    <span style="color:#00a">&amp;optional</span> (<span style="color:#a00">connspec</span> *connspec*))
-  (<span style="color:#00a">let*</span> ((*kernel* (<span style="color:#a00">lparallel:make-kernel</span> <span style="color:#a00">workers</span>))
-         (<span style="color:#a00">channel</span>  (<span style="color:#a00">lparallel:make-channel</span>)))
-    (<span style="color:#0aa">loop</span> <span style="color:#a00">repeat</span> <span style="color:#a00">workers</span>
-       <span style="color:#0aa">do</span> (<span style="color:#a00">lparallel:submit-task</span> <span style="color:#a00">channel</span> <span style="color:#0a0">#&#39;</span><span style="color:#a00">retweet-many-times</span>
-                                 <span style="color:#a00">retweets</span> <span style="color:#a00">messageid</span> <span style="color:#a00">sql</span> <span style="color:#a00">connspec</span>))
-
-    (<span style="color:#0aa">loop</span> <span style="color:#a00">repeat</span> <span style="color:#a00">workers</span> <span style="color:#a00">sum</span> (<span style="color:#a00">lparallel:receive-result</span> <span style="color:#a00">channel</span>))))
-
-(<span style="color:#0aa">defun</span> <span style="color:#a00">retweet-many-times</span> (<span style="color:#a00">times</span> <span style="color:#a00">messageid</span> <span style="color:#a00">sql</span>
-                           <span style="color:#00a">&amp;optional</span> (<span style="color:#a00">connspec</span> *connspec*))
-  (<span style="color:#a00">pomo:with-connection</span> <span style="color:#a00">connspec</span>
-    (<span style="color:#a00">pomo:query</span>
-     (<span style="color:#0a0">format</span> <span style="color:#a00">nil</span> <span style="color:#a50">&#34;set application_name to &#39;worker ~a&#39;&#34;</span>
-             (<span style="color:#a00">lparallel:kernel-worker-index</span>)))
-    (<span style="color:#0aa">loop</span> <span style="color:#a00">repeat</span> <span style="color:#a00">times</span> <span style="color:#a00">sum</span> (<span style="color:#a00">retweet</span> <span style="color:#a00">messageid</span> <span style="color:#a00">sql</span>))))
-
-(<span style="color:#0aa">defun</span> <span style="color:#a00">retweet</span> (<span style="color:#a00">messageid</span> <span style="color:#a00">sql</span>)
-  (<span style="color:#0aa">handler-case</span>
-      (<span style="color:#00a">progn</span>
-        (<span style="color:#a00">pomo:query</span> <span style="color:#a00">sql</span> <span style="color:#a00">messageid</span>)
-        <span style="color:#099">1</span>)
-    (<span style="color:#a00">database-error</span> (<span style="color:#a00">c</span>)
-      (<span style="color:#0a0">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;Error: ~a~%&#34;</span> <span style="color:#a00">c</span>)
-      <span style="color:#099">0</span>)))
-</code></pre></div><p>Here&rsquo;s a typical result with a concurrency of 100 workers all wanting to do
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-lisp" data-lang="lisp"><span style="display:flex;"><span>(<span style="color:#0aa">defpackage</span> <span style="color:#00a">#:concurrency</span>
+</span></span><span style="display:flex;"><span>  (<span style="color:#00a">:use</span> <span style="color:#00a">#:cl</span> <span style="color:#00a">#:appdev</span>)
+</span></span><span style="display:flex;"><span>  (<span style="color:#00a">:import-from</span> <span style="color:#00a">#:lparallel</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#00a">#:*kernel*</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#00a">#:make-kernel</span> <span style="color:#00a">#:make-channel</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#00a">#:submit-task</span> <span style="color:#00a">#:receive-result</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#00a">#:kernel-worker-index</span>)
+</span></span><span style="display:flex;"><span>  (<span style="color:#00a">:import-from</span> <span style="color:#00a">#:cl-postgres-error</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#00a">#:database-error</span>)
+</span></span><span style="display:flex;"><span>  (<span style="color:#00a">:export</span>      <span style="color:#00a">#:*connspec*</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#00a">#:concurrency-test</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(<span style="color:#0aa">in-package</span> <span style="color:#00a">#:concurrency</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(<span style="color:#0aa">defparameter</span> *connspec* &#39;(<span style="color:#a50">&#34;appdev&#34;</span> <span style="color:#a50">&#34;dim&#34;</span> <span style="color:#a00">nil</span> <span style="color:#a50">&#34;localhost&#34;</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(<span style="color:#0aa">defparameter</span> *insert-rt*
+</span></span><span style="display:flex;"><span>  <span style="color:#a50">&#34;insert into tweet.activity(messageid, action) values($1, &#39;rt&#39;)&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(<span style="color:#0aa">defparameter</span> *update-rt*
+</span></span><span style="display:flex;"><span>  <span style="color:#a50">&#34;update tweet.message set rts = coalesce(rts, 0) + 1 where messageid = $1&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(<span style="color:#0aa">defun</span> <span style="color:#a00">concurrency-test</span> (<span style="color:#a00">workers</span> <span style="color:#a00">retweets</span> <span style="color:#a00">messageid</span>
+</span></span><span style="display:flex;"><span>                         <span style="color:#00a">&amp;optional</span> (<span style="color:#a00">connspec</span> *connspec*))
+</span></span><span style="display:flex;"><span>  (<span style="color:#0a0">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;Starting benchmark for updates~%&#34;</span>)
+</span></span><span style="display:flex;"><span>  (<span style="color:#a00">with-timing</span> (<span style="color:#a00">rts</span> <span style="color:#a00">seconds</span>)
+</span></span><span style="display:flex;"><span>      (<span style="color:#a00">run-workers</span> <span style="color:#a00">workers</span> <span style="color:#a00">retweets</span> <span style="color:#a00">messageid</span> *update-rt* <span style="color:#a00">connspec</span>)
+</span></span><span style="display:flex;"><span>    (<span style="color:#0a0">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;Updating took ~f seconds, did ~d rts~%&#34;</span> <span style="color:#a00">seconds</span> <span style="color:#a00">rts</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  (<span style="color:#0a0">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;~%&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  (<span style="color:#0a0">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;Starting benchmark for inserts~%&#34;</span>)
+</span></span><span style="display:flex;"><span>  (<span style="color:#a00">with-timing</span> (<span style="color:#a00">rts</span> <span style="color:#a00">seconds</span>)
+</span></span><span style="display:flex;"><span>      (<span style="color:#a00">run-workers</span> <span style="color:#a00">workers</span> <span style="color:#a00">retweets</span> <span style="color:#a00">messageid</span> *insert-rt* <span style="color:#a00">connspec</span>)
+</span></span><span style="display:flex;"><span>    (<span style="color:#0a0">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;Inserting took ~f seconds, did ~d rts~%&#34;</span> <span style="color:#a00">seconds</span> <span style="color:#a00">rts</span>)))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(<span style="color:#0aa">defun</span> <span style="color:#a00">run-workers</span> (<span style="color:#a00">workers</span> <span style="color:#a00">retweets</span> <span style="color:#a00">messageid</span> <span style="color:#a00">sql</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#00a">&amp;optional</span> (<span style="color:#a00">connspec</span> *connspec*))
+</span></span><span style="display:flex;"><span>  (<span style="color:#00a">let*</span> ((*kernel* (<span style="color:#a00">lparallel:make-kernel</span> <span style="color:#a00">workers</span>))
+</span></span><span style="display:flex;"><span>         (<span style="color:#a00">channel</span>  (<span style="color:#a00">lparallel:make-channel</span>)))
+</span></span><span style="display:flex;"><span>    (<span style="color:#0aa">loop</span> <span style="color:#a00">repeat</span> <span style="color:#a00">workers</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0aa">do</span> (<span style="color:#a00">lparallel:submit-task</span> <span style="color:#a00">channel</span> <span style="color:#0a0">#&#39;</span><span style="color:#a00">retweet-many-times</span>
+</span></span><span style="display:flex;"><span>                                 <span style="color:#a00">retweets</span> <span style="color:#a00">messageid</span> <span style="color:#a00">sql</span> <span style="color:#a00">connspec</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    (<span style="color:#0aa">loop</span> <span style="color:#a00">repeat</span> <span style="color:#a00">workers</span> <span style="color:#a00">sum</span> (<span style="color:#a00">lparallel:receive-result</span> <span style="color:#a00">channel</span>))))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(<span style="color:#0aa">defun</span> <span style="color:#a00">retweet-many-times</span> (<span style="color:#a00">times</span> <span style="color:#a00">messageid</span> <span style="color:#a00">sql</span>
+</span></span><span style="display:flex;"><span>                           <span style="color:#00a">&amp;optional</span> (<span style="color:#a00">connspec</span> *connspec*))
+</span></span><span style="display:flex;"><span>  (<span style="color:#a00">pomo:with-connection</span> <span style="color:#a00">connspec</span>
+</span></span><span style="display:flex;"><span>    (<span style="color:#a00">pomo:query</span>
+</span></span><span style="display:flex;"><span>     (<span style="color:#0a0">format</span> <span style="color:#a00">nil</span> <span style="color:#a50">&#34;set application_name to &#39;worker ~a&#39;&#34;</span>
+</span></span><span style="display:flex;"><span>             (<span style="color:#a00">lparallel:kernel-worker-index</span>)))
+</span></span><span style="display:flex;"><span>    (<span style="color:#0aa">loop</span> <span style="color:#a00">repeat</span> <span style="color:#a00">times</span> <span style="color:#a00">sum</span> (<span style="color:#a00">retweet</span> <span style="color:#a00">messageid</span> <span style="color:#a00">sql</span>))))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(<span style="color:#0aa">defun</span> <span style="color:#a00">retweet</span> (<span style="color:#a00">messageid</span> <span style="color:#a00">sql</span>)
+</span></span><span style="display:flex;"><span>  (<span style="color:#0aa">handler-case</span>
+</span></span><span style="display:flex;"><span>      (<span style="color:#00a">progn</span>
+</span></span><span style="display:flex;"><span>        (<span style="color:#a00">pomo:query</span> <span style="color:#a00">sql</span> <span style="color:#a00">messageid</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#099">1</span>)
+</span></span><span style="display:flex;"><span>    (<span style="color:#a00">database-error</span> (<span style="color:#a00">c</span>)
+</span></span><span style="display:flex;"><span>      (<span style="color:#0a0">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;Error: ~a~%&#34;</span> <span style="color:#a00">c</span>)
+</span></span><span style="display:flex;"><span>      <span style="color:#099">0</span>)))
+</span></span></code></pre></div><p>Here&rsquo;s a typical result with a concurrency of 100 workers all wanting to do
 10 retweet in a loop using a <em>messageid</em>, here message 3. While it&rsquo;s not
 representative to have them loop 10 times to retweet the same message, it
 should help create the concurrency effect we want to produce, which is
@@ -629,26 +629,26 @@ lock access to the same row.</p>
 <p>The theory says that those concurrent users will have to wait in line, and
 thus spend time waiting for a lock on the PostgreSQL server. We should see
 that in the timing reports as a time difference:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp"><span style="color:#a00">CL-USER&gt;</span> (<span style="color:#a00">concurrency::concurrency-test</span> <span style="color:#099">100</span> <span style="color:#099">10</span> <span style="color:#099">3</span>)
-<span style="color:#a00">Starting</span> <span style="color:#a00">benchmark</span> <span style="color:#a00">for</span> <span style="color:#a00">updates</span>
-<span style="color:#a00">Updating</span> <span style="color:#a00">took</span> <span style="color:#099">3.099873</span> <span style="color:#a00">seconds,</span> <span style="color:#a00">did</span> <span style="color:#099">1000</span> <span style="color:#a00">rts</span>
-
-<span style="color:#a00">Starting</span> <span style="color:#a00">benchmark</span> <span style="color:#a00">for</span> <span style="color:#a00">inserts</span>
-<span style="color:#a00">Inserting</span> <span style="color:#a00">took</span> <span style="color:#099">2.132164</span> <span style="color:#a00">seconds,</span> <span style="color:#a00">did</span> <span style="color:#099">1000</span> <span style="color:#a00">rts</span>
-</code></pre></div><p>The <em>update</em> variant of the test took almost 50% as much time to complete
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-lisp" data-lang="lisp"><span style="display:flex;"><span><span style="color:#a00">CL-USER&gt;</span> (<span style="color:#a00">concurrency::concurrency-test</span> <span style="color:#099">100</span> <span style="color:#099">10</span> <span style="color:#099">3</span>)
+</span></span><span style="display:flex;"><span><span style="color:#a00">Starting</span> <span style="color:#a00">benchmark</span> <span style="color:#a00">for</span> <span style="color:#a00">updates</span>
+</span></span><span style="display:flex;"><span><span style="color:#a00">Updating</span> <span style="color:#a00">took</span> <span style="color:#099">3.099873</span> <span style="color:#a00">seconds,</span> <span style="color:#a00">did</span> <span style="color:#099">1000</span> <span style="color:#a00">rts</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a00">Starting</span> <span style="color:#a00">benchmark</span> <span style="color:#a00">for</span> <span style="color:#a00">inserts</span>
+</span></span><span style="display:flex;"><span><span style="color:#a00">Inserting</span> <span style="color:#a00">took</span> <span style="color:#099">2.132164</span> <span style="color:#a00">seconds,</span> <span style="color:#a00">did</span> <span style="color:#099">1000</span> <span style="color:#a00">rts</span>
+</span></span></code></pre></div><p>The <em>update</em> variant of the test took almost 50% as much time to complete
 than the <em>insert</em> variant, with this level of concurrency. Given that we
 have really simple SQL statements, we can attribute the timing difference to
 having had to wait in line. Basically, the <em>update</em> version spent almost 1
 second out of 3 seconds waiting for a free slot.</p>
 <p>In another test with even more concurrency pressure at 50 retweets per
 worker, we can show that the results are repeatable:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp"><span style="color:#a00">CL-USER&gt;</span> (<span style="color:#a00">concurrency::concurrency-test</span> <span style="color:#099">100</span> <span style="color:#099">50</span> <span style="color:#099">6</span>)
-<span style="color:#a00">Starting</span> <span style="color:#a00">benchmark</span> <span style="color:#a00">for</span> <span style="color:#a00">updates</span>
-<span style="color:#a00">Updating</span> <span style="color:#a00">took</span> <span style="color:#099">5.070135</span> <span style="color:#a00">seconds,</span> <span style="color:#a00">did</span> <span style="color:#099">5000</span> <span style="color:#a00">rts</span>
-
-<span style="color:#a00">Starting</span> <span style="color:#a00">benchmark</span> <span style="color:#a00">for</span> <span style="color:#a00">inserts</span>
-<span style="color:#a00">Inserting</span> <span style="color:#a00">took</span> <span style="color:#099">3.739505</span> <span style="color:#a00">seconds,</span> <span style="color:#a00">did</span> <span style="color:#099">5000</span> <span style="color:#a00">rts</span>
-</code></pre></div><hr />
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-lisp" data-lang="lisp"><span style="display:flex;"><span><span style="color:#a00">CL-USER&gt;</span> (<span style="color:#a00">concurrency::concurrency-test</span> <span style="color:#099">100</span> <span style="color:#099">50</span> <span style="color:#099">6</span>)
+</span></span><span style="display:flex;"><span><span style="color:#a00">Starting</span> <span style="color:#a00">benchmark</span> <span style="color:#a00">for</span> <span style="color:#a00">updates</span>
+</span></span><span style="display:flex;"><span><span style="color:#a00">Updating</span> <span style="color:#a00">took</span> <span style="color:#099">5.070135</span> <span style="color:#a00">seconds,</span> <span style="color:#a00">did</span> <span style="color:#099">5000</span> <span style="color:#a00">rts</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a00">Starting</span> <span style="color:#a00">benchmark</span> <span style="color:#a00">for</span> <span style="color:#a00">inserts</span>
+</span></span><span style="display:flex;"><span><span style="color:#a00">Inserting</span> <span style="color:#a00">took</span> <span style="color:#099">3.739505</span> <span style="color:#a00">seconds,</span> <span style="color:#a00">did</span> <span style="color:#099">5000</span> <span style="color:#a00">rts</span>
+</span></span></code></pre></div><hr />
 <figure class="right"><a href="https://theartofpostgresql.com"><img src="/img/TAOP_Book_Cover_200x260.png"/></a>
 </figure>
 
@@ -678,9 +678,17 @@ concurrency in PostgreSQL.</p>
 
             </div>
           </div>
-          <div style="margin-top: 1em;">
- <a href="https://theartofpostgresql.com" alt="The Art of PostgreSQL">
-  <img src="/img/taopg-cta.jpg" style="width:90%; height: auto; margin-left: 5%">
+          
+
+
+
+
+
+<div style="margin-top: 1em;">
+ <script async src="//tinder.thrivecart.com/embed/v1/thrivecart.js"></script>
+ <a data-thrivecart-account="theartofpostgresql" data-thrivecart-tpl="v2" data-thrivecart-product="18" class="thrivecart-button ">
+  <img src="https://spark.thrivecart.com/0x0/https%3A%2F%2Fthrivecart.s3.amazonaws.com%2Fuser_assets%2FNABJ5K7H%2Fproducts%2F18%2Ftaopg-cta-1661268188.jpg"
+       style="width:90%; height: auto; margin-left: 5%"/>
  </a>
 </div>
 
@@ -784,7 +792,7 @@ concurrency in PostgreSQL.</p>
         </article>
         <footer id="footer" class="main-content-wrap">
   <span class="copyrights">
-    &copy; 2021 Dimitri Fontaine. 
+    &copy; 2022 Dimitri Fontaine. 
   </span>
 </footer>
 

@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.89.3">
+    <meta name="generator" content="Hugo 0.101.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>PostgreSQL Data Types: JSON</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -507,30 +507,30 @@ indentation.</p>
 early draft that is still available for backward compatibility reasons only.
 Here&rsquo;s a very quick example showing some differences between those two
 datatypes:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>js(id<span style="color:#bbb"> </span><span style="color:#0aa">serial</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb"> </span>extra<span style="color:#bbb"> </span>json);<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>js(extra)<span style="color:#bbb">
-</span><span style="color:#bbb">     </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#a50">&#39;[1, 2, 3, 4]&#39;</span>),<span style="color:#bbb">
-</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;[2, 3, 5, 8]&#39;</span>),<span style="color:#bbb">
-</span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;{&#34;key&#34;: &#34;value&#34;}&#39;</span>);<span style="color:#bbb">
-</span></code></pre></div><p>The <em>js</em> table only has a primary key and a <em>json</em> column for extra
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>js(id<span style="color:#bbb"> </span><span style="color:#0aa">serial</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb"> </span>extra<span style="color:#bbb"> </span>json);<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>js(extra)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#a50">&#39;[1, 2, 3, 4]&#39;</span>),<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;[2, 3, 5, 8]&#39;</span>),<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;{&#34;key&#34;: &#34;value&#34;}&#39;</span>);<span style="color:#bbb">
+</span></span></span></code></pre></div><p>The <em>js</em> table only has a primary key and a <em>json</em> column for extra
 information. It&rsquo;s not a good design, but we want a very simple example here
 and won&rsquo;t be coding any application on top of it, so it will do for the
 following couple SQL queries:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span>*<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>js<span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>extra<span style="color:#bbb"> </span>@&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;2&#39;</span>;<span style="color:#bbb">
-</span></code></pre></div><p>When we want to search for entries where the <em>extra</em> column contains a
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">select</span><span style="color:#bbb"> </span>*<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>js<span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>extra<span style="color:#bbb"> </span>@&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;2&#39;</span>;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>When we want to search for entries where the <em>extra</em> column contains a
 number in its array, we get the following error:</p>
 <pre tabindex="0"><code class="language-psql" data-lang="psql">ERROR:  operator does not exist: json @&gt; unknown
-LINE 1: select * from js where extra @&gt; '2';
+LINE 1: select * from js where extra @&gt; &#39;2&#39;;
                                      ^
 HINT:  No operator matches the given name and argument type(s). ⏎
 You might need to add explicit type casts.
 </code></pre><p>Right. <em>json</em> is only text and not very powerful, and it doesn&rsquo;t offer an
 implementation for the <em>contains</em> operator. Switching the content to <em>jsonb</em>
 then:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">alter</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>js<span style="color:#bbb"> </span><span style="color:#00a">alter</span><span style="color:#bbb"> </span><span style="color:#00a">column</span><span style="color:#bbb"> </span>extra<span style="color:#bbb"> </span><span style="color:#00a">type</span><span style="color:#bbb"> </span>jsonb;<span style="color:#bbb">
-</span></code></pre></div><p>Now we can run the same query again:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span>*<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>js<span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>extra<span style="color:#bbb"> </span>@&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;2&#39;</span>;<span style="color:#bbb">
-</span></code></pre></div><p>And we find out that of course our sample data set of two rows contains the
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">alter</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>js<span style="color:#bbb"> </span><span style="color:#00a">alter</span><span style="color:#bbb"> </span><span style="color:#00a">column</span><span style="color:#bbb"> </span>extra<span style="color:#bbb"> </span><span style="color:#00a">type</span><span style="color:#bbb"> </span>jsonb;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>Now we can run the same query again:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">select</span><span style="color:#bbb"> </span>*<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>js<span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>extra<span style="color:#bbb"> </span>@&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;2&#39;</span>;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>And we find out that of course our sample data set of two rows contains the
 number <em>2</em> in the extra <em>jsonb</em> field, which here only contains arrays of
 numbers:</p>
 <pre tabindex="0"><code class="language-psql" data-lang="psql"> id │    extra     
@@ -539,8 +539,8 @@ numbers:</p>
   2 │ [2, 3, 5, 8]
 (2 rows)
 </code></pre><p>We can also search for JSON arrays containing another JSON array:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span>*<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>js<span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>extra<span style="color:#bbb"> </span>@&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;[2,4]&#39;</span>;<span style="color:#bbb">
-</span></code></pre></div><p>This time a single row is found, as expected:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">select</span><span style="color:#bbb"> </span>*<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>js<span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>extra<span style="color:#bbb"> </span>@&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;[2,4]&#39;</span>;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>This time a single row is found, as expected:</p>
 <pre tabindex="0"><code class="language-psql" data-lang="psql"> id │    extra     
 ════╪══════════════
   1 │ [1, 2, 3, 4]
@@ -566,8 +566,8 @@ in the PostgreSQL documentation for more information about the
 <code>jsonb_path_ops</code> which can be used as in the following example and provides
 a very good general purpose index for the <code>@&gt;</code> operator as used in the
 previous query:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">index</span><span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>js<span style="color:#bbb"> </span><span style="color:#00a">using</span><span style="color:#bbb"> </span>gin<span style="color:#bbb"> </span>(extra<span style="color:#bbb"> </span>jsonb_path_ops);<span style="color:#bbb">
-</span></code></pre></div><p>Now, it is possible to use <em>jsonb</em> as a flexible way to maintain your data
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">index</span><span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>js<span style="color:#bbb"> </span><span style="color:#00a">using</span><span style="color:#bbb"> </span>gin<span style="color:#bbb"> </span>(extra<span style="color:#bbb"> </span>jsonb_path_ops);<span style="color:#bbb">
+</span></span></span></code></pre></div><p>Now, it is possible to use <em>jsonb</em> as a flexible way to maintain your data
 model. It is possible to then think of PostgreSQL like a <em>schemaless</em>
 service and have a heterogeneous set of documents all in a single relation.</p>
 <h2 id="conclusion">Conclusion</h2>
@@ -594,9 +594,17 @@ it out!</p>
 
             </div>
           </div>
-          <div style="margin-top: 1em;">
- <a href="https://theartofpostgresql.com" alt="The Art of PostgreSQL">
-  <img src="/img/taopg-cta.jpg" style="width:90%; height: auto; margin-left: 5%">
+          
+
+
+
+
+
+<div style="margin-top: 1em;">
+ <script async src="//tinder.thrivecart.com/embed/v1/thrivecart.js"></script>
+ <a data-thrivecart-account="theartofpostgresql" data-thrivecart-tpl="v2" data-thrivecart-product="18" class="thrivecart-button ">
+  <img src="https://spark.thrivecart.com/0x0/https%3A%2F%2Fthrivecart.s3.amazonaws.com%2Fuser_assets%2FNABJ5K7H%2Fproducts%2F18%2Ftaopg-cta-1661268188.jpg"
+       style="width:90%; height: auto; margin-left: 5%"/>
  </a>
 </div>
 
@@ -696,7 +704,7 @@ it out!</p>
         </article>
         <footer id="footer" class="main-content-wrap">
   <span class="copyrights">
-    &copy; 2021 Dimitri Fontaine. 
+    &copy; 2022 Dimitri Fontaine. 
   </span>
 </footer>
 

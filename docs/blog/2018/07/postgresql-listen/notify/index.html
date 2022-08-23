@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.89.3">
+    <meta name="generator" content="Hugo 0.101.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>PostgreSQL LISTEN/NOTIFY</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -324,7 +324,7 @@ if (!doNotTrack) {
       </time>
     
     <span style="float: right; width: 65%">
-      <i class="fa fa-clock-o"></i> 14 mins read
+      <i class="fa fa-clock-o"></i> 15 mins read
       
     </span>
     <span style="float: left; width: 35%">
@@ -595,14 +595,14 @@ to the client even when the client is idle.</p>
 processed by the client. It could be that the server is being restarted, or
 an application message is being delivered.</p>
 <p>Here&rsquo;s an example of doing this:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">yesql#<span style="color:#bbb"> </span><span style="color:#00a">listen</span><span style="color:#bbb"> </span>channel;<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">LISTEN</span><span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span>yesql#<span style="color:#bbb"> </span><span style="color:#00a">notify</span><span style="color:#bbb"> </span>channel,<span style="color:#bbb"> </span><span style="color:#a50">&#39;foo&#39;</span>;<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">NOTIFY</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span>Asynchronous<span style="color:#bbb"> </span>notification<span style="color:#bbb"> </span><span style="color:#a50">&#34;channel&#34;</span><span style="color:#bbb"> </span><span style="color:#00a">with</span><span style="color:#bbb"> </span>payload<span style="color:#bbb"> </span><span style="color:#a50">&#34;foo&#34;</span><span style="color:#bbb">  </span><span style="color:#f00;background-color:#faa">⏎</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span>received<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>server<span style="color:#bbb"> </span>process<span style="color:#bbb"> </span><span style="color:#00a">with</span><span style="color:#bbb"> </span>PID<span style="color:#bbb"> </span><span style="color:#099">40430</span>.<span style="color:#bbb">
-</span></code></pre></div><p>Note that the message could be sent from another connection, so try it and
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>yesql#<span style="color:#bbb"> </span><span style="color:#00a">listen</span><span style="color:#bbb"> </span>channel;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">LISTEN</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>yesql#<span style="color:#bbb"> </span><span style="color:#00a">notify</span><span style="color:#bbb"> </span>channel,<span style="color:#bbb"> </span><span style="color:#a50">&#39;foo&#39;</span>;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">NOTIFY</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>Asynchronous<span style="color:#bbb"> </span>notification<span style="color:#bbb"> </span><span style="color:#a50">&#34;channel&#34;</span><span style="color:#bbb"> </span><span style="color:#00a">with</span><span style="color:#bbb"> </span>payload<span style="color:#bbb"> </span><span style="color:#a50">&#34;foo&#34;</span><span style="color:#bbb">  </span><span style="color:#f00;background-color:#faa">⏎</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>received<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>server<span style="color:#bbb"> </span>process<span style="color:#bbb"> </span><span style="color:#00a">with</span><span style="color:#bbb"> </span>PID<span style="color:#bbb"> </span><span style="color:#099">40430</span>.<span style="color:#bbb">
+</span></span></span></code></pre></div><p>Note that the message could be sent from another connection, so try it and
 see with several <em>psql</em> instances. The <em>payload</em> from the message can be any
 text, up to 8kB in length. This allows for rich messages to flow, such as
 JSON encoded values.</p>
@@ -619,73 +619,73 @@ program listening to notifications and updating the cache, we now bypass the
 concurrency issues.</p>
 <p>Before implementing the client application, we can implement the trigger for
 notification, and use <em>psql</em> as a testing client:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">or</span><span style="color:#bbb"> </span><span style="color:#00a">replace</span><span style="color:#bbb"> </span><span style="color:#00a">function</span><span style="color:#bbb"> </span>twcache.tg_notify_counters<span style="color:#bbb"> </span>()<span style="color:#bbb">
-</span><span style="color:#bbb"> </span><span style="color:#00a">returns</span><span style="color:#bbb"> </span><span style="color:#00a">trigger</span><span style="color:#bbb">
-</span><span style="color:#bbb"> </span><span style="color:#00a">language</span><span style="color:#bbb"> </span>plpgsql<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">$$</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">declare</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span>channel<span style="color:#bbb"> </span><span style="color:#0aa">text</span><span style="color:#bbb"> </span>:=<span style="color:#bbb"> </span>TG_ARGV[<span style="color:#099">0</span>];<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">begin</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span>PERFORM<span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span><span style="color:#bbb">     </span><span style="color:#00a">with</span><span style="color:#bbb"> </span>payload(messageid,<span style="color:#bbb"> </span>rts,<span style="color:#bbb"> </span>favs)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
-</span><span style="color:#bbb">     </span>(<span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.messageid,<span style="color:#bbb">
-</span><span style="color:#bbb">              </span>coalesce(<span style="color:#bbb">
-</span><span style="color:#bbb">                 </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb">
-</span><span style="color:#bbb">                   </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span><span style="color:#bbb">    </span><span style="color:#00a">then</span><span style="color:#bbb">  </span><span style="color:#099">1</span><span style="color:#bbb">
-</span><span style="color:#bbb">                   </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;de-rt&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>-<span style="color:#099">1</span><span style="color:#bbb">
-</span><span style="color:#bbb">                  </span><span style="color:#00a">end</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">                 </span><span style="color:#099">0</span><span style="color:#bbb">
-</span><span style="color:#bbb">              </span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>rts,<span style="color:#bbb">
-</span><span style="color:#bbb">              </span>coalesce(<span style="color:#bbb">
-</span><span style="color:#bbb">                </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb">
-</span><span style="color:#bbb">                  </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;fav&#39;</span><span style="color:#bbb">    </span><span style="color:#00a">then</span><span style="color:#bbb">  </span><span style="color:#099">1</span><span style="color:#bbb">
-</span><span style="color:#bbb">                  </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;de-fav&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>-<span style="color:#099">1</span><span style="color:#bbb">
-</span><span style="color:#bbb">                 </span><span style="color:#00a">end</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">                </span><span style="color:#099">0</span><span style="color:#bbb">
-</span><span style="color:#bbb">              </span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>favs<span style="color:#bbb">
-</span><span style="color:#bbb">     </span>)<span style="color:#bbb">
-</span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>pg_notify(channel,<span style="color:#bbb"> </span>row_to_json(payload)::<span style="color:#0aa">text</span>)<span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>payload<span style="color:#bbb">
-</span><span style="color:#bbb">  </span>);<span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">RETURN</span><span style="color:#bbb"> </span><span style="color:#00a">NULL</span>;<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">end</span>;<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#f00;background-color:#faa">$$</span>;<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">CREATE</span><span style="color:#bbb"> </span><span style="color:#00a">TRIGGER</span><span style="color:#bbb"> </span>notify_counters<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">AFTER</span><span style="color:#bbb"> </span><span style="color:#00a">INSERT</span><span style="color:#bbb">
-</span><span style="color:#bbb">            </span><span style="color:#00a">ON</span><span style="color:#bbb"> </span>tweet.activity<span style="color:#bbb">
-</span><span style="color:#bbb">      </span><span style="color:#00a">FOR</span><span style="color:#bbb"> </span><span style="color:#00a">EACH</span><span style="color:#bbb"> </span><span style="color:#00a">ROW</span><span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#00a">EXECUTE</span><span style="color:#bbb"> </span><span style="color:#00a">PROCEDURE</span><span style="color:#bbb"> </span>twcache.tg_notify_counters(<span style="color:#a50">&#39;tweet.activity&#39;</span>);<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">commit</span>;<span style="color:#bbb">
-</span></code></pre></div><p>Then to test the trigger, we can issue the following statements at a <em>psql</em>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">begin</span>;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">or</span><span style="color:#bbb"> </span><span style="color:#00a">replace</span><span style="color:#bbb"> </span><span style="color:#00a">function</span><span style="color:#bbb"> </span>twcache.tg_notify_counters<span style="color:#bbb"> </span>()<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">returns</span><span style="color:#bbb"> </span><span style="color:#00a">trigger</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">language</span><span style="color:#bbb"> </span>plpgsql<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">$$</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">declare</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>channel<span style="color:#bbb"> </span><span style="color:#0aa">text</span><span style="color:#bbb"> </span>:=<span style="color:#bbb"> </span>TG_ARGV[<span style="color:#099">0</span>];<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">begin</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>PERFORM<span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">with</span><span style="color:#bbb"> </span>payload(messageid,<span style="color:#bbb"> </span>rts,<span style="color:#bbb"> </span>favs)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.messageid,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span>coalesce(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                 </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                   </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span><span style="color:#bbb">    </span><span style="color:#00a">then</span><span style="color:#bbb">  </span><span style="color:#099">1</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                   </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;de-rt&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>-<span style="color:#099">1</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                  </span><span style="color:#00a">end</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                 </span><span style="color:#099">0</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>rts,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span>coalesce(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">NEW</span>.action<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                  </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;fav&#39;</span><span style="color:#bbb">    </span><span style="color:#00a">then</span><span style="color:#bbb">  </span><span style="color:#099">1</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                  </span><span style="color:#00a">when</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;de-fav&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">then</span><span style="color:#bbb"> </span>-<span style="color:#099">1</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                 </span><span style="color:#00a">end</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                </span><span style="color:#099">0</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>favs<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>pg_notify(channel,<span style="color:#bbb"> </span>row_to_json(payload)::<span style="color:#0aa">text</span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>payload<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>);<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">RETURN</span><span style="color:#bbb"> </span><span style="color:#00a">NULL</span>;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">end</span>;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#f00;background-color:#faa">$$</span>;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">CREATE</span><span style="color:#bbb"> </span><span style="color:#00a">TRIGGER</span><span style="color:#bbb"> </span>notify_counters<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">AFTER</span><span style="color:#bbb"> </span><span style="color:#00a">INSERT</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#00a">ON</span><span style="color:#bbb"> </span>tweet.activity<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#00a">FOR</span><span style="color:#bbb"> </span><span style="color:#00a">EACH</span><span style="color:#bbb"> </span><span style="color:#00a">ROW</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">EXECUTE</span><span style="color:#bbb"> </span><span style="color:#00a">PROCEDURE</span><span style="color:#bbb"> </span>twcache.tg_notify_counters(<span style="color:#a50">&#39;tweet.activity&#39;</span>);<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">commit</span>;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>Then to test the trigger, we can issue the following statements at a <em>psql</em>
 prompt:</p>
-<pre tabindex="0"><code class="language-psql" data-lang="psql">listen &quot;tweet.activity&quot;;
+<pre tabindex="0"><code class="language-psql" data-lang="psql">listen &#34;tweet.activity&#34;;
 
 insert into tweet.activity(messageid, action)
-     values (33, 'rt'),
-            (33, 'rt'),
-            (33, 'de-rt'),
-            (33, 'fav'),
-            (33, 'de-fav'),
-            (33, 'rt'),
-            (33, 'fav');
+     values (33, &#39;rt&#39;),
+            (33, &#39;rt&#39;),
+            (33, &#39;de-rt&#39;),
+            (33, &#39;fav&#39;),
+            (33, &#39;de-fav&#39;),
+            (33, &#39;rt&#39;),
+            (33, &#39;fav&#39;);
 </code></pre><p>We get then the following output from the console:</p>
 <pre tabindex="0"><code class="language-psql" data-lang="psql">INSERT 0 7
-Asynchronous notification &quot;tweet.activity&quot; with payload        ⏎
-&quot;{&quot;messageid&quot;:33,&quot;rts&quot;:1,&quot;favs&quot;:0}&quot; received from              ⏎
+Asynchronous notification &#34;tweet.activity&#34; with payload        ⏎
+&#34;{&#34;messageid&#34;:33,&#34;rts&#34;:1,&#34;favs&#34;:0}&#34; received from              ⏎
 server process with PID 73216.
-Asynchronous notification &quot;tweet.activity&quot; with payload        ⏎
-&quot;{&quot;messageid&quot;:33,&quot;rts&quot;:-1,&quot;favs&quot;:0}&quot; received from             ⏎
+Asynchronous notification &#34;tweet.activity&#34; with payload        ⏎
+&#34;{&#34;messageid&#34;:33,&#34;rts&#34;:-1,&#34;favs&#34;:0}&#34; received from             ⏎
 server process with PID 73216.
-Asynchronous notification &quot;tweet.activity&quot; with payload        ⏎
-&quot;{&quot;messageid&quot;:33,&quot;rts&quot;:0,&quot;favs&quot;:1}&quot; received from              ⏎
+Asynchronous notification &#34;tweet.activity&#34; with payload        ⏎
+&#34;{&#34;messageid&#34;:33,&#34;rts&#34;:0,&#34;favs&#34;:1}&#34; received from              ⏎
 server process with PID 73216.
-Asynchronous notification &quot;tweet.activity&quot; with payload        ⏎
-&quot;{&quot;messageid&quot;:33,&quot;rts&quot;:0,&quot;favs&quot;:-1}&quot; received from             ⏎
+Asynchronous notification &#34;tweet.activity&#34; with payload        ⏎
+&#34;{&#34;messageid&#34;:33,&#34;rts&#34;:0,&#34;favs&#34;:-1}&#34; received from             ⏎
 server process with PID 73216.
 </code></pre><p>So we made seven inserts, and we have four notifications. This behavior
 might be surprising, yet it is fully documented on the PostgreSQL manual
@@ -709,22 +709,22 @@ that our implementation of the cache server with <em>notify</em> can only be
 correct if the main application issues only distinct <em>tweet.activity</em>
 actions in a single transaction. For our usage, this is not a deal-breaker,
 so we can fix our tests.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>tweet.activity(messageid,<span style="color:#bbb"> </span>action)<span style="color:#bbb"> </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#099">33</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>);<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>tweet.activity(messageid,<span style="color:#bbb"> </span>action)<span style="color:#bbb"> </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#099">33</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-rt&#39;</span>);<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>tweet.activity(messageid,<span style="color:#bbb"> </span>action)<span style="color:#bbb"> </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#099">33</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;fav&#39;</span>);<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>tweet.activity(messageid,<span style="color:#bbb"> </span>action)<span style="color:#bbb"> </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#099">33</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-rt&#39;</span>);<span style="color:#bbb">
-</span></code></pre></div><p>And this time we get the expected notifications:</p>
-<pre tabindex="0"><code class="language-psql" data-lang="psql">Asynchronous notification &quot;tweet.activity&quot; with payload        ⏎
-&quot;{&quot;messageid&quot;:33,&quot;rts&quot;:1,&quot;favs&quot;:0}&quot; received from              ⏎
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>tweet.activity(messageid,<span style="color:#bbb"> </span>action)<span style="color:#bbb"> </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#099">33</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;rt&#39;</span>);<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>tweet.activity(messageid,<span style="color:#bbb"> </span>action)<span style="color:#bbb"> </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#099">33</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-rt&#39;</span>);<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>tweet.activity(messageid,<span style="color:#bbb"> </span>action)<span style="color:#bbb"> </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#099">33</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;fav&#39;</span>);<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>tweet.activity(messageid,<span style="color:#bbb"> </span>action)<span style="color:#bbb"> </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#099">33</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;de-rt&#39;</span>);<span style="color:#bbb">
+</span></span></span></code></pre></div><p>And this time we get the expected notifications:</p>
+<pre tabindex="0"><code class="language-psql" data-lang="psql">Asynchronous notification &#34;tweet.activity&#34; with payload        ⏎
+&#34;{&#34;messageid&#34;:33,&#34;rts&#34;:1,&#34;favs&#34;:0}&#34; received from              ⏎
 server process with PID 73216.
-Asynchronous notification &quot;tweet.activity&quot; with payload        ⏎
-&quot;{&quot;messageid&quot;:33,&quot;rts&quot;:-1,&quot;favs&quot;:0}&quot; received from             ⏎
+Asynchronous notification &#34;tweet.activity&#34; with payload        ⏎
+&#34;{&#34;messageid&#34;:33,&#34;rts&#34;:-1,&#34;favs&#34;:0}&#34; received from             ⏎
 server process with PID 73216.
-Asynchronous notification &quot;tweet.activity&quot; with payload        ⏎
-&quot;{&quot;messageid&quot;:33,&quot;rts&quot;:0,&quot;favs&quot;:1}&quot; received from              ⏎
+Asynchronous notification &#34;tweet.activity&#34; with payload        ⏎
+&#34;{&#34;messageid&#34;:33,&#34;rts&#34;:0,&#34;favs&#34;:1}&#34; received from              ⏎
 server process with PID 73216.
-Asynchronous notification &quot;tweet.activity&quot; with payload        ⏎
-&quot;{&quot;messageid&quot;:33,&quot;rts&quot;:-1,&quot;favs&quot;:0}&quot; received from             ⏎
+Asynchronous notification &#34;tweet.activity&#34; with payload        ⏎
+&#34;{&#34;messageid&#34;:33,&#34;rts&#34;:-1,&#34;favs&#34;:0}&#34; received from             ⏎
 server process with PID 73216.
 </code></pre><hr />
 <figure class="right"><a href="https://theartofpostgresql.com"><img src="/img/TAOP_Book_Cover_200x260.png"/></a>
@@ -768,80 +768,80 @@ might also be one of the popular cache solutions such as
 <a href="https://memcached.org">Memcached</a> or <a href="https://redis.io">Redis</a>.</p>
 <p>In our example, we implement a cache maintenance service in Go and the cache
 itself is maintained as a PostgreSQL table:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">begin</span>;<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">schema</span><span style="color:#bbb"> </span><span style="color:#00a">if</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">exists</span><span style="color:#bbb"> </span>twcache;<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>twcache.counters<span style="color:#bbb">
-</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span><span style="color:#bbb">   </span>messageid<span style="color:#bbb">   </span><span style="color:#0aa">bigint</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">   </span>rts<span style="color:#bbb">         </span><span style="color:#0aa">bigint</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">   </span>favs<span style="color:#bbb">        </span><span style="color:#0aa">bigint</span><span style="color:#bbb">
-</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">commit</span>;<span style="color:#bbb">
-</span></code></pre></div><p>With this table, implementing a NOTIFY client service that maintains the
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">begin</span>;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">schema</span><span style="color:#bbb"> </span><span style="color:#00a">if</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">exists</span><span style="color:#bbb"> </span>twcache;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>twcache.counters<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>messageid<span style="color:#bbb">   </span><span style="color:#0aa">bigint</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>rts<span style="color:#bbb">         </span><span style="color:#0aa">bigint</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>favs<span style="color:#bbb">        </span><span style="color:#0aa">bigint</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">commit</span>;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>With this table, implementing a NOTIFY client service that maintains the
 cache is easy enough to do, and here&rsquo;s what happens when the service runs
 and we do some testing:</p>
 <pre tabindex="0"><code>2017/09/21 22:00:36 Connecting to postgres:///yesql?sslmode=disable… 
-2017/09/21 22:00:36 Listening to notifications on channel &quot;tweet.activity&quot;
+2017/09/21 22:00:36 Listening to notifications on channel &#34;tweet.activity&#34;
 2017/09/21 22:00:37 Cache initialized with 6 entries.
 2017/09/21 22:00:37 Start processing notifications, waiting for events…
-2017/09/21 22:00:42 Received event: {&quot;messageid&quot;:33,&quot;rts&quot;:1,&quot;favs&quot;:0}
-2017/09/21 22:00:42 Received event: {&quot;messageid&quot;:33,&quot;rts&quot;:-1,&quot;favs&quot;:0}
-2017/09/21 22:00:42 Received event: {&quot;messageid&quot;:33,&quot;rts&quot;:0,&quot;favs&quot;:1}
-2017/09/21 22:00:42 Received event: {&quot;messageid&quot;:33,&quot;rts&quot;:-1,&quot;favs&quot;:0}
+2017/09/21 22:00:42 Received event: {&#34;messageid&#34;:33,&#34;rts&#34;:1,&#34;favs&#34;:0}
+2017/09/21 22:00:42 Received event: {&#34;messageid&#34;:33,&#34;rts&#34;:-1,&#34;favs&#34;:0}
+2017/09/21 22:00:42 Received event: {&#34;messageid&#34;:33,&#34;rts&#34;:0,&#34;favs&#34;:1}
+2017/09/21 22:00:42 Received event: {&#34;messageid&#34;:33,&#34;rts&#34;:-1,&#34;favs&#34;:0}
 2017/09/21 22:00:47 Materializing 6 events from memory
 </code></pre><p>The client code is written in Go, and is included in full in this article.
 One of the main bits of interest is the <em>materialize</em> function, which is an
 interesting implementation of pushing the in-memory cache data structure
 down to our PostgreSQL table <em>twcache.counters</em>.</p>
 <p>The in-memory cache structure looks like the following:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00a">type</span> Counter <span style="color:#00a">struct</span> {
-	MessageId <span style="color:#0aa">int</span> <span style="color:#a50">`json:&#34;messageid&#34;`</span>
-	Rts       <span style="color:#0aa">int</span> <span style="color:#a50">`json:&#34;rts&#34;`</span>
-	Favs      <span style="color:#0aa">int</span> <span style="color:#a50">`json:&#34;favs&#34;`</span>
-}
-
-<span style="color:#00a">type</span> Cache <span style="color:#00a">map</span>[<span style="color:#0aa">int</span>]*Counter
-</code></pre></div><p>And given such a data structure, we use the efficient Go default JSON
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#00a">type</span> Counter <span style="color:#00a">struct</span> {
+</span></span><span style="display:flex;"><span>	MessageId <span style="color:#0aa">int</span> <span style="color:#a50">`json:&#34;messageid&#34;`</span>
+</span></span><span style="display:flex;"><span>	Rts       <span style="color:#0aa">int</span> <span style="color:#a50">`json:&#34;rts&#34;`</span>
+</span></span><span style="display:flex;"><span>	Favs      <span style="color:#0aa">int</span> <span style="color:#a50">`json:&#34;favs&#34;`</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#00a">type</span> Cache <span style="color:#00a">map</span>[<span style="color:#0aa">int</span>]*Counter
+</span></span></code></pre></div><p>And given such a data structure, we use the efficient Go default JSON
 marshaling facility to transform the cache elements and pass them all down
 to PostgreSQL as a single JSON object.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00a">func</span> <span style="color:#0a0">materialize</span>(db *sql.DB, cache Cache) <span style="color:#0aa">error</span> {
-    ...
-    
-	js, err := json.<span style="color:#0a0">Marshal</span>(cache)
-
-	<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
-		log.<span style="color:#0a0">Printf</span>(<span style="color:#a50">&#34;Error while materializing cache: %s&#34;</span>, err)
-		<span style="color:#00a">return</span> err
-	}
-    
-	_, err = db.<span style="color:#0a0">Query</span>(q, js)
-    
-    ...
-    <span style="color:#00a">return</span> <span style="color:#00a">nil</span>
-}
-</code></pre></div><p>The JSON object is then processed in a SQL query, that we find embedded in
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#00a">func</span> <span style="color:#0a0">materialize</span>(db *sql.DB, cache Cache) <span style="color:#0aa">error</span> {
+</span></span><span style="display:flex;"><span>    ...
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>	js, err := json.<span style="color:#0a0">Marshal</span>(cache)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
+</span></span><span style="display:flex;"><span>		log.<span style="color:#0a0">Printf</span>(<span style="color:#a50">&#34;Error while materializing cache: %s&#34;</span>, err)
+</span></span><span style="display:flex;"><span>		<span style="color:#00a">return</span> err
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>	_, err = db.<span style="color:#0a0">Query</span>(q, js)
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    ...
+</span></span><span style="display:flex;"><span>    <span style="color:#00a">return</span> <span style="color:#00a">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>The JSON object is then processed in a SQL query, that we find embedded in
 the Go code — it&rsquo;s the <em>q</em> string variable that is used in the snippet above
 in the expression <em>db.Query(q, js)</em>, where <em>js</em> is the JSON representation
 of the entirety of the cache data.</p>
 <p>Here&rsquo;s the SQL query we use:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span><span style="color:#bbb"> </span>rec<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
-</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>rec.*<span style="color:#bbb">
-</span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>json_each(<span style="color:#f00;background-color:#faa">$</span><span style="color:#099">1</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>t,<span style="color:#bbb">
-</span><span style="color:#bbb">          </span>json_populate_record(<span style="color:#00a">null</span>::twcache.counters,<span style="color:#bbb"> </span>value)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>rec<span style="color:#bbb">
-</span><span style="color:#bbb"> </span>)<span style="color:#bbb">
-</span><span style="color:#bbb"> </span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>twcache.counters(messageid,<span style="color:#bbb"> </span>rts,<span style="color:#bbb"> </span>favs)<span style="color:#bbb">
-</span><span style="color:#bbb">      </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>messageid,<span style="color:#bbb"> </span>rts,<span style="color:#bbb"> </span>favs<span style="color:#bbb">
-</span><span style="color:#bbb">        </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>rec<span style="color:#bbb">
-</span><span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>conflict<span style="color:#bbb"> </span>(messageid)<span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">do</span><span style="color:#bbb"> </span><span style="color:#00a">update</span><span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">set</span><span style="color:#bbb"> </span>rts<span style="color:#bbb">  </span>=<span style="color:#bbb"> </span>counters.rts<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span>excluded.rts,<span style="color:#bbb">
-</span><span style="color:#bbb">             </span>favs<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>counters.favs<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span>excluded.favs<span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>counters.messageid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>excluded.messageid<span style="color:#bbb">
-</span></code></pre></div><p>In this query, we use the PostgreSQL
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">with</span><span style="color:#bbb"> </span>rec<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>rec.*<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>json_each(<span style="color:#f00;background-color:#faa">$</span><span style="color:#099">1</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>t,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span>json_populate_record(<span style="color:#00a">null</span>::twcache.counters,<span style="color:#bbb"> </span>value)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>rec<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>twcache.counters(messageid,<span style="color:#bbb"> </span>rts,<span style="color:#bbb"> </span>favs)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>messageid,<span style="color:#bbb"> </span>rts,<span style="color:#bbb"> </span>favs<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>rec<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>conflict<span style="color:#bbb"> </span>(messageid)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">do</span><span style="color:#bbb"> </span><span style="color:#00a">update</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">set</span><span style="color:#bbb"> </span>rts<span style="color:#bbb">  </span>=<span style="color:#bbb"> </span>counters.rts<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span>excluded.rts,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">             </span>favs<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>counters.favs<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span>excluded.favs<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>counters.messageid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>excluded.messageid<span style="color:#bbb">
+</span></span></span></code></pre></div><p>In this query, we use the PostgreSQL
 <a href="https://www.postgresql.org/docs/9.6/static/functions-json.html#FUNCTIONS-JSON-PROCESSING-TABLE">json_populate_record</a>
 function. This function is almost magical and it is described as such in the
 documentation:</p>
@@ -867,237 +867,237 @@ here.</p>
 <p>Then our SQL query uses the <em>insert into &hellip; select &hellip; on conflict do
 update</em> variant that we&rsquo;re used to by now.</p>
 <p>So, here&rsquo;s the full Go script we&rsquo;re using here:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#00a">package</span> main
-
-<span style="color:#00a">import</span> (
-	<span style="color:#a50">&#34;database/sql&#34;</span>
-	<span style="color:#a50">&#34;encoding/json&#34;</span>
-	<span style="color:#a50">&#34;flag&#34;</span>
-	<span style="color:#a50">&#34;time&#34;</span>
-	<span style="color:#a50">&#34;log&#34;</span>
-	<span style="color:#a50">&#34;os&#34;</span>
-
-	<span style="color:#a50">&#34;github.com/lib/pq&#34;</span>
-)
-
-<span style="color:#00a">type</span> Config <span style="color:#00a">struct</span> {
-	PGuri   <span style="color:#0aa">string</span>
-	Channel <span style="color:#0aa">string</span>
-	Sync    time.Duration
-	Idle    time.Duration
-}
-
-<span style="color:#00a">type</span> Counter <span style="color:#00a">struct</span> {
-	MessageId <span style="color:#0aa">int</span> <span style="color:#a50">`json:&#34;messageid&#34;`</span>
-	Rts       <span style="color:#0aa">int</span> <span style="color:#a50">`json:&#34;rts&#34;`</span>
-	Favs      <span style="color:#0aa">int</span> <span style="color:#a50">`json:&#34;favs&#34;`</span>
-}
-
-<span style="color:#00a">type</span> Cache <span style="color:#00a">map</span>[<span style="color:#0aa">int</span>]*Counter
-
-<span style="color:#00a">const</span> sync_delay = <span style="color:#099">10</span> * time.Second
-<span style="color:#00a">const</span> idle_delay = <span style="color:#099">30</span> * time.Second
-<span style="color:#00a">const</span> scrn_width = <span style="color:#099">65</span>
-<span style="color:#00a">const</span> min_reconn = <span style="color:#099">10</span> * time.Second
-<span style="color:#00a">const</span> max_reconn = time.Minute
-
-<span style="color:#00a">func</span> <span style="color:#0a0">main</span>() {
-	conf := <span style="color:#0a0">processFlags</span>()
-	log.<span style="color:#0a0">SetOutput</span>(os.Stdout)
-
-	log.<span style="color:#0a0">Printf</span>(<span style="color:#a50">&#34;Connecting to %s… &#34;</span>, conf.PGuri)
-	db, err := sql.<span style="color:#0a0">Open</span>(<span style="color:#a50">&#34;postgres&#34;</span>, conf.PGuri)
-	<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
-		log.<span style="color:#0a0">Printf</span>(<span style="color:#a50">&#34;Failed to connect to &#39;%s&#39;: %s&#34;</span>, conf.PGuri, err)
-		os.<span style="color:#0a0">Exit</span>(<span style="color:#099">1</span>)
-	}
-	<span style="color:#00a">defer</span> db.<span style="color:#0a0">Close</span>()
-
-	reportErr := <span style="color:#00a">func</span>(ev pq.ListenerEventType, err <span style="color:#0aa">error</span>) {
-		<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
-			log.<span style="color:#0a0">Printf</span>(<span style="color:#a50">&#34;Failed to start listener: %s&#34;</span>, err)
-			os.<span style="color:#0a0">Exit</span>(<span style="color:#099">1</span>)
-		}
-	}
-
-	<span style="color:#aaa;font-style:italic">//
-</span><span style="color:#aaa;font-style:italic"></span>	<span style="color:#aaa;font-style:italic">// First, LISTEN to incoming events
-</span><span style="color:#aaa;font-style:italic"></span>	<span style="color:#aaa;font-style:italic">//
-</span><span style="color:#aaa;font-style:italic"></span>	listener := pq.<span style="color:#0a0">NewListener</span>(conf.PGuri, min_reconn, max_reconn, reportErr)
-	err = listener.<span style="color:#0a0">Listen</span>(conf.Channel)
-	<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
-		log.<span style="color:#0a0">Printf</span>(
-			<span style="color:#a50">&#34;Failed to LISTEN to channel &#39;%s&#39;: %s&#34;</span>,
-			conf.Channel, err)
-		<span style="color:#0aa">panic</span>(err)
-	}
-	log.<span style="color:#0a0">Printf</span>(
-		<span style="color:#a50">&#34;Listening to notifications on channel \&#34;%s\&#34;&#34;</span>,
-		conf.Channel)
-
-	<span style="color:#aaa;font-style:italic">//
-</span><span style="color:#aaa;font-style:italic"></span>	<span style="color:#aaa;font-style:italic">// Second, initialize the cache with the current values from the
-</span><span style="color:#aaa;font-style:italic"></span>	<span style="color:#aaa;font-style:italic">// base table, only then proceed to process the notifications.
-</span><span style="color:#aaa;font-style:italic"></span>	<span style="color:#aaa;font-style:italic">//
-</span><span style="color:#aaa;font-style:italic"></span>	cache, err := <span style="color:#0a0">initCache</span>(db)
-
-	<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
-		log.<span style="color:#0a0">Printf</span>(<span style="color:#a50">&#34;Error initializing cache&#34;</span>)
-		<span style="color:#0aa">panic</span>(err)
-	}
-	log.<span style="color:#0a0">Printf</span>(
-		<span style="color:#a50">&#34;Cache initialized with %d entries.&#34;</span>,
-		<span style="color:#0aa">len</span>(cache))
-
-	<span style="color:#aaa;font-style:italic">//
-</span><span style="color:#aaa;font-style:italic"></span>	<span style="color:#aaa;font-style:italic">// Third, grab notifications and process them by updating the
-</span><span style="color:#aaa;font-style:italic"></span>	<span style="color:#aaa;font-style:italic">// counters that changed.
-</span><span style="color:#aaa;font-style:italic"></span>	<span style="color:#aaa;font-style:italic">//
-</span><span style="color:#aaa;font-style:italic"></span>	log.<span style="color:#0a0">Println</span>(<span style="color:#a50">&#34;Start processing notifications, waiting for events…&#34;</span>)
-
-	reset := time.<span style="color:#0a0">Now</span>()
-	<span style="color:#00a">for</span> {
-		<span style="color:#0a0">waitForNotification</span>(listener, cache, conf.Idle)
-
-		<span style="color:#00a">if</span> time.<span style="color:#0a0">Since</span>(reset) &gt;= conf.Sync {
-			err := <span style="color:#0a0">materialize</span>(db, cache)
-
-			<span style="color:#aaa;font-style:italic">// reset the cache *unless* there was an error!
-</span><span style="color:#aaa;font-style:italic"></span>			<span style="color:#00a">if</span> err == <span style="color:#00a">nil</span> {
-				cache = <span style="color:#0aa">make</span>(Cache)
-				reset = time.<span style="color:#0a0">Now</span>()
-			}
-		}
-	}
-}
-
-<span style="color:#00a">func</span> <span style="color:#0a0">processFlags</span>() *Config {
-	<span style="color:#00a">var</span> conninfo <span style="color:#0aa">string</span> = <span style="color:#a50">&#34;postgres:///yesql?sslmode=disable&#34;</span>
-	<span style="color:#00a">var</span> channel <span style="color:#0aa">string</span> = <span style="color:#a50">&#34;tweet.activity&#34;</span>
-
-	syncPtr := flag.<span style="color:#0a0">Int</span>(<span style="color:#a50">&#34;sync&#34;</span>, <span style="color:#0aa">int</span>(sync_delay.<span style="color:#0a0">Seconds</span>()),
-		<span style="color:#a50">&#34;Sync cache every SYNC seconds&#34;</span>)
-	flag.<span style="color:#0a0">StringVar</span>(&amp;conninfo, <span style="color:#a50">&#34;pguri&#34;</span>, conninfo,
-		<span style="color:#a50">&#34;PostgreSQL connection string&#34;</span>)
-	flag.<span style="color:#0a0">StringVar</span>(&amp;channel, <span style="color:#a50">&#34;channel&#34;</span>, channel,
-		<span style="color:#a50">&#34;LISTEN to this channel&#34;</span>)
-
-	flag.<span style="color:#0a0">Parse</span>()
-
-	sync := time.<span style="color:#0a0">Duration</span>(*syncPtr) * time.Second
-	idle := sync / <span style="color:#099">4</span>
-
-	<span style="color:#00a">return</span> &amp;Config{conninfo, channel, sync, idle}
-}
-
-<span style="color:#00a">func</span> <span style="color:#0a0">waitForNotification</span>(l *pq.Listener, cache Cache, timeout time.Duration) {
-	<span style="color:#00a">select</span> {
-	<span style="color:#00a">case</span> n := &lt;-l.Notify:
-		<span style="color:#00a">var</span> c Counter
-		err := json.<span style="color:#0a0">Unmarshal</span>([]<span style="color:#0aa">byte</span>(n.Extra), &amp;c)
-
-		<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
-			log.<span style="color:#0a0">Printf</span>(<span style="color:#a50">&#34;Failed to parse &#39;%s&#39;: %s&#34;</span>, n.Extra, err)
-		} <span style="color:#00a">else</span> {
-			log.<span style="color:#0a0">Printf</span>(<span style="color:#a50">&#34;Received event: %s&#34;</span>, n.Extra)
-			<span style="color:#0a0">updateCounter</span>(cache, c)
-		}
-
-	<span style="color:#00a">case</span> &lt;-time.<span style="color:#0a0">After</span>(timeout):
-		<span style="color:#00a">return</span>
-	}
-}
-
-<span style="color:#00a">func</span> <span style="color:#0a0">initCache</span>(db *sql.DB) (Cache, <span style="color:#0aa">error</span>) {
-	q := <span style="color:#a50">&#34;select messageid, rts, favs from tweet.message_with_counters;&#34;</span>
-
-	rows, err := db.<span style="color:#0a0">Query</span>(q)
-	<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
-		<span style="color:#00a">return</span> <span style="color:#00a">nil</span>, err
-	}
-	cache := <span style="color:#0aa">make</span>(Cache)
-
-	<span style="color:#00a">for</span> rows.<span style="color:#0a0">Next</span>() {
-		c := Counter{}
-		err := rows.<span style="color:#0a0">Scan</span>(&amp;c.MessageId, &amp;c.Rts, &amp;c.Favs)
-
-		<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
-			<span style="color:#00a">return</span> <span style="color:#00a">nil</span>, err
-		}
-		cache[c.MessageId] = &amp;c
-	}
-	err = rows.<span style="color:#0a0">Err</span>()
-	<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
-		<span style="color:#00a">return</span> <span style="color:#00a">nil</span>, err
-	}
-	<span style="color:#00a">return</span> cache, <span style="color:#00a">nil</span>
-}
-
-<span style="color:#00a">func</span> <span style="color:#0a0">materialize</span>(db *sql.DB, cache Cache) <span style="color:#0aa">error</span> {
-	<span style="color:#00a">if</span> <span style="color:#0aa">len</span>(cache) == <span style="color:#099">0</span> {
-		<span style="color:#00a">return</span> <span style="color:#00a">nil</span>
-	}
-	log.<span style="color:#0a0">Printf</span>(<span style="color:#a50">&#34;Materializing %d events from memory&#34;</span>, <span style="color:#0aa">len</span>(cache))
-
-	q := <span style="color:#a50">`
-</span><span style="color:#a50">with rec as
-</span><span style="color:#a50"> (
-</span><span style="color:#a50">   select rec.*
-</span><span style="color:#a50">     from json_each($1) as t,
-</span><span style="color:#a50">          json_populate_record(null::twcache.counters, value) as rec
-</span><span style="color:#a50"> )
-</span><span style="color:#a50"> insert into twcache.counters(messageid, rts, favs)
-</span><span style="color:#a50">      select messageid, rts, favs
-</span><span style="color:#a50">        from rec
-</span><span style="color:#a50"> on conflict (messageid)
-</span><span style="color:#a50">   do update
-</span><span style="color:#a50">         set rts  = counters.rts + excluded.rts,
-</span><span style="color:#a50">             favs = counters.favs + excluded.favs
-</span><span style="color:#a50">       where counters.messageid = excluded.messageid
-</span><span style="color:#a50">`</span>
-	js, err := json.<span style="color:#0a0">Marshal</span>(cache)
-	<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
-		log.<span style="color:#0a0">Printf</span>(<span style="color:#a50">&#34;Error while materializing cache: %s&#34;</span>, err)
-		<span style="color:#00a">return</span> err
-	}
-
-	_, err = db.<span style="color:#0a0">Query</span>(q, js)
-	<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
-		log.<span style="color:#0a0">Printf</span>(<span style="color:#a50">&#34;Error materliazing cache: %s&#34;</span>, err)
-		<span style="color:#00a">return</span> err
-	}
-	<span style="color:#00a">return</span> <span style="color:#00a">nil</span>
-}
-
-<span style="color:#00a">func</span> <span style="color:#0a0">updateCounter</span>(cache Cache, c Counter) {
-	_, found := cache[c.MessageId]
-
-	<span style="color:#00a">if</span> found {
-		cache[c.MessageId].Rts += c.Rts
-		cache[c.MessageId].Favs += c.Favs
-	} <span style="color:#00a">else</span> {
-		cache[c.MessageId] = &amp;c
-	}
-}
-</code></pre></div><p>It&rsquo;s important to note that coded as such, we can use the function to both
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#00a">package</span> main
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#00a">import</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#a50">&#34;database/sql&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a50">&#34;encoding/json&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a50">&#34;flag&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a50">&#34;time&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a50">&#34;log&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a50">&#34;os&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a50">&#34;github.com/lib/pq&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#00a">type</span> Config <span style="color:#00a">struct</span> {
+</span></span><span style="display:flex;"><span>	PGuri   <span style="color:#0aa">string</span>
+</span></span><span style="display:flex;"><span>	Channel <span style="color:#0aa">string</span>
+</span></span><span style="display:flex;"><span>	Sync    time.Duration
+</span></span><span style="display:flex;"><span>	Idle    time.Duration
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#00a">type</span> Counter <span style="color:#00a">struct</span> {
+</span></span><span style="display:flex;"><span>	MessageId <span style="color:#0aa">int</span> <span style="color:#a50">`json:&#34;messageid&#34;`</span>
+</span></span><span style="display:flex;"><span>	Rts       <span style="color:#0aa">int</span> <span style="color:#a50">`json:&#34;rts&#34;`</span>
+</span></span><span style="display:flex;"><span>	Favs      <span style="color:#0aa">int</span> <span style="color:#a50">`json:&#34;favs&#34;`</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#00a">type</span> Cache <span style="color:#00a">map</span>[<span style="color:#0aa">int</span>]*Counter
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#00a">const</span> sync_delay = <span style="color:#099">10</span> * time.Second
+</span></span><span style="display:flex;"><span><span style="color:#00a">const</span> idle_delay = <span style="color:#099">30</span> * time.Second
+</span></span><span style="display:flex;"><span><span style="color:#00a">const</span> scrn_width = <span style="color:#099">65</span>
+</span></span><span style="display:flex;"><span><span style="color:#00a">const</span> min_reconn = <span style="color:#099">10</span> * time.Second
+</span></span><span style="display:flex;"><span><span style="color:#00a">const</span> max_reconn = time.Minute
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#00a">func</span> <span style="color:#0a0">main</span>() {
+</span></span><span style="display:flex;"><span>	conf := <span style="color:#0a0">processFlags</span>()
+</span></span><span style="display:flex;"><span>	log.<span style="color:#0a0">SetOutput</span>(os.Stdout)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	log.<span style="color:#0a0">Printf</span>(<span style="color:#a50">&#34;Connecting to %s… &#34;</span>, conf.PGuri)
+</span></span><span style="display:flex;"><span>	db, err := sql.<span style="color:#0a0">Open</span>(<span style="color:#a50">&#34;postgres&#34;</span>, conf.PGuri)
+</span></span><span style="display:flex;"><span>	<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
+</span></span><span style="display:flex;"><span>		log.<span style="color:#0a0">Printf</span>(<span style="color:#a50">&#34;Failed to connect to &#39;%s&#39;: %s&#34;</span>, conf.PGuri, err)
+</span></span><span style="display:flex;"><span>		os.<span style="color:#0a0">Exit</span>(<span style="color:#099">1</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#00a">defer</span> db.<span style="color:#0a0">Close</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	reportErr := <span style="color:#00a">func</span>(ev pq.ListenerEventType, err <span style="color:#0aa">error</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
+</span></span><span style="display:flex;"><span>			log.<span style="color:#0a0">Printf</span>(<span style="color:#a50">&#34;Failed to start listener: %s&#34;</span>, err)
+</span></span><span style="display:flex;"><span>			os.<span style="color:#0a0">Exit</span>(<span style="color:#099">1</span>)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#aaa;font-style:italic">//
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span>	<span style="color:#aaa;font-style:italic">// First, LISTEN to incoming events
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span>	<span style="color:#aaa;font-style:italic">//
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span>	listener := pq.<span style="color:#0a0">NewListener</span>(conf.PGuri, min_reconn, max_reconn, reportErr)
+</span></span><span style="display:flex;"><span>	err = listener.<span style="color:#0a0">Listen</span>(conf.Channel)
+</span></span><span style="display:flex;"><span>	<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
+</span></span><span style="display:flex;"><span>		log.<span style="color:#0a0">Printf</span>(
+</span></span><span style="display:flex;"><span>			<span style="color:#a50">&#34;Failed to LISTEN to channel &#39;%s&#39;: %s&#34;</span>,
+</span></span><span style="display:flex;"><span>			conf.Channel, err)
+</span></span><span style="display:flex;"><span>		<span style="color:#0aa">panic</span>(err)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	log.<span style="color:#0a0">Printf</span>(
+</span></span><span style="display:flex;"><span>		<span style="color:#a50">&#34;Listening to notifications on channel \&#34;%s\&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>		conf.Channel)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#aaa;font-style:italic">//
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span>	<span style="color:#aaa;font-style:italic">// Second, initialize the cache with the current values from the
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span>	<span style="color:#aaa;font-style:italic">// base table, only then proceed to process the notifications.
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span>	<span style="color:#aaa;font-style:italic">//
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span>	cache, err := <span style="color:#0a0">initCache</span>(db)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
+</span></span><span style="display:flex;"><span>		log.<span style="color:#0a0">Printf</span>(<span style="color:#a50">&#34;Error initializing cache&#34;</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#0aa">panic</span>(err)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	log.<span style="color:#0a0">Printf</span>(
+</span></span><span style="display:flex;"><span>		<span style="color:#a50">&#34;Cache initialized with %d entries.&#34;</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#0aa">len</span>(cache))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#aaa;font-style:italic">//
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span>	<span style="color:#aaa;font-style:italic">// Third, grab notifications and process them by updating the
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span>	<span style="color:#aaa;font-style:italic">// counters that changed.
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span>	<span style="color:#aaa;font-style:italic">//
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span>	log.<span style="color:#0a0">Println</span>(<span style="color:#a50">&#34;Start processing notifications, waiting for events…&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	reset := time.<span style="color:#0a0">Now</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#00a">for</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#0a0">waitForNotification</span>(listener, cache, conf.Idle)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#00a">if</span> time.<span style="color:#0a0">Since</span>(reset) &gt;= conf.Sync {
+</span></span><span style="display:flex;"><span>			err := <span style="color:#0a0">materialize</span>(db, cache)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>			<span style="color:#aaa;font-style:italic">// reset the cache *unless* there was an error!
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span>			<span style="color:#00a">if</span> err == <span style="color:#00a">nil</span> {
+</span></span><span style="display:flex;"><span>				cache = <span style="color:#0aa">make</span>(Cache)
+</span></span><span style="display:flex;"><span>				reset = time.<span style="color:#0a0">Now</span>()
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#00a">func</span> <span style="color:#0a0">processFlags</span>() *Config {
+</span></span><span style="display:flex;"><span>	<span style="color:#00a">var</span> conninfo <span style="color:#0aa">string</span> = <span style="color:#a50">&#34;postgres:///yesql?sslmode=disable&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#00a">var</span> channel <span style="color:#0aa">string</span> = <span style="color:#a50">&#34;tweet.activity&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	syncPtr := flag.<span style="color:#0a0">Int</span>(<span style="color:#a50">&#34;sync&#34;</span>, <span style="color:#0aa">int</span>(sync_delay.<span style="color:#0a0">Seconds</span>()),
+</span></span><span style="display:flex;"><span>		<span style="color:#a50">&#34;Sync cache every SYNC seconds&#34;</span>)
+</span></span><span style="display:flex;"><span>	flag.<span style="color:#0a0">StringVar</span>(&amp;conninfo, <span style="color:#a50">&#34;pguri&#34;</span>, conninfo,
+</span></span><span style="display:flex;"><span>		<span style="color:#a50">&#34;PostgreSQL connection string&#34;</span>)
+</span></span><span style="display:flex;"><span>	flag.<span style="color:#0a0">StringVar</span>(&amp;channel, <span style="color:#a50">&#34;channel&#34;</span>, channel,
+</span></span><span style="display:flex;"><span>		<span style="color:#a50">&#34;LISTEN to this channel&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	flag.<span style="color:#0a0">Parse</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	sync := time.<span style="color:#0a0">Duration</span>(*syncPtr) * time.Second
+</span></span><span style="display:flex;"><span>	idle := sync / <span style="color:#099">4</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#00a">return</span> &amp;Config{conninfo, channel, sync, idle}
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#00a">func</span> <span style="color:#0a0">waitForNotification</span>(l *pq.Listener, cache Cache, timeout time.Duration) {
+</span></span><span style="display:flex;"><span>	<span style="color:#00a">select</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#00a">case</span> n := &lt;-l.Notify:
+</span></span><span style="display:flex;"><span>		<span style="color:#00a">var</span> c Counter
+</span></span><span style="display:flex;"><span>		err := json.<span style="color:#0a0">Unmarshal</span>([]<span style="color:#0aa">byte</span>(n.Extra), &amp;c)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
+</span></span><span style="display:flex;"><span>			log.<span style="color:#0a0">Printf</span>(<span style="color:#a50">&#34;Failed to parse &#39;%s&#39;: %s&#34;</span>, n.Extra, err)
+</span></span><span style="display:flex;"><span>		} <span style="color:#00a">else</span> {
+</span></span><span style="display:flex;"><span>			log.<span style="color:#0a0">Printf</span>(<span style="color:#a50">&#34;Received event: %s&#34;</span>, n.Extra)
+</span></span><span style="display:flex;"><span>			<span style="color:#0a0">updateCounter</span>(cache, c)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#00a">case</span> &lt;-time.<span style="color:#0a0">After</span>(timeout):
+</span></span><span style="display:flex;"><span>		<span style="color:#00a">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#00a">func</span> <span style="color:#0a0">initCache</span>(db *sql.DB) (Cache, <span style="color:#0aa">error</span>) {
+</span></span><span style="display:flex;"><span>	q := <span style="color:#a50">&#34;select messageid, rts, favs from tweet.message_with_counters;&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	rows, err := db.<span style="color:#0a0">Query</span>(q)
+</span></span><span style="display:flex;"><span>	<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#00a">return</span> <span style="color:#00a">nil</span>, err
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	cache := <span style="color:#0aa">make</span>(Cache)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#00a">for</span> rows.<span style="color:#0a0">Next</span>() {
+</span></span><span style="display:flex;"><span>		c := Counter{}
+</span></span><span style="display:flex;"><span>		err := rows.<span style="color:#0a0">Scan</span>(&amp;c.MessageId, &amp;c.Rts, &amp;c.Favs)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#00a">return</span> <span style="color:#00a">nil</span>, err
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		cache[c.MessageId] = &amp;c
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	err = rows.<span style="color:#0a0">Err</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#00a">return</span> <span style="color:#00a">nil</span>, err
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#00a">return</span> cache, <span style="color:#00a">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#00a">func</span> <span style="color:#0a0">materialize</span>(db *sql.DB, cache Cache) <span style="color:#0aa">error</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#00a">if</span> <span style="color:#0aa">len</span>(cache) == <span style="color:#099">0</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#00a">return</span> <span style="color:#00a">nil</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	log.<span style="color:#0a0">Printf</span>(<span style="color:#a50">&#34;Materializing %d events from memory&#34;</span>, <span style="color:#0aa">len</span>(cache))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	q := <span style="color:#a50">`
+</span></span></span><span style="display:flex;"><span><span style="color:#a50">with rec as
+</span></span></span><span style="display:flex;"><span><span style="color:#a50"> (
+</span></span></span><span style="display:flex;"><span><span style="color:#a50">   select rec.*
+</span></span></span><span style="display:flex;"><span><span style="color:#a50">     from json_each($1) as t,
+</span></span></span><span style="display:flex;"><span><span style="color:#a50">          json_populate_record(null::twcache.counters, value) as rec
+</span></span></span><span style="display:flex;"><span><span style="color:#a50"> )
+</span></span></span><span style="display:flex;"><span><span style="color:#a50"> insert into twcache.counters(messageid, rts, favs)
+</span></span></span><span style="display:flex;"><span><span style="color:#a50">      select messageid, rts, favs
+</span></span></span><span style="display:flex;"><span><span style="color:#a50">        from rec
+</span></span></span><span style="display:flex;"><span><span style="color:#a50"> on conflict (messageid)
+</span></span></span><span style="display:flex;"><span><span style="color:#a50">   do update
+</span></span></span><span style="display:flex;"><span><span style="color:#a50">         set rts  = counters.rts + excluded.rts,
+</span></span></span><span style="display:flex;"><span><span style="color:#a50">             favs = counters.favs + excluded.favs
+</span></span></span><span style="display:flex;"><span><span style="color:#a50">       where counters.messageid = excluded.messageid
+</span></span></span><span style="display:flex;"><span><span style="color:#a50">`</span>
+</span></span><span style="display:flex;"><span>	js, err := json.<span style="color:#0a0">Marshal</span>(cache)
+</span></span><span style="display:flex;"><span>	<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
+</span></span><span style="display:flex;"><span>		log.<span style="color:#0a0">Printf</span>(<span style="color:#a50">&#34;Error while materializing cache: %s&#34;</span>, err)
+</span></span><span style="display:flex;"><span>		<span style="color:#00a">return</span> err
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	_, err = db.<span style="color:#0a0">Query</span>(q, js)
+</span></span><span style="display:flex;"><span>	<span style="color:#00a">if</span> err != <span style="color:#00a">nil</span> {
+</span></span><span style="display:flex;"><span>		log.<span style="color:#0a0">Printf</span>(<span style="color:#a50">&#34;Error materliazing cache: %s&#34;</span>, err)
+</span></span><span style="display:flex;"><span>		<span style="color:#00a">return</span> err
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#00a">return</span> <span style="color:#00a">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#00a">func</span> <span style="color:#0a0">updateCounter</span>(cache Cache, c Counter) {
+</span></span><span style="display:flex;"><span>	_, found := cache[c.MessageId]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#00a">if</span> found {
+</span></span><span style="display:flex;"><span>		cache[c.MessageId].Rts += c.Rts
+</span></span><span style="display:flex;"><span>		cache[c.MessageId].Favs += c.Favs
+</span></span><span style="display:flex;"><span>	} <span style="color:#00a">else</span> {
+</span></span><span style="display:flex;"><span>		cache[c.MessageId] = &amp;c
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>It&rsquo;s important to note that coded as such, we can use the function to both
 materialize a full cache as fetched at startup, and to materialize the cache
 we build in-memory while receiving notifications.</p>
 <p>The query used to fetch the initial value of the cache and set it again at
 startup is the following:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span>messageid,<span style="color:#bbb"> </span>rts,<span style="color:#bbb"> </span>favs<span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>tweet.message_with_counters;<span style="color:#bbb">
-</span></code></pre></div><p>We use the view definition that we saw earlier to do the computations for
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">select</span><span style="color:#bbb"> </span>messageid,<span style="color:#bbb"> </span>rts,<span style="color:#bbb"> </span>favs<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>tweet.message_with_counters;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>We use the view definition that we saw earlier to do the computations for
 us, and fill in our in-memory cache data structure from the result of the
 query.</p>
 <p>The trigger processing has a cost of course, as we can see in the following
 test:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp"><span style="color:#a00">CL-USER&gt;</span> (<span style="color:#a00">concurrency::concurrency-test</span> <span style="color:#099">100</span> <span style="color:#099">100</span> <span style="color:#099">35</span>)
-<span style="color:#a00">Starting</span> <span style="color:#a00">benchmark</span> <span style="color:#a00">for</span> <span style="color:#a00">updates</span>
-<span style="color:#a00">Updating</span> <span style="color:#a00">took</span> <span style="color:#099">8.428939</span> <span style="color:#a00">seconds,</span> <span style="color:#a00">did</span> <span style="color:#099">10000</span> <span style="color:#a00">rts</span>
-
-<span style="color:#a00">Starting</span> <span style="color:#a00">benchmark</span> <span style="color:#a00">for</span> <span style="color:#a00">inserts</span>
-<span style="color:#a00">Inserting</span> <span style="color:#a00">took</span> <span style="color:#099">10.351908</span> <span style="color:#a00">seconds,</span> <span style="color:#a00">did</span> <span style="color:#099">10000</span> <span style="color:#a00">rts</span>
-</code></pre></div><p>Remember when reading those numbers that we can&rsquo;t compare them meaningfully
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-lisp" data-lang="lisp"><span style="display:flex;"><span><span style="color:#a00">CL-USER&gt;</span> (<span style="color:#a00">concurrency::concurrency-test</span> <span style="color:#099">100</span> <span style="color:#099">100</span> <span style="color:#099">35</span>)
+</span></span><span style="display:flex;"><span><span style="color:#a00">Starting</span> <span style="color:#a00">benchmark</span> <span style="color:#a00">for</span> <span style="color:#a00">updates</span>
+</span></span><span style="display:flex;"><span><span style="color:#a00">Updating</span> <span style="color:#a00">took</span> <span style="color:#099">8.428939</span> <span style="color:#a00">seconds,</span> <span style="color:#a00">did</span> <span style="color:#099">10000</span> <span style="color:#a00">rts</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a00">Starting</span> <span style="color:#a00">benchmark</span> <span style="color:#a00">for</span> <span style="color:#a00">inserts</span>
+</span></span><span style="display:flex;"><span><span style="color:#a00">Inserting</span> <span style="color:#a00">took</span> <span style="color:#099">10.351908</span> <span style="color:#a00">seconds,</span> <span style="color:#a00">did</span> <span style="color:#099">10000</span> <span style="color:#a00">rts</span>
+</span></span></code></pre></div><p>Remember when reading those numbers that we can&rsquo;t compare them meaningfully
 anymore. We installed our trigger after insert on <em>tweet.activity</em>, which
 means that the update benchmark isn&rsquo;t calling any trigger whereas the insert
 benchmark is calling our trigger function 10,000 times in this test.</p>
@@ -1107,14 +1107,14 @@ work for PostgreSQL here.</p>
 <p>Our cache maintenance server received 10,000 notifications with a JSON
 payload and then reported the cumulated figures to our cache table only
 once, as we can see from the logs:</p>
-<pre tabindex="0"><code>2017/09/21 22:24:06 Received event: {&quot;messageid&quot;:35,&quot;rts&quot;:1,&quot;favs&quot;:0}
-2017/09/21 22:24:06 Received event: {&quot;messageid&quot;:35,&quot;rts&quot;:1,&quot;favs&quot;:0}
-2017/09/21 22:24:06 Received event: {&quot;messageid&quot;:35,&quot;rts&quot;:1,&quot;favs&quot;:0}
-2017/09/21 22:24:06 Received event: {&quot;messageid&quot;:35,&quot;rts&quot;:1,&quot;favs&quot;:0}
+<pre tabindex="0"><code>2017/09/21 22:24:06 Received event: {&#34;messageid&#34;:35,&#34;rts&#34;:1,&#34;favs&#34;:0}
+2017/09/21 22:24:06 Received event: {&#34;messageid&#34;:35,&#34;rts&#34;:1,&#34;favs&#34;:0}
+2017/09/21 22:24:06 Received event: {&#34;messageid&#34;:35,&#34;rts&#34;:1,&#34;favs&#34;:0}
+2017/09/21 22:24:06 Received event: {&#34;messageid&#34;:35,&#34;rts&#34;:1,&#34;favs&#34;:0}
 2017/09/21 22:24:09 Materializing 1 events from memory
 </code></pre><p>Having a look at the cache, here&rsquo;s what we have:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">table</span><span style="color:#bbb"> </span>twcache.counters;<span style="color:#bbb">
-</span></code></pre></div><pre tabindex="0"><code class="language-psql" data-lang="psql"> messageid │  rts   │ favs 
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">table</span><span style="color:#bbb"> </span>twcache.counters;<span style="color:#bbb">
+</span></span></span></code></pre></div><pre tabindex="0"><code class="language-psql" data-lang="psql"> messageid │  rts   │ favs 
 ═══════════╪════════╪══════
          1 │  41688 │    0
          2 │ 222690 │    0
@@ -1212,9 +1212,17 @@ build exactly the facility they need. PostgreSQL really is
 
             </div>
           </div>
-          <div style="margin-top: 1em;">
- <a href="https://theartofpostgresql.com" alt="The Art of PostgreSQL">
-  <img src="/img/taopg-cta.jpg" style="width:90%; height: auto; margin-left: 5%">
+          
+
+
+
+
+
+<div style="margin-top: 1em;">
+ <script async src="//tinder.thrivecart.com/embed/v1/thrivecart.js"></script>
+ <a data-thrivecart-account="theartofpostgresql" data-thrivecart-tpl="v2" data-thrivecart-product="18" class="thrivecart-button ">
+  <img src="https://spark.thrivecart.com/0x0/https%3A%2F%2Fthrivecart.s3.amazonaws.com%2Fuser_assets%2FNABJ5K7H%2Fproducts%2F18%2Ftaopg-cta-1661268188.jpg"
+       style="width:90%; height: auto; margin-left: 5%"/>
  </a>
 </div>
 
@@ -1320,7 +1328,7 @@ build exactly the facility they need. PostgreSQL really is
         </article>
         <footer id="footer" class="main-content-wrap">
   <span class="copyrights">
-    &copy; 2021 Dimitri Fontaine. 
+    &copy; 2022 Dimitri Fontaine. 
   </span>
 </footer>
 

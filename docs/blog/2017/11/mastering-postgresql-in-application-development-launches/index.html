@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.89.3">
+    <meta name="generator" content="Hugo 0.101.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Mastering PostgreSQL in Application Development launches!</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -354,11 +354,11 @@ interested in, your job is to <strong>describe</strong> the data set you need in
 simplest possible way. Sometimes this is pretty easy: I want all the
 information we have in the table <em>drivers</em> about the driver whom <em>driverid</em>
 is <em>1</em> translates easily to</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#bbb">   </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>driverid,<span style="color:#bbb"> </span>driverref,<span style="color:#bbb"> </span><span style="color:#0aa">number</span>,<span style="color:#bbb"> </span>code,<span style="color:#bbb">
-</span><span style="color:#bbb">          </span>forename,<span style="color:#bbb"> </span>surname,<span style="color:#bbb"> </span>dob,<span style="color:#bbb"> </span>nationality,<span style="color:#bbb"> </span>url<span style="color:#bbb">
-</span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>drivers<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>driverid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#099">1</span>;<span style="color:#bbb">
-</span></code></pre></div><p>In this case we get the following result:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>driverid,<span style="color:#bbb"> </span>driverref,<span style="color:#bbb"> </span><span style="color:#0aa">number</span>,<span style="color:#bbb"> </span>code,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span>forename,<span style="color:#bbb"> </span>surname,<span style="color:#bbb"> </span>dob,<span style="color:#bbb"> </span>nationality,<span style="color:#bbb"> </span>url<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>drivers<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>driverid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#099">1</span>;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>In this case we get the following result:</p>
 <pre tabindex="0"><code>─[ RECORD 1 ]────────────────────────────────────────────
 driverid    │ 1
 driverref   │ hamilton
@@ -380,41 +380,41 @@ clauses is known to be rare in the dataset, then chances are we should use
 an index to fetch it… but if it&rsquo;s pretty common, an index will only slow us
 down.</p>
 <p>The top-three per decade query looks like the following:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span><span style="color:#bbb"> </span>decades<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span>(<span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">extract</span>(<span style="color:#a50">&#39;year&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>date_trunc(<span style="color:#a50">&#39;decade&#39;</span>,<span style="color:#bbb"> </span><span style="color:#0aa">date</span>))<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>decade<span style="color:#bbb">
-</span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>races<span style="color:#bbb">
-</span><span style="color:#bbb"> </span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>decade<span style="color:#bbb">
-</span><span style="color:#bbb"></span>)<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">select</span><span style="color:#bbb"> </span>decade,<span style="color:#bbb">
-</span><span style="color:#bbb">       </span>rank()<span style="color:#bbb"> </span>over(partition<span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>decade<span style="color:#bbb">
-</span><span style="color:#bbb">                   </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>wins<span style="color:#bbb"> </span><span style="color:#00a">desc</span>)<span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>rank,<span style="color:#bbb">
-</span><span style="color:#bbb">       </span>forename,<span style="color:#bbb"> </span>surname,<span style="color:#bbb"> </span>wins<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>decades<span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#00a">left</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span><span style="color:#00a">lateral</span><span style="color:#bbb">
-</span><span style="color:#bbb">       </span>(<span style="color:#bbb">
-</span><span style="color:#bbb">          </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>code,<span style="color:#bbb"> </span>forename,<span style="color:#bbb"> </span>surname,<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>wins<span style="color:#bbb">
-</span><span style="color:#bbb">            </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>drivers<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">                 </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>results<span style="color:#bbb">
-</span><span style="color:#bbb">                   </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>results.driverid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>drivers.driverid<span style="color:#bbb">
-</span><span style="color:#bbb">                  </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>results.<span style="color:#00a">position</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">                 </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>races<span style="color:#bbb"> </span><span style="color:#00a">using</span>(raceid)<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">           </span><span style="color:#00a">where</span><span style="color:#bbb">   </span><span style="color:#00a">extract</span>(<span style="color:#a50">&#39;year&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>date_trunc(<span style="color:#a50">&#39;decade&#39;</span>,<span style="color:#bbb"> </span>races.<span style="color:#0aa">date</span>))<span style="color:#bbb">
-</span><span style="color:#bbb">                 </span>=<span style="color:#bbb"> </span>decades.decade<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">        </span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>decades.decade,<span style="color:#bbb"> </span>drivers.driverid<span style="color:#bbb">
-</span><span style="color:#bbb">        </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>wins<span style="color:#bbb"> </span><span style="color:#00a">desc</span><span style="color:#bbb">
-</span><span style="color:#bbb">           </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">3</span><span style="color:#bbb">
-</span><span style="color:#bbb">       </span>)<span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>winners<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span><span style="color:#00a">true</span><span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>decade<span style="color:#bbb"> </span><span style="color:#00a">asc</span>,<span style="color:#bbb"> </span>wins<span style="color:#bbb"> </span><span style="color:#00a">desc</span>;<span style="color:#bbb">
-</span></code></pre></div><p>How to implement a top-N query in SQL is explained in details in <a href="http://masteringpostgresql.com">Mastering
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">with</span><span style="color:#bbb"> </span>decades<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">extract</span>(<span style="color:#a50">&#39;year&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>date_trunc(<span style="color:#a50">&#39;decade&#39;</span>,<span style="color:#bbb"> </span><span style="color:#0aa">date</span>))<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>decade<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>races<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>decade<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">select</span><span style="color:#bbb"> </span>decade,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>rank()<span style="color:#bbb"> </span>over(partition<span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>decade<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                   </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>wins<span style="color:#bbb"> </span><span style="color:#00a">desc</span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>rank,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>forename,<span style="color:#bbb"> </span>surname,<span style="color:#bbb"> </span>wins<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>decades<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">left</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span><span style="color:#00a">lateral</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>code,<span style="color:#bbb"> </span>forename,<span style="color:#bbb"> </span>surname,<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>wins<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>drivers<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                 </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>results<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                   </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>results.driverid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>drivers.driverid<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                  </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>results.<span style="color:#00a">position</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                 </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>races<span style="color:#bbb"> </span><span style="color:#00a">using</span>(raceid)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">           </span><span style="color:#00a">where</span><span style="color:#bbb">   </span><span style="color:#00a">extract</span>(<span style="color:#a50">&#39;year&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>date_trunc(<span style="color:#a50">&#39;decade&#39;</span>,<span style="color:#bbb"> </span>races.<span style="color:#0aa">date</span>))<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                 </span>=<span style="color:#bbb"> </span>decades.decade<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>decades.decade,<span style="color:#bbb"> </span>drivers.driverid<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>wins<span style="color:#bbb"> </span><span style="color:#00a">desc</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">           </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">3</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>winners<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span><span style="color:#00a">true</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>decade<span style="color:#bbb"> </span><span style="color:#00a">asc</span>,<span style="color:#bbb"> </span>wins<span style="color:#bbb"> </span><span style="color:#00a">desc</span>;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>How to implement a top-N query in SQL is explained in details in <a href="http://masteringpostgresql.com">Mastering
 PostgreSQL in Application Development</a>, and
 you will find this very query and its result set too!</p>
 <p>Once you&rsquo;ve read the book and practiced enough, then writing such a query is
@@ -513,9 +513,17 @@ I enjoyed writing it!</p>
 
             </div>
           </div>
-          <div style="margin-top: 1em;">
- <a href="https://theartofpostgresql.com" alt="The Art of PostgreSQL">
-  <img src="/img/taopg-cta.jpg" style="width:90%; height: auto; margin-left: 5%">
+          
+
+
+
+
+
+<div style="margin-top: 1em;">
+ <script async src="//tinder.thrivecart.com/embed/v1/thrivecart.js"></script>
+ <a data-thrivecart-account="theartofpostgresql" data-thrivecart-tpl="v2" data-thrivecart-product="18" class="thrivecart-button ">
+  <img src="https://spark.thrivecart.com/0x0/https%3A%2F%2Fthrivecart.s3.amazonaws.com%2Fuser_assets%2FNABJ5K7H%2Fproducts%2F18%2Ftaopg-cta-1661268188.jpg"
+       style="width:90%; height: auto; margin-left: 5%"/>
  </a>
 </div>
 
@@ -613,7 +621,7 @@ I enjoyed writing it!</p>
         </article>
         <footer id="footer" class="main-content-wrap">
   <span class="copyrights">
-    &copy; 2021 Dimitri Fontaine. 
+    &copy; 2022 Dimitri Fontaine. 
   </span>
 </footer>
 

@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.89.3">
+    <meta name="generator" content="Hugo 0.101.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Concurrent Hello</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -33,10 +33,10 @@
     
     <meta name="description" content="Thanks to Mickael on twitter I ran into that article about implementing a very basic Hello World! program as a way to get into a new concurrent language or facility. The original article, titled Concurrent Hello World in Go, Erlang and C&#43;&#43; is all about getting to know The Go Programming Language better.
 To quote the article:
- The first thing I always do when playing around with a new software platform is to write a concurrent &ldquo;Hello World&rdquo; program.">
+The first thing I always do when playing around with a new software platform is to write a concurrent &ldquo;Hello World&rdquo; program.">
     <meta property="og:description" content="Thanks to Mickael on twitter I ran into that article about implementing a very basic Hello World! program as a way to get into a new concurrent language or facility. The original article, titled Concurrent Hello World in Go, Erlang and C&#43;&#43; is all about getting to know The Go Programming Language better.
 To quote the article:
- The first thing I always do when playing around with a new software platform is to write a concurrent &ldquo;Hello World&rdquo; program.">
+The first thing I always do when playing around with a new software platform is to write a concurrent &ldquo;Hello World&rdquo; program.">
     <meta property="og:type" content="blog">
     <meta property="og:title" content="Concurrent Hello">
     <meta property="og:url" content="https://tapoueh.org/blog/2012/11/concurrent-hello/">
@@ -45,7 +45,7 @@ To quote the article:
     <meta name="twitter:title" content="Concurrent Hello">
     <meta name="twitter:description" content="Thanks to Mickael on twitter I ran into that article about implementing a very basic Hello World! program as a way to get into a new concurrent language or facility. The original article, titled Concurrent Hello World in Go, Erlang and C&#43;&#43; is all about getting to know The Go Programming Language better.
 To quote the article:
- The first thing I always do when playing around with a new software platform is to write a concurrent &ldquo;Hello World&rdquo; program.">
+The first thing I always do when playing around with a new software platform is to write a concurrent &ldquo;Hello World&rdquo; program.">
     
       <meta name="twitter:creator" content="@tapoueh">
     
@@ -349,30 +349,30 @@ active entities synchronizing with each other so that the output always is
 <p>Here&rsquo;s my try in <a href="http://cliki.net/">Common Lisp</a>
 using <a href="http://lparallel.org/">lparallel</a> and some <em>local nicknames</em>, the
 whole <code>23</code> lines of it:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp">(<span style="color:#0aa">defun</span> <span style="color:#a00">say-hello</span> (<span style="color:#a00">helloq</span> <span style="color:#a00">worldq</span> <span style="color:#a00">n</span>)
-  (<span style="color:#0aa">dotimes</span> (<span style="color:#a00">i</span> <span style="color:#a00">n</span>)
-    (<span style="color:#0a0">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;Hello &#34;</span>)
-    (<span style="color:#a00">lq:push-queue</span> <span style="color:#00a">:say-world</span> <span style="color:#a00">worldq</span>)
-    (<span style="color:#a00">lq:pop-queue</span> <span style="color:#a00">helloq</span>))
-  (<span style="color:#a00">lq:push-queue</span> <span style="color:#00a">:quit</span> <span style="color:#a00">worldq</span>))
-
-(<span style="color:#0aa">defun</span> <span style="color:#a00">say-world</span> (<span style="color:#a00">helloq</span> <span style="color:#a00">worldq</span>)
-  (<span style="color:#0aa">when</span> (<span style="color:#0a0">eq</span> (<span style="color:#a00">lq:pop-queue</span> <span style="color:#a00">worldq</span>) <span style="color:#00a">:say-world</span>)
-    (<span style="color:#0a0">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;World!~%&#34;</span>)
-    (<span style="color:#a00">lq:push-queue</span> <span style="color:#00a">:say-hello</span> <span style="color:#a00">helloq</span>)
-    (<span style="color:#a00">say-world</span> <span style="color:#a00">helloq</span> <span style="color:#a00">worldq</span>)))
-
-(<span style="color:#0aa">defun</span> <span style="color:#a00">hello-world</span> (<span style="color:#a00">n</span>)
-  (<span style="color:#00a">let*</span> ((<span style="color:#a00">lp:*kernel*</span>  (<span style="color:#a00">lp:make-kernel</span> <span style="color:#099">2</span>)) <span style="color:#aaa;font-style:italic">; a new one each time, as we end it</span>
-	 (<span style="color:#a00">channel</span>      (<span style="color:#a00">lp:make-channel</span>))
-	 (<span style="color:#a00">helloq</span>       (<span style="color:#a00">lq:make-queue</span>))
-	 (<span style="color:#a00">worldq</span>       (<span style="color:#a00">lq:make-queue</span>)))
-    (<span style="color:#a00">lp:submit-task</span> <span style="color:#a00">channel</span> <span style="color:#0a0">#&#39;</span><span style="color:#a00">say-world</span> <span style="color:#a00">helloq</span> <span style="color:#a00">worldq</span>)
-    (<span style="color:#a00">lp:submit-task</span> <span style="color:#a00">channel</span> <span style="color:#0a0">#&#39;</span><span style="color:#a00">say-hello</span> <span style="color:#a00">helloq</span> <span style="color:#a00">worldq</span> <span style="color:#a00">n</span>)
-    (<span style="color:#a00">lp:receive-result</span> <span style="color:#a00">channel</span>)
-    (<span style="color:#a00">lp:receive-result</span> <span style="color:#a00">channel</span>)
-    (<span style="color:#a00">lp:end-kernel</span>)))
-</code></pre></div><p>If you want to play locally with that code, I&rsquo;ve been updating it to a
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-lisp" data-lang="lisp"><span style="display:flex;"><span>(<span style="color:#0aa">defun</span> <span style="color:#a00">say-hello</span> (<span style="color:#a00">helloq</span> <span style="color:#a00">worldq</span> <span style="color:#a00">n</span>)
+</span></span><span style="display:flex;"><span>  (<span style="color:#0aa">dotimes</span> (<span style="color:#a00">i</span> <span style="color:#a00">n</span>)
+</span></span><span style="display:flex;"><span>    (<span style="color:#0a0">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;Hello &#34;</span>)
+</span></span><span style="display:flex;"><span>    (<span style="color:#a00">lq:push-queue</span> <span style="color:#00a">:say-world</span> <span style="color:#a00">worldq</span>)
+</span></span><span style="display:flex;"><span>    (<span style="color:#a00">lq:pop-queue</span> <span style="color:#a00">helloq</span>))
+</span></span><span style="display:flex;"><span>  (<span style="color:#a00">lq:push-queue</span> <span style="color:#00a">:quit</span> <span style="color:#a00">worldq</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(<span style="color:#0aa">defun</span> <span style="color:#a00">say-world</span> (<span style="color:#a00">helloq</span> <span style="color:#a00">worldq</span>)
+</span></span><span style="display:flex;"><span>  (<span style="color:#0aa">when</span> (<span style="color:#0a0">eq</span> (<span style="color:#a00">lq:pop-queue</span> <span style="color:#a00">worldq</span>) <span style="color:#00a">:say-world</span>)
+</span></span><span style="display:flex;"><span>    (<span style="color:#0a0">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;World!~%&#34;</span>)
+</span></span><span style="display:flex;"><span>    (<span style="color:#a00">lq:push-queue</span> <span style="color:#00a">:say-hello</span> <span style="color:#a00">helloq</span>)
+</span></span><span style="display:flex;"><span>    (<span style="color:#a00">say-world</span> <span style="color:#a00">helloq</span> <span style="color:#a00">worldq</span>)))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(<span style="color:#0aa">defun</span> <span style="color:#a00">hello-world</span> (<span style="color:#a00">n</span>)
+</span></span><span style="display:flex;"><span>  (<span style="color:#00a">let*</span> ((<span style="color:#a00">lp:*kernel*</span>  (<span style="color:#a00">lp:make-kernel</span> <span style="color:#099">2</span>)) <span style="color:#aaa;font-style:italic">; a new one each time, as we end it</span>
+</span></span><span style="display:flex;"><span>	 (<span style="color:#a00">channel</span>      (<span style="color:#a00">lp:make-channel</span>))
+</span></span><span style="display:flex;"><span>	 (<span style="color:#a00">helloq</span>       (<span style="color:#a00">lq:make-queue</span>))
+</span></span><span style="display:flex;"><span>	 (<span style="color:#a00">worldq</span>       (<span style="color:#a00">lq:make-queue</span>)))
+</span></span><span style="display:flex;"><span>    (<span style="color:#a00">lp:submit-task</span> <span style="color:#a00">channel</span> <span style="color:#0a0">#&#39;</span><span style="color:#a00">say-world</span> <span style="color:#a00">helloq</span> <span style="color:#a00">worldq</span>)
+</span></span><span style="display:flex;"><span>    (<span style="color:#a00">lp:submit-task</span> <span style="color:#a00">channel</span> <span style="color:#0a0">#&#39;</span><span style="color:#a00">say-hello</span> <span style="color:#a00">helloq</span> <span style="color:#a00">worldq</span> <span style="color:#a00">n</span>)
+</span></span><span style="display:flex;"><span>    (<span style="color:#a00">lp:receive-result</span> <span style="color:#a00">channel</span>)
+</span></span><span style="display:flex;"><span>    (<span style="color:#a00">lp:receive-result</span> <span style="color:#a00">channel</span>)
+</span></span><span style="display:flex;"><span>    (<span style="color:#a00">lp:end-kernel</span>)))
+</span></span></code></pre></div><p>If you want to play locally with that code, I&rsquo;ve been updating it to a
 <em>github</em> project
 named <a href="https://github.com/dimitri/go-hello-world">go-hello-world</a>, even if
 it&rsquo;s coded in <em>CL</em>. See the <code>package.lisp</code> in there for how I did enable the
@@ -387,21 +387,21 @@ main function was returning before the thing is over.</p>
 the end of the program before returning to the <em>REPL</em>, and that indeed fixes
 it. A way to assert that is using the <code>time</code> macro, which was always
 intermingled with the output before. It&rsquo;s fixed now:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp"><span style="color:#a00">CL-USER&gt;</span> (<span style="color:#0aa">time</span> (<span style="color:#a00">go-hello-world:hello-world</span> <span style="color:#099">1000</span>))
-<span style="color:#a00">Hello</span> <span style="color:#a00">World!</span>
-...
-<span style="color:#a00">Hello</span> <span style="color:#a00">World!</span>
-(<span style="color:#a00">GO-HELLO-WORLD:HELLO-WORLD</span> <span style="color:#099">1000</span>)
-<span style="color:#a00">took</span> <span style="color:#099">27</span>,<span style="color:#099">886</span> <span style="color:#a00">microseconds</span> (<span style="color:#099">0.027886</span> <span style="color:#a00">seconds</span>) <span style="color:#a00">to</span> <span style="color:#a00">run.</span>
-      <span style="color:#099">1</span>,<span style="color:#099">593</span> <span style="color:#a00">microseconds</span> (<span style="color:#099">0.001593</span> <span style="color:#a00">seconds,</span> <span style="color:#a00">5.71%</span>) <span style="color:#a00">of</span> <span style="color:#a00">which</span> <span style="color:#a00">was</span> <span style="color:#a00">spent</span> <span style="color:#a00">in</span> <span style="color:#a00">GC.</span>
-<span style="color:#a00">During</span> <span style="color:#a00">that</span> <span style="color:#a00">period,</span> <span style="color:#0aa">and</span> <span style="color:#a00">with</span> <span style="color:#099">4</span> <span style="color:#a00">available</span> <span style="color:#a00">CPU</span> <span style="color:#a00">cores,</span>
-     <span style="color:#099">23</span>,<span style="color:#099">246</span> <span style="color:#a00">microseconds</span> (<span style="color:#099">0.023246</span> <span style="color:#a00">seconds</span>) <span style="color:#a00">were</span> <span style="color:#a00">spent</span> <span style="color:#a00">in</span> <span style="color:#a00">user</span> <span style="color:#a00">mode</span>
-     <span style="color:#099">14</span>,<span style="color:#099">427</span> <span style="color:#a00">microseconds</span> (<span style="color:#099">0.014427</span> <span style="color:#a00">seconds</span>) <span style="color:#a00">were</span> <span style="color:#a00">spent</span> <span style="color:#a00">in</span> <span style="color:#a00">system</span> <span style="color:#a00">mode</span>
- <span style="color:#099">4</span>,<span style="color:#099">272</span> <span style="color:#a00">bytes</span> <span style="color:#a00">of</span> <span style="color:#a00">memory</span> <span style="color:#a00">allocated.</span>
- <span style="color:#099">10</span> <span style="color:#a00">minor</span> <span style="color:#a00">page</span> <span style="color:#a00">faults,</span> <span style="color:#099">0</span> <span style="color:#a00">major</span> <span style="color:#a00">page</span> <span style="color:#a00">faults,</span> <span style="color:#099">0</span> <span style="color:#a00">swaps.</span>
-(<span style="color:#f00;background-color:#faa">#</span><span style="color:#a00">&lt;PROCESS</span> <span style="color:#a00">lparallel</span> <span style="color:#a00">kernel</span> <span style="color:#a00">shutdown</span> <span style="color:#a00">manager</span>(<span style="color:#099">62</span>) <span style="color:#a00">[Reset]</span> <span style="color:#099">#x30200109F65D</span><span style="color:#0a0">&gt;</span> ...)
-<span style="color:#a00">CL-USER&gt;</span> 
-</code></pre></div><h2 id="conclusion">Conclusion</h2>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-lisp" data-lang="lisp"><span style="display:flex;"><span><span style="color:#a00">CL-USER&gt;</span> (<span style="color:#0aa">time</span> (<span style="color:#a00">go-hello-world:hello-world</span> <span style="color:#099">1000</span>))
+</span></span><span style="display:flex;"><span><span style="color:#a00">Hello</span> <span style="color:#a00">World!</span>
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span><span style="color:#a00">Hello</span> <span style="color:#a00">World!</span>
+</span></span><span style="display:flex;"><span>(<span style="color:#a00">GO-HELLO-WORLD:HELLO-WORLD</span> <span style="color:#099">1000</span>)
+</span></span><span style="display:flex;"><span><span style="color:#a00">took</span> <span style="color:#099">27</span>,<span style="color:#099">886</span> <span style="color:#a00">microseconds</span> (<span style="color:#099">0.027886</span> <span style="color:#a00">seconds</span>) <span style="color:#a00">to</span> <span style="color:#a00">run.</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#099">1</span>,<span style="color:#099">593</span> <span style="color:#a00">microseconds</span> (<span style="color:#099">0.001593</span> <span style="color:#a00">seconds,</span> <span style="color:#a00">5.71%</span>) <span style="color:#a00">of</span> <span style="color:#a00">which</span> <span style="color:#a00">was</span> <span style="color:#a00">spent</span> <span style="color:#a00">in</span> <span style="color:#a00">GC.</span>
+</span></span><span style="display:flex;"><span><span style="color:#a00">During</span> <span style="color:#a00">that</span> <span style="color:#a00">period,</span> <span style="color:#0aa">and</span> <span style="color:#a00">with</span> <span style="color:#099">4</span> <span style="color:#a00">available</span> <span style="color:#a00">CPU</span> <span style="color:#a00">cores,</span>
+</span></span><span style="display:flex;"><span>     <span style="color:#099">23</span>,<span style="color:#099">246</span> <span style="color:#a00">microseconds</span> (<span style="color:#099">0.023246</span> <span style="color:#a00">seconds</span>) <span style="color:#a00">were</span> <span style="color:#a00">spent</span> <span style="color:#a00">in</span> <span style="color:#a00">user</span> <span style="color:#a00">mode</span>
+</span></span><span style="display:flex;"><span>     <span style="color:#099">14</span>,<span style="color:#099">427</span> <span style="color:#a00">microseconds</span> (<span style="color:#099">0.014427</span> <span style="color:#a00">seconds</span>) <span style="color:#a00">were</span> <span style="color:#a00">spent</span> <span style="color:#a00">in</span> <span style="color:#a00">system</span> <span style="color:#a00">mode</span>
+</span></span><span style="display:flex;"><span> <span style="color:#099">4</span>,<span style="color:#099">272</span> <span style="color:#a00">bytes</span> <span style="color:#a00">of</span> <span style="color:#a00">memory</span> <span style="color:#a00">allocated.</span>
+</span></span><span style="display:flex;"><span> <span style="color:#099">10</span> <span style="color:#a00">minor</span> <span style="color:#a00">page</span> <span style="color:#a00">faults,</span> <span style="color:#099">0</span> <span style="color:#a00">major</span> <span style="color:#a00">page</span> <span style="color:#a00">faults,</span> <span style="color:#099">0</span> <span style="color:#a00">swaps.</span>
+</span></span><span style="display:flex;"><span>(<span style="color:#f00;background-color:#faa">#</span><span style="color:#a00">&lt;PROCESS</span> <span style="color:#a00">lparallel</span> <span style="color:#a00">kernel</span> <span style="color:#a00">shutdown</span> <span style="color:#a00">manager</span>(<span style="color:#099">62</span>) <span style="color:#a00">[Reset]</span> <span style="color:#099">#x30200109F65D</span><span style="color:#0a0">&gt;</span> ...)
+</span></span><span style="display:flex;"><span><span style="color:#a00">CL-USER&gt;</span> 
+</span></span></code></pre></div><h2 id="conclusion">Conclusion</h2>
 <p>While <em>Go</em> language seems to bring very interesting things on the table,
 such as better compilation units and tools, I still think that the
 concurrency primitives at the core of it are easy to find in other places.
@@ -421,9 +421,17 @@ for <a href="http://lparallel.org/">lparallel</a>!</p>
 
             </div>
           </div>
-          <div style="margin-top: 1em;">
- <a href="https://theartofpostgresql.com" alt="The Art of PostgreSQL">
-  <img src="/img/taopg-cta.jpg" style="width:90%; height: auto; margin-left: 5%">
+          
+
+
+
+
+
+<div style="margin-top: 1em;">
+ <script async src="//tinder.thrivecart.com/embed/v1/thrivecart.js"></script>
+ <a data-thrivecart-account="theartofpostgresql" data-thrivecart-tpl="v2" data-thrivecart-product="18" class="thrivecart-button ">
+  <img src="https://spark.thrivecart.com/0x0/https%3A%2F%2Fthrivecart.s3.amazonaws.com%2Fuser_assets%2FNABJ5K7H%2Fproducts%2F18%2Ftaopg-cta-1661268188.jpg"
+       style="width:90%; height: auto; margin-left: 5%"/>
  </a>
 </div>
 
@@ -517,7 +525,7 @@ for <a href="http://lparallel.org/">lparallel</a>!</p>
         </article>
         <footer id="footer" class="main-content-wrap">
   <span class="copyrights">
-    &copy; 2021 Dimitri Fontaine. 
+    &copy; 2022 Dimitri Fontaine. 
   </span>
 </footer>
 

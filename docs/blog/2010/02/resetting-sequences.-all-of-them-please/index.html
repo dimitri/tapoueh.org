@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.89.3">
+    <meta name="generator" content="Hugo 0.101.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Resetting sequences. All of them, please!</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -366,35 +366,43 @@ is in fact the query itself. A nice way to start is to
 <code>\set ECHO_HIDDEN</code> then
 describe some table, you now have a catalog example query to work with. Then
 you tweak it somehow and get this:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">SELECT</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;select &#39;</span><span style="color:#bbb"> 
-</span><span style="color:#bbb">        </span>||<span style="color:#bbb"> </span><span style="color:#00a">trim</span>(<span style="color:#00a">trailing</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;)&#39;</span><span style="color:#bbb"> 
-</span><span style="color:#bbb">           </span><span style="color:#00a">from</span><span style="color:#bbb"> </span><span style="color:#00a">replace</span>(pg_get_expr(d.adbin,<span style="color:#bbb"> </span>d.adrelid),<span style="color:#bbb">
-</span><span style="color:#bbb">                        </span><span style="color:#a50">&#39;nextval&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;setval&#39;</span>))<span style="color:#bbb">
-</span><span style="color:#bbb">        </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39;, (select max( &#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>a.attname<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39;) from only &#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">        </span>||<span style="color:#bbb"> </span>nspname<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39;.&#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>relname<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39;));&#39;</span><span style="color:#bbb"> 
-</span><span style="color:#bbb">  </span><span style="color:#00a">FROM</span><span style="color:#bbb"> </span>pg_class<span style="color:#bbb"> </span><span style="color:#00a">c</span><span style="color:#bbb"> 
-</span><span style="color:#bbb">       </span><span style="color:#00a">JOIN</span><span style="color:#bbb"> </span>pg_namespace<span style="color:#bbb"> </span>n<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>n.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">c</span>.relnamespace<span style="color:#bbb"> 
-</span><span style="color:#bbb">       </span><span style="color:#00a">JOIN</span><span style="color:#bbb"> </span>pg_attribute<span style="color:#bbb"> </span>a<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>a.attrelid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">c</span>.oid<span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#00a">JOIN</span><span style="color:#bbb"> </span>pg_attrdef<span style="color:#bbb"> </span>d<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>d.adrelid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>a.attrelid<span style="color:#bbb"> 
-</span><span style="color:#bbb">                          </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>d.adnum<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>a.attnum<span style="color:#bbb">
-</span><span style="color:#bbb">                          </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>a.atthasdef<span style="color:#bbb"> 
-</span><span style="color:#bbb"> </span><span style="color:#00a">WHERE</span><span style="color:#bbb"> </span>relkind<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;r&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>a.attnum<span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb"> 
-</span><span style="color:#bbb">       </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>pg_get_expr(d.adbin,<span style="color:#bbb"> </span>d.adrelid)<span style="color:#bbb"> </span>~<span style="color:#bbb"> </span><span style="color:#a50">&#39;^nextval&#39;</span>;<span style="color:#bbb">
-</span></code></pre></div><p>Coming next, a <em>recode</em> script in order to
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">SELECT</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;select &#39;</span><span style="color:#bbb"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>||<span style="color:#bbb"> </span><span style="color:#00a">trim</span>(<span style="color:#00a">trailing</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;)&#39;</span><span style="color:#bbb"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">           </span><span style="color:#00a">from</span><span style="color:#bbb"> </span><span style="color:#00a">replace</span>(pg_get_expr(d.adbin,<span style="color:#bbb"> </span>d.adrelid),<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                        </span><span style="color:#a50">&#39;nextval&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;setval&#39;</span>))<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39;, (select max( &#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>a.attname<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39;) from only &#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>||<span style="color:#bbb"> </span>nspname<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39;.&#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>relname<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39;));&#39;</span><span style="color:#bbb"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">FROM</span><span style="color:#bbb"> </span>pg_class<span style="color:#bbb"> </span><span style="color:#00a">c</span><span style="color:#bbb"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">JOIN</span><span style="color:#bbb"> </span>pg_namespace<span style="color:#bbb"> </span>n<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>n.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">c</span>.relnamespace<span style="color:#bbb"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">JOIN</span><span style="color:#bbb"> </span>pg_attribute<span style="color:#bbb"> </span>a<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>a.attrelid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">c</span>.oid<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">JOIN</span><span style="color:#bbb"> </span>pg_attrdef<span style="color:#bbb"> </span>d<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>d.adrelid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>a.attrelid<span style="color:#bbb"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                          </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>d.adnum<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>a.attnum<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                          </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>a.atthasdef<span style="color:#bbb"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">WHERE</span><span style="color:#bbb"> </span>relkind<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;r&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>a.attnum<span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>pg_get_expr(d.adbin,<span style="color:#bbb"> </span>d.adrelid)<span style="color:#bbb"> </span>~<span style="color:#bbb"> </span><span style="color:#a50">&#39;^nextval&#39;</span>;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>Coming next, a <em>recode</em> script in order to
 get
 <a href="/blog/2010/02/getting-out-of-sql_ascii-part-1/">from SQL_ASCII to UTF-8</a>,
 and some strange looking queries too.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">recode.sh [-npdf0TI] [-U user ] -s schema [-m mintable] pattern
-</code></pre></div><p>Stay tuned!</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>recode.sh [-npdf0TI] [-U user ] -s schema [-m mintable] pattern
+</span></span></code></pre></div><p>Stay tuned!</p>
 
               
 
 
             </div>
           </div>
-          <div style="margin-top: 1em;">
- <a href="https://theartofpostgresql.com" alt="The Art of PostgreSQL">
-  <img src="/img/taopg-cta.jpg" style="width:90%; height: auto; margin-left: 5%">
+          
+
+
+
+
+
+<div style="margin-top: 1em;">
+ <script async src="//tinder.thrivecart.com/embed/v1/thrivecart.js"></script>
+ <a data-thrivecart-account="theartofpostgresql" data-thrivecart-tpl="v2" data-thrivecart-product="18" class="thrivecart-button ">
+  <img src="https://spark.thrivecart.com/0x0/https%3A%2F%2Fthrivecart.s3.amazonaws.com%2Fuser_assets%2FNABJ5K7H%2Fproducts%2F18%2Ftaopg-cta-1661268188.jpg"
+       style="width:90%; height: auto; margin-left: 5%"/>
  </a>
 </div>
 
@@ -490,7 +498,7 @@ and some strange looking queries too.</p>
         </article>
         <footer id="footer" class="main-content-wrap">
   <span class="copyrights">
-    &copy; 2021 Dimitri Fontaine. 
+    &copy; 2022 Dimitri Fontaine. 
   </span>
 </footer>
 

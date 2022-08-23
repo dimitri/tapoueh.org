@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.89.3">
+    <meta name="generator" content="Hugo 0.101.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Fast and stupid?</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -337,124 +337,124 @@ challenge. The idea is to write the simplest code possible and see how
 smarter you need to be when you need perfs. Let&rsquo;s have a try!</p>
 <h2 id="local-python-results">local python results</h2>
 <p>Here&rsquo;s the code I did use to benchmark the python solution:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#00a">def</span> <span style="color:#0a0">sumrange</span>(arg):
-    <span style="color:#00a">return</span> <span style="color:#0aa">sum</span>(xrange(arg))
-
-<span style="color:#00a">def</span> <span style="color:#0a0">sumrange2</span>(arg):
-    x = i = <span style="color:#099">0</span>
-    <span style="color:#00a">while</span> i &lt; arg:
-        x += i
-        i += <span style="color:#099">1</span>
-    <span style="color:#00a">return</span> x
-
-
-<span style="color:#00a">import</span> <span style="color:#0aa;text-decoration:underline">ctypes</span>
-ct_sumrange = ctypes.CDLL(<span style="color:#a50">&#39;/Users/dim/dev/CL/jiaroo/sumrange.so&#39;</span>)
-
-<span style="color:#00a">def</span> <span style="color:#0a0">sumrange_ctypes</span>(arg):
-    <span style="color:#00a">return</span> ct_sumrange.sumrange(arg)
-
-<span style="color:#00a">if</span> __name__ == <span style="color:#a50">&#34;__main__&#34;</span>:
-    <span style="color:#00a">import</span> <span style="color:#0aa;text-decoration:underline">timeit</span>
-    t1 = timeit.Timer(<span style="color:#a50">&#39;import jiaroo; jiaroo.sumrange(10**10)&#39;</span>)
-    t2 = timeit.Timer(<span style="color:#a50">&#39;import jiaroo; jiaroo.sumrange2(10**10)&#39;</span>)
-    ct = timeit.Timer(<span style="color:#a50">&#39;import jiaroo; jiaroo.sumrange_ctypes(10**10)&#39;</span>)
-
-    <span style="color:#0aa">print</span> <span style="color:#a50">&#39;timing python sumrange(10**10)&#39;</span>
-    <span style="color:#0aa">print</span> <span style="color:#a50">&#39;xrange: </span><span style="color:#a50">%5f</span><span style="color:#a50">s&#39;</span> % t1.timeit(<span style="color:#099">1</span>)
-    <span style="color:#0aa">print</span> <span style="color:#a50">&#39;while:  </span><span style="color:#a50">%5f</span><span style="color:#a50">s&#39;</span> % t2.timeit(<span style="color:#099">1</span>)
-    <span style="color:#0aa">print</span> <span style="color:#a50">&#39;ctypes: </span><span style="color:#a50">%5f</span><span style="color:#a50">s&#39;</span> % ct.timeit(<span style="color:#099">1</span>)
-</code></pre></div><p>Oh. And the C code too, sorry about that.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#4c8317">#include</span> <span style="color:#4c8317">&lt;stdio.h&gt;</span><span style="color:#4c8317">
-</span><span style="color:#4c8317"></span>
-<span style="color:#0aa">int</span> <span style="color:#0a0">sumrange</span>(<span style="color:#0aa">int</span> arg)
-{
-    <span style="color:#0aa">int</span> i, x;
-    x = <span style="color:#099">0</span>;
-
-    <span style="color:#00a">for</span> (i = <span style="color:#099">0</span>; i &lt; arg; i++) {
-        x = x + i;
-    }
-    <span style="color:#00a">return</span> x;
-}
-</code></pre></div><p>And here&rsquo;s how I did compile it. The author of the inspiring article
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#00a">def</span> <span style="color:#0a0">sumrange</span>(arg):
+</span></span><span style="display:flex;"><span>    <span style="color:#00a">return</span> <span style="color:#0aa">sum</span>(xrange(arg))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#00a">def</span> <span style="color:#0a0">sumrange2</span>(arg):
+</span></span><span style="display:flex;"><span>    x = i = <span style="color:#099">0</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#00a">while</span> i &lt; arg:
+</span></span><span style="display:flex;"><span>        x += i
+</span></span><span style="display:flex;"><span>        i += <span style="color:#099">1</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#00a">return</span> x
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#00a">import</span> <span style="color:#0aa;text-decoration:underline">ctypes</span>
+</span></span><span style="display:flex;"><span>ct_sumrange = ctypes.CDLL(<span style="color:#a50">&#39;/Users/dim/dev/CL/jiaroo/sumrange.so&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#00a">def</span> <span style="color:#0a0">sumrange_ctypes</span>(arg):
+</span></span><span style="display:flex;"><span>    <span style="color:#00a">return</span> ct_sumrange.sumrange(arg)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#00a">if</span> __name__ == <span style="color:#a50">&#34;__main__&#34;</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#00a">import</span> <span style="color:#0aa;text-decoration:underline">timeit</span>
+</span></span><span style="display:flex;"><span>    t1 = timeit.Timer(<span style="color:#a50">&#39;import jiaroo; jiaroo.sumrange(10**10)&#39;</span>)
+</span></span><span style="display:flex;"><span>    t2 = timeit.Timer(<span style="color:#a50">&#39;import jiaroo; jiaroo.sumrange2(10**10)&#39;</span>)
+</span></span><span style="display:flex;"><span>    ct = timeit.Timer(<span style="color:#a50">&#39;import jiaroo; jiaroo.sumrange_ctypes(10**10)&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0aa">print</span> <span style="color:#a50">&#39;timing python sumrange(10**10)&#39;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0aa">print</span> <span style="color:#a50">&#39;xrange: </span><span style="color:#a50">%5f</span><span style="color:#a50">s&#39;</span> % t1.timeit(<span style="color:#099">1</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#0aa">print</span> <span style="color:#a50">&#39;while:  </span><span style="color:#a50">%5f</span><span style="color:#a50">s&#39;</span> % t2.timeit(<span style="color:#099">1</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#0aa">print</span> <span style="color:#a50">&#39;ctypes: </span><span style="color:#a50">%5f</span><span style="color:#a50">s&#39;</span> % ct.timeit(<span style="color:#099">1</span>)
+</span></span></code></pre></div><p>Oh. And the C code too, sorry about that.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#4c8317">#include</span> <span style="color:#4c8317">&lt;stdio.h&gt;</span><span style="color:#4c8317">
+</span></span></span><span style="display:flex;"><span><span style="color:#4c8317"></span>
+</span></span><span style="display:flex;"><span><span style="color:#0aa">int</span> <span style="color:#0a0">sumrange</span>(<span style="color:#0aa">int</span> arg)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#0aa">int</span> i, x;
+</span></span><span style="display:flex;"><span>    x = <span style="color:#099">0</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#00a">for</span> (i = <span style="color:#099">0</span>; i &lt; arg; i++) {
+</span></span><span style="display:flex;"><span>        x = x + i;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#00a">return</span> x;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>And here&rsquo;s how I did compile it. The author of the inspiring article
 insisted on stupid optimisation targets, I did follow him:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">gcc -shared -Wl,-install_name,sumrange.so -o sumrange.so -fPIC sumrange.c -O0
-</code></pre></div><p>And here&rsquo;s the result I did get out of it:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ python jiaroo.py
-timing python sumrange(10**10)
-xrange: 927.039917s
-<span style="color:#00a">while</span>:  2377.291237s
-ctypes: 5.297124s
-</code></pre></div><p>Let&rsquo;s be fair, with <code>-O2</code> we get much better results:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">timing python sumrange(10**10)
-ctypes: 1.065684s
-</code></pre></div><h2 id="common-lisp-to-the-rescue">Common Lisp to the rescue</h2>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>gcc -shared -Wl,-install_name,sumrange.so -o sumrange.so -fPIC sumrange.c -O0
+</span></span></code></pre></div><p>And here&rsquo;s the result I did get out of it:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ python jiaroo.py
+</span></span><span style="display:flex;"><span>timing python sumrange(10**10)
+</span></span><span style="display:flex;"><span>xrange: 927.039917s
+</span></span><span style="display:flex;"><span><span style="color:#00a">while</span>:  2377.291237s
+</span></span><span style="display:flex;"><span>ctypes: 5.297124s
+</span></span></code></pre></div><p>Let&rsquo;s be fair, with <code>-O2</code> we get much better results:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>timing python sumrange(10**10)
+</span></span><span style="display:flex;"><span>ctypes: 1.065684s
+</span></span></code></pre></div><h2 id="common-lisp-to-the-rescue">Common Lisp to the rescue</h2>
 <p>So let&rsquo;s have a try in Common Lisp, will you ask me, right?</p>
 <p>Here&rsquo;s the code I did use, you can see three different tries:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp"><span style="color:#aaa;font-style:italic">;;;; jiaroo.lisp</span>
-<span style="color:#aaa;font-style:italic">;;;</span>
-<span style="color:#aaa;font-style:italic">;;; See http://jiaaro.com/python-performance-the-easyish-way</span>
-<span style="color:#aaa;font-style:italic">;;;</span>
-<span style="color:#aaa;font-style:italic">;;; The goal here is to find out if CL needs to resort to C for very simple</span>
-<span style="color:#aaa;font-style:italic">;;; optimisation tricks like python apparently needs too, unless using pypy</span>
-<span style="color:#aaa;font-style:italic">;;; (to some extend).</span>
-
-(<span style="color:#0aa">in-package</span> <span style="color:#00a">#:jiaroo</span>)
-
-<span style="color:#aaa;font-style:italic">;;; &#34;jiaroo&#34; goes here. Hacks and glory await!</span>
-
-(<span style="color:#0aa">defun</span> <span style="color:#a00">sumrange-loop</span> (<span style="color:#0a0">max</span>)
-  <span style="color:#a50">&#34;return the sum of numbers from 1 to MAX&#34;</span>
-  (<span style="color:#00a">let</span> ((<span style="color:#a00">sum</span> <span style="color:#099">0</span>))
-    (<span style="color:#00a">declare</span> (<span style="color:#00a">type</span> (<span style="color:#0aa">and</span> <span style="color:#0aa">unsigned-byte</span> <span style="color:#0aa">fixnum</span>) <span style="color:#0a0">max</span> <span style="color:#a00">sum</span>)
-	     (<span style="color:#00a">optimize</span> <span style="color:#a00">speed</span>))
-    (<span style="color:#0aa">loop</span> <span style="color:#a00">for</span> <span style="color:#a00">i</span> <span style="color:#0aa">fixnum</span> <span style="color:#a00">from</span> <span style="color:#099">1</span> <span style="color:#a00">to</span> <span style="color:#0a0">max</span> <span style="color:#0aa">do</span> (<span style="color:#0aa">incf</span> <span style="color:#a00">sum</span> <span style="color:#a00">i</span>))))
-
-(<span style="color:#0aa">defun</span> <span style="color:#a00">sumrange-dotimes</span> (<span style="color:#0a0">max</span>)
-  <span style="color:#a50">&#34;return the sum of numbers from 1 to MAX&#34;</span>
-  (<span style="color:#00a">let</span> ((<span style="color:#a00">sum</span> <span style="color:#099">0</span>))
-    (<span style="color:#00a">declare</span> (<span style="color:#00a">type</span> (<span style="color:#0aa">and</span> <span style="color:#0aa">unsigned-byte</span> <span style="color:#0aa">fixnum</span>) <span style="color:#0a0">max</span> <span style="color:#a00">sum</span>)
-	     (<span style="color:#00a">optimize</span> <span style="color:#a00">speed</span>))
-    (<span style="color:#0aa">dotimes</span> (<span style="color:#a00">i</span> <span style="color:#0a0">max</span> <span style="color:#a00">sum</span>)
-      (<span style="color:#0aa">incf</span> <span style="color:#a00">sum</span> <span style="color:#a00">i</span>))))
-
-(<span style="color:#0aa">defun</span> <span style="color:#a00">pk-sumrange</span> (<span style="color:#0a0">max</span>)
-  (<span style="color:#00a">declare</span> (<span style="color:#00a">type</span> (<span style="color:#0aa">and</span> <span style="color:#0aa">unsigned-byte</span> <span style="color:#0aa">fixnum</span>) <span style="color:#0a0">max</span>)
-	   (<span style="color:#00a">optimize</span> <span style="color:#a00">speed</span>))
-  (<span style="color:#00a">let</span> ((<span style="color:#a00">sum</span> <span style="color:#099">0</span>))
-    (<span style="color:#00a">declare</span> (<span style="color:#00a">type</span> (<span style="color:#0aa">and</span> <span style="color:#0aa">fixnum</span> <span style="color:#0aa">unsigned-byte</span>) <span style="color:#a00">sum</span>))
-    (<span style="color:#0aa">dotimes</span> (<span style="color:#a00">i</span> <span style="color:#0a0">max</span> <span style="color:#a00">sum</span>)
-      (<span style="color:#0aa">setf</span> <span style="color:#a00">sum</span> (<span style="color:#0a0">logand</span> (<span style="color:#0a0">+</span> <span style="color:#a00">sum</span> <span style="color:#a00">i</span>) <span style="color:#a00">most-positive-fixnum</span>)))))
-
-(<span style="color:#0aa">defmacro</span> <span style="color:#a00">timing</span> (<span style="color:#00a">&amp;body</span> <span style="color:#a00">forms</span>)
-  <span style="color:#a50">&#34;return both how much real time was spend in body and its result&#34;</span>
-  (<span style="color:#00a">let</span> ((<span style="color:#a00">start</span> (<span style="color:#0a0">gensym</span>))
-	(<span style="color:#a00">end</span> (<span style="color:#0a0">gensym</span>))
-	(<span style="color:#a00">result</span> (<span style="color:#0a0">gensym</span>)))
-    `(<span style="color:#00a">let*</span> ((,<span style="color:#a00">start</span> (<span style="color:#0a0">get-internal-real-time</span>))
-	    (,<span style="color:#a00">result</span> (<span style="color:#00a">progn</span> ,@<span style="color:#a00">forms</span>))
-	    (,<span style="color:#a00">end</span> (<span style="color:#0a0">get-internal-real-time</span>)))
-       (<span style="color:#0a0">values</span> ,<span style="color:#a00">result</span> (<span style="color:#0a0">/</span> (<span style="color:#0a0">-</span> ,<span style="color:#a00">end</span> ,<span style="color:#a00">start</span>) <span style="color:#a00">internal-time-units-per-second</span>)))))
-
-(<span style="color:#0aa">defun</span> <span style="color:#a00">bench-sumrange</span> (<span style="color:#a00">power</span>)
-  <span style="color:#a50">&#34;print execution time of both the previous functions&#34;</span>
-  (<span style="color:#00a">let*</span> ((<span style="color:#0a0">max</span> (<span style="color:#0a0">expt</span> <span style="color:#099">10</span> <span style="color:#a00">power</span>))
-	 (<span style="color:#a00">lp-time</span> (<span style="color:#0aa">multiple-value-bind</span> (<span style="color:#a00">r</span> <span style="color:#a00">s</span>) (<span style="color:#a00">timing</span> (<span style="color:#a00">sumrange-loop</span> <span style="color:#0a0">max</span>)) <span style="color:#a00">s</span>))
-	 (<span style="color:#a00">dt-time</span> (<span style="color:#0aa">multiple-value-bind</span> (<span style="color:#a00">r</span> <span style="color:#a00">s</span>) (<span style="color:#a00">timing</span> (<span style="color:#a00">sumrange-dotimes</span> <span style="color:#0a0">max</span>)) <span style="color:#a00">s</span>))
-	 (<span style="color:#a00">pk-time</span> (<span style="color:#0aa">multiple-value-bind</span> (<span style="color:#a00">r</span> <span style="color:#a00">s</span>) (<span style="color:#a00">timing</span> (<span style="color:#a00">pk-sumrange</span> <span style="color:#0a0">max</span>)) <span style="color:#a00">s</span>)))
-    (<span style="color:#0a0">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;timing common lisp sumrange 10**~d~%&#34;</span> <span style="color:#a00">power</span>)
-    (<span style="color:#0a0">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;loop:       ~2,3fs ~%&#34;</span> <span style="color:#a00">lp-time</span>)
-    (<span style="color:#0a0">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;dotimes:    ~2,3fs ~%&#34;</span> <span style="color:#a00">dt-time</span>)
-    (<span style="color:#0a0">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;pk dotimes: ~2,3fs ~%&#34;</span> <span style="color:#a00">pk-time</span>)))
-</code></pre></div><p>And here&rsquo;s the results:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp"><span style="color:#a00">CL-USER&gt;</span> (<span style="color:#a00">bench-sumrange</span> <span style="color:#099">10</span>)
-<span style="color:#a00">timing</span> <span style="color:#a00">common</span> <span style="color:#a00">lisp</span> <span style="color:#a00">sumrange</span> <span style="color:#a00">10**10</span>
-<span style="color:#a00">loop:</span>       <span style="color:#a00">11.213s</span> 
-<span style="color:#a00">dotimes:</span>    <span style="color:#a00">7.642s</span> 
-<span style="color:#a00">pk</span> <span style="color:#a00">dotimes:</span> <span style="color:#a00">22.185s</span> 
-<span style="color:#a00">NIL</span>
-</code></pre></div><h2 id="discussion">Discussion</h2>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-lisp" data-lang="lisp"><span style="display:flex;"><span><span style="color:#aaa;font-style:italic">;;;; jiaroo.lisp</span>
+</span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic">;;;</span>
+</span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic">;;; See http://jiaaro.com/python-performance-the-easyish-way</span>
+</span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic">;;;</span>
+</span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic">;;; The goal here is to find out if CL needs to resort to C for very simple</span>
+</span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic">;;; optimisation tricks like python apparently needs too, unless using pypy</span>
+</span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic">;;; (to some extend).</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(<span style="color:#0aa">in-package</span> <span style="color:#00a">#:jiaroo</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic">;;; &#34;jiaroo&#34; goes here. Hacks and glory await!</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(<span style="color:#0aa">defun</span> <span style="color:#a00">sumrange-loop</span> (<span style="color:#0a0">max</span>)
+</span></span><span style="display:flex;"><span>  <span style="color:#a50">&#34;return the sum of numbers from 1 to MAX&#34;</span>
+</span></span><span style="display:flex;"><span>  (<span style="color:#00a">let</span> ((<span style="color:#a00">sum</span> <span style="color:#099">0</span>))
+</span></span><span style="display:flex;"><span>    (<span style="color:#00a">declare</span> (<span style="color:#00a">type</span> (<span style="color:#0aa">and</span> <span style="color:#0aa">unsigned-byte</span> <span style="color:#0aa">fixnum</span>) <span style="color:#0a0">max</span> <span style="color:#a00">sum</span>)
+</span></span><span style="display:flex;"><span>	     (<span style="color:#00a">optimize</span> <span style="color:#a00">speed</span>))
+</span></span><span style="display:flex;"><span>    (<span style="color:#0aa">loop</span> <span style="color:#a00">for</span> <span style="color:#a00">i</span> <span style="color:#0aa">fixnum</span> <span style="color:#a00">from</span> <span style="color:#099">1</span> <span style="color:#a00">to</span> <span style="color:#0a0">max</span> <span style="color:#0aa">do</span> (<span style="color:#0aa">incf</span> <span style="color:#a00">sum</span> <span style="color:#a00">i</span>))))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(<span style="color:#0aa">defun</span> <span style="color:#a00">sumrange-dotimes</span> (<span style="color:#0a0">max</span>)
+</span></span><span style="display:flex;"><span>  <span style="color:#a50">&#34;return the sum of numbers from 1 to MAX&#34;</span>
+</span></span><span style="display:flex;"><span>  (<span style="color:#00a">let</span> ((<span style="color:#a00">sum</span> <span style="color:#099">0</span>))
+</span></span><span style="display:flex;"><span>    (<span style="color:#00a">declare</span> (<span style="color:#00a">type</span> (<span style="color:#0aa">and</span> <span style="color:#0aa">unsigned-byte</span> <span style="color:#0aa">fixnum</span>) <span style="color:#0a0">max</span> <span style="color:#a00">sum</span>)
+</span></span><span style="display:flex;"><span>	     (<span style="color:#00a">optimize</span> <span style="color:#a00">speed</span>))
+</span></span><span style="display:flex;"><span>    (<span style="color:#0aa">dotimes</span> (<span style="color:#a00">i</span> <span style="color:#0a0">max</span> <span style="color:#a00">sum</span>)
+</span></span><span style="display:flex;"><span>      (<span style="color:#0aa">incf</span> <span style="color:#a00">sum</span> <span style="color:#a00">i</span>))))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(<span style="color:#0aa">defun</span> <span style="color:#a00">pk-sumrange</span> (<span style="color:#0a0">max</span>)
+</span></span><span style="display:flex;"><span>  (<span style="color:#00a">declare</span> (<span style="color:#00a">type</span> (<span style="color:#0aa">and</span> <span style="color:#0aa">unsigned-byte</span> <span style="color:#0aa">fixnum</span>) <span style="color:#0a0">max</span>)
+</span></span><span style="display:flex;"><span>	   (<span style="color:#00a">optimize</span> <span style="color:#a00">speed</span>))
+</span></span><span style="display:flex;"><span>  (<span style="color:#00a">let</span> ((<span style="color:#a00">sum</span> <span style="color:#099">0</span>))
+</span></span><span style="display:flex;"><span>    (<span style="color:#00a">declare</span> (<span style="color:#00a">type</span> (<span style="color:#0aa">and</span> <span style="color:#0aa">fixnum</span> <span style="color:#0aa">unsigned-byte</span>) <span style="color:#a00">sum</span>))
+</span></span><span style="display:flex;"><span>    (<span style="color:#0aa">dotimes</span> (<span style="color:#a00">i</span> <span style="color:#0a0">max</span> <span style="color:#a00">sum</span>)
+</span></span><span style="display:flex;"><span>      (<span style="color:#0aa">setf</span> <span style="color:#a00">sum</span> (<span style="color:#0a0">logand</span> (<span style="color:#0a0">+</span> <span style="color:#a00">sum</span> <span style="color:#a00">i</span>) <span style="color:#a00">most-positive-fixnum</span>)))))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(<span style="color:#0aa">defmacro</span> <span style="color:#a00">timing</span> (<span style="color:#00a">&amp;body</span> <span style="color:#a00">forms</span>)
+</span></span><span style="display:flex;"><span>  <span style="color:#a50">&#34;return both how much real time was spend in body and its result&#34;</span>
+</span></span><span style="display:flex;"><span>  (<span style="color:#00a">let</span> ((<span style="color:#a00">start</span> (<span style="color:#0a0">gensym</span>))
+</span></span><span style="display:flex;"><span>	(<span style="color:#a00">end</span> (<span style="color:#0a0">gensym</span>))
+</span></span><span style="display:flex;"><span>	(<span style="color:#a00">result</span> (<span style="color:#0a0">gensym</span>)))
+</span></span><span style="display:flex;"><span>    `(<span style="color:#00a">let*</span> ((,<span style="color:#a00">start</span> (<span style="color:#0a0">get-internal-real-time</span>))
+</span></span><span style="display:flex;"><span>	    (,<span style="color:#a00">result</span> (<span style="color:#00a">progn</span> ,@<span style="color:#a00">forms</span>))
+</span></span><span style="display:flex;"><span>	    (,<span style="color:#a00">end</span> (<span style="color:#0a0">get-internal-real-time</span>)))
+</span></span><span style="display:flex;"><span>       (<span style="color:#0a0">values</span> ,<span style="color:#a00">result</span> (<span style="color:#0a0">/</span> (<span style="color:#0a0">-</span> ,<span style="color:#a00">end</span> ,<span style="color:#a00">start</span>) <span style="color:#a00">internal-time-units-per-second</span>)))))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(<span style="color:#0aa">defun</span> <span style="color:#a00">bench-sumrange</span> (<span style="color:#a00">power</span>)
+</span></span><span style="display:flex;"><span>  <span style="color:#a50">&#34;print execution time of both the previous functions&#34;</span>
+</span></span><span style="display:flex;"><span>  (<span style="color:#00a">let*</span> ((<span style="color:#0a0">max</span> (<span style="color:#0a0">expt</span> <span style="color:#099">10</span> <span style="color:#a00">power</span>))
+</span></span><span style="display:flex;"><span>	 (<span style="color:#a00">lp-time</span> (<span style="color:#0aa">multiple-value-bind</span> (<span style="color:#a00">r</span> <span style="color:#a00">s</span>) (<span style="color:#a00">timing</span> (<span style="color:#a00">sumrange-loop</span> <span style="color:#0a0">max</span>)) <span style="color:#a00">s</span>))
+</span></span><span style="display:flex;"><span>	 (<span style="color:#a00">dt-time</span> (<span style="color:#0aa">multiple-value-bind</span> (<span style="color:#a00">r</span> <span style="color:#a00">s</span>) (<span style="color:#a00">timing</span> (<span style="color:#a00">sumrange-dotimes</span> <span style="color:#0a0">max</span>)) <span style="color:#a00">s</span>))
+</span></span><span style="display:flex;"><span>	 (<span style="color:#a00">pk-time</span> (<span style="color:#0aa">multiple-value-bind</span> (<span style="color:#a00">r</span> <span style="color:#a00">s</span>) (<span style="color:#a00">timing</span> (<span style="color:#a00">pk-sumrange</span> <span style="color:#0a0">max</span>)) <span style="color:#a00">s</span>)))
+</span></span><span style="display:flex;"><span>    (<span style="color:#0a0">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;timing common lisp sumrange 10**~d~%&#34;</span> <span style="color:#a00">power</span>)
+</span></span><span style="display:flex;"><span>    (<span style="color:#0a0">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;loop:       ~2,3fs ~%&#34;</span> <span style="color:#a00">lp-time</span>)
+</span></span><span style="display:flex;"><span>    (<span style="color:#0a0">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;dotimes:    ~2,3fs ~%&#34;</span> <span style="color:#a00">dt-time</span>)
+</span></span><span style="display:flex;"><span>    (<span style="color:#0a0">format</span> <span style="color:#a00">t</span> <span style="color:#a50">&#34;pk dotimes: ~2,3fs ~%&#34;</span> <span style="color:#a00">pk-time</span>)))
+</span></span></code></pre></div><p>And here&rsquo;s the results:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-lisp" data-lang="lisp"><span style="display:flex;"><span><span style="color:#a00">CL-USER&gt;</span> (<span style="color:#a00">bench-sumrange</span> <span style="color:#099">10</span>)
+</span></span><span style="display:flex;"><span><span style="color:#a00">timing</span> <span style="color:#a00">common</span> <span style="color:#a00">lisp</span> <span style="color:#a00">sumrange</span> <span style="color:#a00">10**10</span>
+</span></span><span style="display:flex;"><span><span style="color:#a00">loop:</span>       <span style="color:#a00">11.213s</span> 
+</span></span><span style="display:flex;"><span><span style="color:#a00">dotimes:</span>    <span style="color:#a00">7.642s</span> 
+</span></span><span style="display:flex;"><span><span style="color:#a00">pk</span> <span style="color:#a00">dotimes:</span> <span style="color:#a00">22.185s</span> 
+</span></span><span style="display:flex;"><span><span style="color:#a00">NIL</span>
+</span></span></code></pre></div><h2 id="discussion">Discussion</h2>
 <p>So python is very slow. C is pretty fast. And Common Lisp just in the
 middle. Honnestly I expected better performances from my beloved Common Lisp
 here, but I didn&rsquo;t try very hard, by
@@ -475,38 +475,38 @@ solution here.</p>
 <p>Let&rsquo;s see the winning source code in <em>python</em> and <em>common lisp</em> to compare
 the programmer side of things: how hard was it really to get <code>121</code> times
 faster?</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#00a">def</span> <span style="color:#0a0">sumrange</span>(arg):
-    <span style="color:#00a">return</span> <span style="color:#0aa">sum</span>(xrange(arg))
-</code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp">(<span style="color:#0aa">defun</span> <span style="color:#a00">sumrange-dotimes</span> (<span style="color:#0a0">max</span>)
-  <span style="color:#a50">&#34;return the sum of numbers from 1 to MAX&#34;</span>
-  (<span style="color:#00a">let</span> ((<span style="color:#a00">sum</span> <span style="color:#099">0</span>))
-    (<span style="color:#00a">declare</span> (<span style="color:#00a">type</span> (<span style="color:#0aa">and</span> <span style="color:#0aa">unsigned-byte</span> <span style="color:#0aa">fixnum</span>) <span style="color:#0a0">max</span> <span style="color:#a00">sum</span>)
-	     (<span style="color:#00a">optimize</span> <span style="color:#a00">speed</span>))
-    (<span style="color:#0aa">dotimes</span> (<span style="color:#a00">i</span> <span style="color:#0a0">max</span> <span style="color:#a00">sum</span>)
-      (<span style="color:#0aa">incf</span> <span style="color:#a00">sum</span> <span style="color:#a00">i</span>))))
-</code></pre></div><p>That&rsquo;s about it. Yes we can see some <em>manual</em> optimisation directives here,
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#00a">def</span> <span style="color:#0a0">sumrange</span>(arg):
+</span></span><span style="display:flex;"><span>    <span style="color:#00a">return</span> <span style="color:#0aa">sum</span>(xrange(arg))
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-lisp" data-lang="lisp"><span style="display:flex;"><span>(<span style="color:#0aa">defun</span> <span style="color:#a00">sumrange-dotimes</span> (<span style="color:#0a0">max</span>)
+</span></span><span style="display:flex;"><span>  <span style="color:#a50">&#34;return the sum of numbers from 1 to MAX&#34;</span>
+</span></span><span style="display:flex;"><span>  (<span style="color:#00a">let</span> ((<span style="color:#a00">sum</span> <span style="color:#099">0</span>))
+</span></span><span style="display:flex;"><span>    (<span style="color:#00a">declare</span> (<span style="color:#00a">type</span> (<span style="color:#0aa">and</span> <span style="color:#0aa">unsigned-byte</span> <span style="color:#0aa">fixnum</span>) <span style="color:#0a0">max</span> <span style="color:#a00">sum</span>)
+</span></span><span style="display:flex;"><span>	     (<span style="color:#00a">optimize</span> <span style="color:#a00">speed</span>))
+</span></span><span style="display:flex;"><span>    (<span style="color:#0aa">dotimes</span> (<span style="color:#a00">i</span> <span style="color:#0a0">max</span> <span style="color:#a00">sum</span>)
+</span></span><span style="display:flex;"><span>      (<span style="color:#0aa">incf</span> <span style="color:#a00">sum</span> <span style="color:#a00">i</span>))))
+</span></span></code></pre></div><p>That&rsquo;s about it. Yes we can see some <em>manual</em> optimisation directives here,
 which are optimisation <em>extra complexity</em>. Not to the same level as bringing
 a compiled artifact that you need to build and deploy, though. Remember that
 you will need to know the full path where to find the <code>sumrange.so</code> file on
 the production system, in the optimised <em>python</em> case, so that&rsquo;s what we are
 comparing against.</p>
 <p>Here&rsquo;s what happens without the optimisation, and with a smaller target:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-lisp" data-lang="lisp"><span style="color:#a00">CL-USER&gt;</span> (<span style="color:#0aa">time</span> (<span style="color:#a00">jiaroo:sumrange-dotimes</span> (<span style="color:#0a0">expt</span> <span style="color:#099">10</span> <span style="color:#099">9</span>)))
-(<span style="color:#a00">JIAROO:SUMRANGE-DOTIMES</span> (<span style="color:#a00">EXPT</span> <span style="color:#099">10</span> <span style="color:#099">9</span>))
-<span style="color:#a00">took</span> <span style="color:#099">722</span>,<span style="color:#099">592</span> <span style="color:#a00">microseconds</span> (<span style="color:#099">0.722592</span> <span style="color:#a00">seconds</span>) <span style="color:#a00">to</span> <span style="color:#a00">run.</span>
-<span style="color:#a00">During</span> <span style="color:#a00">that</span> <span style="color:#a00">period,</span> <span style="color:#0aa">and</span> <span style="color:#a00">with</span> <span style="color:#099">2</span> <span style="color:#a00">available</span> <span style="color:#a00">CPU</span> <span style="color:#a00">cores,</span>
-     <span style="color:#099">714</span>,<span style="color:#099">709</span> <span style="color:#a00">microseconds</span> (<span style="color:#099">0.714709</span> <span style="color:#a00">seconds</span>) <span style="color:#a00">were</span> <span style="color:#a00">spent</span> <span style="color:#a00">in</span> <span style="color:#a00">user</span> <span style="color:#a00">mode</span>
-       <span style="color:#099">1</span>,<span style="color:#099">183</span> <span style="color:#a00">microseconds</span> (<span style="color:#099">0.001183</span> <span style="color:#a00">seconds</span>) <span style="color:#a00">were</span> <span style="color:#a00">spent</span> <span style="color:#a00">in</span> <span style="color:#a00">system</span> <span style="color:#a00">mode</span>
-<span style="color:#099">499999999500000000</span>
-
-<span style="color:#a00">CL-USER&gt;</span> (<span style="color:#0aa">time</span> (<span style="color:#00a">let</span> ((<span style="color:#a00">sum</span> <span style="color:#099">0</span>)) (<span style="color:#0aa">dotimes</span> (<span style="color:#a00">i</span> (<span style="color:#0a0">expt</span> <span style="color:#099">10</span> <span style="color:#099">9</span>) <span style="color:#a00">sum</span>) (<span style="color:#0aa">incf</span> <span style="color:#a00">sum</span> <span style="color:#a00">i</span>))))
-(<span style="color:#a00">LET</span> ((<span style="color:#a00">SUM</span> <span style="color:#099">0</span>)) (<span style="color:#a00">DOTIMES</span> (<span style="color:#a00">I</span> (<span style="color:#a00">EXPT</span> <span style="color:#099">10</span> <span style="color:#099">9</span>) <span style="color:#a00">SUM</span>) (<span style="color:#a00">INCF</span> <span style="color:#a00">SUM</span> <span style="color:#a00">I</span>)))
-<span style="color:#a00">took</span> <span style="color:#099">2</span>,<span style="color:#099">174</span>,<span style="color:#099">767</span> <span style="color:#a00">microseconds</span> (<span style="color:#099">2.174767</span> <span style="color:#a00">seconds</span>) <span style="color:#a00">to</span> <span style="color:#a00">run.</span>
-<span style="color:#a00">During</span> <span style="color:#a00">that</span> <span style="color:#a00">period,</span> <span style="color:#0aa">and</span> <span style="color:#a00">with</span> <span style="color:#099">2</span> <span style="color:#a00">available</span> <span style="color:#a00">CPU</span> <span style="color:#a00">cores,</span>
-     <span style="color:#099">2</span>,<span style="color:#099">156</span>,<span style="color:#099">549</span> <span style="color:#a00">microseconds</span> (<span style="color:#099">2.156549</span> <span style="color:#a00">seconds</span>) <span style="color:#a00">were</span> <span style="color:#a00">spent</span> <span style="color:#a00">in</span> <span style="color:#a00">user</span> <span style="color:#a00">mode</span>
-        <span style="color:#099">10</span>,<span style="color:#099">225</span> <span style="color:#a00">microseconds</span> (<span style="color:#099">0.010225</span> <span style="color:#a00">seconds</span>) <span style="color:#a00">were</span> <span style="color:#a00">spent</span> <span style="color:#a00">in</span> <span style="color:#a00">system</span> <span style="color:#a00">mode</span>
-<span style="color:#099">499999999500000000</span>
-</code></pre></div><p>We get a <code>3</code> times speed-up from those 2 lines of lisp optimisation
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-lisp" data-lang="lisp"><span style="display:flex;"><span><span style="color:#a00">CL-USER&gt;</span> (<span style="color:#0aa">time</span> (<span style="color:#a00">jiaroo:sumrange-dotimes</span> (<span style="color:#0a0">expt</span> <span style="color:#099">10</span> <span style="color:#099">9</span>)))
+</span></span><span style="display:flex;"><span>(<span style="color:#a00">JIAROO:SUMRANGE-DOTIMES</span> (<span style="color:#a00">EXPT</span> <span style="color:#099">10</span> <span style="color:#099">9</span>))
+</span></span><span style="display:flex;"><span><span style="color:#a00">took</span> <span style="color:#099">722</span>,<span style="color:#099">592</span> <span style="color:#a00">microseconds</span> (<span style="color:#099">0.722592</span> <span style="color:#a00">seconds</span>) <span style="color:#a00">to</span> <span style="color:#a00">run.</span>
+</span></span><span style="display:flex;"><span><span style="color:#a00">During</span> <span style="color:#a00">that</span> <span style="color:#a00">period,</span> <span style="color:#0aa">and</span> <span style="color:#a00">with</span> <span style="color:#099">2</span> <span style="color:#a00">available</span> <span style="color:#a00">CPU</span> <span style="color:#a00">cores,</span>
+</span></span><span style="display:flex;"><span>     <span style="color:#099">714</span>,<span style="color:#099">709</span> <span style="color:#a00">microseconds</span> (<span style="color:#099">0.714709</span> <span style="color:#a00">seconds</span>) <span style="color:#a00">were</span> <span style="color:#a00">spent</span> <span style="color:#a00">in</span> <span style="color:#a00">user</span> <span style="color:#a00">mode</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#099">1</span>,<span style="color:#099">183</span> <span style="color:#a00">microseconds</span> (<span style="color:#099">0.001183</span> <span style="color:#a00">seconds</span>) <span style="color:#a00">were</span> <span style="color:#a00">spent</span> <span style="color:#a00">in</span> <span style="color:#a00">system</span> <span style="color:#a00">mode</span>
+</span></span><span style="display:flex;"><span><span style="color:#099">499999999500000000</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a00">CL-USER&gt;</span> (<span style="color:#0aa">time</span> (<span style="color:#00a">let</span> ((<span style="color:#a00">sum</span> <span style="color:#099">0</span>)) (<span style="color:#0aa">dotimes</span> (<span style="color:#a00">i</span> (<span style="color:#0a0">expt</span> <span style="color:#099">10</span> <span style="color:#099">9</span>) <span style="color:#a00">sum</span>) (<span style="color:#0aa">incf</span> <span style="color:#a00">sum</span> <span style="color:#a00">i</span>))))
+</span></span><span style="display:flex;"><span>(<span style="color:#a00">LET</span> ((<span style="color:#a00">SUM</span> <span style="color:#099">0</span>)) (<span style="color:#a00">DOTIMES</span> (<span style="color:#a00">I</span> (<span style="color:#a00">EXPT</span> <span style="color:#099">10</span> <span style="color:#099">9</span>) <span style="color:#a00">SUM</span>) (<span style="color:#a00">INCF</span> <span style="color:#a00">SUM</span> <span style="color:#a00">I</span>)))
+</span></span><span style="display:flex;"><span><span style="color:#a00">took</span> <span style="color:#099">2</span>,<span style="color:#099">174</span>,<span style="color:#099">767</span> <span style="color:#a00">microseconds</span> (<span style="color:#099">2.174767</span> <span style="color:#a00">seconds</span>) <span style="color:#a00">to</span> <span style="color:#a00">run.</span>
+</span></span><span style="display:flex;"><span><span style="color:#a00">During</span> <span style="color:#a00">that</span> <span style="color:#a00">period,</span> <span style="color:#0aa">and</span> <span style="color:#a00">with</span> <span style="color:#099">2</span> <span style="color:#a00">available</span> <span style="color:#a00">CPU</span> <span style="color:#a00">cores,</span>
+</span></span><span style="display:flex;"><span>     <span style="color:#099">2</span>,<span style="color:#099">156</span>,<span style="color:#099">549</span> <span style="color:#a00">microseconds</span> (<span style="color:#099">2.156549</span> <span style="color:#a00">seconds</span>) <span style="color:#a00">were</span> <span style="color:#a00">spent</span> <span style="color:#a00">in</span> <span style="color:#a00">user</span> <span style="color:#a00">mode</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#099">10</span>,<span style="color:#099">225</span> <span style="color:#a00">microseconds</span> (<span style="color:#099">0.010225</span> <span style="color:#a00">seconds</span>) <span style="color:#a00">were</span> <span style="color:#a00">spent</span> <span style="color:#a00">in</span> <span style="color:#a00">system</span> <span style="color:#a00">mode</span>
+</span></span><span style="display:flex;"><span><span style="color:#099">499999999500000000</span>
+</span></span></code></pre></div><p>We get a <code>3</code> times speed-up from those 2 lines of lisp optimisation
 directives, which is pretty good. And it&rsquo;s exponential as I didn&rsquo;t have the
 patience to actually wait until the non optimised <code>10^10</code> run finished, I
 killed it.</p>
@@ -522,9 +522,17 @@ Common Lisp.</p>
 
             </div>
           </div>
-          <div style="margin-top: 1em;">
- <a href="https://theartofpostgresql.com" alt="The Art of PostgreSQL">
-  <img src="/img/taopg-cta.jpg" style="width:90%; height: auto; margin-left: 5%">
+          
+
+
+
+
+
+<div style="margin-top: 1em;">
+ <script async src="//tinder.thrivecart.com/embed/v1/thrivecart.js"></script>
+ <a data-thrivecart-account="theartofpostgresql" data-thrivecart-tpl="v2" data-thrivecart-product="18" class="thrivecart-button ">
+  <img src="https://spark.thrivecart.com/0x0/https%3A%2F%2Fthrivecart.s3.amazonaws.com%2Fuser_assets%2FNABJ5K7H%2Fproducts%2F18%2Ftaopg-cta-1661268188.jpg"
+       style="width:90%; height: auto; margin-left: 5%"/>
  </a>
 </div>
 
@@ -618,7 +626,7 @@ Common Lisp.</p>
         </article>
         <footer id="footer" class="main-content-wrap">
   <span class="copyrights">
-    &copy; 2021 Dimitri Fontaine. 
+    &copy; 2022 Dimitri Fontaine. 
   </span>
 </footer>
 

@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.89.3">
+    <meta name="generator" content="Hugo 0.101.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>from MySQL to PostgreSQL</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -689,10 +689,10 @@ database, so you have to do that yourself. Also, currently pgloader doesn&rsquo;
 change the <em>search_path</em> of the target database, so you might want to do
 that yourself. Which means you need the following 3 commands if we wanted to
 be exhaustive (the migration itself only happens at the pgloader step):</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ createdb f1db
-$ pgloader mysql://root@localhost/f1db pgsql:///f1db
-$ psql -d f1db -c <span style="color:#a50">&#39;ALTER DATABASE f1db SET search_path TO f1db, public;&#39;</span>
-</code></pre></div><p><a href="http://pgloader.io">pgloader</a> needs a live MySQL database to operate its
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ createdb f1db
+</span></span><span style="display:flex;"><span>$ pgloader mysql://root@localhost/f1db pgsql:///f1db
+</span></span><span style="display:flex;"><span>$ psql -d f1db -c <span style="color:#a50">&#39;ALTER DATABASE f1db SET search_path TO f1db, public;&#39;</span>
+</span></span></code></pre></div><p><a href="http://pgloader.io">pgloader</a> needs a live MySQL database to operate its
 magic. It is less error prone to query system&rsquo;s catalogs than to learn how
 to parse all those SQL dialects.</p>
 <p>You might have seen that the automated migration targets a PostgreSQL schema
@@ -706,35 +706,35 @@ automatically converted to PostgreSQL GiST indexes. In previous versions of
 pgloader, when playing with
 the <a href="https://dev.mysql.com/doc/sakila/en/">Sakila Sample Database</a> you would
 have the following error:</p>
-<pre tabindex="0"><code>ERROR PostgreSQL Database error 42704: data type point has no default operator class for access method &quot;btree&quot;
+<pre tabindex="0"><code>ERROR PostgreSQL Database error 42704: data type point has no default operator class for access method &#34;btree&#34;
 HINT: You must specify an operator class for the index or define a default operator class for the data type.
 QUERY: CREATE INDEX idx_188012_idx_location ON pagila.address (location);
 </code></pre><p>In that case what we should do is issue to PostgreSQL the following <em>CREATE
 INDEX</em> command instead:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">CREATE</span><span style="color:#bbb"> </span><span style="color:#00a">INDEX</span><span style="color:#bbb"> </span>idx_188012_idx_location<span style="color:#bbb"> </span><span style="color:#00a">ON</span><span style="color:#bbb"> </span>pagila.address<span style="color:#bbb"> </span><span style="color:#00a">USING</span><span style="color:#bbb"> </span>gist(<span style="color:#00a">location</span>);<span style="color:#bbb">
-</span></code></pre></div><p>And guess what? yes of course this is a paste from a run of current
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">CREATE</span><span style="color:#bbb"> </span><span style="color:#00a">INDEX</span><span style="color:#bbb"> </span>idx_188012_idx_location<span style="color:#bbb"> </span><span style="color:#00a">ON</span><span style="color:#bbb"> </span>pagila.address<span style="color:#bbb"> </span><span style="color:#00a">USING</span><span style="color:#bbb"> </span>gist(<span style="color:#00a">location</span>);<span style="color:#bbb">
+</span></span></span></code></pre></div><p>And guess what? yes of course this is a paste from a run of current
 pgloader&rsquo;s version, where this is implemented in a transparent way for the
 users. Also, rather than hardcoding which PostgreSQL types need a special
 treatment here, pgloader runs the following SQL query against the PostgreSQL
 catalogs, as found in the source tree
 at
 <a href="https://github.com/dimitri/pgloader/blob/master/src/pgsql/sql/list-typenames-without-btree-support.sql">src/pgsql/sql/list-typenames-without-btree-support.sql</a>:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">select</span><span style="color:#bbb"> </span>typname,<span style="color:#bbb">
-</span><span style="color:#bbb">       </span>array_agg(amname<span style="color:#bbb"> </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>amname<span style="color:#bbb"> </span>&lt;&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;gist&#39;</span>,<span style="color:#bbb"> </span>amname<span style="color:#bbb"> </span>&lt;&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;gin&#39;</span>)<span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pg_type<span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_opclass<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>pg_opclass.opcintype<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>pg_type.oid<span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_am<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>pg_am.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>pg_opclass.opcmethod<span style="color:#bbb">
-</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#00a">substring</span>(typname<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">for</span><span style="color:#bbb"> </span><span style="color:#099">1</span>)<span style="color:#bbb"> </span>&lt;&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;_&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#00a">and</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">exists</span><span style="color:#bbb">
-</span><span style="color:#bbb">       </span>(<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>amname<span style="color:#bbb">
-</span><span style="color:#bbb">           </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pg_am<span style="color:#bbb"> </span>am<span style="color:#bbb">
-</span><span style="color:#bbb">                </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_opclass<span style="color:#bbb"> </span><span style="color:#00a">c</span><span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>am.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">c</span>.opcmethod<span style="color:#bbb">
-</span><span style="color:#bbb">                </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_type<span style="color:#bbb"> </span>t<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span><span style="color:#00a">c</span>.opcintype<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>t.oid<span style="color:#bbb">
-</span><span style="color:#bbb">          </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>amname<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;btree&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>t.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>pg_type.oid<span style="color:#bbb">
-</span><span style="color:#bbb">       </span>)<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>typname;<span style="color:#bbb">
-</span></code></pre></div><p>The typical result of the query is following. The important part of
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">select</span><span style="color:#bbb"> </span>typname,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>array_agg(amname<span style="color:#bbb"> </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>amname<span style="color:#bbb"> </span>&lt;&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;gist&#39;</span>,<span style="color:#bbb"> </span>amname<span style="color:#bbb"> </span>&lt;&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;gin&#39;</span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pg_type<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_opclass<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>pg_opclass.opcintype<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>pg_type.oid<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_am<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>pg_am.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>pg_opclass.opcmethod<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span><span style="color:#00a">substring</span>(typname<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">for</span><span style="color:#bbb"> </span><span style="color:#099">1</span>)<span style="color:#bbb"> </span>&lt;&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;_&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">and</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">exists</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>amname<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">           </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pg_am<span style="color:#bbb"> </span>am<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_opclass<span style="color:#bbb"> </span><span style="color:#00a">c</span><span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>am.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">c</span>.opcmethod<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_type<span style="color:#bbb"> </span>t<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span><span style="color:#00a">c</span>.opcintype<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>t.oid<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>amname<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;btree&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>t.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>pg_type.oid<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>typname;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>The typical result of the query is following. The important part of
 discovering data types without btree support at run time is that pgloader
 then will support locally installed extensions it knows nothing about, and
 that you can target in the user-defined casting rules (see below).</p>
@@ -761,8 +761,8 @@ the <a href="https://github.com/lerocha/chinook-database">chinook database</a>, 
 again pgloader takes care of the schema definition, indexes, primary keys,
 foreign keys, default values, comments&hellip; the whole thing:</p>
 <pre tabindex="0"><code>$ pgloader https://github.com/lerocha/chinook-database/raw/master/ChinookDatabase/DataSources/Chinook_Sqlite_AutoIncrementPKs.sqlite pgsql:///chinook
-2017-07-06T18:16:52.256000+02:00 LOG Fetching 'https://github.com/lerocha/chinook-database/raw/master/ChinookDatabase/DataSources/Chinook_Sqlite_AutoIncrementPKs.sqlite'
-2017-07-06T18:16:54.118000+02:00 ERROR PostgreSQL Database error 42P16: multiple primary keys for table &quot;playlisttrack&quot; are not allowed
+2017-07-06T18:16:52.256000+02:00 LOG Fetching &#39;https://github.com/lerocha/chinook-database/raw/master/ChinookDatabase/DataSources/Chinook_Sqlite_AutoIncrementPKs.sqlite&#39;
+2017-07-06T18:16:54.118000+02:00 ERROR PostgreSQL Database error 42P16: multiple primary keys for table &#34;playlisttrack&#34; are not allowed
 QUERY: ALTER TABLE playlisttrack ADD PRIMARY KEY USING INDEX idx_189226_sqlite_autoindex_playlisttrack_1;
 2017-07-06T18:16:54.119000+02:00 LOG report summary reset
              table name       read   imported     errors      total time
@@ -850,13 +850,13 @@ pgloader is doing. Now, even when the indexes are pre-defined in the target
 schema, provided that you use the <em>drop indexes</em> option to the <em>WITH</em> clause.</p>
 <p>Note that you can still use it on the command line, without a command file,
 as in this example:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ pgloader --with <span style="color:#a50">&#34;data only&#34;</span>          <span style="color:#a50">\
-</span><span style="color:#a50"></span>           --with truncate             <span style="color:#a50">\
-</span><span style="color:#a50"></span>           --with <span style="color:#a50">&#34;drop indexes&#34;</span>       <span style="color:#a50">\
-</span><span style="color:#a50"></span>           --verbose                   <span style="color:#a50">\
-</span><span style="color:#a50"></span>           mysql://root@localhost/f1db <span style="color:#a50">\
-</span><span style="color:#a50"></span>           pgsql:///f1db
-</code></pre></div><p>For this command to work, the f1db PostgreSQL target database must have been
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ pgloader --with <span style="color:#a50">&#34;data only&#34;</span>          <span style="color:#a50">\
+</span></span></span><span style="display:flex;"><span><span style="color:#a50"></span>           --with truncate             <span style="color:#a50">\
+</span></span></span><span style="display:flex;"><span><span style="color:#a50"></span>           --with <span style="color:#a50">&#34;drop indexes&#34;</span>       <span style="color:#a50">\
+</span></span></span><span style="display:flex;"><span><span style="color:#a50"></span>           --verbose                   <span style="color:#a50">\
+</span></span></span><span style="display:flex;"><span><span style="color:#a50"></span>           mysql://root@localhost/f1db <span style="color:#a50">\
+</span></span></span><span style="display:flex;"><span><span style="color:#a50"></span>           pgsql:///f1db
+</span></span></code></pre></div><p>For this command to work, the f1db PostgreSQL target database must have been
 defined before, with the right set of SQL objects of course. Which is
 exactly what ORMs are doing for you, I&rsquo;ve been told.</p>
 <h2 id="schema-mapping-options">Schema mapping options</h2>
@@ -867,11 +867,11 @@ scenario, as in the following example:</p>
      from      mysql://root@localhost/sakila
      into postgresql:///sakila
 
- ALTER TABLE NAMES MATCHING 'sales_by_store' RENAME TO 'sales_by_store_list'
- ALTER TABLE NAMES MATCHING 'film' RENAME TO 'films'
- ALTER TABLE NAMES MATCHING ~/./ SET (fillfactor='40')
+ ALTER TABLE NAMES MATCHING &#39;sales_by_store&#39; RENAME TO &#39;sales_by_store_list&#39;
+ ALTER TABLE NAMES MATCHING &#39;film&#39; RENAME TO &#39;films&#39;
+ ALTER TABLE NAMES MATCHING ~/./ SET (fillfactor=&#39;40&#39;)
 
- ALTER SCHEMA 'sakila' RENAME TO 'pagila'
+ ALTER SCHEMA &#39;sakila&#39; RENAME TO &#39;pagila&#39;
 </code></pre><p>Here the <em>ALTER</em> commands are not executed in any database, neither the
 source not the target. They are used as a mapping specifications from the
 source to the target, so that we create tables found in the <em>sakila</em> schema
@@ -939,9 +939,17 @@ choice) join the <a href="http://pgloader.io/sponsors.html">pgloader sponsors pa
 
             </div>
           </div>
-          <div style="margin-top: 1em;">
- <a href="https://theartofpostgresql.com" alt="The Art of PostgreSQL">
-  <img src="/img/taopg-cta.jpg" style="width:90%; height: auto; margin-left: 5%">
+          
+
+
+
+
+
+<div style="margin-top: 1em;">
+ <script async src="//tinder.thrivecart.com/embed/v1/thrivecart.js"></script>
+ <a data-thrivecart-account="theartofpostgresql" data-thrivecart-tpl="v2" data-thrivecart-product="18" class="thrivecart-button ">
+  <img src="https://spark.thrivecart.com/0x0/https%3A%2F%2Fthrivecart.s3.amazonaws.com%2Fuser_assets%2FNABJ5K7H%2Fproducts%2F18%2Ftaopg-cta-1661268188.jpg"
+       style="width:90%; height: auto; margin-left: 5%"/>
  </a>
 </div>
 
@@ -1039,7 +1047,7 @@ choice) join the <a href="http://pgloader.io/sponsors.html">pgloader sponsors pa
         </article>
         <footer id="footer" class="main-content-wrap">
   <span class="copyrights">
-    &copy; 2021 Dimitri Fontaine. 
+    &copy; 2022 Dimitri Fontaine. 
   </span>
 </footer>
 

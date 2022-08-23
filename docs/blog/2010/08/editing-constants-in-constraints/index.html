@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.89.3">
+    <meta name="generator" content="Hugo 0.101.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Editing constants in constraints</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -357,41 +357,41 @@ constants in the constraints, so that
 <code>pg_dump -s</code> plus some schema tweaking
 would kick-start a server. Here&rsquo;s a
 <code>PLpgSQL</code> snippet to do just that:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plpgsql" data-lang="plpgsql"><span style="color:#00a">FOR</span><span style="color:#bbb"> </span>rec<span style="color:#bbb"> </span><span style="color:#00a">IN</span><span style="color:#bbb"> </span><span style="color:#00a">EXECUTE</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#f00;background-color:#faa">$</span>s<span style="color:#f00;background-color:#faa">$</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">SELECT</span><span style="color:#bbb"> </span>schemaname,<span style="color:#bbb"> </span>tablename,<span style="color:#bbb"> </span>conname,<span style="color:#bbb"> </span>attnames,<span style="color:#bbb"> </span>def<span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">FROM</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">SELECT</span><span style="color:#bbb"> </span>n<span style="color:#099">.</span>nspname,<span style="color:#bbb"> </span>c<span style="color:#099">.</span>relname,<span style="color:#bbb"> </span>r<span style="color:#099">.</span>conname,<span style="color:#bbb"> 
-</span><span style="color:#bbb">          </span>(<span style="color:#00a">select</span><span style="color:#bbb"> </span>array_accum(attname)<span style="color:#bbb">
-</span><span style="color:#bbb">             </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pg_attribute<span style="color:#bbb"> 
-</span><span style="color:#bbb">            </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>attrelid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>c<span style="color:#099">.</span>oid<span style="color:#bbb"> </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>r<span style="color:#099">.</span>conkey<span style="color:#bbb"> </span>@&gt;<span style="color:#bbb"> </span><span style="color:#00a">array</span>[attnum])<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>attnames,<span style="color:#bbb"> 
-</span><span style="color:#bbb">          </span>pg_catalog<span style="color:#099">.</span>pg_get_constraintdef(r<span style="color:#099">.</span>oid,<span style="color:#bbb"> </span><span style="color:#00a">true</span>)<span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">FROM</span><span style="color:#bbb"> </span>pg_catalog<span style="color:#099">.</span>pg_constraint<span style="color:#bbb"> </span>r<span style="color:#bbb"> 
-</span><span style="color:#bbb">        </span><span style="color:#00a">JOIN</span><span style="color:#bbb"> </span>pg_class<span style="color:#bbb"> </span>c<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>c<span style="color:#099">.</span>oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>r<span style="color:#099">.</span>conrelid<span style="color:#bbb"> 
-</span><span style="color:#bbb">        </span><span style="color:#00a">JOIN</span><span style="color:#bbb"> </span>pg_namespace<span style="color:#bbb"> </span>n<span style="color:#bbb"> </span><span style="color:#00a">ON</span><span style="color:#bbb"> </span>n<span style="color:#099">.</span>oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>c<span style="color:#099">.</span>relnamespace<span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">WHERE</span><span style="color:#bbb"> </span>r<span style="color:#099">.</span>contype<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;c&#39;</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">ORDER</span><span style="color:#bbb"> </span><span style="color:#00a">BY</span><span style="color:#bbb"> </span><span style="color:#099">1</span>,<span style="color:#bbb"> </span><span style="color:#099">2</span>,<span style="color:#bbb"> </span><span style="color:#099">3</span><span style="color:#bbb">
-</span><span style="color:#bbb">       </span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>cons(schemaname,<span style="color:#bbb"> </span>tablename,<span style="color:#bbb"> </span>conname,<span style="color:#bbb"> </span>attnames,<span style="color:#bbb"> </span>def)<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">WHERE</span><span style="color:#bbb"> </span>attnames<span style="color:#bbb"> </span>@&gt;<span style="color:#bbb"> </span><span style="color:#00a">array</span>[<span style="color:#a50">&#39;server&#39;</span>]::<span style="color:#00a">name</span>[]<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#f00;background-color:#faa">$</span>s<span style="color:#f00;background-color:#faa">$</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">LOOP</span><span style="color:#bbb">
-</span><span style="color:#bbb">    </span>rec<span style="color:#099">.</span>def<span style="color:#bbb"> </span>:=<span style="color:#bbb"> </span><span style="color:#00a">replace</span>(rec<span style="color:#099">.</span>def,<span style="color:#bbb"> </span><span style="color:#a50">&#39;server = &#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>old_id,<span style="color:#bbb">
-</span><span style="color:#bbb">                                </span><span style="color:#a50">&#39;server = &#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>new_id);<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">    </span>sql<span style="color:#bbb"> </span>:=<span style="color:#bbb"> </span><span style="color:#a50">&#39;ALTER TABLE &#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>rec<span style="color:#099">.</span>schemaname<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39;.&#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>rec<span style="color:#099">.</span>tablename<span style="color:#bbb">
-</span><span style="color:#bbb">        </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39; DROP CONSTRAINT &#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>rec<span style="color:#099">.</span>conname;<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">RAISE</span><span style="color:#bbb"> </span><span style="color:#00a">NOTICE</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;%&#39;</span>,<span style="color:#bbb"> </span>sql;<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">RETURN</span><span style="color:#bbb"> </span><span style="color:#00a">NEXT</span>;<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">EXECUTE</span><span style="color:#bbb"> </span>sql;<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">    </span>sql<span style="color:#bbb"> </span>:=<span style="color:#bbb"> </span><span style="color:#a50">&#39;ALTER TABLE &#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>rec<span style="color:#099">.</span>schemaname<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39;.&#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>rec<span style="color:#099">.</span>tablename<span style="color:#bbb">
-</span><span style="color:#bbb">        </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39; ADD &#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>rec<span style="color:#099">.</span>def;<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">RAISE</span><span style="color:#bbb"> </span><span style="color:#00a">NOTICE</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;%&#39;</span>,<span style="color:#bbb"> </span>sql;<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">RETURN</span><span style="color:#bbb"> </span><span style="color:#00a">NEXT</span>;<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">EXECUTE</span><span style="color:#bbb"> </span>sql;<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">END</span><span style="color:#bbb"> </span><span style="color:#00a">LOOP</span>;<span style="color:#bbb">
-</span></code></pre></div><p>This relies on the fact that our constraints are on the column
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plpgsql" data-lang="plpgsql"><span style="display:flex;"><span><span style="color:#00a">FOR</span><span style="color:#bbb"> </span>rec<span style="color:#bbb"> </span><span style="color:#00a">IN</span><span style="color:#bbb"> </span><span style="color:#00a">EXECUTE</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#f00;background-color:#faa">$</span>s<span style="color:#f00;background-color:#faa">$</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">SELECT</span><span style="color:#bbb"> </span>schemaname,<span style="color:#bbb"> </span>tablename,<span style="color:#bbb"> </span>conname,<span style="color:#bbb"> </span>attnames,<span style="color:#bbb"> </span>def<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">FROM</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">SELECT</span><span style="color:#bbb"> </span>n<span style="color:#099">.</span>nspname,<span style="color:#bbb"> </span>c<span style="color:#099">.</span>relname,<span style="color:#bbb"> </span>r<span style="color:#099">.</span>conname,<span style="color:#bbb"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span>(<span style="color:#00a">select</span><span style="color:#bbb"> </span>array_accum(attname)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">             </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pg_attribute<span style="color:#bbb"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>attrelid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>c<span style="color:#099">.</span>oid<span style="color:#bbb"> </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>r<span style="color:#099">.</span>conkey<span style="color:#bbb"> </span>@&gt;<span style="color:#bbb"> </span><span style="color:#00a">array</span>[attnum])<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>attnames,<span style="color:#bbb"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span>pg_catalog<span style="color:#099">.</span>pg_get_constraintdef(r<span style="color:#099">.</span>oid,<span style="color:#bbb"> </span><span style="color:#00a">true</span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">FROM</span><span style="color:#bbb"> </span>pg_catalog<span style="color:#099">.</span>pg_constraint<span style="color:#bbb"> </span>r<span style="color:#bbb"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#00a">JOIN</span><span style="color:#bbb"> </span>pg_class<span style="color:#bbb"> </span>c<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>c<span style="color:#099">.</span>oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>r<span style="color:#099">.</span>conrelid<span style="color:#bbb"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#00a">JOIN</span><span style="color:#bbb"> </span>pg_namespace<span style="color:#bbb"> </span>n<span style="color:#bbb"> </span><span style="color:#00a">ON</span><span style="color:#bbb"> </span>n<span style="color:#099">.</span>oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>c<span style="color:#099">.</span>relnamespace<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">WHERE</span><span style="color:#bbb"> </span>r<span style="color:#099">.</span>contype<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;c&#39;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">ORDER</span><span style="color:#bbb"> </span><span style="color:#00a">BY</span><span style="color:#bbb"> </span><span style="color:#099">1</span>,<span style="color:#bbb"> </span><span style="color:#099">2</span>,<span style="color:#bbb"> </span><span style="color:#099">3</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>cons(schemaname,<span style="color:#bbb"> </span>tablename,<span style="color:#bbb"> </span>conname,<span style="color:#bbb"> </span>attnames,<span style="color:#bbb"> </span>def)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">WHERE</span><span style="color:#bbb"> </span>attnames<span style="color:#bbb"> </span>@&gt;<span style="color:#bbb"> </span><span style="color:#00a">array</span>[<span style="color:#a50">&#39;server&#39;</span>]::<span style="color:#00a">name</span>[]<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#f00;background-color:#faa">$</span>s<span style="color:#f00;background-color:#faa">$</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">LOOP</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span>rec<span style="color:#099">.</span>def<span style="color:#bbb"> </span>:=<span style="color:#bbb"> </span><span style="color:#00a">replace</span>(rec<span style="color:#099">.</span>def,<span style="color:#bbb"> </span><span style="color:#a50">&#39;server = &#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>old_id,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                                </span><span style="color:#a50">&#39;server = &#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>new_id);<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span>sql<span style="color:#bbb"> </span>:=<span style="color:#bbb"> </span><span style="color:#a50">&#39;ALTER TABLE &#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>rec<span style="color:#099">.</span>schemaname<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39;.&#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>rec<span style="color:#099">.</span>tablename<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39; DROP CONSTRAINT &#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>rec<span style="color:#099">.</span>conname;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">RAISE</span><span style="color:#bbb"> </span><span style="color:#00a">NOTICE</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;%&#39;</span>,<span style="color:#bbb"> </span>sql;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">RETURN</span><span style="color:#bbb"> </span><span style="color:#00a">NEXT</span>;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">EXECUTE</span><span style="color:#bbb"> </span>sql;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span>sql<span style="color:#bbb"> </span>:=<span style="color:#bbb"> </span><span style="color:#a50">&#39;ALTER TABLE &#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>rec<span style="color:#099">.</span>schemaname<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39;.&#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>rec<span style="color:#099">.</span>tablename<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39; ADD &#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>rec<span style="color:#099">.</span>def;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">RAISE</span><span style="color:#bbb"> </span><span style="color:#00a">NOTICE</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;%&#39;</span>,<span style="color:#bbb"> </span>sql;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">RETURN</span><span style="color:#bbb"> </span><span style="color:#00a">NEXT</span>;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">EXECUTE</span><span style="color:#bbb"> </span>sql;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">END</span><span style="color:#bbb"> </span><span style="color:#00a">LOOP</span>;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>This relies on the fact that our constraints are on the column
 <code>server</code>. Why
 would this be any better than a
 <code>sed</code> one-liner, would you ask me? I&rsquo;m fed up
@@ -400,8 +400,8 @@ command will change data I didn&rsquo;t want to edit. I want context aware tools
 pretty please, to
 <em>feel</em> safe.</p>
 <p>Otherwise I&rsquo;d might have gone with</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">pg_dump -s| sed -e <span style="color:#a50">&#39;s:\(server =\) 17:\1 18:&#39;</span>
-</code></pre></div><p>but this one-liner already contains too much useless magic for my taste (the
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>pg_dump -s| sed -e <span style="color:#a50">&#39;s:\(server =\) 17:\1 18:&#39;</span>
+</span></span></code></pre></div><p>but this one-liner already contains too much useless magic for my taste (the
 space before <em>17</em> ain&rsquo;t in the group match to allow for having <em>\1 18</em> in
 the right hand side. And this isn&rsquo;t yet parametrized, and there I&rsquo;ll need to
 talk to the database, as that&rsquo;s were I store the servers name and their id
@@ -414,9 +414,17 @@ answers get to my mailbox!</p>
 
             </div>
           </div>
-          <div style="margin-top: 1em;">
- <a href="https://theartofpostgresql.com" alt="The Art of PostgreSQL">
-  <img src="/img/taopg-cta.jpg" style="width:90%; height: auto; margin-left: 5%">
+          
+
+
+
+
+
+<div style="margin-top: 1em;">
+ <script async src="//tinder.thrivecart.com/embed/v1/thrivecart.js"></script>
+ <a data-thrivecart-account="theartofpostgresql" data-thrivecart-tpl="v2" data-thrivecart-product="18" class="thrivecart-button ">
+  <img src="https://spark.thrivecart.com/0x0/https%3A%2F%2Fthrivecart.s3.amazonaws.com%2Fuser_assets%2FNABJ5K7H%2Fproducts%2F18%2Ftaopg-cta-1661268188.jpg"
+       style="width:90%; height: auto; margin-left: 5%"/>
  </a>
 </div>
 
@@ -514,7 +522,7 @@ answers get to my mailbox!</p>
         </article>
         <footer id="footer" class="main-content-wrap">
   <span class="copyrights">
-    &copy; 2021 Dimitri Fontaine. 
+    &copy; 2022 Dimitri Fontaine. 
   </span>
 </footer>
 

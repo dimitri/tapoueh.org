@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.89.3">
+    <meta name="generator" content="Hugo 0.101.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>PostgreSQL, Aggregates and Histograms</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -493,28 +493,28 @@ the <em>histogram</em> data, which is a ordered list of ranges with a min and a 
 value and a <em>frequency</em>, which is how many games were recorded with a number
 or <em>rebounds</em> within any given <em>bucket</em> range. And last, we want to display
 something a little more visual than just a list of numbers:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">with</span><span style="color:#bbb"> </span>drb_stats<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">min</span>(drb)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">min</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">           </span><span style="color:#00a">max</span>(drb)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">max</span><span style="color:#bbb">
-</span><span style="color:#bbb">      </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>team_stats<span style="color:#bbb">
-</span><span style="color:#bbb"></span>),<span style="color:#bbb">
-</span><span style="color:#bbb">     </span>histogram<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>width_bucket(drb,<span style="color:#bbb"> </span><span style="color:#00a">min</span>,<span style="color:#bbb"> </span><span style="color:#00a">max</span>,<span style="color:#bbb"> </span><span style="color:#099">9</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>bucket,<span style="color:#bbb">
-</span><span style="color:#bbb">          </span>int4range(<span style="color:#00a">min</span>(drb),<span style="color:#bbb"> </span><span style="color:#00a">max</span>(drb),<span style="color:#bbb"> </span><span style="color:#a50">&#39;[]&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>range,<span style="color:#bbb">
-</span><span style="color:#bbb">          </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>freq<span style="color:#bbb">
-</span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>team_stats,<span style="color:#bbb"> </span>drb_stats<span style="color:#bbb">
-</span><span style="color:#bbb"> </span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>bucket<span style="color:#bbb">
-</span><span style="color:#bbb"> </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>bucket<span style="color:#bbb">
-</span><span style="color:#bbb"></span>)<span style="color:#bbb">
-</span><span style="color:#bbb"> </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>bucket,<span style="color:#bbb"> </span>range,<span style="color:#bbb"> </span>freq,<span style="color:#bbb">
-</span><span style="color:#bbb">        </span>repeat(<span style="color:#a50">&#39;■&#39;</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">               </span>(<span style="color:#bbb">   </span>freq::<span style="color:#0aa">float</span><span style="color:#bbb">
-</span><span style="color:#bbb">                 </span>/<span style="color:#bbb"> </span><span style="color:#00a">max</span>(freq)<span style="color:#bbb"> </span>over()<span style="color:#bbb">
-</span><span style="color:#bbb">                 </span>*<span style="color:#bbb"> </span><span style="color:#099">30</span><span style="color:#bbb">
-</span><span style="color:#bbb">               </span>)::<span style="color:#0aa">int</span><span style="color:#bbb">
-</span><span style="color:#bbb">        </span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>bar<span style="color:#bbb">
-</span><span style="color:#bbb">   </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>histogram;<span style="color:#bbb">
-</span></code></pre></div><p>The first part of the query is the <em>drb_stats</em> common table expression, and
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">with</span><span style="color:#bbb"> </span>drb_stats<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">min</span>(drb)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">min</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">           </span><span style="color:#00a">max</span>(drb)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">max</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>team_stats<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>),<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span>histogram<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>width_bucket(drb,<span style="color:#bbb"> </span><span style="color:#00a">min</span>,<span style="color:#bbb"> </span><span style="color:#00a">max</span>,<span style="color:#bbb"> </span><span style="color:#099">9</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>bucket,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span>int4range(<span style="color:#00a">min</span>(drb),<span style="color:#bbb"> </span><span style="color:#00a">max</span>(drb),<span style="color:#bbb"> </span><span style="color:#a50">&#39;[]&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>range,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>freq<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>team_stats,<span style="color:#bbb"> </span>drb_stats<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>bucket<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>bucket<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>bucket,<span style="color:#bbb"> </span>range,<span style="color:#bbb"> </span>freq,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>repeat(<span style="color:#a50">&#39;■&#39;</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">               </span>(<span style="color:#bbb">   </span>freq::<span style="color:#0aa">float</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                 </span>/<span style="color:#bbb"> </span><span style="color:#00a">max</span>(freq)<span style="color:#bbb"> </span>over()<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                 </span>*<span style="color:#bbb"> </span><span style="color:#099">30</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">               </span>)::<span style="color:#0aa">int</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>bar<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>histogram;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>The first part of the query is the <em>drb_stats</em> common table expression, and
 its role is to fetch the min and max values of <em>drb</em> in our whole dataset.
 It&rsquo;s better than doing the query separately and then injecting the result in
 the next query, because there&rsquo;s no <em>roundtrip</em>, but it&rsquo;s basically the idea.</p>
@@ -574,9 +574,17 @@ comment on the article if you&rsquo;re interested.</p>
 
             </div>
           </div>
-          <div style="margin-top: 1em;">
- <a href="https://theartofpostgresql.com" alt="The Art of PostgreSQL">
-  <img src="/img/taopg-cta.jpg" style="width:90%; height: auto; margin-left: 5%">
+          
+
+
+
+
+
+<div style="margin-top: 1em;">
+ <script async src="//tinder.thrivecart.com/embed/v1/thrivecart.js"></script>
+ <a data-thrivecart-account="theartofpostgresql" data-thrivecart-tpl="v2" data-thrivecart-product="18" class="thrivecart-button ">
+  <img src="https://spark.thrivecart.com/0x0/https%3A%2F%2Fthrivecart.s3.amazonaws.com%2Fuser_assets%2FNABJ5K7H%2Fproducts%2F18%2Ftaopg-cta-1661268188.jpg"
+       style="width:90%; height: auto; margin-left: 5%"/>
  </a>
 </div>
 
@@ -678,7 +686,7 @@ comment on the article if you&rsquo;re interested.</p>
         </article>
         <footer id="footer" class="main-content-wrap">
   <span class="copyrights">
-    &copy; 2021 Dimitri Fontaine. 
+    &copy; 2022 Dimitri Fontaine. 
   </span>
 </footer>
 

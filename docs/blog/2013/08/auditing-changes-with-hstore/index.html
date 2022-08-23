@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.89.3">
+    <meta name="generator" content="Hugo 0.101.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Auditing Changes with Hstore</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -306,7 +306,7 @@ if (!doNotTrack) {
       </time>
     
     <span style="float: right; width: 65%">
-      <i class="fa fa-clock-o"></i> 2 mins read
+      <i class="fa fa-clock-o"></i> 3 mins read
       
     </span>
     <span style="float: left; width: 35%">
@@ -486,33 +486,33 @@ use case for
 whose documentation says that it will
 <em>delete matching pairs from left
 operand</em>.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">&gt;<span style="color:#bbb"> </span><span style="color:#00a">select</span><span style="color:#bbb">   </span><span style="color:#a50">&#39;f1 =&gt; a, f2 =&gt; x&#39;</span>::hstore<span style="color:#bbb">
-</span><span style="color:#bbb">         </span>-<span style="color:#bbb"> </span><span style="color:#a50">&#39;f1 =&gt; b, f2 =&gt; x&#39;</span>::hstore<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>diff;<span style="color:#bbb">
-</span><span style="color:#bbb">   </span>diff<span style="color:#bbb">    
-</span><span style="color:#bbb"></span><span style="color:#aaa;font-style:italic">-----------
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb"> </span><span style="color:#a50">&#34;f1&#34;</span>=&gt;<span style="color:#a50">&#34;a&#34;</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span>(<span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">row</span>)<span style="color:#bbb">
-</span></code></pre></div><p>That&rsquo;s what we&rsquo;re going to use in our
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>&gt;<span style="color:#bbb"> </span><span style="color:#00a">select</span><span style="color:#bbb">   </span><span style="color:#a50">&#39;f1 =&gt; a, f2 =&gt; x&#39;</span>::hstore<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span>-<span style="color:#bbb"> </span><span style="color:#a50">&#39;f1 =&gt; b, f2 =&gt; x&#39;</span>::hstore<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>diff;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>diff<span style="color:#bbb">    
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#aaa;font-style:italic">-----------
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb"> </span><span style="color:#a50">&#34;f1&#34;</span>=&gt;<span style="color:#a50">&#34;a&#34;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>(<span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">row</span>)<span style="color:#bbb">
+</span></span></span></code></pre></div><p>That&rsquo;s what we&rsquo;re going to use in our
 <em>changes auditing trigger</em> now, because
 it&rsquo;s pretty useful a format to understand what did change.</p>
 <h2 id="auditing-changes-with-a-trigger">Auditing changes with a trigger</h2>
 <p>First we need some setup, a couple of tables to use in our worked out
 example:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>example<span style="color:#bbb">
-</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span><span style="color:#bbb">   </span>id<span style="color:#bbb">   </span><span style="color:#0aa">serial</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">   </span>f1<span style="color:#bbb">   </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">   </span>f2<span style="color:#bbb">   </span><span style="color:#0aa">text</span><span style="color:#bbb">
-</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>audit<span style="color:#bbb">
-</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span><span style="color:#bbb">  </span>change_date<span style="color:#bbb"> </span>timestamptz<span style="color:#bbb"> </span><span style="color:#00a">default</span><span style="color:#bbb"> </span>now(),<span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">before</span><span style="color:#bbb"> </span>hstore,<span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">after</span><span style="color:#bbb">  </span>hstore<span style="color:#bbb">
-</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
-</span></code></pre></div><p>The idea is to add a row in the
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>example<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>id<span style="color:#bbb">   </span><span style="color:#0aa">serial</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>f1<span style="color:#bbb">   </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>f2<span style="color:#bbb">   </span><span style="color:#0aa">text</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>audit<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>change_date<span style="color:#bbb"> </span>timestamptz<span style="color:#bbb"> </span><span style="color:#00a">default</span><span style="color:#bbb"> </span>now(),<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">before</span><span style="color:#bbb"> </span>hstore,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">after</span><span style="color:#bbb">  </span>hstore<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span></span></span></code></pre></div><p>The idea is to add a row in the
 <code>audit</code> table each time it is updated, with
 the
 <em>hstore</em> representation of the data in flight before and after the change.
@@ -520,17 +520,17 @@ So as to avoid the problem of not being able to easily rebuild the current
 value of a row at any time in the history, we&rsquo;re going to store a couple of
 full
 <em>hstore</em> representations here.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">function</span><span style="color:#bbb"> </span>audit()<span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">returns</span><span style="color:#bbb"> </span><span style="color:#00a">trigger</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">language</span><span style="color:#bbb"> </span>plpgsql<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">$$</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">begin</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">INSERT</span><span style="color:#bbb"> </span><span style="color:#00a">INTO</span><span style="color:#bbb"> </span>audit(<span style="color:#00a">before</span>,<span style="color:#bbb"> </span><span style="color:#00a">after</span>)<span style="color:#bbb">
-</span><span style="color:#bbb">       </span><span style="color:#00a">SELECT</span><span style="color:#bbb"> </span>hstore(<span style="color:#00a">old</span>),<span style="color:#bbb"> </span>hstore(<span style="color:#00a">new</span>);<span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">return</span><span style="color:#bbb"> </span><span style="color:#00a">new</span>;<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">end</span>;<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#f00;background-color:#faa">$$</span>;<span style="color:#bbb">
-</span></code></pre></div><center>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">function</span><span style="color:#bbb"> </span>audit()<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">returns</span><span style="color:#bbb"> </span><span style="color:#00a">trigger</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">language</span><span style="color:#bbb"> </span>plpgsql<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">$$</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">begin</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">INSERT</span><span style="color:#bbb"> </span><span style="color:#00a">INTO</span><span style="color:#bbb"> </span>audit(<span style="color:#00a">before</span>,<span style="color:#bbb"> </span><span style="color:#00a">after</span>)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">SELECT</span><span style="color:#bbb"> </span>hstore(<span style="color:#00a">old</span>),<span style="color:#bbb"> </span>hstore(<span style="color:#00a">new</span>);<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">return</span><span style="color:#bbb"> </span><span style="color:#00a">new</span>;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">end</span>;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#f00;background-color:#faa">$$</span>;<span style="color:#bbb">
+</span></span></span></code></pre></div><center>
 
 
  
@@ -574,26 +574,26 @@ trigger as
 <code>TG_TABLE_SCHEMA</code> while at it!</p>
 <p>Be sure to check the
 <a href="http://www.postgresql.org/docs/current/interactive/plpgsql-trigger.html">PL/pgSQL Trigger Procedures</a> documentation.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">trigger</span><span style="color:#bbb"> </span>audit<span style="color:#bbb">
-</span><span style="color:#bbb">      </span><span style="color:#00a">after</span><span style="color:#bbb"> </span><span style="color:#00a">update</span><span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>example<span style="color:#bbb">
-</span><span style="color:#bbb">          </span><span style="color:#00a">for</span><span style="color:#bbb"> </span><span style="color:#00a">each</span><span style="color:#bbb"> </span><span style="color:#00a">row</span><span style="color:#bbb">
-</span><span style="color:#bbb"> </span><span style="color:#00a">execute</span><span style="color:#bbb"> </span><span style="color:#00a">procedure</span><span style="color:#bbb"> </span>audit();<span style="color:#bbb">
-</span></code></pre></div><h2 id="testing-it">Testing it</h2>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">trigger</span><span style="color:#bbb"> </span>audit<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#00a">after</span><span style="color:#bbb"> </span><span style="color:#00a">update</span><span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>example<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#00a">for</span><span style="color:#bbb"> </span><span style="color:#00a">each</span><span style="color:#bbb"> </span><span style="color:#00a">row</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">execute</span><span style="color:#bbb"> </span><span style="color:#00a">procedure</span><span style="color:#bbb"> </span>audit();<span style="color:#bbb">
+</span></span></span></code></pre></div><h2 id="testing-it">Testing it</h2>
 <p>With that in place, let&rsquo;s try it out:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">&gt;<span style="color:#bbb"> </span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>example(id,<span style="color:#bbb"> </span>f1,<span style="color:#bbb"> </span>f2)<span style="color:#bbb"> </span><span style="color:#00a">values</span>(<span style="color:#099">1</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;a&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;a&#39;</span>);<span style="color:#bbb">
-</span><span style="color:#bbb"></span>&gt;<span style="color:#bbb"> </span><span style="color:#00a">update</span><span style="color:#bbb"> </span>example<span style="color:#bbb"> </span><span style="color:#00a">set</span><span style="color:#bbb"> </span>f1<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;b&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>id<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#099">1</span>;<span style="color:#bbb">
-</span><span style="color:#bbb"></span>&gt;<span style="color:#bbb"> </span><span style="color:#00a">update</span><span style="color:#bbb"> </span>example<span style="color:#bbb"> </span><span style="color:#00a">set</span><span style="color:#bbb"> </span>f2<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;c&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>id<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#099">1</span>;<span style="color:#bbb">
-</span></code></pre></div><p>And here&rsquo;s what we can see:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql">&gt;<span style="color:#bbb"> </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>change_date,<span style="color:#bbb">
-</span><span style="color:#bbb">         </span><span style="color:#00a">after</span><span style="color:#bbb"> </span>-<span style="color:#bbb"> </span><span style="color:#00a">before</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>diff<span style="color:#bbb">
-</span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>audit;<span style="color:#bbb">
-</span><span style="color:#bbb">          
-</span><span style="color:#bbb">          </span>change_date<span style="color:#bbb">          </span>|<span style="color:#bbb">   </span>diff<span style="color:#bbb">    
-</span><span style="color:#bbb"></span><span style="color:#aaa;font-style:italic">-------------------------------+-----------
-</span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb"> </span><span style="color:#099">2013</span>-<span style="color:#099">08</span>-<span style="color:#099">27</span><span style="color:#bbb"> </span><span style="color:#099">17</span>:<span style="color:#099">59</span>:<span style="color:#099">19</span>.<span style="color:#099">808217</span>+<span style="color:#099">02</span><span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#a50">&#34;f1&#34;</span>=&gt;<span style="color:#a50">&#34;b&#34;</span><span style="color:#bbb">
-</span><span style="color:#bbb"> </span><span style="color:#099">2013</span>-<span style="color:#099">08</span>-<span style="color:#099">27</span><span style="color:#bbb"> </span><span style="color:#099">17</span>:<span style="color:#099">59</span>:<span style="color:#099">19</span>.<span style="color:#099">808217</span>+<span style="color:#099">02</span><span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#a50">&#34;f2&#34;</span>=&gt;<span style="color:#a50">&#34;c&#34;</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span>(<span style="color:#099">2</span><span style="color:#bbb"> </span><span style="color:#00a">rows</span>)<span style="color:#bbb">
-</span></code></pre></div><h2 id="conclusion">Conclusion</h2>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>&gt;<span style="color:#bbb"> </span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>example(id,<span style="color:#bbb"> </span>f1,<span style="color:#bbb"> </span>f2)<span style="color:#bbb"> </span><span style="color:#00a">values</span>(<span style="color:#099">1</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;a&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;a&#39;</span>);<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>&gt;<span style="color:#bbb"> </span><span style="color:#00a">update</span><span style="color:#bbb"> </span>example<span style="color:#bbb"> </span><span style="color:#00a">set</span><span style="color:#bbb"> </span>f1<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;b&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>id<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#099">1</span>;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>&gt;<span style="color:#bbb"> </span><span style="color:#00a">update</span><span style="color:#bbb"> </span>example<span style="color:#bbb"> </span><span style="color:#00a">set</span><span style="color:#bbb"> </span>f2<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;c&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>id<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#099">1</span>;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>And here&rsquo;s what we can see:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>&gt;<span style="color:#bbb"> </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>change_date,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">after</span><span style="color:#bbb"> </span>-<span style="color:#bbb"> </span><span style="color:#00a">before</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>diff<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>audit;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span>change_date<span style="color:#bbb">          </span>|<span style="color:#bbb">   </span>diff<span style="color:#bbb">    
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#aaa;font-style:italic">-------------------------------+-----------
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb"> </span><span style="color:#099">2013</span>-<span style="color:#099">08</span>-<span style="color:#099">27</span><span style="color:#bbb"> </span><span style="color:#099">17</span>:<span style="color:#099">59</span>:<span style="color:#099">19</span>.<span style="color:#099">808217</span>+<span style="color:#099">02</span><span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#a50">&#34;f1&#34;</span>=&gt;<span style="color:#a50">&#34;b&#34;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#099">2013</span>-<span style="color:#099">08</span>-<span style="color:#099">27</span><span style="color:#bbb"> </span><span style="color:#099">17</span>:<span style="color:#099">59</span>:<span style="color:#099">19</span>.<span style="color:#099">808217</span>+<span style="color:#099">02</span><span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#a50">&#34;f2&#34;</span>=&gt;<span style="color:#a50">&#34;c&#34;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>(<span style="color:#099">2</span><span style="color:#bbb"> </span><span style="color:#00a">rows</span>)<span style="color:#bbb">
+</span></span></span></code></pre></div><h2 id="conclusion">Conclusion</h2>
 <p>The
 <em>hstore</em> extension is really useful and versatile, and we just saw another
 use case for it!</p>
@@ -602,9 +602,17 @@ use case for it!</p>
 
             </div>
           </div>
-          <div style="margin-top: 1em;">
- <a href="https://theartofpostgresql.com" alt="The Art of PostgreSQL">
-  <img src="/img/taopg-cta.jpg" style="width:90%; height: auto; margin-left: 5%">
+          
+
+
+
+
+
+<div style="margin-top: 1em;">
+ <script async src="//tinder.thrivecart.com/embed/v1/thrivecart.js"></script>
+ <a data-thrivecart-account="theartofpostgresql" data-thrivecart-tpl="v2" data-thrivecart-product="18" class="thrivecart-button ">
+  <img src="https://spark.thrivecart.com/0x0/https%3A%2F%2Fthrivecart.s3.amazonaws.com%2Fuser_assets%2FNABJ5K7H%2Fproducts%2F18%2Ftaopg-cta-1661268188.jpg"
+       style="width:90%; height: auto; margin-left: 5%"/>
  </a>
 </div>
 
@@ -706,7 +714,7 @@ use case for it!</p>
         </article>
         <footer id="footer" class="main-content-wrap">
   <span class="copyrights">
-    &copy; 2021 Dimitri Fontaine. 
+    &copy; 2022 Dimitri Fontaine. 
   </span>
 </footer>
 

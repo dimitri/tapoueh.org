@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.89.3">
+    <meta name="generator" content="Hugo 0.101.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>PostgreSQL Data Types: XML</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -453,40 +453,40 @@ procedures</em> in this language. If you have to deal with XML documents in your
 database, check out <a href="https://github.com/petere/plxslt">PL/XSLT</a>.</p>
 <h2 id="processing-xml-with-plxslt">Processing XML with PL/XSLT</h2>
 <p>An example of a <em>PL/XSLT</em> function follows:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span><span style="color:#bbb"> </span>extension<span style="color:#bbb"> </span>plxslt;<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">CREATE</span><span style="color:#bbb"> </span><span style="color:#00a">OR</span><span style="color:#bbb"> </span><span style="color:#00a">REPLACE</span><span style="color:#bbb"> </span><span style="color:#00a">FUNCTION</span><span style="color:#bbb"> </span>striptags(xml)<span style="color:#bbb"> </span><span style="color:#00a">RETURNS</span><span style="color:#bbb"> </span><span style="color:#0aa">text</span><span style="color:#bbb">
-</span><span style="color:#bbb">	</span><span style="color:#00a">LANGUAGE</span><span style="color:#bbb"> </span>xslt<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">AS</span><span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">$$</span>&lt;?xml<span style="color:#bbb"> </span><span style="color:#00a">version</span>=<span style="color:#a50">&#34;1.0&#34;</span>?&gt;<span style="color:#bbb">
-</span><span style="color:#bbb"></span>&lt;xsl:stylesheet<span style="color:#bbb"> </span><span style="color:#00a">version</span>=<span style="color:#a50">&#34;1.0&#34;</span><span style="color:#bbb">
-</span><span style="color:#bbb">    </span>xmlns:xsl=<span style="color:#a50">&#34;http://www.w3.org/1999/XSL/Transform&#34;</span><span style="color:#bbb">
-</span><span style="color:#bbb">    </span>xmlns=<span style="color:#a50">&#34;http://www.w3.org/1999/xhtml&#34;</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span>&gt;<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span>&lt;xsl:<span style="color:#00a">output</span><span style="color:#bbb"> </span><span style="color:#00a">method</span>=<span style="color:#a50">&#34;text&#34;</span><span style="color:#bbb"> </span>omit-xml-declaration=<span style="color:#a50">&#34;yes&#34;</span>/&gt;<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb">  </span>&lt;xsl:<span style="color:#00a">template</span><span style="color:#bbb"> </span><span style="color:#00a">match</span>=<span style="color:#a50">&#34;/&#34;</span>&gt;<span style="color:#bbb">
-</span><span style="color:#bbb">    </span>&lt;xsl:apply-templates/&gt;<span style="color:#bbb">
-</span><span style="color:#bbb">  </span>&lt;/xsl:<span style="color:#00a">template</span>&gt;<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span>&lt;/xsl:stylesheet&gt;<span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#f00;background-color:#faa">$$</span>;<span style="color:#bbb">
-</span></code></pre></div><p>It can be used like this:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>docs<span style="color:#bbb">
-</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span><span style="color:#bbb">   </span>id<span style="color:#bbb">      </span><span style="color:#0aa">serial</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
-</span><span style="color:#bbb">   </span>content<span style="color:#bbb"> </span>xml<span style="color:#bbb">
-</span><span style="color:#bbb"> </span>);<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>docs(content)<span style="color:#bbb">
-</span><span style="color:#bbb">     </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#a50">&#39;&lt;?xml version=&#34;1.0&#34;?&gt;
-</span><span style="color:#a50">&lt;html xmlns=&#34;http://www.w3.org/1999/xhtml&#34;&gt;
-</span><span style="color:#a50">&lt;body&gt;hello&lt;/body&gt;
-</span><span style="color:#a50">&lt;/html&gt;&#39;</span>);<span style="color:#bbb">
-</span><span style="color:#bbb">
-</span><span style="color:#bbb"></span><span style="color:#00a">select</span><span style="color:#bbb"> </span>id,<span style="color:#bbb"> </span>striptags(content)<span style="color:#bbb">
-</span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>docs;<span style="color:#bbb">
-</span></code></pre></div><p>As expected, here&rsquo;s the result:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">create</span><span style="color:#bbb"> </span>extension<span style="color:#bbb"> </span>plxslt;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">CREATE</span><span style="color:#bbb"> </span><span style="color:#00a">OR</span><span style="color:#bbb"> </span><span style="color:#00a">REPLACE</span><span style="color:#bbb"> </span><span style="color:#00a">FUNCTION</span><span style="color:#bbb"> </span>striptags(xml)<span style="color:#bbb"> </span><span style="color:#00a">RETURNS</span><span style="color:#bbb"> </span><span style="color:#0aa">text</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">	</span><span style="color:#00a">LANGUAGE</span><span style="color:#bbb"> </span>xslt<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">AS</span><span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">$$</span>&lt;?xml<span style="color:#bbb"> </span><span style="color:#00a">version</span>=<span style="color:#a50">&#34;1.0&#34;</span>?&gt;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>&lt;xsl:stylesheet<span style="color:#bbb"> </span><span style="color:#00a">version</span>=<span style="color:#a50">&#34;1.0&#34;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span>xmlns:xsl=<span style="color:#a50">&#34;http://www.w3.org/1999/XSL/Transform&#34;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span>xmlns=<span style="color:#a50">&#34;http://www.w3.org/1999/xhtml&#34;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>&gt;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>&lt;xsl:<span style="color:#00a">output</span><span style="color:#bbb"> </span><span style="color:#00a">method</span>=<span style="color:#a50">&#34;text&#34;</span><span style="color:#bbb"> </span>omit-xml-declaration=<span style="color:#a50">&#34;yes&#34;</span>/&gt;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>&lt;xsl:<span style="color:#00a">template</span><span style="color:#bbb"> </span><span style="color:#00a">match</span>=<span style="color:#a50">&#34;/&#34;</span>&gt;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span>&lt;xsl:apply-templates/&gt;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>&lt;/xsl:<span style="color:#00a">template</span>&gt;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>&lt;/xsl:stylesheet&gt;<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#f00;background-color:#faa">$$</span>;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>It can be used like this:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>docs<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>(<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>id<span style="color:#bbb">      </span><span style="color:#0aa">serial</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>content<span style="color:#bbb"> </span>xml<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>docs(content)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#a50">&#39;&lt;?xml version=&#34;1.0&#34;?&gt;
+</span></span></span><span style="display:flex;"><span><span style="color:#a50">&lt;html xmlns=&#34;http://www.w3.org/1999/xhtml&#34;&gt;
+</span></span></span><span style="display:flex;"><span><span style="color:#a50">&lt;body&gt;hello&lt;/body&gt;
+</span></span></span><span style="display:flex;"><span><span style="color:#a50">&lt;/html&gt;&#39;</span>);<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">select</span><span style="color:#bbb"> </span>id,<span style="color:#bbb"> </span>striptags(content)<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>docs;<span style="color:#bbb">
+</span></span></span></code></pre></div><p>As expected, here&rsquo;s the result:</p>
 <pre tabindex="0"><code class="language-psql" data-lang="psql"> id │ striptags 
 ════╪═══════════
   1 │          ↵
@@ -507,9 +507,17 @@ it out!</p>
 
             </div>
           </div>
-          <div style="margin-top: 1em;">
- <a href="https://theartofpostgresql.com" alt="The Art of PostgreSQL">
-  <img src="/img/taopg-cta.jpg" style="width:90%; height: auto; margin-left: 5%">
+          
+
+
+
+
+
+<div style="margin-top: 1em;">
+ <script async src="//tinder.thrivecart.com/embed/v1/thrivecart.js"></script>
+ <a data-thrivecart-account="theartofpostgresql" data-thrivecart-tpl="v2" data-thrivecart-product="18" class="thrivecart-button ">
+  <img src="https://spark.thrivecart.com/0x0/https%3A%2F%2Fthrivecart.s3.amazonaws.com%2Fuser_assets%2FNABJ5K7H%2Fproducts%2F18%2Ftaopg-cta-1661268188.jpg"
+       style="width:90%; height: auto; margin-left: 5%"/>
  </a>
 </div>
 
@@ -609,7 +617,7 @@ it out!</p>
         </article>
         <footer id="footer" class="main-content-wrap">
   <span class="copyrights">
-    &copy; 2021 Dimitri Fontaine. 
+    &copy; 2022 Dimitri Fontaine. 
   </span>
 </footer>
 

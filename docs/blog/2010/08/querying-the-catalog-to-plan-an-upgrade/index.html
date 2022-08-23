@@ -21,7 +21,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.89.3">
+    <meta name="generator" content="Hugo 0.101.0">
     <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
     <title>Querying the Catalog to plan an upgrade</title>
     <meta name="author" content="Dimitri Fontaine">
@@ -351,9 +351,9 @@ reflexive facilities of some programming languages, except much more useful,
 because you&rsquo;re reaching all the system at once. But, well, here it goes:</p>
 <pre tabindex="0"><code>SELECT schemaname, tablename, relname, amname, indexdef
   FROM pg_indexes i 
-       JOIN pg_class c ON i.indexname = c.relname and c.relkind = 'i' 
+       JOIN pg_class c ON i.indexname = c.relname and c.relkind = &#39;i&#39; 
        JOIN pg_am am ON c.relam = am.oid
- WHERE amname = 'gist';
+ WHERE amname = &#39;gist&#39;;
 </code></pre><p>Now you could replace the
 <code>WHERE</code> clause with
 <code>WHERE amname IN ('gist', 'hash')</code>
@@ -362,11 +362,11 @@ to check both conditions at once. What about pursuing the restriction on the
 <code>interval</code> columns. Well let&rsquo;s try it:</p>
 <pre tabindex="0"><code>SELECT schemaname, tablename, relname as indexname, amname, indclass
   FROM pg_indexes i 
-       JOIN pg_class c on i.indexname = c.relname and c.relkind = 'i' 
+       JOIN pg_class c on i.indexname = c.relname and c.relkind = &#39;i&#39; 
        JOIN pg_am am on c.relam = am.oid 
        JOIN pg_index x on x.indexrelid = c.oid 
- WHERE amname in ('btree', 'gist') 
-       and schemaname not in ('pg_catalog', 'information_schema');
+ WHERE amname in (&#39;btree&#39;, &#39;gist&#39;) 
+       and schemaname not in (&#39;pg_catalog&#39;, &#39;information_schema&#39;);
 </code></pre><p>We&rsquo;re not there yet, because as you notice, the catalogs are somewhat
 optimized and not always in a normal form. That&rsquo;s good for the system&rsquo;s
 performance, but it makes querying a bit uneasy. What we want is to get from
@@ -391,25 +391,25 @@ the data type, either the
 <em>storage</em> one.</p>
 <pre tabindex="0"><code>SELECT schemaname, tablename, relname as indexname, amname, indclass, opcname, typname
   FROM pg_indexes i 
-       JOIN pg_class c on i.indexname = c.relname and c.relkind = 'i' 
+       JOIN pg_class c on i.indexname = c.relname and c.relkind = &#39;i&#39; 
        JOIN pg_am am on c.relam = am.oid 
        JOIN pg_index x on x.indexrelid = c.oid 
        JOIN pg_opclass o 
-         on string_to_array(x.indclass::text, ' ')::oid[] @&gt; array[o.oid]::oid[]
+         on string_to_array(x.indclass::text, &#39; &#39;)::oid[] @&gt; array[o.oid]::oid[]
        JOIN pg_type t on o.opckeytype = t.oid
-WHERE amname = 'hash' and t.typname = 'interval'
+WHERE amname = &#39;hash&#39; and t.typname = &#39;interval&#39;
 
 UNION ALL
 
 SELECT schemaname, tablename, relname as indexname, amname, indclass, opcname, typname
   FROM pg_indexes i 
-       JOIN pg_class c on i.indexname = c.relname and c.relkind = 'i' 
+       JOIN pg_class c on i.indexname = c.relname and c.relkind = &#39;i&#39; 
        JOIN pg_am am on c.relam = am.oid 
        JOIN pg_index x on x.indexrelid = c.oid 
        JOIN pg_opclass o 
-         on string_to_array(x.indclass::text, ' ')::oid[] @&gt; array[o.oid]::oid[]
+         on string_to_array(x.indclass::text, &#39; &#39;)::oid[] @&gt; array[o.oid]::oid[]
        JOIN pg_type t on o.opcintype = t.oid
-WHERE amname = 'hash' and t.typname = 'interval';
+WHERE amname = &#39;hash&#39; and t.typname = &#39;interval&#39;;
 </code></pre><p>Most certainly this query will return no row for you, as
 <em>hash</em> indexes are
 not widely used, mainly because they are not crash tolerant. For seeing some
@@ -434,9 +434,17 @@ exercise for the reader, though.</p>
 
             </div>
           </div>
-          <div style="margin-top: 1em;">
- <a href="https://theartofpostgresql.com" alt="The Art of PostgreSQL">
-  <img src="/img/taopg-cta.jpg" style="width:90%; height: auto; margin-left: 5%">
+          
+
+
+
+
+
+<div style="margin-top: 1em;">
+ <script async src="//tinder.thrivecart.com/embed/v1/thrivecart.js"></script>
+ <a data-thrivecart-account="theartofpostgresql" data-thrivecart-tpl="v2" data-thrivecart-product="18" class="thrivecart-button ">
+  <img src="https://spark.thrivecart.com/0x0/https%3A%2F%2Fthrivecart.s3.amazonaws.com%2Fuser_assets%2FNABJ5K7H%2Fproducts%2F18%2Ftaopg-cta-1661268188.jpg"
+       style="width:90%; height: auto; margin-left: 5%"/>
  </a>
 </div>
 
@@ -534,7 +542,7 @@ exercise for the reader, though.</p>
         </article>
         <footer id="footer" class="main-content-wrap">
   <span class="copyrights">
-    &copy; 2021 Dimitri Fontaine. 
+    &copy; 2022 Dimitri Fontaine. 
   </span>
 </footer>
 
