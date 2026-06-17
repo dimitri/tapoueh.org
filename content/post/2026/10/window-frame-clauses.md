@@ -5,12 +5,12 @@ tags = ["PostgreSQL", "SQL", "Window Functions", "Analytics"]
 categories = ["PostgreSQL", "YeSQL"]
 +++
 
-A window function operates over a *frame* — a subset of the partition
-defined by the `OVER` clause. Most people use `sum() over (order by ...)` and
-accept the default frame without examining it. The default is reasonable for
-running totals, but once you have duplicate values in the ordering column,
-or once you need a rolling N-row or N-value window, the three frame modes —
-`ROWS`, `RANGE`, and `GROUPS` — diverge in ways that matter.
+The default frame for `sum() over (order by date)` includes all rows up
+to and including the current one — right for a running total, wrong for a
+rolling 7-day average that should count by time interval rather than row
+position. `ROWS`, `RANGE`, and `GROUPS` are the three ways to define what
+"up to" means. They agree when there are no ties; they diverge when there
+are.
 
 <!--more-->
 <!--toc-->

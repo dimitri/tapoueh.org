@@ -5,11 +5,11 @@ tags = ["PostgreSQL", "SQL", "MERGE", "DML"]
 categories = ["PostgreSQL", "YeSQL"]
 +++
 
-`INSERT ... ON CONFLICT DO UPDATE` solved the upsert problem well enough
-for most cases. PostgreSQL 15 went further with the `MERGE` statement —
-SQL standard syntax, multiple `WHEN` clauses, and the ability to handle
-matched, not-matched, and (from PostgreSQL 17) not-matched-by-source rows
-all in a single command.
+A daily stock-level snapshot arrives in a staging table. Some SKUs are
+new — insert them. Some changed — update them. Some have vanished from the
+supplier's feed — delete them. Three operations, one source, one
+transaction. Before PostgreSQL 15 you wired them up separately. `MERGE`
+does all three in a single statement.
 
 <!--more-->
 <!--toc-->

@@ -5,10 +5,10 @@ tags = ["PostgreSQL", "Performance", "EXPLAIN", "Query Optimization"]
 categories = ["PostgreSQL", "YeSQL"]
 +++
 
-PostgreSQL shows you everything you need to understand why a query is slow.
-The information is in `EXPLAIN ANALYZE` output — if you know how to read
-it. The format is dense at first; once you know the grammar, it becomes
-straightforward.
+A query is slow. `EXPLAIN ANALYZE` shows why — estimated rows, actual
+rows, time per node, loops, buffer hits and misses. The format is dense
+the first time you read it. Once you know what each line means, it becomes
+the most useful diagnostic tool PostgreSQL has.
 
 <!--more-->
 <!--toc-->

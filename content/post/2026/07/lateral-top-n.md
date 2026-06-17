@@ -1,183 +1,102 @@
 +++
-title = "Top-N Per Group with a LATERAL Join"
+title = "Top-N Per Group with LATERAL"
 date = "2026-07-15T00:00:00+00:00"
 tags = ["PostgreSQL", "SQL", "LATERAL", "Lab"]
 categories = ["PostgreSQL", "YeSQL"]
 +++
 
-"Give me the three most recent articles in each category." This sounds
-simple and it is — once you know `LATERAL`. Without it, the query either
-gets a correlated subquery per category (slow) or a window function with a
-filter (workable but indirect). With `LATERAL`, the intention is direct and
-the planner can use indexes properly.
+Each driver's three best finishes in 2017. The LIMIT must run once per
+driver — which is exactly what LATERAL does and a plain join cannot.
 
 <!--more-->
 <!--toc-->
 
-## The schema
+## The problem a plain join cannot solve
 
-The Lab's `sandbox` schema has three tables: `category`, `article`, and
-`comment`. Articles belong to a category; comments belong to an article.
-We will build from a simple join up to a nested LATERAL that collects the
-top comments on each top article.
+A JOIN between `drivers` and `results` returns every finish for every
+driver. There is no way to say "stop after three per driver" at the join
+level — that limit only makes sense per group, not over the whole result
+set. You could reach for a window function and filter afterward, but the
+cleanest expression is a subquery that runs once per driver, with the
+driver's id in scope. LATERAL makes that possible.
 
-```sql
-\dt sandbox.*
-```
-
-```
- Schema  │   Name   │ Type  │ Owner
-═════════╪══════════╪═══════╪═══════
- sandbox │ article  │ table │ taop
- sandbox │ category │ table │ taop
- sandbox │ comment  │ table │ taop
- sandbox │ lorem    │ table │ taop
-```
-
-## Step 1: a plain JOIN
-
-Start by counting articles per category to understand the data:
+## LATERAL is SQL's manual loop
 
 ```sql
-  select category.name, count(article.id)
-    from sandbox.category
-         join sandbox.article on article.category = category.id
-group by category.name
-order by count desc;
-```
-
-```
-    name    │ count
-════════════╪═══════
- box office │   343
- news       │   329
- sport      │   170
- music      │   158
-```
-
-Four categories, a few hundred articles each. Now: how do you get just
-the most recent one per category?
-
-## Step 2: add LATERAL
-
-A `LATERAL` subquery is like a correlated subquery in the `FROM` clause.
-It can reference columns from the tables listed before it — here,
-`category.id` — and it is executed once per row of those tables. Crucially,
-you can `LIMIT` it:
-
-```sql
-select category.name,
-       article.title,
-       to_char(article.pubdate, 'YYYY-MM-DD') as pubdate
-  from sandbox.category
+select d.surname          as driver,
+       top3.race,
+       top3.pos,
+       top3.points
+  from f1db.drivers d
   join lateral (
-      select id, title, pubdate
-        from sandbox.article
-       where category = category.id
-    order by pubdate desc
-       limit 1
-  ) as article on true;
-```
-
-```
-    name    │                    title                     │  pubdate
-════════════╪══════════════════════════════════════════════╪════════════
- sport      │ Magna Ut Distinctio Aut Itaque               │ 2026-04-19
- news       │ Aliquip Eius Consectetur Quas Delectus       │ 2026-04-20
- box office │ Sit Odio Rem Aperiam Doloribus               │ 2026-04-20
- music      │ Reprehenderit Adipiscing Nihil Neque Aliquid │ 2026-04-19
-```
-
-One row per category. Change `limit 1` to `limit 3` and you get the top
-three — something a window function can do too, but `LATERAL` reads more
-naturally as intent and lets the planner push the `LIMIT` into the
-index scan.
-
-## Step 3: a second LATERAL for comments
-
-Now nest another `LATERAL` *inside* the first — or rather, listed after it
-in the `FROM` clause, referencing the article that the first LATERAL already
-found. This gives us the three most recent comments on each top article:
-
-```sql
-select category.name,
-       article.title,
-       comment.id,
-       to_char(comment.pubdate, 'YYYY-MM-DD') as pubdate
-  from sandbox.category
-  join lateral (
-      select id, title, pubdate
-        from sandbox.article
-       where category = category.id
-    order by pubdate desc
-       limit 1
-  ) as article on true
-  join lateral (
-      select id, content, pubdate
-        from sandbox.comment
-       where article = article.id
-    order by pubdate desc
+      select r.name             as race,
+             res.positionorder  as pos,
+             res.points
+        from f1db.results res
+        join f1db.races   r on r.raceid = res.raceid
+       where res.driverid = d.driverid
+         and r.year       = 2017
+         and res.points   > 0
+       order by res.points desc
        limit 3
-  ) as comment on true;
+  ) top3 on true
+ where d.surname in ('Hamilton', 'Vettel', 'Bottas', 'Ricciardo', 'Verstappen')
+ order by d.surname, top3.points desc;
 ```
 
-Four categories × 1 article × 3 comments = 12 rows, each giving you a
-category, its newest article, and one of that article's three newest comments.
+The inner subquery references `d.driverid` from the outer row. Without
+`LATERAL` that reference is a syntax error — the outer table is not in
+scope inside a subquery in `FROM`. With it, the subquery re-evaluates for
+each driver row, using that driver's id. `ORDER BY points DESC LIMIT 3`
+runs once per driver and returns at most three rows.
 
-## Step 4: collapse comments into JSON
-
-Twelve rows is awkward to process in application code. `jsonb_agg()` folds
-the comment rows back into a single JSONB array per article, so the result
-is one row per category:
-
-```sql
-\set comments 3
-\set articles 1
-
-  select category.name as category,
-         article.pubdate,
-         title,
-         jsonb_pretty(comments) as comments
-    from sandbox.category
-         left join lateral (
-            select id, title, article.pubdate,
-                   jsonb_agg(comment) as comments
-              from sandbox.article
-                   left join lateral (
-                       select comment.pubdate,
-                              substring(comment.content from 1 for 25) || '…'
-                              as content
-                         from sandbox.comment
-                        where comment.article = article.id
-                     order by comment.pubdate desc
-                        limit :comments
-                   ) as comment on true
-             where category = category.id
-          group by article.id
-          order by article.pubdate desc
-             limit :articles
-         ) as article on true
-order by category.name, article.pubdate desc;
+```
+  driver   │         race          │ pos │ points
+═══════════╪═══════════════════════╪═════╪════════
+ Bottas    │ Russian Grand Prix    │   1 │   25
+ Bottas    │ Austrian Grand Prix   │   1 │   25
+ Bottas    │ Abu Dhabi Grand Prix  │   2 │   18
+ Hamilton  │ British Grand Prix    │   1 │   25
+ Hamilton  │ Italian Grand Prix    │   1 │   25
+ Hamilton  │ Singapore Grand Prix  │   1 │   25
+ Ricciardo │ Azerbaijan Grand Prix │   1 │   25
+ Ricciardo │ Malaysian Grand Prix  │   1 │   25
+ Ricciardo │ Monaco Grand Prix     │   1 │   25
+ Verstappen│ Malaysian Grand Prix  │   3 │   15
+ ...
 ```
 
-The `:comments` and `:articles` variables let you change the limits at the
-psql prompt without touching the query.
+Three rows per driver. The planner implements this as a Nested Loop: for
+each driver row on the outer side, it runs the inner subquery — sorting
+and limiting inside the loop.
+
+## join lateral ... on true
+
+`JOIN LATERAL (...) AS alias ON TRUE` is the standard spelling. `ON TRUE`
+means every outer row joins to whatever the subquery returns. Use `LEFT
+JOIN LATERAL` if you want outer rows with no matching subquery result to
+appear with NULLs rather than be dropped.
 
 ## When to reach for LATERAL
 
-- **Top-N per group** with a known N and an index on the ordering column —
-  `LATERAL` is usually faster than `ROW_NUMBER() OVER (...)` because the
-  planner can use an index scan with a stop condition.
-- **Parameterised subqueries** — when the subquery depends on a value from
-  the outer row (a distance, a date range, a category id) and needs its own
-  `ORDER BY` or `LIMIT`.
+LATERAL is the right tool when the subquery needs a value from the outer
+row and needs its own `ORDER BY` or `LIMIT`. The canonical cases:
+
+- **Top-N per group** — as above; N is fixed and the ordering column is
+  indexed. The planner can use an Index Scan inside the loop and stop
+  after N rows.
+- **Nearest-neighbour per row** — find the three closest locations to
+  each store; the distance expression references the store's coordinates.
+- **Time-series joins** — for each event, find the measurement reading
+  immediately before it.
 - **Set-returning functions** — `LATERAL` is implicit when you call a
-  function in `FROM`; you only need to write it explicitly with subqueries.
+  function in `FROM`; you only write it explicitly with subqueries.
 
 {{< lab >}}
-You can run this example directly in The Lab:
+The top-three-per-decade query in the Lab is a close relative — rank
+combined with LATERAL to pull the top winners decade by decade:
 
-```sh
-\i starter-kit/01-nested-lateral.md
+```sql
+\i 04-sql-select/15-sql-102/03_01_f1db.decade.top3.sql
 ```
 {{< /lab >}}

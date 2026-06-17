@@ -5,12 +5,11 @@ tags = ["PostgreSQL", "Performance", "Query Optimization", "Sorting"]
 categories = ["PostgreSQL", "YeSQL"]
 +++
 
-Sorting is expensive. A full sort reads every row, builds the sorted
-output, then lets the query proceed. PostgreSQL 13 added *incremental
-sort*: when the data is already sorted on a prefix of the required key,
-sort only the tail within each pre-sorted group. Combined with `LIMIT`,
-this can turn an O(N log N) sort into something much closer to O(k log k)
-where k is the limit.
+`ORDER BY customer_id, order_date` with only an index on `customer_id`.
+PostgreSQL 12 sorts the entire table. PostgreSQL 13 reads customers in
+index order and sorts `order_date` within each customer group as those
+groups stream in. Combined with `LIMIT`, it often touches only a fraction
+of the rows. That is incremental sort.
 
 <!--more-->
 <!--toc-->

@@ -5,11 +5,12 @@ tags = ["PostgreSQL", "SQL", "Aggregation", "Statistics", "Lab"]
 categories = ["PostgreSQL", "YeSQL"]
 +++
 
-Percentiles are the honest version of averages. An average hides the
-distribution; a handful of percentiles reveals it. The median tells you
-what typical looks like; the 99th tells you what your worst-case users
-experience. PostgreSQL computes them all in one aggregate call — no
-multiple passes, no self-joins, no application-side sorting.
+The PostgreSQL project's commit log is in The Lab: every commit since
+2000, with the author timestamp (`ats`) and the committer timestamp
+(`cts`). The difference is how long a patch waited in review before
+landing. The average is 34 hours. The median is under 4 minutes. Both
+are true; `percentile_cont()` makes sense of the distribution — median,
+90th, 95th, 99th — in a single ordered pass.
 
 <!--more-->
 <!--toc-->

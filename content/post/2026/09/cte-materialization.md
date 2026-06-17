@@ -5,12 +5,12 @@ tags = ["PostgreSQL", "SQL", "CTE", "Query Optimization", "Performance"]
 categories = ["PostgreSQL", "YeSQL"]
 +++
 
-For years, a Common Table Expression in PostgreSQL was an *optimization
-fence*: the planner materialised it into a temporary result set, then
-queried that set, never pushing predicates from the outer query into the
-CTE's scan. PostgreSQL 12 changed this. Understanding what changed — and
-when each behaviour is correct — matters for anyone writing non-trivial
-queries.
+You write a CTE to filter an expensive subquery once, then reference it
+twice. In PostgreSQL 11 the planner always runs it once: CTEs are
+optimization fences. In PostgreSQL 12 the planner may inline it and run
+it twice — once per reference. That is not a bug. It is the planner being
+smarter. Knowing when it materialises and when it does not matters for
+query design.
 
 <!--more-->
 <!--toc-->

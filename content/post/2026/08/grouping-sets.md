@@ -5,11 +5,9 @@ tags = ["PostgreSQL", "SQL", "GROUPING SETS", "Aggregation", "Lab"]
 categories = ["PostgreSQL", "YeSQL"]
 +++
 
-Formula 1 tracks two world championships in parallel: one for drivers, one
-for constructors. Finding both champions for every season requires
-aggregating points over two different groupings of the same data. The
-obvious approach — two separate queries joined together — works but scans
-the results table twice. `GROUPING SETS` does it in one pass.
+Formula 1 tracks two championships in parallel. Computing both from a
+single scan is what `GROUPING SETS` is for: two unrelated groupings, one
+query, one pass over the data.
 
 <!--more-->
 <!--toc-->

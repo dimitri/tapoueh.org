@@ -5,12 +5,12 @@ tags = ["PostgreSQL", "SQL", "CTE", "Recursive", "Graph", "Lab"]
 categories = ["PostgreSQL", "YeSQL"]
 +++
 
-`WITH RECURSIVE` is one of SQL's most powerful features and one of its
-least understood. PostgreSQL 14 added two standard sub-clauses —
-`SEARCH` and `CYCLE` — that handle the two most common headaches with
-recursive queries: controlling traversal order and detecting infinite
-loops. Both replace boilerplate that recursive queries have carried for
-decades.
+Walk the Loire basin upstream from the sea: start at the river's mouth,
+find everything that flows into it, then everything that flows into those
+reaches, and so on. `WITH RECURSIVE` handles the iteration. PostgreSQL 14
+added `SEARCH` to control whether it goes depth-first or breadth-first,
+and `CYCLE` to stop it when it loops back — two pieces of boilerplate that
+recursive queries have carried manually for decades.
 
 <!--more-->
 <!--toc-->

@@ -5,11 +5,11 @@ tags = ["PostgreSQL", "Performance", "Monitoring", "I/O", "pg_stat_io"]
 categories = ["PostgreSQL", "YeSQL"]
 +++
 
-PostgreSQL 16 added `pg_stat_io` — a system view that finally breaks down
-I/O statistics by *who* is doing the I/O: client backends, autovacuum,
-the background writer, the checkpointer, WAL writer, and more. Before this
-view existed, you could see that *something* was doing a lot of reads, but
-not what. Now you can.
+Autovacuum is hammering disk. You can see it in I/O wait, but which
+process, against which object, in which context? Before PostgreSQL 16,
+`pg_stat_bgwriter` gave you global counters and little else. `pg_stat_io`,
+added in PostgreSQL 16, breaks I/O down by backend type, object, and
+context — reads, writes, hits, evictions, per process category.
 
 <!--more-->
 <!--toc-->

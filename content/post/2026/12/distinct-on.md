@@ -5,12 +5,11 @@ tags = ["PostgreSQL", "SQL", "DISTINCT ON", "Query Patterns"]
 categories = ["PostgreSQL", "YeSQL"]
 +++
 
-SQL Standard offers `DISTINCT` to deduplicate rows; PostgreSQL adds
-`DISTINCT ON (expression)` to keep exactly one row per distinct value of
-an expression. It is a PostgreSQL extension to standard SQL, and it solves
-the top-1-per-group problem more directly than window functions or LATERAL
-joins — at least when you need the first (or last) row per group and you
-have a clear ordering.
+The most recent order per customer. `DISTINCT ON (customer_id)` with
+`ORDER BY customer_id, order_date DESC` keeps exactly one row per
+customer: the one that sorts first. It is PostgreSQL-specific syntax, it
+reads as intent, and with a composite index on `(customer_id, order_date
+DESC)` it needs no sort at all.
 
 <!--more-->
 <!--toc-->
