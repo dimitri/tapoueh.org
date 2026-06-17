@@ -123,12 +123,27 @@ standalone-useful, zero sales, fully Planet-safe.
 - [ ] In GitHub repo **Settings → Pages → Source = "GitHub Actions"** (currently
       "Deploy from `docs/`") so the new workflow deploys.
 - [ ] Confirm **course/workshop URLs** (guessed `/course/`, `/workshop/`).
-- [ ] Draft the **Lab introduction** post (first scheduled article).
-- [ ] Build the 6–12 month **post queue** with future dates.
-- [ ] Backfill **talk narratives** from old "Conferences" blog posts.
-- [ ] Add privacy-friendly **analytics** (GA4 or Plausible) — UA is dead.
-- [ ] Cleanup: remove the unused `themes/tranquilpeak` and stale
-      `static/css/{dim,nav}.css`.
+- [x] Draft the **Lab introduction** post → `content/post/2026/07/lab-intro.md` (2026-07-01).
+- [x] Build the 6–12 month **post queue** with future dates.
+      12 posts, July–December 2026, 1st/15th cadence:
+      - 2026-07-01  Lab intro (Planet wake-up)
+      - 2026-07-15  LATERAL top-N per group
+      - 2026-08-01  GROUPING SETS + FILTER (Formula 1)
+      - 2026-08-15  percentile_cont() — multiple percentiles at once
+      - 2026-09-01  PostgreSQL MERGE statement (v15)
+      - 2026-09-15  CTE materialization (v12)
+      - 2026-10-01  Window frame clauses: ROWS, RANGE, GROUPS
+      - 2026-10-15  Reading EXPLAIN output
+      - 2026-11-01  Incremental Sort (v13)
+      - 2026-11-15  SEARCH and CYCLE in WITH RECURSIVE (v14)
+      - 2026-12-01  DISTINCT ON: top-1 per group
+      - 2026-12-15  pg_stat_io (v16)
+- [x] Backfill **talk narratives** — added .Content to:
+      conf/2019/FOSDEM.md, conf/2020/PostgresTV.md, conf/2021/MACI-46.md
+- [x] Add privacy-friendly **analytics** — Plausible hook in `head.html`;
+      activate by setting `plausibleDomain = "tapoueh.org"` in `config.toml [params]`.
+- [x] Cleanup: stale `static/css/{dim,nav,style-*.min}.css` removed.
+      `themes/tranquilpeak` was already absent from the working tree.
 - [ ] Decide on **dark mode** (deferred).
 
 ## 7. How to run
