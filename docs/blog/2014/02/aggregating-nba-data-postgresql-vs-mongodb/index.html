@@ -1,360 +1,76 @@
-
-
-  
-    
-  
-
-
-  
-
-
-
-
-  
-
-
-  
-
 <!DOCTYPE html>
 <html lang="en-us">
-  <head>
-    
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.101.0">
-    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
-    <title>Aggregating NBA data, PostgreSQL vs MongoDB</title>
-    <meta name="author" content="Dimitri Fontaine">
-    <meta name="keywords" content="">
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aggregating NBA data, PostgreSQL vs MongoDB · Dimitri Fontaine</title>
 
-    <link rel="icon" href="/favicon.ico">
-    
+  
+  
+  <meta name="description" content="When reading the article Crunching 30 Years of NBA Data with MongoDB Aggregation I coulnd&rsquo;t help but think that we&rsquo;ve been enjoying aggregates in …">
+  <link rel="canonical" href="http://localhost:1313/blog/2014/02/aggregating-nba-data-postgresql-vs-mongodb/">
 
-    
-    <meta name="description" content="When reading the article
-Crunching 30 Years of NBA Data with MongoDB Aggregation I coulnd&rsquo;t help but
-think that we&rsquo;ve been enjoying
-aggregates in SQL for 3 or 4 decades already.
-When using
-PostgreSQL it&rsquo;s even easy to actually add your own aggregates
-given the SQL command
-create aggregate.">
-    <meta property="og:description" content="When reading the article
-Crunching 30 Years of NBA Data with MongoDB Aggregation I coulnd&rsquo;t help but
-think that we&rsquo;ve been enjoying
-aggregates in SQL for 3 or 4 decades already.
-When using
-PostgreSQL it&rsquo;s even easy to actually add your own aggregates
-given the SQL command
-create aggregate.">
-    <meta property="og:type" content="blog">
-    <meta property="og:title" content="Aggregating NBA data, PostgreSQL vs MongoDB">
-    <meta property="og:url" content="https://tapoueh.org/blog/2014/02/aggregating-nba-data-postgresql-vs-mongodb/">
-    <meta property="og:site_name" content="The Art of PostgreSQL">
-    <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="Aggregating NBA data, PostgreSQL vs MongoDB">
-    <meta name="twitter:description" content="When reading the article
-Crunching 30 Years of NBA Data with MongoDB Aggregation I coulnd&rsquo;t help but
-think that we&rsquo;ve been enjoying
-aggregates in SQL for 3 or 4 decades already.
-When using
-PostgreSQL it&rsquo;s even easy to actually add your own aggregates
-given the SQL command
-create aggregate.">
-    
-      <meta name="twitter:creator" content="@tapoueh">
-    
-    
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,300;0,400;0,700;1,400&display=swap" rel="stylesheet">
 
-    
-    
+  
+  <link rel="stylesheet" href="/css/main.47d94e129c21f6f85c3b99aa6edc4fc75b72dd224364783be9d8b9d49b486ae3.css" integrity="sha256-R9lOEpwh9vhcO5mqbtxPx1ty3SJDZHg76di51JtIauM=">
+  
 
-    
-      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
-    
+  <link rel="alternate" type="application/rss+xml" title="Dimitri Fontaine" href="/index.xml">
+  <link rel="icon" href="/favicon.ico">
 
-    
-      <meta property="og:image" content="https://tapoueh.org/img/old/postgresql-mongodb.jpg">
-    
-    
-      <meta property="og:image" content="https://tapoueh.org/img/old/postgresql-mongodb.jpg">
-    
-    
+  
+  <meta property="og:site_name" content="Dimitri Fontaine">
+  <meta property="og:title" content="Aggregating NBA data, PostgreSQL vs MongoDB">
+  <meta property="og:description" content="When reading the article Crunching 30 Years of NBA Data with MongoDB Aggregation I coulnd&rsquo;t help but think that we&rsquo;ve been enjoying aggregates in …">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="http://localhost:1313/blog/2014/02/aggregating-nba-data-postgresql-vs-mongodb/">
+  <meta name="twitter:card" content="summary">
+  
+</head>
 
-    
-
-    
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
-    
-    
-    <link rel="stylesheet" href="/css/style-jsjn0006wyhpyzivf6yceb31gvpjatbcs3qzjvlumobfnugccvobqwxnnaj8.min.css" />
-    
-    
-      <link rel="stylesheet" href="https://tapoueh.org/css/dim.css">
-    
-      <link rel="stylesheet" href="https://tapoueh.org/css/nav.css">
-    
-
-    
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+  <div class="wrap">
+    <a class="wordmark" href="/">Dimitri Fontaine</a>
+    <nav class="site-nav" aria-label="Main navigation">
       
-<script type="application/javascript">
-var doNotTrack = false;
-if (!doNotTrack) {
-	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-	ga('create', 'UA-47059482-1', 'auto');
-	
-	ga('send', 'pageview');
-}
-</script>
-    
-    
-  </head>
-
-  <body>
-    <div id="blog">
-      <header id="header" data-behavior="5">
-  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
-  <div class="navbar-collapse collapse header-title" id="navigation">
-    <ul class="nav navbar-nav navbar-right">
+        <a href="/"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>Writing</a>
       
-      <li class="dropdown">
-        
-        <a style="color: black;" href="/" alt="blog"><i class="sidebar-button-icon fa fa-lg fa-home"></i></a>
-        
-      </li>
+        <a href="/conf/"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></span>Talks</a>
       
-      <li class="dropdown">
-        
-        <a style="color: black;" href="/conf/" alt="talks"><i class="sidebar-button-icon fa fa-lg fa-microphone"></i></a>
-        
-      </li>
+        <a href="/categories/"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span>Topics</a>
       
-      <li class="dropdown">
-        
-        <a style="color: black;" href="https://twitter.com/tapoueh" alt="Twitter"><i class="sidebar-button-icon fa fa-lg fa-twitter"></i></a>
-        
-      </li>
+        <a href="/projects/"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span>Projects</a>
       
-      <li class="dropdown">
-        
-        <a style="color: black;" href="http://theartofpostgresql.com" alt="The Art Of PostgreSQL"><i class="sidebar-button-icon fa fa-lg fa-book"></i></a>
-        
-      </li>
+        <a href="/about/"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>About</a>
       
-    </ul>
+      
+      <a class="rss" href="/index.xml" title="RSS feed" aria-label="RSS feed"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg></span></a>
+    </nav>
   </div>
-
-  
-    
-      <a class="header-right-icon "
-         href="https://theartofpostgresql.com/" target="_blank">
-    
-    
-      <i class="fa fa-lg fa-book"></i>
-    
-    
-    </a>
-  
 </header>
 
-      <nav id="sidebar" data-behavior="5">
-  <div class="sidebar-container">
+  <main id="main">
     
-      <div class="sidebar-profile">
-        <a href="/#about" aria-label="">
-          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
-        </a>
-        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
-        
-          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
-        
-      </div>
-    
-    <ul class="sidebar-buttons">
-      
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="/" title="Blog">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
-      
-      <span class="sidebar-button-desc">Blog</span>
-    </a>
-  </li>
-
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="/about/" title="About">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
-      
-      <span class="sidebar-button-desc">About</span>
-    </a>
-  </li>
-
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="/categories/yesql/" title="YeSQL">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-database"></i>
-      
-      <span class="sidebar-button-desc">YeSQL</span>
-    </a>
-  </li>
-
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener" title="The Art of PostgreSQL">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
-      
-      <span class="sidebar-button-desc">The Art of PostgreSQL</span>
-    </a>
-  </li>
-
-
-    </ul>
-    <ul class="sidebar-buttons">
-      
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener" title="GitHub">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
-      
-      <span class="sidebar-button-desc">GitHub</span>
-    </a>
-  </li>
-
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener" title="Twitter">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
-      
-      <span class="sidebar-button-desc">Twitter</span>
-    </a>
-  </li>
-
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="/categories" title="Categories">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
-      
-      <span class="sidebar-button-desc">Categories</span>
-    </a>
-  </li>
-
-
-    </ul>
-    <ul class="sidebar-buttons">
-      
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="/index.xml" title="RSS">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
-      
-      <span class="sidebar-button-desc">RSS</span>
-    </a>
-  </li>
-
-
-    </ul>
-  </div>
-</nav>
-
-      
-  <div class="post-header-cover
-              text-left
-              post-header-cover--partial"
-       style="background-image:url('/img/old/postgresql-mongodb.jpg')"
-       data-behavior="5">
-    
-      <div class="post-header main-content-wrap text-left">
-  
-    <h1 class="post-title">
-      Aggregating NBA data, PostgreSQL vs MongoDB
-    </h1>
-  
-  
-  <div class="postShorten-meta post-meta">
-    
-      <time itemprop="datePublished" datetime="2014-02-17T23:40:00&#43;01:00">
-        <span style="float: left; width: 35%">
-          <i class="fa fa-calendar"></i> 
-  
-  
-  
-  
-    Monday 17 Feb 2014
-  
-
-        </span>
-      </time>
-    
-    <span style="float: right; width: 65%">
-      <i class="fa fa-clock-o"></i> 9 mins read
-      
-    </span>
-    <span style="float: left; width: 35%">
-      <i class="fa fa-bookmark"></i> 
-  
-  
-    <span></span>
-    
-      <a class="category-link" href="/categories/postgresql">PostgreSQL</a>, 
-    
-      <a class="category-link" href="/categories/yesql">YeSQL</a>
-    
-  
-
-    </span>
-    <div>
-      <p>
-        
-        
-        
-        
-        <a href="/tags/mongodb/">
-          <i class="fa fa-tag"></i> MongoDB
-        </a>
-        
-        
-        
-        
-        
-        <a href="/tags/statistics/">
-          <i class="fa fa-tag"></i> Statistics
-        </a>
-        
-        
-      </p>
-    </div>
-  </div>
-
-
+<article class="wrap">
+  <header class="article-header reading">
+    <div class="eyebrow">PostgreSQL · YeSQL</div>
+    <h1>Aggregating NBA data, PostgreSQL vs MongoDB</h1>
+    <div class="post-meta">
+  <time datetime="2014-02-17">Feb 17, 2014</time>
+  <span class="dot">·</span><span>9 min read</span>
+  <span class="dot">·</span><span class="tags"><a class="tag" href="/tags/postgresql/">#PostgreSQL</a><a class="tag" href="/tags/mongodb/">#MongoDB</a><a class="tag" href="/tags/yesql/">#YeSQL</a><a class="tag" href="/tags/statistics/">#Statistics</a></span>
 </div>
+
+  </header>
+
+  <div class="prose reading">
     
-  </div>
-
-
-      <div id="main" data-behavior="5"
-        class="hasCover
-               hasCoverMetaIn
-               ">
-        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
-          
-          
-          <div class="post-content markdown" itemprop="articleBody">
-            <div class="main-content-wrap">
-              <p>When reading the article
+    <p>When reading the article
 <a href="http://thecodebarbarian.wordpress.com/2014/02/14/crunching-30-years-of-nba-data-with-mongodb-aggregation/">Crunching 30 Years of NBA Data with MongoDB Aggregation</a> I coulnd&rsquo;t help but
 think that we&rsquo;ve been enjoying
 <a href="http://www.postgresql.org/docs/current/static/tutorial-agg.html">aggregates</a> in SQL for 3 or 4 decades already.
@@ -366,179 +82,17 @@ given the SQL command
 <p>The next step after thinking how obvious the queries written in the
 mentionned article would be to express in SQL was to actually load the data
 into PostgreSQL and write the aggregate queries, of course.</p>
- 
-
-
-
-
-<div class="table-of-contents toc bd-callout">
-    
-    <h4 class="text-muted">Table of Contents</h4>
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2014/02/aggregating-nba-data-postgresql-vs-mongodb/#loading-the-data">
-                    Loading the data
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2014/02/aggregating-nba-data-postgresql-vs-mongodb/#running-the-aggregates">
-                    Running the Aggregates
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2014/02/aggregating-nba-data-postgresql-vs-mongodb/#correlating-stats-with-wins">
-                    Correlating stats with wins
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2014/02/aggregating-nba-data-postgresql-vs-mongodb/#defensive-rebounds-and-total-rebounds-versus-win-percentage">
-                    Defensive Rebounds and Total Rebounds Versus Win Percentage
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2014/02/aggregating-nba-data-postgresql-vs-mongodb/#interesting-factoid">
-                    Interesting factoid
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2014/02/aggregating-nba-data-postgresql-vs-mongodb/#total-rebounds-and-wins">
-                    Total rebounds and wins
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2014/02/aggregating-nba-data-postgresql-vs-mongodb/#conclusion">
-                    Conclusion
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-</div>
-
-
+<div class="toc"><div class="toc-title">Contents</div><nav id="TableOfContents">
+  <ul>
+    <li><a href="#loading-the-data">Loading the data</a></li>
+    <li><a href="#running-the-aggregates">Running the Aggregates</a></li>
+    <li><a href="#correlating-stats-with-wins">Correlating stats with wins</a></li>
+    <li><a href="#defensive-rebounds-and-total-rebounds-versus-win-percentage">Defensive Rebounds and Total Rebounds Versus Win Percentage</a></li>
+    <li><a href="#interesting-factoid">Interesting factoid</a></li>
+    <li><a href="#total-rebounds-and-wins">Total rebounds and wins</a></li>
+    <li><a href="#conclusion">Conclusion</a></li>
+  </ul>
+</nav></div>
 <h2 id="loading-the-data">Loading the data</h2>
 <p>With the help of a little bit of
 <em>Common Lisp</em> code and using the
@@ -558,61 +112,61 @@ per team, which would be a boolean but is a number in the given
 we store only the scores. Here&rsquo;s the main table definition of the stats we
 are going to be playing with, the
 <code>game</code> table:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>nba.game<span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>id<span style="color:#bbb">          </span><span style="color:#0aa">serial</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#0aa">date</span><span style="color:#bbb">        </span>timestamptz,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">host</span><span style="color:#bbb">        </span><span style="color:#0aa">int</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>nba.team(id),<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>guest<span style="color:#bbb">       </span><span style="color:#0aa">int</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>nba.team(id),<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>host_score<span style="color:#bbb">  </span><span style="color:#0aa">int</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>guest_score<span style="color:#bbb"> </span><span style="color:#0aa">int</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>);<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">create</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">nba</span><span class="p">.</span><span class="n">game</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">id</span><span class="w">          </span><span class="nb">serial</span><span class="w"> </span><span class="k">primary</span><span class="w"> </span><span class="k">key</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nb">date</span><span class="w">        </span><span class="n">timestamptz</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">host</span><span class="w">        </span><span class="nb">int</span><span class="w"> </span><span class="k">references</span><span class="w"> </span><span class="n">nba</span><span class="p">.</span><span class="n">team</span><span class="p">(</span><span class="n">id</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">guest</span><span class="w">       </span><span class="nb">int</span><span class="w"> </span><span class="k">references</span><span class="w"> </span><span class="n">nba</span><span class="p">.</span><span class="n">team</span><span class="p">(</span><span class="n">id</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">host_score</span><span class="w">  </span><span class="nb">int</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">guest_score</span><span class="w"> </span><span class="nb">int</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">);</span><span class="w">
 </span></span></span></code></pre></div><p>As much of the aggregates in the referenced article are playing with
 statistics from teams who actually
 <em>won</em> the game, let&rsquo;s create a view to
 simplify our SQL queries thereafter:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">view</span><span style="color:#bbb"> </span>winners<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>id,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#0aa">date</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span>host_score<span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span>guest_score<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#00a">host</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#00a">else</span><span style="color:#bbb"> </span>guest<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#00a">end</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>winner<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>game;<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">create</span><span class="w"> </span><span class="k">view</span><span class="w"> </span><span class="n">winners</span><span class="w"> </span><span class="k">as</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="nb">date</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="k">case</span><span class="w"> </span><span class="k">when</span><span class="w"> </span><span class="n">host_score</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">guest_score</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">              </span><span class="k">then</span><span class="w"> </span><span class="k">host</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">              </span><span class="k">else</span><span class="w"> </span><span class="n">guest</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="k">end</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">winner</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">from</span><span class="w"> </span><span class="n">game</span><span class="p">;</span><span class="w">
 </span></span></span></code></pre></div><p>If you&rsquo;re not doing much SQL, remember that creating such a view is common
 practice in the relational world.</p>
 <h2 id="running-the-aggregates">Running the Aggregates</h2>
 <p>Now that we have the extra useful view, it&rsquo;s possible to implement the first
 <a href="http://www.mongodb.org/">MongoDB</a> query in SQL. First, let&rsquo;s have a look at the MongoDB query:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span>db.games.aggregate([
-</span></span><span style="display:flex;"><span>  {
-</span></span><span style="display:flex;"><span>    $match : {
-</span></span><span style="display:flex;"><span>      date : {
-</span></span><span style="display:flex;"><span>        $gt : ISODate(<span style="color:#a50">&#34;1999-08-01T00:00:00Z&#34;</span>),
-</span></span><span style="display:flex;"><span>        $lt : ISODate(<span style="color:#a50">&#34;2000-08-01T00:00:00Z&#34;</span>)
-</span></span><span style="display:flex;"><span>      }
-</span></span><span style="display:flex;"><span>    }
-</span></span><span style="display:flex;"><span>  },
-</span></span><span style="display:flex;"><span>  {
-</span></span><span style="display:flex;"><span>    $unwind : <span style="color:#a50">&#39;$teams&#39;</span>
-</span></span><span style="display:flex;"><span>  },
-</span></span><span style="display:flex;"><span>  {
-</span></span><span style="display:flex;"><span>    $match : {
-</span></span><span style="display:flex;"><span>      <span style="color:#a50">&#39;teams.won&#39;</span> : <span style="color:#099">1</span>
-</span></span><span style="display:flex;"><span>    }
-</span></span><span style="display:flex;"><span>  },
-</span></span><span style="display:flex;"><span>  {
-</span></span><span style="display:flex;"><span>    $group : {
-</span></span><span style="display:flex;"><span>      _id : <span style="color:#a50">&#39;$teams.name&#39;</span>,
-</span></span><span style="display:flex;"><span>      wins : { $sum : <span style="color:#099">1</span> }
-</span></span><span style="display:flex;"><span>    }
-</span></span><span style="display:flex;"><span>  },
-</span></span><span style="display:flex;"><span>  {
-</span></span><span style="display:flex;"><span>    $sort : { wins : -<span style="color:#099">1</span> }
-</span></span><span style="display:flex;"><span>  },
-</span></span><span style="display:flex;"><span>  {
-</span></span><span style="display:flex;"><span>    $limit : <span style="color:#099">5</span>
-</span></span><span style="display:flex;"><span>  }
-</span></span><span style="display:flex;"><span>]);
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-js" data-lang="js"><span class="line"><span class="cl"><span class="nx">db</span><span class="p">.</span><span class="nx">games</span><span class="p">.</span><span class="nx">aggregate</span><span class="p">([</span>
+</span></span><span class="line"><span class="cl">  <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">$match</span> <span class="o">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">date</span> <span class="o">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">$gt</span> <span class="o">:</span> <span class="nx">ISODate</span><span class="p">(</span><span class="s2">&#34;1999-08-01T00:00:00Z&#34;</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">$lt</span> <span class="o">:</span> <span class="nx">ISODate</span><span class="p">(</span><span class="s2">&#34;2000-08-01T00:00:00Z&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="p">},</span>
+</span></span><span class="line"><span class="cl">  <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">$unwind</span> <span class="o">:</span> <span class="s1">&#39;$teams&#39;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">},</span>
+</span></span><span class="line"><span class="cl">  <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">$match</span> <span class="o">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="s1">&#39;teams.won&#39;</span> <span class="o">:</span> <span class="mi">1</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="p">},</span>
+</span></span><span class="line"><span class="cl">  <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">$group</span> <span class="o">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">_id</span> <span class="o">:</span> <span class="s1">&#39;$teams.name&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">wins</span> <span class="o">:</span> <span class="p">{</span> <span class="nx">$sum</span> <span class="o">:</span> <span class="mi">1</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="p">},</span>
+</span></span><span class="line"><span class="cl">  <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">$sort</span> <span class="o">:</span> <span class="p">{</span> <span class="nx">wins</span> <span class="o">:</span> <span class="o">-</span><span class="mi">1</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="p">},</span>
+</span></span><span class="line"><span class="cl">  <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">$limit</span> <span class="o">:</span> <span class="mi">5</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">]);</span>
 </span></span></code></pre></div><p>I don&rsquo;t know about you, but I have quite a hard time deciphering what that
 query is actually doing, and when the explanation text talks about
 <em>using a
@@ -622,24 +176,24 @@ been writing the
 format itself, as it&rsquo;s obviously meant to be generated by a tool rather than
 typed by a human being.</p>
 <p>Here&rsquo;s the same query in SQL, with the result this time:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">SELECT</span><span style="color:#bbb"> </span>abbrev,<span style="color:#bbb"> </span>name,<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">FROM</span><span style="color:#bbb"> </span>winners<span style="color:#bbb"> </span><span style="color:#00a">JOIN</span><span style="color:#bbb"> </span>team<span style="color:#bbb"> </span><span style="color:#00a">ON</span><span style="color:#bbb"> </span>team.id<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>winners.winner<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">WHERE</span><span style="color:#bbb">     </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;1999-08-01T00:00:00Z&#39;</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">AND</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span>&lt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;2000-08-01T00:00:00Z&#39;</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">GROUP</span><span style="color:#bbb"> </span><span style="color:#00a">BY</span><span style="color:#bbb"> </span>winner,<span style="color:#bbb"> </span>abbrev,<span style="color:#bbb"> </span>name<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">ORDER</span><span style="color:#bbb"> </span><span style="color:#00a">BY</span><span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span><span style="color:#00a">DESC</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">LIMIT</span><span style="color:#bbb"> </span><span style="color:#099">5</span>;<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>abbrev<span style="color:#bbb"> </span>|<span style="color:#bbb">          </span>name<span style="color:#bbb">          </span>|<span style="color:#bbb"> </span><span style="color:#00a">count</span><span style="color:#bbb"> 
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#aaa;font-style:italic">--------+------------------------+-------
-</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb"> </span>LAL<span style="color:#bbb">    </span>|<span style="color:#bbb"> </span>Los<span style="color:#bbb"> </span>Angeles<span style="color:#bbb"> </span>Lakers<span style="color:#bbb">     </span>|<span style="color:#bbb">    </span><span style="color:#099">67</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>POR<span style="color:#bbb">    </span>|<span style="color:#bbb"> </span>Portland<span style="color:#bbb"> </span>Trail<span style="color:#bbb"> </span>Blazers<span style="color:#bbb"> </span>|<span style="color:#bbb">    </span><span style="color:#099">59</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>IND<span style="color:#bbb">    </span>|<span style="color:#bbb"> </span>Indiana<span style="color:#bbb"> </span>Pacers<span style="color:#bbb">         </span>|<span style="color:#bbb">    </span><span style="color:#099">56</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>UTA<span style="color:#bbb">    </span>|<span style="color:#bbb"> </span>Utah<span style="color:#bbb"> </span>Jazz<span style="color:#bbb">              </span>|<span style="color:#bbb">    </span><span style="color:#099">55</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>SAS<span style="color:#bbb">    </span>|<span style="color:#bbb"> </span>San<span style="color:#bbb"> </span>Antonio<span style="color:#bbb"> </span>Spurs<span style="color:#bbb">      </span>|<span style="color:#bbb">    </span><span style="color:#099">53</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>(<span style="color:#099">5</span><span style="color:#bbb"> </span><span style="color:#00a">rows</span>)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>Time:<span style="color:#bbb"> </span><span style="color:#099">8</span>.<span style="color:#099">101</span><span style="color:#bbb"> </span>ms<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="w">  </span><span class="k">SELECT</span><span class="w"> </span><span class="n">abbrev</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">FROM</span><span class="w"> </span><span class="n">winners</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">team</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">team</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">winners</span><span class="p">.</span><span class="n">winner</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="k">WHERE</span><span class="w">     </span><span class="nb">date</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="s1">&#39;1999-08-01T00:00:00Z&#39;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="k">AND</span><span class="w"> </span><span class="nb">date</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="s1">&#39;2000-08-01T00:00:00Z&#39;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">winner</span><span class="p">,</span><span class="w"> </span><span class="n">abbrev</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">DESC</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="k">LIMIT</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">abbrev</span><span class="w"> </span><span class="o">|</span><span class="w">          </span><span class="n">name</span><span class="w">          </span><span class="o">|</span><span class="w"> </span><span class="k">count</span><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="c1">--------+------------------------+-------
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">LAL</span><span class="w">    </span><span class="o">|</span><span class="w"> </span><span class="n">Los</span><span class="w"> </span><span class="n">Angeles</span><span class="w"> </span><span class="n">Lakers</span><span class="w">     </span><span class="o">|</span><span class="w">    </span><span class="mi">67</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">POR</span><span class="w">    </span><span class="o">|</span><span class="w"> </span><span class="n">Portland</span><span class="w"> </span><span class="n">Trail</span><span class="w"> </span><span class="n">Blazers</span><span class="w"> </span><span class="o">|</span><span class="w">    </span><span class="mi">59</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">IND</span><span class="w">    </span><span class="o">|</span><span class="w"> </span><span class="n">Indiana</span><span class="w"> </span><span class="n">Pacers</span><span class="w">         </span><span class="o">|</span><span class="w">    </span><span class="mi">56</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">UTA</span><span class="w">    </span><span class="o">|</span><span class="w"> </span><span class="n">Utah</span><span class="w"> </span><span class="n">Jazz</span><span class="w">              </span><span class="o">|</span><span class="w">    </span><span class="mi">55</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">SAS</span><span class="w">    </span><span class="o">|</span><span class="w"> </span><span class="n">San</span><span class="w"> </span><span class="n">Antonio</span><span class="w"> </span><span class="n">Spurs</span><span class="w">      </span><span class="o">|</span><span class="w">    </span><span class="mi">53</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">(</span><span class="mi">5</span><span class="w"> </span><span class="k">rows</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">Time</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">.</span><span class="mi">101</span><span class="w"> </span><span class="n">ms</span><span class="w">
 </span></span></span></code></pre></div><p>What we have here is a pretty basic query using a
 <em>join</em>, a
 <em>where</em> clause to
@@ -653,24 +207,24 @@ all, then you know how to read that query because you&rsquo;ve been writing doze
 of similar ones.</p>
 <p>Here&rsquo;s, as in the original article, the same query against a much larger
 data set this time, with all games of the 2000s decade:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">SELECT</span><span style="color:#bbb"> </span>abbrev,<span style="color:#bbb"> </span>name,<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">FROM</span><span style="color:#bbb"> </span>winners<span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>team<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>team.id<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>winners.winner<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">WHERE</span><span style="color:#bbb">     </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;2000-08-01T00:00:00Z&#39;</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#00a">AND</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span>&lt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;2010-08-01T00:00:00Z&#39;</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">GROUP</span><span style="color:#bbb"> </span><span style="color:#00a">BY</span><span style="color:#bbb"> </span>winner,<span style="color:#bbb"> </span>abbrev,<span style="color:#bbb"> </span>name<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">ORDER</span><span style="color:#bbb"> </span><span style="color:#00a">BY</span><span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span><span style="color:#00a">DESC</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">LIMIT</span><span style="color:#bbb"> </span><span style="color:#099">5</span>;<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>abbrev<span style="color:#bbb"> </span>|<span style="color:#bbb">        </span>name<span style="color:#bbb">        </span>|<span style="color:#bbb"> </span><span style="color:#00a">count</span><span style="color:#bbb"> 
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#aaa;font-style:italic">--------+--------------------+-------
-</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb"> </span>SAS<span style="color:#bbb">    </span>|<span style="color:#bbb"> </span>San<span style="color:#bbb"> </span>Antonio<span style="color:#bbb"> </span>Spurs<span style="color:#bbb">  </span>|<span style="color:#bbb">   </span><span style="color:#099">579</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>DAL<span style="color:#bbb">    </span>|<span style="color:#bbb"> </span>Dallas<span style="color:#bbb"> </span>Mavericks<span style="color:#bbb">   </span>|<span style="color:#bbb">   </span><span style="color:#099">568</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>LAL<span style="color:#bbb">    </span>|<span style="color:#bbb"> </span>Los<span style="color:#bbb"> </span>Angeles<span style="color:#bbb"> </span>Lakers<span style="color:#bbb"> </span>|<span style="color:#bbb">   </span><span style="color:#099">524</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>PHO<span style="color:#bbb">    </span>|<span style="color:#bbb"> </span>Phoenix<span style="color:#bbb"> </span>Suns<span style="color:#bbb">       </span>|<span style="color:#bbb">   </span><span style="color:#099">495</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>DET<span style="color:#bbb">    </span>|<span style="color:#bbb"> </span>Detroit<span style="color:#bbb"> </span>Pistons<span style="color:#bbb">    </span>|<span style="color:#bbb">   </span><span style="color:#099">489</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>(<span style="color:#099">5</span><span style="color:#bbb"> </span><span style="color:#00a">rows</span>)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>Time:<span style="color:#bbb"> </span><span style="color:#099">24</span>.<span style="color:#099">713</span><span style="color:#bbb"> </span>ms<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="w">   </span><span class="k">SELECT</span><span class="w"> </span><span class="n">abbrev</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">     </span><span class="k">FROM</span><span class="w"> </span><span class="n">winners</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">team</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">team</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">winners</span><span class="p">.</span><span class="n">winner</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">WHERE</span><span class="w">     </span><span class="nb">date</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="s1">&#39;2000-08-01T00:00:00Z&#39;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="k">AND</span><span class="w"> </span><span class="nb">date</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="s1">&#39;2010-08-01T00:00:00Z&#39;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">winner</span><span class="p">,</span><span class="w"> </span><span class="n">abbrev</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">DESC</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">LIMIT</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">abbrev</span><span class="w"> </span><span class="o">|</span><span class="w">        </span><span class="n">name</span><span class="w">        </span><span class="o">|</span><span class="w"> </span><span class="k">count</span><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="c1">--------+--------------------+-------
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">SAS</span><span class="w">    </span><span class="o">|</span><span class="w"> </span><span class="n">San</span><span class="w"> </span><span class="n">Antonio</span><span class="w"> </span><span class="n">Spurs</span><span class="w">  </span><span class="o">|</span><span class="w">   </span><span class="mi">579</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">DAL</span><span class="w">    </span><span class="o">|</span><span class="w"> </span><span class="n">Dallas</span><span class="w"> </span><span class="n">Mavericks</span><span class="w">   </span><span class="o">|</span><span class="w">   </span><span class="mi">568</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">LAL</span><span class="w">    </span><span class="o">|</span><span class="w"> </span><span class="n">Los</span><span class="w"> </span><span class="n">Angeles</span><span class="w"> </span><span class="n">Lakers</span><span class="w"> </span><span class="o">|</span><span class="w">   </span><span class="mi">524</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">PHO</span><span class="w">    </span><span class="o">|</span><span class="w"> </span><span class="n">Phoenix</span><span class="w"> </span><span class="n">Suns</span><span class="w">       </span><span class="o">|</span><span class="w">   </span><span class="mi">495</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">DET</span><span class="w">    </span><span class="o">|</span><span class="w"> </span><span class="n">Detroit</span><span class="w"> </span><span class="n">Pistons</span><span class="w">    </span><span class="o">|</span><span class="w">   </span><span class="mi">489</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">(</span><span class="mi">5</span><span class="w"> </span><span class="k">rows</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">Time</span><span class="p">:</span><span class="w"> </span><span class="mi">24</span><span class="p">.</span><span class="mi">713</span><span class="w"> </span><span class="n">ms</span><span class="w">
 </span></span></span></code></pre></div><h2 id="correlating-stats-with-wins">Correlating stats with wins</h2>
 <p>The goal here is to compute how often a team wins when they record more
 defensive rebounds than their opponent across the entire data set.</p>
@@ -681,37 +235,31 @@ winner team registered a greater
 <em>count
 how many times</em> in SQL is usually written as a
 <code>sum(case when &lt;condition&gt; then 1 else 0 end)</code>, which is what we&rsquo;re doing here:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>games,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">sum</span>(<span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span>ws.drb<span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span>ls.drb<span style="color:#bbb"> </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">else</span><span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb"> </span><span style="color:#00a">end</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>drb,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">sum</span>(<span style="color:#00a">case</span><span style="color:#bbb"> </span><span style="color:#00a">when</span><span style="color:#bbb"> </span>ws.drb<span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span>ls.drb<span style="color:#bbb"> </span><span style="color:#00a">then</span><span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">else</span><span style="color:#bbb"> </span><span style="color:#099">0</span><span style="color:#bbb"> </span><span style="color:#00a">end</span>)::<span style="color:#0aa">float</span><span style="color:#bbb"> </span>/<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>*<span style="color:#bbb"> </span><span style="color:#099">100</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>pct<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>winlose<span style="color:#bbb"> </span>wl<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>team<span style="color:#bbb"> </span>w<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>wl.winner<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>w.id<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>team<span style="color:#bbb"> </span>l<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>wl.loser<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>l.id<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>team_stats<span style="color:#bbb"> </span>ws<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>ws.game<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>wl.id<span style="color:#bbb"> </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>ws.team<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>wl.winner<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>team_stats<span style="color:#bbb"> </span>ls<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>ls.game<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>wl.id<span style="color:#bbb"> </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>ls.team<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>wl.loser;<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>games<span style="color:#bbb"> </span>|<span style="color:#bbb">  </span>drb<span style="color:#bbb">  </span>|<span style="color:#bbb">       </span>pct<span style="color:#bbb">        
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#aaa;font-style:italic">-------+-------+------------------
-</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb"> </span><span style="color:#099">31686</span><span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#099">22292</span><span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#099">70</span>.<span style="color:#099">3528372151739</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>(<span style="color:#099">1</span><span style="color:#bbb"> </span><span style="color:#00a">row</span>)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>Time:<span style="color:#bbb"> </span><span style="color:#099">276</span>.<span style="color:#099">669</span><span style="color:#bbb"> </span>ms<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">select</span><span class="w"> </span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">games</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">sum</span><span class="p">(</span><span class="k">case</span><span class="w"> </span><span class="k">when</span><span class="w"> </span><span class="n">ws</span><span class="p">.</span><span class="n">drb</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">ls</span><span class="p">.</span><span class="n">drb</span><span class="w"> </span><span class="k">then</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="k">end</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">drb</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">sum</span><span class="p">(</span><span class="k">case</span><span class="w"> </span><span class="k">when</span><span class="w"> </span><span class="n">ws</span><span class="p">.</span><span class="n">drb</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">ls</span><span class="p">.</span><span class="n">drb</span><span class="w"> </span><span class="k">then</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="k">end</span><span class="p">)::</span><span class="nb">float</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">pct</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">winlose</span><span class="w"> </span><span class="n">wl</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">join</span><span class="w"> </span><span class="n">team</span><span class="w"> </span><span class="n">w</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">wl</span><span class="p">.</span><span class="n">winner</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">w</span><span class="p">.</span><span class="n">id</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">join</span><span class="w"> </span><span class="n">team</span><span class="w"> </span><span class="n">l</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">wl</span><span class="p">.</span><span class="n">loser</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">l</span><span class="p">.</span><span class="n">id</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">join</span><span class="w"> </span><span class="n">team_stats</span><span class="w"> </span><span class="n">ws</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">ws</span><span class="p">.</span><span class="n">game</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">wl</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">ws</span><span class="p">.</span><span class="n">team</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">wl</span><span class="p">.</span><span class="n">winner</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">join</span><span class="w"> </span><span class="n">team_stats</span><span class="w"> </span><span class="n">ls</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">ls</span><span class="p">.</span><span class="n">game</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">wl</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">ls</span><span class="p">.</span><span class="n">team</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">wl</span><span class="p">.</span><span class="n">loser</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">games</span><span class="w"> </span><span class="o">|</span><span class="w">  </span><span class="n">drb</span><span class="w">  </span><span class="o">|</span><span class="w">       </span><span class="n">pct</span><span class="w">        
+</span></span></span><span class="line"><span class="cl"><span class="c1">-------+-------+------------------
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="mi">31686</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">22292</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">70</span><span class="p">.</span><span class="mi">3528372151739</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">(</span><span class="mi">1</span><span class="w"> </span><span class="k">row</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">Time</span><span class="p">:</span><span class="w"> </span><span class="mi">276</span><span class="p">.</span><span class="mi">669</span><span class="w"> </span><span class="n">ms</span><span class="w">
 </span></span></span></code></pre></div><p>We note here than in the original MongoDB article the aggregation query is
 short of computing the
 <em>percentage</em> directly, apparently it&rsquo;s been done in the
 client tool, maybe using a
 <em>spreadsheet</em> application or something.</p>
 <h2 id="defensive-rebounds-and-total-rebounds-versus-win-percentage">Defensive Rebounds and Total Rebounds Versus Win Percentage</h2>
-
-
-
-<div class="figure fig25 right dim-margin" >
-  
-    <img class="fig-img" src="/img/old/DReboundsVandy.320.png" >
-  
-  
-</div>
-
+<div class="figure fig25 right dim-margin">
+  <a href="/img/old/DReboundsVandy.320.png">
+    <img class="fig-img" src="/img/old/DReboundsVandy.320.png" loading="lazy">
+  </a></div>
 <p>Next, still following on our inspirational article
 <a href="http://thecodebarbarian.wordpress.com/2014/02/14/crunching-30-years-of-nba-data-with-mongodb-aggregation/">Crunching 30 Years of NBA Data with MongoDB Aggregation</a>, we’re going to
 compute what percentage of the time a team wins as a function of the number
@@ -719,26 +267,26 @@ of defensive rebounds they recorded.</p>
 <p>I&rsquo;m not sure I understand what they achieve with averaging ones when a team
 wins and zero when a team loses, so I couldn&rsquo;t quite reproduce their result.
 Here&rsquo;s an approaching query tho:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">with</span><span style="color:#bbb"> </span>game_stats<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>t.id,<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>team<span style="color:#bbb"> </span>t<span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>game<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>game.<span style="color:#00a">host</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>t.id<span style="color:#bbb"> </span><span style="color:#00a">or</span><span style="color:#bbb"> </span>game.guest<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>t.id<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>t.id<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">select</span><span style="color:#bbb"> </span>ts.team,<span style="color:#bbb"> </span>round(<span style="color:#00a">avg</span>(drb),<span style="color:#bbb"> </span><span style="color:#099">2</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>drb,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>round(<span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>/<span style="color:#bbb"> </span>gs.<span style="color:#00a">count</span>::<span style="color:#0aa">numeric</span><span style="color:#bbb"> </span>*<span style="color:#bbb"> </span><span style="color:#099">100</span>,<span style="color:#bbb"> </span><span style="color:#099">2</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>winpct,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>wins,<span style="color:#bbb"> </span>gs.<span style="color:#00a">count</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>games<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>team_stats<span style="color:#bbb"> </span>ts<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>game<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>game.id<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>ts.game<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>game.<span style="color:#00a">host</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>ts.team<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>game.host_score<span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span>game.guest_score<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>game_stats<span style="color:#bbb"> </span>gs<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>gs.id<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>ts.team<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>ts.team,<span style="color:#bbb"> </span>gs.<span style="color:#00a">count</span>;<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>team<span style="color:#bbb"> </span>|<span style="color:#bbb">  </span>drb<span style="color:#bbb">  </span>|<span style="color:#bbb"> </span>winpct<span style="color:#bbb"> </span>|<span style="color:#bbb"> </span>wins<span style="color:#bbb"> </span>|<span style="color:#bbb"> </span>games<span style="color:#bbb"> 
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#aaa;font-style:italic">------+-------+--------+------+-------
-</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#bbb">    </span><span style="color:#099">4</span><span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#099">31</span>.<span style="color:#099">59</span><span style="color:#bbb"> </span>|<span style="color:#bbb">  </span><span style="color:#099">31</span>.<span style="color:#099">46</span><span style="color:#bbb"> </span>|<span style="color:#bbb">  </span><span style="color:#099">710</span><span style="color:#bbb"> </span>|<span style="color:#bbb">  </span><span style="color:#099">2257</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#099">7</span><span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#099">32</span>.<span style="color:#099">55</span><span style="color:#bbb"> </span>|<span style="color:#bbb">  </span><span style="color:#099">31</span>.<span style="color:#099">89</span><span style="color:#bbb"> </span>|<span style="color:#bbb">  </span><span style="color:#099">720</span><span style="color:#bbb"> </span>|<span style="color:#bbb">  </span><span style="color:#099">2258</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#099">16</span><span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#099">31</span>.<span style="color:#099">70</span><span style="color:#bbb"> </span>|<span style="color:#bbb">  </span><span style="color:#099">37</span>.<span style="color:#099">62</span><span style="color:#bbb"> </span>|<span style="color:#bbb">  </span><span style="color:#099">849</span><span style="color:#bbb"> </span>|<span style="color:#bbb">  </span><span style="color:#099">2257</span><span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">with</span><span class="w"> </span><span class="n">game_stats</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">select</span><span class="w"> </span><span class="n">t</span><span class="p">.</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="k">from</span><span class="w"> </span><span class="n">team</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">game</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">game</span><span class="p">.</span><span class="k">host</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">t</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="k">or</span><span class="w"> </span><span class="n">game</span><span class="p">.</span><span class="n">guest</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">t</span><span class="p">.</span><span class="n">id</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="k">group</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">t</span><span class="p">.</span><span class="n">id</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">select</span><span class="w"> </span><span class="n">ts</span><span class="p">.</span><span class="n">team</span><span class="p">,</span><span class="w"> </span><span class="n">round</span><span class="p">(</span><span class="k">avg</span><span class="p">(</span><span class="n">drb</span><span class="p">),</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">drb</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="n">round</span><span class="p">(</span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">gs</span><span class="p">.</span><span class="k">count</span><span class="p">::</span><span class="nb">numeric</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">winpct</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">wins</span><span class="p">,</span><span class="w"> </span><span class="n">gs</span><span class="p">.</span><span class="k">count</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">games</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">team_stats</span><span class="w"> </span><span class="n">ts</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">join</span><span class="w"> </span><span class="n">game</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">game</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ts</span><span class="p">.</span><span class="n">game</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="k">and</span><span class="w"> </span><span class="n">game</span><span class="p">.</span><span class="k">host</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ts</span><span class="p">.</span><span class="n">team</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="k">and</span><span class="w"> </span><span class="n">game</span><span class="p">.</span><span class="n">host_score</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">game</span><span class="p">.</span><span class="n">guest_score</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">join</span><span class="w"> </span><span class="n">game_stats</span><span class="w"> </span><span class="n">gs</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">gs</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ts</span><span class="p">.</span><span class="n">team</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">group</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">ts</span><span class="p">.</span><span class="n">team</span><span class="p">,</span><span class="w"> </span><span class="n">gs</span><span class="p">.</span><span class="k">count</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">team</span><span class="w"> </span><span class="o">|</span><span class="w">  </span><span class="n">drb</span><span class="w">  </span><span class="o">|</span><span class="w"> </span><span class="n">winpct</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">wins</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">games</span><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="c1">------+-------+--------+------+-------
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="mi">4</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">31</span><span class="p">.</span><span class="mi">59</span><span class="w"> </span><span class="o">|</span><span class="w">  </span><span class="mi">31</span><span class="p">.</span><span class="mi">46</span><span class="w"> </span><span class="o">|</span><span class="w">  </span><span class="mi">710</span><span class="w"> </span><span class="o">|</span><span class="w">  </span><span class="mi">2257</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="mi">7</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">32</span><span class="p">.</span><span class="mi">55</span><span class="w"> </span><span class="o">|</span><span class="w">  </span><span class="mi">31</span><span class="p">.</span><span class="mi">89</span><span class="w"> </span><span class="o">|</span><span class="w">  </span><span class="mi">720</span><span class="w"> </span><span class="o">|</span><span class="w">  </span><span class="mi">2258</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="mi">16</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">31</span><span class="p">.</span><span class="mi">70</span><span class="w"> </span><span class="o">|</span><span class="w">  </span><span class="mi">37</span><span class="p">.</span><span class="mi">62</span><span class="w"> </span><span class="o">|</span><span class="w">  </span><span class="mi">849</span><span class="w"> </span><span class="o">|</span><span class="w">  </span><span class="mi">2257</span><span class="w">
 </span></span></span></code></pre></div><p>I only pasted the first few lines of the result because I&rsquo;m not sure how to
 make sense of it, really.</p>
 <h2 id="interesting-factoid">Interesting factoid</h2>
@@ -757,43 +305,43 @@ on 12/26/1995 despite recording only 14 defensive rebounds.</p>
 <a href="http://www.postgresql.org/docs/9.3/static/tutorial-window.html">Window Function</a> for good measure, we get actually 4
 different games with the minimum defensive rebounds in our history of NBA
 games, 14:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">with</span><span style="color:#bbb"> </span>stats(game,<span style="color:#bbb"> </span>team,<span style="color:#bbb"> </span>drb,<span style="color:#bbb"> </span><span style="color:#00a">min</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>ts.game,<span style="color:#bbb"> </span>ts.team,<span style="color:#bbb"> </span>drb,<span style="color:#bbb"> </span><span style="color:#00a">min</span>(drb)<span style="color:#bbb"> </span>over<span style="color:#bbb"> </span>()<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>team_stats<span style="color:#bbb"> </span>ts<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">           </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>winners<span style="color:#bbb"> </span>w<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>w.id<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>ts.game<span style="color:#bbb"> </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>w.winner<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>ts.team<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">select</span><span style="color:#bbb"> </span>game.<span style="color:#0aa">date</span>::<span style="color:#0aa">date</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">host</span>.name<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39; -- &#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>host_score<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">host</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>guest.name<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39; -- &#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>guest_score<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>guest,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>stats.drb<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>winner_drb<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>stats<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>game<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>game.id<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>stats.game<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>team<span style="color:#bbb"> </span><span style="color:#00a">host</span><span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span><span style="color:#00a">host</span>.id<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>game.<span style="color:#00a">host</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>team<span style="color:#bbb"> </span>guest<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>guest.id<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>game.guest<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>drb<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">min</span>;<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>-[<span style="color:#bbb"> </span>RECORD<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span>]<span style="color:#aaa;font-style:italic">----------------------------
-</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#0aa">date</span><span style="color:#bbb">       </span>|<span style="color:#bbb"> </span><span style="color:#099">1995</span>-<span style="color:#099">12</span>-<span style="color:#099">26</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">host</span><span style="color:#bbb">       </span>|<span style="color:#bbb"> </span>Toronto<span style="color:#bbb"> </span>Raptors<span style="color:#bbb"> </span><span style="color:#aaa;font-style:italic">-- 93
-</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span>guest<span style="color:#bbb">      </span>|<span style="color:#bbb"> </span>Milwaukee<span style="color:#bbb"> </span>Bucks<span style="color:#bbb"> </span><span style="color:#aaa;font-style:italic">-- 87
-</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span>winner_drb<span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#099">14</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>-[<span style="color:#bbb"> </span>RECORD<span style="color:#bbb"> </span><span style="color:#099">2</span><span style="color:#bbb"> </span>]<span style="color:#aaa;font-style:italic">----------------------------
-</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#0aa">date</span><span style="color:#bbb">       </span>|<span style="color:#bbb"> </span><span style="color:#099">1996</span>-<span style="color:#099">02</span>-<span style="color:#099">02</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">host</span><span style="color:#bbb">       </span>|<span style="color:#bbb"> </span>Golden<span style="color:#bbb"> </span><span style="color:#00a">State</span><span style="color:#bbb"> </span>Warriors<span style="color:#bbb"> </span><span style="color:#aaa;font-style:italic">-- 114
-</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span>guest<span style="color:#bbb">      </span>|<span style="color:#bbb"> </span>Toronto<span style="color:#bbb"> </span>Raptors<span style="color:#bbb"> </span><span style="color:#aaa;font-style:italic">-- 111
-</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span>winner_drb<span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#099">14</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>-[<span style="color:#bbb"> </span>RECORD<span style="color:#bbb"> </span><span style="color:#099">3</span><span style="color:#bbb"> </span>]<span style="color:#aaa;font-style:italic">----------------------------
-</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#0aa">date</span><span style="color:#bbb">       </span>|<span style="color:#bbb"> </span><span style="color:#099">1998</span>-<span style="color:#099">03</span>-<span style="color:#099">31</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">host</span><span style="color:#bbb">       </span>|<span style="color:#bbb"> </span>Vancouver<span style="color:#bbb"> </span>Grizzlies<span style="color:#bbb"> </span><span style="color:#aaa;font-style:italic">-- 101
-</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span>guest<span style="color:#bbb">      </span>|<span style="color:#bbb"> </span>Dallas<span style="color:#bbb"> </span>Mavericks<span style="color:#bbb"> </span><span style="color:#aaa;font-style:italic">-- 104
-</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span>winner_drb<span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#099">14</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>-[<span style="color:#bbb"> </span>RECORD<span style="color:#bbb"> </span><span style="color:#099">4</span><span style="color:#bbb"> </span>]<span style="color:#aaa;font-style:italic">----------------------------
-</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#0aa">date</span><span style="color:#bbb">       </span>|<span style="color:#bbb"> </span><span style="color:#099">2009</span>-<span style="color:#099">01</span>-<span style="color:#099">14</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">host</span><span style="color:#bbb">       </span>|<span style="color:#bbb"> </span><span style="color:#00a">New</span><span style="color:#bbb"> </span>York<span style="color:#bbb"> </span>Knicks<span style="color:#bbb"> </span><span style="color:#aaa;font-style:italic">-- 128
-</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span>guest<span style="color:#bbb">      </span>|<span style="color:#bbb"> </span>Washington<span style="color:#bbb"> </span>Wizards<span style="color:#bbb"> </span><span style="color:#aaa;font-style:italic">-- 122
-</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span>winner_drb<span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#099">14</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>Time:<span style="color:#bbb"> </span><span style="color:#099">126</span>.<span style="color:#099">276</span><span style="color:#bbb"> </span>ms<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">with</span><span class="w"> </span><span class="n">stats</span><span class="p">(</span><span class="n">game</span><span class="p">,</span><span class="w"> </span><span class="n">team</span><span class="p">,</span><span class="w"> </span><span class="n">drb</span><span class="p">,</span><span class="w"> </span><span class="k">min</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">select</span><span class="w"> </span><span class="n">ts</span><span class="p">.</span><span class="n">game</span><span class="p">,</span><span class="w"> </span><span class="n">ts</span><span class="p">.</span><span class="n">team</span><span class="p">,</span><span class="w"> </span><span class="n">drb</span><span class="p">,</span><span class="w"> </span><span class="k">min</span><span class="p">(</span><span class="n">drb</span><span class="p">)</span><span class="w"> </span><span class="n">over</span><span class="w"> </span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="k">from</span><span class="w"> </span><span class="n">team_stats</span><span class="w"> </span><span class="n">ts</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">           </span><span class="k">join</span><span class="w"> </span><span class="n">winners</span><span class="w"> </span><span class="n">w</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">w</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ts</span><span class="p">.</span><span class="n">game</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">w</span><span class="p">.</span><span class="n">winner</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ts</span><span class="p">.</span><span class="n">team</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">select</span><span class="w"> </span><span class="n">game</span><span class="p">.</span><span class="nb">date</span><span class="p">::</span><span class="nb">date</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">host</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39; -- &#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">host_score</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="k">host</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="n">guest</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39; -- &#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">guest_score</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">guest</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="n">stats</span><span class="p">.</span><span class="n">drb</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">winner_drb</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">stats</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">join</span><span class="w"> </span><span class="n">game</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">game</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">stats</span><span class="p">.</span><span class="n">game</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">join</span><span class="w"> </span><span class="n">team</span><span class="w"> </span><span class="k">host</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="k">host</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">game</span><span class="p">.</span><span class="k">host</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">join</span><span class="w"> </span><span class="n">team</span><span class="w"> </span><span class="n">guest</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">guest</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">game</span><span class="p">.</span><span class="n">guest</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">drb</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">min</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="o">-</span><span class="p">[</span><span class="w"> </span><span class="n">RECORD</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">]</span><span class="c1">----------------------------
+</span></span></span><span class="line"><span class="cl"><span class="nb">date</span><span class="w">       </span><span class="o">|</span><span class="w"> </span><span class="mi">1995</span><span class="o">-</span><span class="mi">12</span><span class="o">-</span><span class="mi">26</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">host</span><span class="w">       </span><span class="o">|</span><span class="w"> </span><span class="n">Toronto</span><span class="w"> </span><span class="n">Raptors</span><span class="w"> </span><span class="c1">-- 93
+</span></span></span><span class="line"><span class="cl"><span class="n">guest</span><span class="w">      </span><span class="o">|</span><span class="w"> </span><span class="n">Milwaukee</span><span class="w"> </span><span class="n">Bucks</span><span class="w"> </span><span class="c1">-- 87
+</span></span></span><span class="line"><span class="cl"><span class="n">winner_drb</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">14</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="o">-</span><span class="p">[</span><span class="w"> </span><span class="n">RECORD</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="p">]</span><span class="c1">----------------------------
+</span></span></span><span class="line"><span class="cl"><span class="nb">date</span><span class="w">       </span><span class="o">|</span><span class="w"> </span><span class="mi">1996</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">02</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">host</span><span class="w">       </span><span class="o">|</span><span class="w"> </span><span class="n">Golden</span><span class="w"> </span><span class="k">State</span><span class="w"> </span><span class="n">Warriors</span><span class="w"> </span><span class="c1">-- 114
+</span></span></span><span class="line"><span class="cl"><span class="n">guest</span><span class="w">      </span><span class="o">|</span><span class="w"> </span><span class="n">Toronto</span><span class="w"> </span><span class="n">Raptors</span><span class="w"> </span><span class="c1">-- 111
+</span></span></span><span class="line"><span class="cl"><span class="n">winner_drb</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">14</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="o">-</span><span class="p">[</span><span class="w"> </span><span class="n">RECORD</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="p">]</span><span class="c1">----------------------------
+</span></span></span><span class="line"><span class="cl"><span class="nb">date</span><span class="w">       </span><span class="o">|</span><span class="w"> </span><span class="mi">1998</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">31</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">host</span><span class="w">       </span><span class="o">|</span><span class="w"> </span><span class="n">Vancouver</span><span class="w"> </span><span class="n">Grizzlies</span><span class="w"> </span><span class="c1">-- 101
+</span></span></span><span class="line"><span class="cl"><span class="n">guest</span><span class="w">      </span><span class="o">|</span><span class="w"> </span><span class="n">Dallas</span><span class="w"> </span><span class="n">Mavericks</span><span class="w"> </span><span class="c1">-- 104
+</span></span></span><span class="line"><span class="cl"><span class="n">winner_drb</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">14</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="o">-</span><span class="p">[</span><span class="w"> </span><span class="n">RECORD</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="p">]</span><span class="c1">----------------------------
+</span></span></span><span class="line"><span class="cl"><span class="nb">date</span><span class="w">       </span><span class="o">|</span><span class="w"> </span><span class="mi">2009</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">14</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">host</span><span class="w">       </span><span class="o">|</span><span class="w"> </span><span class="k">New</span><span class="w"> </span><span class="n">York</span><span class="w"> </span><span class="n">Knicks</span><span class="w"> </span><span class="c1">-- 128
+</span></span></span><span class="line"><span class="cl"><span class="n">guest</span><span class="w">      </span><span class="o">|</span><span class="w"> </span><span class="n">Washington</span><span class="w"> </span><span class="n">Wizards</span><span class="w"> </span><span class="c1">-- 122
+</span></span></span><span class="line"><span class="cl"><span class="n">winner_drb</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">14</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">Time</span><span class="p">:</span><span class="w"> </span><span class="mi">126</span><span class="p">.</span><span class="mi">276</span><span class="w"> </span><span class="n">ms</span><span class="w">
 </span></span></span></code></pre></div><p>To understand all there&rsquo;s to know about
 <em>window functions</em>, have a look at my
 article on the topic:
@@ -807,40 +355,40 @@ Antonio Spurs lost to the Houston Rockets, 112-110, on January 4, 1992
 despite recording 75 total rebounds.</p>
 </blockquote>
 <p>Which we translate in SQL as the following query:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">with</span><span style="color:#bbb"> </span>stats<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>ts.game,<span style="color:#bbb"> </span>ts.team,<span style="color:#bbb"> </span>trb,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">           </span><span style="color:#00a">min</span>(trb)<span style="color:#bbb"> </span>over<span style="color:#bbb"> </span>()<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">min</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">           </span><span style="color:#00a">max</span>(trb)<span style="color:#bbb"> </span>over<span style="color:#bbb"> </span>()<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">max</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>team_stats<span style="color:#bbb"> </span>ts<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">           </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>winners<span style="color:#bbb"> </span>w<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>w.id<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>ts.game<span style="color:#bbb"> </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>w.winner<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>ts.team<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">select</span><span style="color:#bbb"> </span>game.<span style="color:#0aa">date</span>::<span style="color:#0aa">date</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">host</span>.name<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39; -- &#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>host_score<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">host</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>guest.name<span style="color:#bbb"> </span>||<span style="color:#bbb"> </span><span style="color:#a50">&#39; -- &#39;</span><span style="color:#bbb"> </span>||<span style="color:#bbb"> </span>guest_score<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>guest,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>stats.trb<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>winner_trb<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>stats<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>game<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>game.id<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>stats.game<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>team<span style="color:#bbb"> </span><span style="color:#00a">host</span><span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span><span style="color:#00a">host</span>.id<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>game.<span style="color:#00a">host</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>team<span style="color:#bbb"> </span>guest<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>guest.id<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>game.guest<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>trb<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">min</span><span style="color:#bbb"> </span><span style="color:#00a">or</span><span style="color:#bbb"> </span>trb<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">max</span>;<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>-[<span style="color:#bbb"> </span>RECORD<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb"> </span>]<span style="color:#aaa;font-style:italic">--------------------------
-</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#0aa">date</span><span style="color:#bbb">       </span>|<span style="color:#bbb"> </span><span style="color:#099">1995</span>-<span style="color:#099">12</span>-<span style="color:#099">28</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">host</span><span style="color:#bbb">       </span>|<span style="color:#bbb"> </span>Dallas<span style="color:#bbb"> </span>Mavericks<span style="color:#bbb"> </span><span style="color:#aaa;font-style:italic">-- 103
-</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span>guest<span style="color:#bbb">      </span>|<span style="color:#bbb"> </span>Vancouver<span style="color:#bbb"> </span>Grizzlies<span style="color:#bbb"> </span><span style="color:#aaa;font-style:italic">-- 101
-</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span>winner_trb<span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#099">76</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>-[<span style="color:#bbb"> </span>RECORD<span style="color:#bbb"> </span><span style="color:#099">2</span><span style="color:#bbb"> </span>]<span style="color:#aaa;font-style:italic">--------------------------
-</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#0aa">date</span><span style="color:#bbb">       </span>|<span style="color:#bbb"> </span><span style="color:#099">1996</span>-<span style="color:#099">04</span>-<span style="color:#099">11</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">host</span><span style="color:#bbb">       </span>|<span style="color:#bbb"> </span><span style="color:#00a">New</span><span style="color:#bbb"> </span>York<span style="color:#bbb"> </span>Knicks<span style="color:#bbb"> </span><span style="color:#aaa;font-style:italic">-- 97
-</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span>guest<span style="color:#bbb">      </span>|<span style="color:#bbb"> </span>Cleveland<span style="color:#bbb"> </span>Cavaliers<span style="color:#bbb"> </span><span style="color:#aaa;font-style:italic">-- 101
-</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span>winner_trb<span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#099">21</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>-[<span style="color:#bbb"> </span>RECORD<span style="color:#bbb"> </span><span style="color:#099">3</span><span style="color:#bbb"> </span>]<span style="color:#aaa;font-style:italic">--------------------------
-</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span><span style="color:#0aa">date</span><span style="color:#bbb">       </span>|<span style="color:#bbb"> </span><span style="color:#099">2007</span>-<span style="color:#099">01</span>-<span style="color:#099">29</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">host</span><span style="color:#bbb">       </span>|<span style="color:#bbb"> </span>Utah<span style="color:#bbb"> </span>Jazz<span style="color:#bbb"> </span><span style="color:#aaa;font-style:italic">-- 115
-</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span>guest<span style="color:#bbb">      </span>|<span style="color:#bbb"> </span><span style="color:#00a">New</span><span style="color:#bbb"> </span>Jersey<span style="color:#bbb"> </span>Nets<span style="color:#bbb"> </span><span style="color:#aaa;font-style:italic">-- 116
-</span></span></span><span style="display:flex;"><span><span style="color:#aaa;font-style:italic"></span>winner_trb<span style="color:#bbb"> </span>|<span style="color:#bbb"> </span><span style="color:#099">21</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>Time:<span style="color:#bbb"> </span><span style="color:#099">127</span>.<span style="color:#099">771</span><span style="color:#bbb"> </span>ms<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">with</span><span class="w"> </span><span class="n">stats</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">select</span><span class="w"> </span><span class="n">ts</span><span class="p">.</span><span class="n">game</span><span class="p">,</span><span class="w"> </span><span class="n">ts</span><span class="p">.</span><span class="n">team</span><span class="p">,</span><span class="w"> </span><span class="n">trb</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">           </span><span class="k">min</span><span class="p">(</span><span class="n">trb</span><span class="p">)</span><span class="w"> </span><span class="n">over</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="k">min</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">           </span><span class="k">max</span><span class="p">(</span><span class="n">trb</span><span class="p">)</span><span class="w"> </span><span class="n">over</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="k">max</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="k">from</span><span class="w"> </span><span class="n">team_stats</span><span class="w"> </span><span class="n">ts</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">           </span><span class="k">join</span><span class="w"> </span><span class="n">winners</span><span class="w"> </span><span class="n">w</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">w</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ts</span><span class="p">.</span><span class="n">game</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">w</span><span class="p">.</span><span class="n">winner</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ts</span><span class="p">.</span><span class="n">team</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">select</span><span class="w"> </span><span class="n">game</span><span class="p">.</span><span class="nb">date</span><span class="p">::</span><span class="nb">date</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">host</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39; -- &#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">host_score</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="k">host</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="n">guest</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39; -- &#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">guest_score</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">guest</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="n">stats</span><span class="p">.</span><span class="n">trb</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">winner_trb</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">stats</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">join</span><span class="w"> </span><span class="n">game</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">game</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">stats</span><span class="p">.</span><span class="n">game</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">join</span><span class="w"> </span><span class="n">team</span><span class="w"> </span><span class="k">host</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="k">host</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">game</span><span class="p">.</span><span class="k">host</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">join</span><span class="w"> </span><span class="n">team</span><span class="w"> </span><span class="n">guest</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">guest</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">game</span><span class="p">.</span><span class="n">guest</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">trb</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">min</span><span class="w"> </span><span class="k">or</span><span class="w"> </span><span class="n">trb</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">max</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="o">-</span><span class="p">[</span><span class="w"> </span><span class="n">RECORD</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">]</span><span class="c1">--------------------------
+</span></span></span><span class="line"><span class="cl"><span class="nb">date</span><span class="w">       </span><span class="o">|</span><span class="w"> </span><span class="mi">1995</span><span class="o">-</span><span class="mi">12</span><span class="o">-</span><span class="mi">28</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">host</span><span class="w">       </span><span class="o">|</span><span class="w"> </span><span class="n">Dallas</span><span class="w"> </span><span class="n">Mavericks</span><span class="w"> </span><span class="c1">-- 103
+</span></span></span><span class="line"><span class="cl"><span class="n">guest</span><span class="w">      </span><span class="o">|</span><span class="w"> </span><span class="n">Vancouver</span><span class="w"> </span><span class="n">Grizzlies</span><span class="w"> </span><span class="c1">-- 101
+</span></span></span><span class="line"><span class="cl"><span class="n">winner_trb</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">76</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="o">-</span><span class="p">[</span><span class="w"> </span><span class="n">RECORD</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="p">]</span><span class="c1">--------------------------
+</span></span></span><span class="line"><span class="cl"><span class="nb">date</span><span class="w">       </span><span class="o">|</span><span class="w"> </span><span class="mi">1996</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">11</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">host</span><span class="w">       </span><span class="o">|</span><span class="w"> </span><span class="k">New</span><span class="w"> </span><span class="n">York</span><span class="w"> </span><span class="n">Knicks</span><span class="w"> </span><span class="c1">-- 97
+</span></span></span><span class="line"><span class="cl"><span class="n">guest</span><span class="w">      </span><span class="o">|</span><span class="w"> </span><span class="n">Cleveland</span><span class="w"> </span><span class="n">Cavaliers</span><span class="w"> </span><span class="c1">-- 101
+</span></span></span><span class="line"><span class="cl"><span class="n">winner_trb</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">21</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="o">-</span><span class="p">[</span><span class="w"> </span><span class="n">RECORD</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="p">]</span><span class="c1">--------------------------
+</span></span></span><span class="line"><span class="cl"><span class="nb">date</span><span class="w">       </span><span class="o">|</span><span class="w"> </span><span class="mi">2007</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">29</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">host</span><span class="w">       </span><span class="o">|</span><span class="w"> </span><span class="n">Utah</span><span class="w"> </span><span class="n">Jazz</span><span class="w"> </span><span class="c1">-- 115
+</span></span></span><span class="line"><span class="cl"><span class="n">guest</span><span class="w">      </span><span class="o">|</span><span class="w"> </span><span class="k">New</span><span class="w"> </span><span class="n">Jersey</span><span class="w"> </span><span class="n">Nets</span><span class="w"> </span><span class="c1">-- 116
+</span></span></span><span class="line"><span class="cl"><span class="n">winner_trb</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">21</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">Time</span><span class="p">:</span><span class="w"> </span><span class="mi">127</span><span class="p">.</span><span class="mi">771</span><span class="w"> </span><span class="n">ms</span><span class="w">
 </span></span></span></code></pre></div><p>Again it&rsquo;s easy enough in SQL to have more details about the
 <em>aside</em> presented
 in our source article, and we get a slightly different story.</p>
@@ -853,18 +401,10 @@ and statistics in
 <a href="http://www.postgresql.org/docs/9.3/static/tutorial-window.html">Window Functions</a> and
 <a href="http://www.postgresql.org/docs/9.3/static/functions-aggregate.html#FUNCTIONS-AGGREGATE-STATISTICS-TABLE">Aggregate Functions for Statistics</a> it&rsquo;s possible to
 implement advanced analysis right into your SQL queries.</p>
-
-
-
-<div class="figure fig25 right dim-margin" >
-  
-    <img class="fig-img" src="/img/old/sql-logo.png"  alt="PostgreSQL is YeSQL">
-  
-   
-    <span class="caption">PostgreSQL is YeSQL</span>
-  
-</div>
-
+<div class="figure fig25 right dim-margin">
+  <a href="/img/old/sql-logo.png">
+    <img class="fig-img" src="/img/old/sql-logo.png" alt="PostgreSQL is YeSQL" loading="lazy">
+  </a><span class="caption">PostgreSQL is YeSQL</span></div>
 <p>In next PostgreSQL release the set of analytical functions is going to
 expand again with the addition of both
 <a href="http://www.postgresql.org/docs/devel/static/functions-aggregate.html#FUNCTIONS-ORDEREDSET-TABLE">Ordered-Set Aggregate Functions</a> (also
@@ -875,283 +415,43 @@ known as
 <p>When the problem you have to solve involves analyzing data, one of the more
 advanced tooling you can find around certainly is the SQL language, in
 particular its implementation in PostgreSQL!</p>
-              
+  </div>
 
-
-            </div>
-          </div>
-          
-
-
-
-
-
-<div style="margin-top: 1em;">
- <script async src="//tinder.thrivecart.com/embed/v1/thrivecart.js"></script>
- <a data-thrivecart-account="theartofpostgresql" data-thrivecart-tpl="v2" data-thrivecart-product="18" class="thrivecart-button ">
-  <img src="https://spark.thrivecart.com/0x0/https%3A%2F%2Fthrivecart.s3.amazonaws.com%2Fuser_assets%2FNABJ5K7H%2Fproducts%2F18%2Ftaopg-cta-1661268188.jpg"
-       style="width:90%; height: auto; margin-left: 5%"/>
- </a>
+  
+    <div class="reading">
+<section class="subscribe">
+  <h2>SQL notes, now and then</h2>
+  <p>Occasional PostgreSQL technique posts and Lab walkthroughs. No noise, unsubscribe anytime.</p>
+  
+    
+    <form class="subscribe-fallback" action="#" method="post" target="_blank">
+      <input type="email" name="email_address" placeholder="you@example.com" aria-label="Email address" required>
+      <button type="submit">Subscribe</button>
+    </form>
+  
+</section>
 </div>
+  
+</article>
 
-          <div id="post-footer" class="post-footer main-content-wrap">
-            
-              
-                
-                
-                  <div class="post-footer-tags">
-                    <span class="text-color-light text-small"></span><br/>
-                    
-  <a class="tag tag--primary tag--small" href="/tags/postgresql/">PostgreSQL</a>
-
-  <a class="tag tag--primary tag--small" href="/tags/mongodb/">MongoDB</a>
-
-  <a class="tag tag--primary tag--small" href="/tags/yesql/">YeSQL</a>
-
-  <a class="tag tag--primary tag--small" href="/tags/statistics/">Statistics</a>
-
-                  </div>
-                
-              
-            
-            <div class="post-actions-wrap">
- <nav>
-    <ul class="post-actions post-action-nav">
-      
-        <li class="post-action">
-          
-            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2014/02/postgresql-aggregates-and-histograms/" data-tooltip="PostgreSQL, Aggregates and Histograms">
-          
-            <i class="fa fa-angle-left"></i>
-            <span class="hide-xs hide-sm text-small icon-ml"></span>
-          </a>
-        </li>
-        <li class="post-action">
-          
-            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2014/02/postgresql-fosdem-conference/" data-tooltip="PostgreSQL FOSDEM Conference">
-          
-            <span class="hide-xs hide-sm text-small icon-mr"></span>
-            <i class="fa fa-angle-right"></i>
-          </a>
-        </li>
-      
-    </ul>
-  </nav>
-  <ul class="post-actions post-action-share">
-    
-      <li class="post-action hide-lg hide-md hide-sm">
-        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
-          <i class="fa fa-share-alt"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2014%2f02%2faggregating-nba-data-postgresql-vs-mongodb%2f">
-          <i class="fa fa-google-plus"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2014%2f02%2faggregating-nba-data-postgresql-vs-mongodb%2f">
-          <i class="fa fa-facebook-official"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=Aggregating%20NBA%20data%2c%20PostgreSQL%20vs%20MongoDB with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2014%2f02%2faggregating-nba-data-postgresql-vs-mongodb%2f">
-          <i class="fa fa-twitter"></i>
-        </a>
-      </li>
-    
-    
-      <li class="post-action">
-        <a class="post-action-btn btn btn--default" href="#disqus_thread">
-          <i class="fa fa-comment-o"></i>
-        </a>
-      </li>
-    
-    <li class="post-action">
-      
-        <a class="post-action-btn btn btn--default" href="#table-of-contents">
-      
-        <i class="fa fa-list"></i>
-      </a>
-    </li>
-  </ul>
-</div>
-
-
-            
-              
-                <div id="disqus_thread">
-  <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-</div>
-
-              
-            
-          </div>
-        </article>
-        <footer id="footer" class="main-content-wrap">
-  <span class="copyrights">
-    &copy; 2022 Dimitri Fontaine. 
-  </span>
+  </main>
+  <footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-bio">
+        <div class="name">Dimitri Fontaine</div>
+        <p>PostgreSQL Major Contributor. I write about getting more out of SQL.</p>
+      </div>
+      <nav class="footer-links" aria-label="Social">
+        <a href="https://github.com/dimitri" rel="me"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>GitHub</a><a href="https://www.linkedin.com/in/dimitrifontaine/" rel="me"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6Z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>LinkedIn</a>
+      </nav>
+    </div>
+    <div class="footer-eco">
+      <a href="https://theartofpostgresql.com">The Art of PostgreSQL</a><a href="https://theartofpostgresql.com/course/">Course</a><a href="https://theartofpostgresql.com/workshop/">Workshop</a><a href="https://theartofpostgresql.com/lab/">The Lab</a><a href="https://oss.theartofpostgresql.com">OSS Maintenance</a>
+      <span>© 2026 Dimitri Fontaine</span>
+    </div>
+  </div>
 </footer>
 
-      </div>
-      <div id="bottom-bar" class="post-bottom-bar" data-behavior="5">
-        <div class="post-actions-wrap">
- <nav>
-    <ul class="post-actions post-action-nav">
-      
-        <li class="post-action">
-          
-            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2014/02/postgresql-aggregates-and-histograms/" data-tooltip="PostgreSQL, Aggregates and Histograms">
-          
-            <i class="fa fa-angle-left"></i>
-            <span class="hide-xs hide-sm text-small icon-ml"></span>
-          </a>
-        </li>
-        <li class="post-action">
-          
-            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2014/02/postgresql-fosdem-conference/" data-tooltip="PostgreSQL FOSDEM Conference">
-          
-            <span class="hide-xs hide-sm text-small icon-mr"></span>
-            <i class="fa fa-angle-right"></i>
-          </a>
-        </li>
-      
-    </ul>
-  </nav>
-  <ul class="post-actions post-action-share">
-    
-      <li class="post-action hide-lg hide-md hide-sm">
-        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
-          <i class="fa fa-share-alt"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2014%2f02%2faggregating-nba-data-postgresql-vs-mongodb%2f">
-          <i class="fa fa-google-plus"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2014%2f02%2faggregating-nba-data-postgresql-vs-mongodb%2f">
-          <i class="fa fa-facebook-official"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=Aggregating%20NBA%20data%2c%20PostgreSQL%20vs%20MongoDB with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2014%2f02%2faggregating-nba-data-postgresql-vs-mongodb%2f">
-          <i class="fa fa-twitter"></i>
-        </a>
-      </li>
-    
-    
-      <li class="post-action">
-        <a class="post-action-btn btn btn--default" href="#disqus_thread">
-          <i class="fa fa-comment-o"></i>
-        </a>
-      </li>
-    
-    <li class="post-action">
-      
-        <a class="post-action-btn btn btn--default" href="#table-of-contents">
-      
-        <i class="fa fa-list"></i>
-      </a>
-    </li>
-  </ul>
-</div>
-
-
-      </div>
-      <div id="share-options-bar" class="share-options-bar" data-behavior="5">
-  <ul class="share-options">
-    <li class="share-option">
-      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2014%2f02%2faggregating-nba-data-postgresql-vs-mongodb%2f">
-        <i class="fa fa-google-plus"></i><span></span>
-      </a>
-    </li>
-    <li class="share-option">
-      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2014%2f02%2faggregating-nba-data-postgresql-vs-mongodb%2f">
-        <i class="fa fa-facebook-official"></i><span></span>
-      </a>
-    </li>
-    <li class="share-option">
-      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=Aggregating%20NBA%20data%2c%20PostgreSQL%20vs%20MongoDB with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2014%2f02%2faggregating-nba-data-postgresql-vs-mongodb%2f">
-        <i class="fa fa-twitter"></i><span></span>
-      </a>
-    </li>
-  </ul>
-</div>
-<div id="share-options-mask" class="share-options-mask"></div>
-
-    </div>
-    
-    <div id="about">
-  <div id="about-card">
-    <div id="about-btn-close">
-      <i class="fa fa-times"></i>
-    </div>
-    
-      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
-    
-    <h4 id="about-card-name">Dimitri Fontaine</h4>
-    
-      <div id="about-card-bio">PostgreSQL Major Contributor</div>
-    
-    
-      <div id="about-card-job">
-        <i class="fa fa-briefcase"></i>
-        <br/>
-        Open Source Software Engineer
-      </div>
-    
-    
-      <div id="about-card-location">
-        <i class="fa fa-map-marker-alt"></i>
-        <br/>
-        France
-      </div>
-    
-  </div>
-</div>
-
-    
-
-    
-  
-    
-      
-      <div id="cover" style="background-image:url('https://tapoueh.org/images/mayan-calendar.jpg');"></div>
-    
-  
-
-
-    
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.1.0/highlight.min.js" integrity="sha512-z+/WWfyD5tccCukM4VvONpEtLmbAm5LDu7eKiyMQJ9m7OfPEDL7gENyDRL3Yfe8XAuGsS2fS4xSMnl6d30kqGQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha512-uURl+ZXMBrF4AwGaWmEetzrd+J5/8NRkWAvJx5sbPSSuOb0bZLqf+tOzniObO00BjHa/dD7gub9oCGMLPQHtQA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
-
-<script src="https://tapoueh.org/js/script-yqzy9wdlzix4lbbwdnzvwx3egsne77earqmn73v9uno8aupuph8wfguccut.min.js"></script>
-
-
-
-<script>
-$(document).ready(function() {
-  hljs.configure({ classPrefix: '', useBR: false });
-  $('pre.code-highlight > code, pre > code').each(function(i, block) {
-    if (!$(this).hasClass('codeblock')) {
-      $(this).addClass('codeblock');
-    }
-    hljs.highlightBlock(block);
-  });
-});
-</script>
-
-
-
-
-    
-  </body>
+</body>
 </html>
-

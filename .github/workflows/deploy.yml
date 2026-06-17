@@ -1,0 +1,55 @@
+name: build & deploy
+
+# Three triggers:
+#  - push to master        → publish edits immediately
+#  - schedule (daily 06:00) → the metronome that releases future-dated posts
+#  - manual dispatch        → publish on demand
+on:
+  push:
+    branches: [master]
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  HUGO_VERSION: "0.154.5"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0          # full history for .Lastmod / .GitInfo
+      - name: Install Hugo (extended)
+        uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: ${{ env.HUGO_VERSION }}
+          extended: true
+      - name: Build
+        # No --buildFuture: posts dated in the future stay queued until their
+        # date passes and the next scheduled run picks them up.
+        run: hugo --minify --gc --baseURL "https://tapoueh.org/"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./docs
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

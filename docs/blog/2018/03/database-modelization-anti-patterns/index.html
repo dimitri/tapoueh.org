@@ -1,360 +1,76 @@
-
-
-  
-    
-  
-
-
-  
-
-
-
-
-  
-
-
-  
-
 <!DOCTYPE html>
 <html lang="en-us">
-  <head>
-    
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.101.0">
-    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
-    <title>Database Modelization Anti-Patterns</title>
-    <meta name="author" content="Dimitri Fontaine">
-    <meta name="keywords" content="">
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Database Modelization Anti-Patterns · Dimitri Fontaine</title>
 
-    <link rel="icon" href="/favicon.ico">
-    
+  
+  
+  <meta name="description" content="Next week we see two awesome PostgreSQL conferences in Europe, back to back, with a day in between just so that people may attend both! In chronological order …">
+  <link rel="canonical" href="http://localhost:1313/blog/2018/03/database-modelization-anti-patterns/">
 
-    
-    <meta name="description" content="Next week we see two awesome PostgreSQL conferences in Europe, back to back,
-with a day in between just so that people may attend both! In chronological
-order we have first Nordic pgDay in Oslo
-where I will have the pleasure to talk about Data Modeling, Normalization
-and
-Denormalization.
-Then we have pgday.paris with an awesome
-schedule and a strong focus on the needs of application developers!">
-    <meta property="og:description" content="Next week we see two awesome PostgreSQL conferences in Europe, back to back,
-with a day in between just so that people may attend both! In chronological
-order we have first Nordic pgDay in Oslo
-where I will have the pleasure to talk about Data Modeling, Normalization
-and
-Denormalization.
-Then we have pgday.paris with an awesome
-schedule and a strong focus on the needs of application developers!">
-    <meta property="og:type" content="blog">
-    <meta property="og:title" content="Database Modelization Anti-Patterns">
-    <meta property="og:url" content="https://tapoueh.org/blog/2018/03/database-modelization-anti-patterns/">
-    <meta property="og:site_name" content="The Art of PostgreSQL">
-    <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="Database Modelization Anti-Patterns">
-    <meta name="twitter:description" content="Next week we see two awesome PostgreSQL conferences in Europe, back to back,
-with a day in between just so that people may attend both! In chronological
-order we have first Nordic pgDay in Oslo
-where I will have the pleasure to talk about Data Modeling, Normalization
-and
-Denormalization.
-Then we have pgday.paris with an awesome
-schedule and a strong focus on the needs of application developers!">
-    
-      <meta name="twitter:creator" content="@tapoueh">
-    
-    
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,300;0,400;0,700;1,400&display=swap" rel="stylesheet">
 
-    
-    
+  
+  <link rel="stylesheet" href="/css/main.47d94e129c21f6f85c3b99aa6edc4fc75b72dd224364783be9d8b9d49b486ae3.css" integrity="sha256-R9lOEpwh9vhcO5mqbtxPx1ty3SJDZHg76di51JtIauM=">
+  
 
-    
-      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
-    
+  <link rel="alternate" type="application/rss+xml" title="Dimitri Fontaine" href="/index.xml">
+  <link rel="icon" href="/favicon.ico">
 
-    
-      <meta property="og:image" content="https://tapoueh.org/img/dbschema.svg">
-    
-    
-      <meta property="og:image" content="https://tapoueh.org/img/dbmodel.jpg">
-    
-    
+  
+  <meta property="og:site_name" content="Dimitri Fontaine">
+  <meta property="og:title" content="Database Modelization Anti-Patterns">
+  <meta property="og:description" content="Next week we see two awesome PostgreSQL conferences in Europe, back to back, with a day in between just so that people may attend both! In chronological order …">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="http://localhost:1313/blog/2018/03/database-modelization-anti-patterns/">
+  <meta name="twitter:card" content="summary">
+  
+</head>
 
-    
-
-    
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
-    
-    
-    <link rel="stylesheet" href="/css/style-jsjn0006wyhpyzivf6yceb31gvpjatbcs3qzjvlumobfnugccvobqwxnnaj8.min.css" />
-    
-    
-      <link rel="stylesheet" href="https://tapoueh.org/css/dim.css">
-    
-      <link rel="stylesheet" href="https://tapoueh.org/css/nav.css">
-    
-
-    
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+  <div class="wrap">
+    <a class="wordmark" href="/">Dimitri Fontaine</a>
+    <nav class="site-nav" aria-label="Main navigation">
       
-<script type="application/javascript">
-var doNotTrack = false;
-if (!doNotTrack) {
-	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-	ga('create', 'UA-47059482-1', 'auto');
-	
-	ga('send', 'pageview');
-}
-</script>
-    
-    
-  </head>
-
-  <body>
-    <div id="blog">
-      <header id="header" data-behavior="5">
-  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
-  <div class="navbar-collapse collapse header-title" id="navigation">
-    <ul class="nav navbar-nav navbar-right">
+        <a href="/"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>Writing</a>
       
-      <li class="dropdown">
-        
-        <a style="color: black;" href="/" alt="blog"><i class="sidebar-button-icon fa fa-lg fa-home"></i></a>
-        
-      </li>
+        <a href="/conf/"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></span>Talks</a>
       
-      <li class="dropdown">
-        
-        <a style="color: black;" href="/conf/" alt="talks"><i class="sidebar-button-icon fa fa-lg fa-microphone"></i></a>
-        
-      </li>
+        <a href="/categories/"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span>Topics</a>
       
-      <li class="dropdown">
-        
-        <a style="color: black;" href="https://twitter.com/tapoueh" alt="Twitter"><i class="sidebar-button-icon fa fa-lg fa-twitter"></i></a>
-        
-      </li>
+        <a href="/projects/"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span>Projects</a>
       
-      <li class="dropdown">
-        
-        <a style="color: black;" href="http://theartofpostgresql.com" alt="The Art Of PostgreSQL"><i class="sidebar-button-icon fa fa-lg fa-book"></i></a>
-        
-      </li>
+        <a href="/about/"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>About</a>
       
-    </ul>
+      
+      <a class="rss" href="/index.xml" title="RSS feed" aria-label="RSS feed"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg></span></a>
+    </nav>
   </div>
-
-  
-    
-      <a class="header-right-icon "
-         href="https://theartofpostgresql.com/" target="_blank">
-    
-    
-      <i class="fa fa-lg fa-book"></i>
-    
-    
-    </a>
-  
 </header>
 
-      <nav id="sidebar" data-behavior="5">
-  <div class="sidebar-container">
+  <main id="main">
     
-      <div class="sidebar-profile">
-        <a href="/#about" aria-label="">
-          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
-        </a>
-        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
-        
-          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
-        
-      </div>
-    
-    <ul class="sidebar-buttons">
-      
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="/" title="Blog">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
-      
-      <span class="sidebar-button-desc">Blog</span>
-    </a>
-  </li>
-
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="/about/" title="About">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
-      
-      <span class="sidebar-button-desc">About</span>
-    </a>
-  </li>
-
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="/categories/yesql/" title="YeSQL">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-database"></i>
-      
-      <span class="sidebar-button-desc">YeSQL</span>
-    </a>
-  </li>
-
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener" title="The Art of PostgreSQL">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
-      
-      <span class="sidebar-button-desc">The Art of PostgreSQL</span>
-    </a>
-  </li>
-
-
-    </ul>
-    <ul class="sidebar-buttons">
-      
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener" title="GitHub">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
-      
-      <span class="sidebar-button-desc">GitHub</span>
-    </a>
-  </li>
-
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener" title="Twitter">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
-      
-      <span class="sidebar-button-desc">Twitter</span>
-    </a>
-  </li>
-
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="/categories" title="Categories">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
-      
-      <span class="sidebar-button-desc">Categories</span>
-    </a>
-  </li>
-
-
-    </ul>
-    <ul class="sidebar-buttons">
-      
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="/index.xml" title="RSS">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
-      
-      <span class="sidebar-button-desc">RSS</span>
-    </a>
-  </li>
-
-
-    </ul>
-  </div>
-</nav>
-
-      
-  <div class="post-header-cover
-              text-left
-              post-header-cover--partial"
-       style="background-image:url('/img/dbmodel.jpg')"
-       data-behavior="5">
-    
-      <div class="post-header main-content-wrap text-left">
-  
-    <h1 class="post-title">
-      Database Modelization Anti-Patterns
-    </h1>
-  
-  
-  <div class="postShorten-meta post-meta">
-    
-      <time itemprop="datePublished" datetime="2018-03-08T18:00:43&#43;01:00">
-        <span style="float: left; width: 35%">
-          <i class="fa fa-calendar"></i> 
-  
-  
-  
-  
-    Thursday 08 Mar 2018
-  
-
-        </span>
-      </time>
-    
-    <span style="float: right; width: 65%">
-      <i class="fa fa-clock-o"></i> 9 mins read
-      
-    </span>
-    <span style="float: left; width: 35%">
-      <i class="fa fa-bookmark"></i> 
-  
-  
-    <span></span>
-    
-      <a class="category-link" href="/categories/postgresql">PostgreSQL</a>, 
-    
-      <a class="category-link" href="/categories/yesql">YeSQL</a>
-    
-  
-
-    </span>
-    <div>
-      <p>
-        
-        
-        
-        
-        
-        
-        <a href="/tags/modelisation/">
-          <i class="fa fa-tag"></i> Modelisation
-        </a>
-        
-        
-        
-        <a href="/tags/anti-patterns/">
-          <i class="fa fa-tag"></i> Anti-Patterns
-        </a>
-        
-        
-      </p>
-    </div>
-  </div>
-
-
+<article class="wrap">
+  <header class="article-header reading">
+    <div class="eyebrow">PostgreSQL · YeSQL</div>
+    <h1>Database Modelization Anti-Patterns</h1>
+    <div class="post-meta">
+  <time datetime="2018-03-08">Mar 8, 2018</time>
+  <span class="dot">·</span><span>9 min read</span>
+  <span class="dot">·</span><span class="tags"><a class="tag" href="/tags/postgresql/">#PostgreSQL</a><a class="tag" href="/tags/yesql/">#YeSQL</a><a class="tag" href="/tags/modelisation/">#Modelisation</a><a class="tag" href="/tags/anti-patterns/">#Anti-Patterns</a></span>
 </div>
+
+  </header>
+
+  <div class="prose reading">
     
-  </div>
-
-
-      <div id="main" data-behavior="5"
-        class="hasCover
-               hasCoverMetaIn
-               ">
-        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
-          
-          
-          <div class="post-content markdown" itemprop="articleBody">
-            <div class="main-content-wrap">
-              <p>Next week we see two awesome PostgreSQL conferences in Europe, back to back,
+    <p>Next week we see two awesome PostgreSQL conferences in Europe, back to back,
 with a day in between just so that people may attend both! In chronological
 order we have first <a href="https://2018.nordicpgday.org">Nordic pgDay</a> in Oslo
 where I will have the pleasure to talk about <a href="https://www.postgresql.eu/events/nordicpgday2018/schedule/session/1896-data-modeling-normalization-and-denormalization/">Data Modeling, Normalization
@@ -362,7 +78,7 @@ and
 Denormalization</a>.
 Then we have <a href="https://2018.pgday.paris">pgday.paris</a> with an awesome
 schedule and a strong focus on the needs of application developers!</p>
-<figure class="right"><a href="https://theartofpostgresql.com"><img src="/img/TAOP_Book_Cover_200x260.png"/></a>
+<figure class="right"><a href="https://theartofpostgresql.com"><img src="/img/TAOP_Book_Cover_200x260.png"></a>
 </figure>
 
 <p>So in today&rsquo;s article I wanted to share some of the bits I&rsquo;m going to talk
@@ -373,110 +89,14 @@ anti-patterns: the infamous EAV, using multiple values in a single column,
 and how using UUIDs might be an anti-pattern too.</p>
 <p>The content of this article is extracted from my book <a href="https://theartofpostgresql.com">The Art of
 PostgresQL</a>, check it out!</p>
- 
-
-
-
-
-<div class="table-of-contents toc bd-callout">
-    
-    <h4 class="text-muted">Table of Contents</h4>
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2018/03/database-modelization-anti-patterns/#entity-attribute-values">
-                    Entity Attribute Values
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2018/03/database-modelization-anti-patterns/#multiple-values-per-column">
-                    Multiple Values per Column
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2018/03/database-modelization-anti-patterns/#uuids">
-                    UUIDs
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2018/03/database-modelization-anti-patterns/#conclusion">
-                    Conclusion
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-</div>
-
-
+<div class="toc"><div class="toc-title">Contents</div><nav id="TableOfContents">
+  <ul>
+    <li><a href="#entity-attribute-values">Entity Attribute Values</a></li>
+    <li><a href="#multiple-values-per-column">Multiple Values per Column</a></li>
+    <li><a href="#uuids">UUIDs</a></li>
+    <li><a href="#conclusion">Conclusion</a></li>
+  </ul>
+</nav></div>
 <h2 id="entity-attribute-values">Entity Attribute Values</h2>
 <p>The <a href="https://en.wikipedia.org/wiki/Entity%E2%80%93attribute%E2%80%93value_model">entity attribute
 values</a>
@@ -485,33 +105,33 @@ specifications. In our application, we have to deal with parameters and new
 parameters may be added at each release. It&rsquo;s not clear which parameters we
 need, we just want a place to manage them easily, and we are already using a
 database server after all. So there we go:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">begin</span>;<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">schema</span><span style="color:#bbb"> </span><span style="color:#00a">if</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">exists</span><span style="color:#bbb"> </span>eav;<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>eav.params<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>entity<span style="color:#bbb">    </span><span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">parameter</span><span style="color:#bbb"> </span><span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>value<span style="color:#bbb">     </span><span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>(entity,<span style="color:#bbb"> </span><span style="color:#00a">parameter</span>)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>);<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">commit</span>;<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">begin</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">eav</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">create</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">eav</span><span class="p">.</span><span class="n">params</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">entity</span><span class="w">    </span><span class="nb">text</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">null</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="k">parameter</span><span class="w"> </span><span class="nb">text</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">null</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">value</span><span class="w">     </span><span class="nb">text</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">null</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="k">primary</span><span class="w"> </span><span class="k">key</span><span class="p">(</span><span class="n">entity</span><span class="p">,</span><span class="w"> </span><span class="k">parameter</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">commit</span><span class="p">;</span><span class="w">
 </span></span></span></code></pre></div><p>You might have already seen this model or a variation of it in the field.
 The model makes it very easy to add <em>things</em> to it, and very difficult to
 make sense of the accumulated data, or to use them effectively in SQL,
 making it an anti-pattern.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>eav.params(entity,<span style="color:#bbb"> </span><span style="color:#00a">parameter</span>,<span style="color:#bbb"> </span>value)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#a50">&#39;backend&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;log_level&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;notice&#39;</span>),<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;backend&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;loglevel&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;info&#39;</span>),<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;api&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;timeout&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;30&#39;</span>),<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;api&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;timout&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;40&#39;</span>),<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;gold&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;response time&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;60&#39;</span>),<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;gold&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;escalation time&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;90&#39;</span>),<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;platinum&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;response time&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;15&#39;</span>),<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;platinum&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;escalation time&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;30&#39;</span>);<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">eav</span><span class="p">.</span><span class="n">params</span><span class="p">(</span><span class="n">entity</span><span class="p">,</span><span class="w"> </span><span class="k">parameter</span><span class="p">,</span><span class="w"> </span><span class="n">value</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">     </span><span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;backend&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;log_level&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;notice&#39;</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">(</span><span class="s1">&#39;backend&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;loglevel&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;info&#39;</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">(</span><span class="s1">&#39;api&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;timeout&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;30&#39;</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">(</span><span class="s1">&#39;api&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;timout&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;40&#39;</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">(</span><span class="s1">&#39;gold&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;response time&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;60&#39;</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">(</span><span class="s1">&#39;gold&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;escalation time&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;90&#39;</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">(</span><span class="s1">&#39;platinum&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;response time&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;15&#39;</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">(</span><span class="s1">&#39;platinum&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;escalation time&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;30&#39;</span><span class="p">);</span><span class="w">
 </span></span></span></code></pre></div><p>In this example we made some typos on purpose, to show the limits of the
 <em>EAV</em> model. It&rsquo;s impossible to catch those errors, and you might have parts
 of your code that query one spelling or a different one.</p>
@@ -542,69 +162,69 @@ join to the <em>params</em> table for each parameter you are interested in.</p>
 time</em> and the <em>escalated time</em> for support customers when using the previous
 <em>params</em> setup. First, we need a quick design for a customer and a support
 contract table:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">begin</span>;<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>eav.support_contract_type<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>id<span style="color:#bbb">   </span><span style="color:#0aa">serial</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>name<span style="color:#bbb"> </span><span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>);<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> 
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>eav.support_contract_type(name)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#a50">&#39;gold&#39;</span>),<span style="color:#bbb"> </span>(<span style="color:#a50">&#39;platinum&#39;</span>);<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>eav.support_contract<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>id<span style="color:#bbb">       </span><span style="color:#0aa">serial</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">type</span><span style="color:#bbb">     </span><span style="color:#0aa">integer</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>eav.support_contract_type(id),<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>validity<span style="color:#bbb"> </span>daterange<span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>contract<span style="color:#bbb"> </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>exclude<span style="color:#bbb"> </span><span style="color:#00a">using</span><span style="color:#bbb"> </span>gist(<span style="color:#00a">type</span><span style="color:#bbb"> </span><span style="color:#00a">with</span><span style="color:#bbb"> </span>=,<span style="color:#bbb"> </span>validity<span style="color:#bbb"> </span><span style="color:#00a">with</span><span style="color:#bbb"> </span>&amp;&amp;)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>);<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>eav.customer<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>id<span style="color:#bbb">       </span><span style="color:#0aa">serial</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>name<span style="color:#bbb">     </span><span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>address<span style="color:#bbb">  </span><span style="color:#0aa">text</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>);<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>eav.support<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>customer<span style="color:#bbb">  </span><span style="color:#0aa">integer</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>contract<span style="color:#bbb">  </span><span style="color:#0aa">integer</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>eav.support_contract(id),<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>instances<span style="color:#bbb"> </span><span style="color:#0aa">integer</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">null</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>(customer,<span style="color:#bbb"> </span>contract),<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">check</span>(instances<span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span><span style="color:#099">0</span>)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>);<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">commit</span>;<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">begin</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">create</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">eav</span><span class="p">.</span><span class="n">support_contract_type</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">id</span><span class="w">   </span><span class="nb">serial</span><span class="w"> </span><span class="k">primary</span><span class="w"> </span><span class="k">key</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">null</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">eav</span><span class="p">.</span><span class="n">support_contract_type</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">     </span><span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;gold&#39;</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;platinum&#39;</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">create</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">eav</span><span class="p">.</span><span class="n">support_contract</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">id</span><span class="w">       </span><span class="nb">serial</span><span class="w"> </span><span class="k">primary</span><span class="w"> </span><span class="k">key</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="k">type</span><span class="w">     </span><span class="nb">integer</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">null</span><span class="w"> </span><span class="k">references</span><span class="w"> </span><span class="n">eav</span><span class="p">.</span><span class="n">support_contract_type</span><span class="p">(</span><span class="n">id</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">validity</span><span class="w"> </span><span class="n">daterange</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">null</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">contract</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">exclude</span><span class="w"> </span><span class="k">using</span><span class="w"> </span><span class="n">gist</span><span class="p">(</span><span class="k">type</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="o">=</span><span class="p">,</span><span class="w"> </span><span class="n">validity</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">create</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">eav</span><span class="p">.</span><span class="n">customer</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">id</span><span class="w">       </span><span class="nb">serial</span><span class="w"> </span><span class="k">primary</span><span class="w"> </span><span class="k">key</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">name</span><span class="w">     </span><span class="nb">text</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">null</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">address</span><span class="w">  </span><span class="nb">text</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">create</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">eav</span><span class="p">.</span><span class="n">support</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">customer</span><span class="w">  </span><span class="nb">integer</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">null</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">contract</span><span class="w">  </span><span class="nb">integer</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">null</span><span class="w"> </span><span class="k">references</span><span class="w"> </span><span class="n">eav</span><span class="p">.</span><span class="n">support_contract</span><span class="p">(</span><span class="n">id</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">instances</span><span class="w"> </span><span class="nb">integer</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">null</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="k">primary</span><span class="w"> </span><span class="k">key</span><span class="p">(</span><span class="n">customer</span><span class="p">,</span><span class="w"> </span><span class="n">contract</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="k">check</span><span class="p">(</span><span class="n">instances</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">commit</span><span class="p">;</span><span class="w">
 </span></span></span></code></pre></div><p>And now it&rsquo;s possible to get customer support contract parameters such as
 <em>response time</em> and <em>escalation time</em>, each with its own join:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">select</span><span style="color:#bbb"> </span>customer.id,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>customer.name,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>ctype.name,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>rtime.value::<span style="color:#0aa">interval</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;resp. time&#34;</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>etime.value::<span style="color:#0aa">interval</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;esc. time&#34;</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>eav.customer<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>eav.support<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>support.customer<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>customer.id<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>eav.support_contract<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>contract<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>support.contract<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>contract.id<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>eav.support_contract_type<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>ctype<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>ctype.id<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>contract.<span style="color:#00a">type</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>eav.params<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>rtime<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>rtime.entity<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>ctype.name<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>rtime.<span style="color:#00a">parameter</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;response time&#39;</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>eav.params<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>etime<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>etime.entity<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>ctype.name<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>etime.<span style="color:#00a">parameter</span><span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;escalation time&#39;</span>;<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">select</span><span class="w"> </span><span class="n">customer</span><span class="p">.</span><span class="n">id</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="n">customer</span><span class="p">.</span><span class="n">name</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="n">ctype</span><span class="p">.</span><span class="n">name</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="n">rtime</span><span class="p">.</span><span class="n">value</span><span class="p">::</span><span class="nb">interval</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="s2">&#34;resp. time&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="n">etime</span><span class="p">.</span><span class="n">value</span><span class="p">::</span><span class="nb">interval</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="s2">&#34;esc. time&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">eav</span><span class="p">.</span><span class="n">customer</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">join</span><span class="w"> </span><span class="n">eav</span><span class="p">.</span><span class="n">support</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="k">on</span><span class="w"> </span><span class="n">support</span><span class="p">.</span><span class="n">customer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">customer</span><span class="p">.</span><span class="n">id</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">join</span><span class="w"> </span><span class="n">eav</span><span class="p">.</span><span class="n">support_contract</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">contract</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="k">on</span><span class="w"> </span><span class="n">support</span><span class="p">.</span><span class="n">contract</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">contract</span><span class="p">.</span><span class="n">id</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">join</span><span class="w"> </span><span class="n">eav</span><span class="p">.</span><span class="n">support_contract_type</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">ctype</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="k">on</span><span class="w"> </span><span class="n">ctype</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">contract</span><span class="p">.</span><span class="k">type</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">join</span><span class="w"> </span><span class="n">eav</span><span class="p">.</span><span class="n">params</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">rtime</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="k">on</span><span class="w"> </span><span class="n">rtime</span><span class="p">.</span><span class="n">entity</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ctype</span><span class="p">.</span><span class="n">name</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">and</span><span class="w"> </span><span class="n">rtime</span><span class="p">.</span><span class="k">parameter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;response time&#39;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">join</span><span class="w"> </span><span class="n">eav</span><span class="p">.</span><span class="n">params</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">etime</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="k">on</span><span class="w"> </span><span class="n">etime</span><span class="p">.</span><span class="n">entity</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ctype</span><span class="p">.</span><span class="n">name</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">and</span><span class="w"> </span><span class="n">etime</span><span class="p">.</span><span class="k">parameter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;escalation time&#39;</span><span class="p">;</span><span class="w">
 </span></span></span></code></pre></div><p>Each parameter you add has to be added as an extra <em>join</em> operation in the
 previous query. Also, if someone enters a value for <em>response time</em> that
 isn&rsquo;t compatible with the <em>interval</em> data type representation, then the
@@ -630,13 +250,13 @@ normal form</em> (<em>1NF</em>) if:</p>
 </ol>
 <p>An anti-pattern that fails to comply with those rules means having a
 multi-valued field in a database schema:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>tweet<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>id<span style="color:#bbb">      </span><span style="color:#0aa">bigint</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#0aa">date</span><span style="color:#bbb">    </span>timestamptz,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>message<span style="color:#bbb"> </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>tags<span style="color:#bbb">    </span><span style="color:#0aa">text</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>);<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">create</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">tweet</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">id</span><span class="w">      </span><span class="nb">bigint</span><span class="w"> </span><span class="k">primary</span><span class="w"> </span><span class="k">key</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="nb">date</span><span class="w">    </span><span class="n">timestamptz</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">message</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">tags</span><span class="w">    </span><span class="nb">text</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="p">);</span><span class="w">
 </span></span></span></code></pre></div><p>Data would then be added with a semicolon separator, for instance, or maybe
 a pipe <code>|</code> char, or in some cases with a fancy Unicode separator char such
 as <code>§</code>, <code>¶</code> or <code>¦</code>. Here we find a classic semicolon:</p>
@@ -749,283 +369,43 @@ Set</a> and write
 some queries using your normalized database model.</p>
 <p>And only when you find problems then see about denormalizing. Maybe before
 the problems happen in production, of course.</p>
-              
+  </div>
 
-
-            </div>
-          </div>
-          
-
-
-
-
-
-<div style="margin-top: 1em;">
- <script async src="//tinder.thrivecart.com/embed/v1/thrivecart.js"></script>
- <a data-thrivecart-account="theartofpostgresql" data-thrivecart-tpl="v2" data-thrivecart-product="18" class="thrivecart-button ">
-  <img src="https://spark.thrivecart.com/0x0/https%3A%2F%2Fthrivecart.s3.amazonaws.com%2Fuser_assets%2FNABJ5K7H%2Fproducts%2F18%2Ftaopg-cta-1661268188.jpg"
-       style="width:90%; height: auto; margin-left: 5%"/>
- </a>
+  
+    <div class="reading">
+<section class="subscribe">
+  <h2>SQL notes, now and then</h2>
+  <p>Occasional PostgreSQL technique posts and Lab walkthroughs. No noise, unsubscribe anytime.</p>
+  
+    
+    <form class="subscribe-fallback" action="#" method="post" target="_blank">
+      <input type="email" name="email_address" placeholder="you@example.com" aria-label="Email address" required>
+      <button type="submit">Subscribe</button>
+    </form>
+  
+</section>
 </div>
+  
+</article>
 
-          <div id="post-footer" class="post-footer main-content-wrap">
-            
-              
-                
-                
-                  <div class="post-footer-tags">
-                    <span class="text-color-light text-small"></span><br/>
-                    
-  <a class="tag tag--primary tag--small" href="/tags/postgresql/">PostgreSQL</a>
-
-  <a class="tag tag--primary tag--small" href="/tags/yesql/">YeSQL</a>
-
-  <a class="tag tag--primary tag--small" href="/tags/modelisation/">Modelisation</a>
-
-  <a class="tag tag--primary tag--small" href="/tags/anti-patterns/">Anti-Patterns</a>
-
-                  </div>
-                
-              
-            
-            <div class="post-actions-wrap">
- <nav>
-    <ul class="post-actions post-action-nav">
-      
-        <li class="post-action">
-          
-            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/03/database-normalization-and-primary-keys/" data-tooltip="Database Normalization and Primary Keys">
-          
-            <i class="fa fa-angle-left"></i>
-            <span class="hide-xs hide-sm text-small icon-ml"></span>
-          </a>
-        </li>
-        <li class="post-action">
-          
-            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/02/sustainable-open-source-development/" data-tooltip="Sustainable Open Source Development">
-          
-            <span class="hide-xs hide-sm text-small icon-mr"></span>
-            <i class="fa fa-angle-right"></i>
-          </a>
-        </li>
-      
-    </ul>
-  </nav>
-  <ul class="post-actions post-action-share">
-    
-      <li class="post-action hide-lg hide-md hide-sm">
-        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
-          <i class="fa fa-share-alt"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f03%2fdatabase-modelization-anti-patterns%2f">
-          <i class="fa fa-google-plus"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f03%2fdatabase-modelization-anti-patterns%2f">
-          <i class="fa fa-facebook-official"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=Database%20Modelization%20Anti-Patterns with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f03%2fdatabase-modelization-anti-patterns%2f">
-          <i class="fa fa-twitter"></i>
-        </a>
-      </li>
-    
-    
-      <li class="post-action">
-        <a class="post-action-btn btn btn--default" href="#disqus_thread">
-          <i class="fa fa-comment-o"></i>
-        </a>
-      </li>
-    
-    <li class="post-action">
-      
-        <a class="post-action-btn btn btn--default" href="#table-of-contents">
-      
-        <i class="fa fa-list"></i>
-      </a>
-    </li>
-  </ul>
-</div>
-
-
-            
-              
-                <div id="disqus_thread">
-  <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-</div>
-
-              
-            
-          </div>
-        </article>
-        <footer id="footer" class="main-content-wrap">
-  <span class="copyrights">
-    &copy; 2022 Dimitri Fontaine. 
-  </span>
+  </main>
+  <footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-bio">
+        <div class="name">Dimitri Fontaine</div>
+        <p>PostgreSQL Major Contributor. I write about getting more out of SQL.</p>
+      </div>
+      <nav class="footer-links" aria-label="Social">
+        <a href="https://github.com/dimitri" rel="me"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>GitHub</a><a href="https://www.linkedin.com/in/dimitrifontaine/" rel="me"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6Z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>LinkedIn</a>
+      </nav>
+    </div>
+    <div class="footer-eco">
+      <a href="https://theartofpostgresql.com">The Art of PostgreSQL</a><a href="https://theartofpostgresql.com/course/">Course</a><a href="https://theartofpostgresql.com/workshop/">Workshop</a><a href="https://theartofpostgresql.com/lab/">The Lab</a><a href="https://oss.theartofpostgresql.com">OSS Maintenance</a>
+      <span>© 2026 Dimitri Fontaine</span>
+    </div>
+  </div>
 </footer>
 
-      </div>
-      <div id="bottom-bar" class="post-bottom-bar" data-behavior="5">
-        <div class="post-actions-wrap">
- <nav>
-    <ul class="post-actions post-action-nav">
-      
-        <li class="post-action">
-          
-            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/03/database-normalization-and-primary-keys/" data-tooltip="Database Normalization and Primary Keys">
-          
-            <i class="fa fa-angle-left"></i>
-            <span class="hide-xs hide-sm text-small icon-ml"></span>
-          </a>
-        </li>
-        <li class="post-action">
-          
-            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/02/sustainable-open-source-development/" data-tooltip="Sustainable Open Source Development">
-          
-            <span class="hide-xs hide-sm text-small icon-mr"></span>
-            <i class="fa fa-angle-right"></i>
-          </a>
-        </li>
-      
-    </ul>
-  </nav>
-  <ul class="post-actions post-action-share">
-    
-      <li class="post-action hide-lg hide-md hide-sm">
-        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
-          <i class="fa fa-share-alt"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f03%2fdatabase-modelization-anti-patterns%2f">
-          <i class="fa fa-google-plus"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f03%2fdatabase-modelization-anti-patterns%2f">
-          <i class="fa fa-facebook-official"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=Database%20Modelization%20Anti-Patterns with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f03%2fdatabase-modelization-anti-patterns%2f">
-          <i class="fa fa-twitter"></i>
-        </a>
-      </li>
-    
-    
-      <li class="post-action">
-        <a class="post-action-btn btn btn--default" href="#disqus_thread">
-          <i class="fa fa-comment-o"></i>
-        </a>
-      </li>
-    
-    <li class="post-action">
-      
-        <a class="post-action-btn btn btn--default" href="#table-of-contents">
-      
-        <i class="fa fa-list"></i>
-      </a>
-    </li>
-  </ul>
-</div>
-
-
-      </div>
-      <div id="share-options-bar" class="share-options-bar" data-behavior="5">
-  <ul class="share-options">
-    <li class="share-option">
-      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f03%2fdatabase-modelization-anti-patterns%2f">
-        <i class="fa fa-google-plus"></i><span></span>
-      </a>
-    </li>
-    <li class="share-option">
-      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f03%2fdatabase-modelization-anti-patterns%2f">
-        <i class="fa fa-facebook-official"></i><span></span>
-      </a>
-    </li>
-    <li class="share-option">
-      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=Database%20Modelization%20Anti-Patterns with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f03%2fdatabase-modelization-anti-patterns%2f">
-        <i class="fa fa-twitter"></i><span></span>
-      </a>
-    </li>
-  </ul>
-</div>
-<div id="share-options-mask" class="share-options-mask"></div>
-
-    </div>
-    
-    <div id="about">
-  <div id="about-card">
-    <div id="about-btn-close">
-      <i class="fa fa-times"></i>
-    </div>
-    
-      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
-    
-    <h4 id="about-card-name">Dimitri Fontaine</h4>
-    
-      <div id="about-card-bio">PostgreSQL Major Contributor</div>
-    
-    
-      <div id="about-card-job">
-        <i class="fa fa-briefcase"></i>
-        <br/>
-        Open Source Software Engineer
-      </div>
-    
-    
-      <div id="about-card-location">
-        <i class="fa fa-map-marker-alt"></i>
-        <br/>
-        France
-      </div>
-    
-  </div>
-</div>
-
-    
-
-    
-  
-    
-      
-      <div id="cover" style="background-image:url('https://tapoueh.org/images/mayan-calendar.jpg');"></div>
-    
-  
-
-
-    
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.1.0/highlight.min.js" integrity="sha512-z+/WWfyD5tccCukM4VvONpEtLmbAm5LDu7eKiyMQJ9m7OfPEDL7gENyDRL3Yfe8XAuGsS2fS4xSMnl6d30kqGQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha512-uURl+ZXMBrF4AwGaWmEetzrd+J5/8NRkWAvJx5sbPSSuOb0bZLqf+tOzniObO00BjHa/dD7gub9oCGMLPQHtQA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
-
-<script src="https://tapoueh.org/js/script-yqzy9wdlzix4lbbwdnzvwx3egsne77earqmn73v9uno8aupuph8wfguccut.min.js"></script>
-
-
-
-<script>
-$(document).ready(function() {
-  hljs.configure({ classPrefix: '', useBR: false });
-  $('pre.code-highlight > code, pre > code').each(function(i, block) {
-    if (!$(this).hasClass('codeblock')) {
-      $(this).addClass('codeblock');
-    }
-    hljs.highlightBlock(block);
-  });
-});
-</script>
-
-
-
-
-    
-  </body>
+</body>
 </html>
-

@@ -1,375 +1,76 @@
-
-
-  
-    
-  
-
-
-  
-
-
-
-
-  
-
-
-  
-
 <!DOCTYPE html>
 <html lang="en-us">
-  <head>
-    
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.101.0">
-    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
-    <title>Geolocation with PostgreSQL</title>
-    <meta name="author" content="Dimitri Fontaine">
-    <meta name="keywords" content="">
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Geolocation with PostgreSQL · Dimitri Fontaine</title>
 
-    <link rel="icon" href="/favicon.ico">
-    
+  
+  
+  <meta name="description" content="We have loaded Open Street Map points of interests in the article The Most Popular Pub Names — which compares PostgreSQL with MongoDB for simple geographical …">
+  <link rel="canonical" href="http://localhost:1313/blog/2018/08/geolocation-with-postgresql/">
 
-    
-    <meta name="description" content="We have loaded Open Street Map points of interests in the article The Most
-Popular Pub Names — which
-compares PostgreSQL with MongoDB for simple geographical queries, and is
-part of our PostgreSQL Extensions article series. In
-today&rsquo;s article, look at how to geolocalize an IP address and locate the
-nearest pub, all within a single SQL query!
-For that, we are going to use the awesome
-ip4r extension from
-RhodiumToad.">
-    <meta property="og:description" content="We have loaded Open Street Map points of interests in the article The Most
-Popular Pub Names — which
-compares PostgreSQL with MongoDB for simple geographical queries, and is
-part of our PostgreSQL Extensions article series. In
-today&rsquo;s article, look at how to geolocalize an IP address and locate the
-nearest pub, all within a single SQL query!
-For that, we are going to use the awesome
-ip4r extension from
-RhodiumToad.">
-    <meta property="og:type" content="blog">
-    <meta property="og:title" content="Geolocation with PostgreSQL">
-    <meta property="og:url" content="https://tapoueh.org/blog/2018/08/geolocation-with-postgresql/">
-    <meta property="og:site_name" content="The Art of PostgreSQL">
-    <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="Geolocation with PostgreSQL">
-    <meta name="twitter:description" content="We have loaded Open Street Map points of interests in the article The Most
-Popular Pub Names — which
-compares PostgreSQL with MongoDB for simple geographical queries, and is
-part of our PostgreSQL Extensions article series. In
-today&rsquo;s article, look at how to geolocalize an IP address and locate the
-nearest pub, all within a single SQL query!
-For that, we are going to use the awesome
-ip4r extension from
-RhodiumToad.">
-    
-      <meta name="twitter:creator" content="@tapoueh">
-    
-    
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,300;0,400;0,700;1,400&display=swap" rel="stylesheet">
 
-    
-    
+  
+  <link rel="stylesheet" href="/css/main.47d94e129c21f6f85c3b99aa6edc4fc75b72dd224364783be9d8b9d49b486ae3.css" integrity="sha256-R9lOEpwh9vhcO5mqbtxPx1ty3SJDZHg76di51JtIauM=">
+  
 
-    
-      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
-    
+  <link rel="alternate" type="application/rss+xml" title="Dimitri Fontaine" href="/index.xml">
+  <link rel="icon" href="/favicon.ico">
 
-    
-      <meta property="og:image" content="https://tapoueh.org/img/earth-tz-logo.jpg">
-    
-    
-      <meta property="og:image" content="https://tapoueh.org/img/earth.jpg">
-    
-    
+  
+  <meta property="og:site_name" content="Dimitri Fontaine">
+  <meta property="og:title" content="Geolocation with PostgreSQL">
+  <meta property="og:description" content="We have loaded Open Street Map points of interests in the article The Most Popular Pub Names — which compares PostgreSQL with MongoDB for simple geographical …">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="http://localhost:1313/blog/2018/08/geolocation-with-postgresql/">
+  <meta name="twitter:card" content="summary">
+  
+</head>
 
-    
-
-    
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
-    
-    
-    <link rel="stylesheet" href="/css/style-jsjn0006wyhpyzivf6yceb31gvpjatbcs3qzjvlumobfnugccvobqwxnnaj8.min.css" />
-    
-    
-      <link rel="stylesheet" href="https://tapoueh.org/css/dim.css">
-    
-      <link rel="stylesheet" href="https://tapoueh.org/css/nav.css">
-    
-
-    
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+  <div class="wrap">
+    <a class="wordmark" href="/">Dimitri Fontaine</a>
+    <nav class="site-nav" aria-label="Main navigation">
       
-<script type="application/javascript">
-var doNotTrack = false;
-if (!doNotTrack) {
-	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-	ga('create', 'UA-47059482-1', 'auto');
-	
-	ga('send', 'pageview');
-}
-</script>
-    
-    
-  </head>
-
-  <body>
-    <div id="blog">
-      <header id="header" data-behavior="5">
-  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
-  <div class="navbar-collapse collapse header-title" id="navigation">
-    <ul class="nav navbar-nav navbar-right">
+        <a href="/"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>Writing</a>
       
-      <li class="dropdown">
-        
-        <a style="color: black;" href="/" alt="blog"><i class="sidebar-button-icon fa fa-lg fa-home"></i></a>
-        
-      </li>
+        <a href="/conf/"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></span>Talks</a>
       
-      <li class="dropdown">
-        
-        <a style="color: black;" href="/conf/" alt="talks"><i class="sidebar-button-icon fa fa-lg fa-microphone"></i></a>
-        
-      </li>
+        <a href="/categories/"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span>Topics</a>
       
-      <li class="dropdown">
-        
-        <a style="color: black;" href="https://twitter.com/tapoueh" alt="Twitter"><i class="sidebar-button-icon fa fa-lg fa-twitter"></i></a>
-        
-      </li>
+        <a href="/projects/"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span>Projects</a>
       
-      <li class="dropdown">
-        
-        <a style="color: black;" href="http://theartofpostgresql.com" alt="The Art Of PostgreSQL"><i class="sidebar-button-icon fa fa-lg fa-book"></i></a>
-        
-      </li>
+        <a href="/about/"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>About</a>
       
-    </ul>
+      
+      <a class="rss" href="/index.xml" title="RSS feed" aria-label="RSS feed"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg></span></a>
+    </nav>
   </div>
-
-  
-    
-      <a class="header-right-icon "
-         href="https://theartofpostgresql.com/" target="_blank">
-    
-    
-      <i class="fa fa-lg fa-book"></i>
-    
-    
-    </a>
-  
 </header>
 
-      <nav id="sidebar" data-behavior="5">
-  <div class="sidebar-container">
+  <main id="main">
     
-      <div class="sidebar-profile">
-        <a href="/#about" aria-label="">
-          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
-        </a>
-        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
-        
-          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
-        
-      </div>
-    
-    <ul class="sidebar-buttons">
-      
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="/" title="Blog">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
-      
-      <span class="sidebar-button-desc">Blog</span>
-    </a>
-  </li>
-
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="/about/" title="About">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
-      
-      <span class="sidebar-button-desc">About</span>
-    </a>
-  </li>
-
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="/categories/yesql/" title="YeSQL">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-database"></i>
-      
-      <span class="sidebar-button-desc">YeSQL</span>
-    </a>
-  </li>
-
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener" title="The Art of PostgreSQL">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
-      
-      <span class="sidebar-button-desc">The Art of PostgreSQL</span>
-    </a>
-  </li>
-
-
-    </ul>
-    <ul class="sidebar-buttons">
-      
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener" title="GitHub">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
-      
-      <span class="sidebar-button-desc">GitHub</span>
-    </a>
-  </li>
-
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener" title="Twitter">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
-      
-      <span class="sidebar-button-desc">Twitter</span>
-    </a>
-  </li>
-
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="/categories" title="Categories">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
-      
-      <span class="sidebar-button-desc">Categories</span>
-    </a>
-  </li>
-
-
-    </ul>
-    <ul class="sidebar-buttons">
-      
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="/index.xml" title="RSS">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
-      
-      <span class="sidebar-button-desc">RSS</span>
-    </a>
-  </li>
-
-
-    </ul>
-  </div>
-</nav>
-
-      
-  <div class="post-header-cover
-              text-left
-              post-header-cover--partial"
-       style="background-image:url('/img/earth.jpg')"
-       data-behavior="5">
-    
-      <div class="post-header main-content-wrap text-left">
-  
-    <h1 class="post-title">
-      Geolocation with PostgreSQL
-    </h1>
-  
-  
-  <div class="postShorten-meta post-meta">
-    
-      <time itemprop="datePublished" datetime="2018-08-24T12:11:33&#43;02:00">
-        <span style="float: left; width: 35%">
-          <i class="fa fa-calendar"></i> 
-  
-  
-  
-  
-    Friday 24 Aug 2018
-  
-
-        </span>
-      </time>
-    
-    <span style="float: right; width: 65%">
-      <i class="fa fa-clock-o"></i> 10 mins read
-      
-    </span>
-    <span style="float: left; width: 35%">
-      <i class="fa fa-bookmark"></i> 
-  
-  
-    <span></span>
-    
-      <a class="category-link" href="/categories/postgresql">PostgreSQL</a>, 
-    
-      <a class="category-link" href="/categories/yesql">YeSQL</a>
-    
-  
-
-    </span>
-    <div>
-      <p>
-        
-        
-        
-        
-        
-        
-        <a href="/tags/point/">
-          <i class="fa fa-tag"></i> Point
-        </a>
-        
-        
-        
-        <a href="/tags/geolocation/">
-          <i class="fa fa-tag"></i> Geolocation
-        </a>
-        
-        
-        
-        <a href="/tags/extensions/">
-          <i class="fa fa-tag"></i> Extensions
-        </a>
-        
-        
-        
-        <a href="/tags/ip4r/">
-          <i class="fa fa-tag"></i> ip4r
-        </a>
-        
-        
-      </p>
-    </div>
-  </div>
-
-
+<article class="wrap">
+  <header class="article-header reading">
+    <div class="eyebrow">PostgreSQL · YeSQL</div>
+    <h1>Geolocation with PostgreSQL</h1>
+    <div class="post-meta">
+  <time datetime="2018-08-24">Aug 24, 2018</time>
+  <span class="dot">·</span><span>10 min read</span>
+  <span class="dot">·</span><span class="tags"><a class="tag" href="/tags/postgresql/">#PostgreSQL</a><a class="tag" href="/tags/yesql/">#YeSQL</a><a class="tag" href="/tags/point/">#Point</a><a class="tag" href="/tags/geolocation/">#Geolocation</a></span>
 </div>
+
+  </header>
+
+  <div class="prose reading">
     
-  </div>
-
-
-      <div id="main" data-behavior="5"
-        class="hasCover
-               hasCoverMetaIn
-               ">
-        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
-          
-          
-          <div class="post-content markdown" itemprop="articleBody">
-            <div class="main-content-wrap">
-              <p>We have loaded Open Street Map points of interests in the article <a href="/blog/2013/08/the-most-popular-pub-names/">The Most
+    <p>We have loaded Open Street Map points of interests in the article <a href="/blog/2013/08/the-most-popular-pub-names/">The Most
 Popular Pub Names</a> — which
 compares PostgreSQL with MongoDB for simple geographical queries, and is
 part of our <a href="/tags/extensions/">PostgreSQL Extensions</a> article series. In
@@ -378,133 +79,15 @@ nearest pub, all within a single SQL query!</p>
 <p>For that, we are going to use the awesome
 <a href="https://github.com/RhodiumToad/ip4r">ip4r</a> extension from
 <a href="http://blog.rhodiumtoad.org.uk/">RhodiumToad</a>.</p>
- 
-
-
-
-
-<div class="table-of-contents toc bd-callout">
-    
-    <h4 class="text-muted">Table of Contents</h4>
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2018/08/geolocation-with-postgresql/#geolocation-data-loading">
-                    Geolocation Data Loading
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2018/08/geolocation-with-postgresql/#finding-an-ip-address-in-our-ranges">
-                    Finding an IP Address in our Ranges
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2018/08/geolocation-with-postgresql/#geolocation-meta-data">
-                    Geolocation meta-data
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2018/08/geolocation-with-postgresql/#emergency-pub">
-                    Emergency Pub
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2018/08/geolocation-with-postgresql/#conclusion">
-                    Conclusion
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-</div>
-
-
+<div class="toc"><div class="toc-title">Contents</div><nav id="TableOfContents">
+  <ul>
+    <li><a href="#geolocation-data-loading">Geolocation Data Loading</a></li>
+    <li><a href="#finding-an-ip-address-in-our-ranges">Finding an IP Address in our Ranges</a></li>
+    <li><a href="#geolocation-meta-data">Geolocation meta-data</a></li>
+    <li><a href="#emergency-pub">Emergency Pub</a></li>
+    <li><a href="#conclusion">Conclusion</a></li>
+  </ul>
+</nav></div>
 <h2 id="geolocation-data-loading">Geolocation Data Loading</h2>
 <p>The first step is to find an <em>geolocation</em> database, and several providers
 are offering that. The one I did choose for that example is the
@@ -514,28 +97,28 @@ Databases</a>.</p>
 <p>After having had a look at the files in there, we define the table schema we
 want and load the archive, using pgloader. So, first, the target schema is
 created using the following script:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">create</span><span style="color:#bbb"> </span>extension<span style="color:#bbb"> </span><span style="color:#00a">if</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">exists</span><span style="color:#bbb"> </span>ip4r;<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">schema</span><span style="color:#bbb"> </span><span style="color:#00a">if</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">exists</span><span style="color:#bbb"> </span>geolite;<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span><span style="color:#00a">if</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">exists</span><span style="color:#bbb"> </span>geolite.<span style="color:#00a">location</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>(<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>locid<span style="color:#bbb">      </span><span style="color:#0aa">integer</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>country<span style="color:#bbb">    </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>region<span style="color:#bbb">     </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>city<span style="color:#bbb">       </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>postalcode<span style="color:#bbb"> </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">location</span><span style="color:#bbb">   </span>point,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>metrocode<span style="color:#bbb">  </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>areacode<span style="color:#bbb">   </span><span style="color:#0aa">text</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>);<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span><span style="color:#00a">if</span><span style="color:#bbb"> </span><span style="color:#00a">not</span><span style="color:#bbb"> </span><span style="color:#00a">exists</span><span style="color:#bbb"> </span>geolite.blocks<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>(<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>iprange<span style="color:#bbb">    </span>ip4r,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>locid<span style="color:#bbb">      </span><span style="color:#0aa">integer</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>);<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">index</span><span style="color:#bbb"> </span>blocks_ip4r_idx<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>geolite.blocks<span style="color:#bbb"> </span><span style="color:#00a">using</span><span style="color:#bbb"> </span>gist(iprange);<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">ip4r</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">geolite</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">create</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">geolite</span><span class="p">.</span><span class="k">location</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">locid</span><span class="w">      </span><span class="nb">integer</span><span class="w"> </span><span class="k">primary</span><span class="w"> </span><span class="k">key</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">country</span><span class="w">    </span><span class="nb">text</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">region</span><span class="w">     </span><span class="nb">text</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">city</span><span class="w">       </span><span class="nb">text</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">postalcode</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="k">location</span><span class="w">   </span><span class="n">point</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">metrocode</span><span class="w">  </span><span class="nb">text</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">areacode</span><span class="w">   </span><span class="nb">text</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       
+</span></span></span><span class="line"><span class="cl"><span class="k">create</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">geolite</span><span class="p">.</span><span class="n">blocks</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">iprange</span><span class="w">    </span><span class="n">ip4r</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">locid</span><span class="w">      </span><span class="nb">integer</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">create</span><span class="w"> </span><span class="k">index</span><span class="w"> </span><span class="n">blocks_ip4r_idx</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">geolite</span><span class="p">.</span><span class="n">blocks</span><span class="w"> </span><span class="k">using</span><span class="w"> </span><span class="n">gist</span><span class="p">(</span><span class="n">iprange</span><span class="p">);</span><span class="w">
 </span></span></span></code></pre></div><p>And the data can now be imported to those target tables thanks to the
 following pgloader command, quite involved:</p>
 <pre tabindex="0"><code>/*
@@ -599,8 +182,8 @@ PostgreSQL. The location in the CSV file is given as two separate fields
 <p>In the same vein, in the pgloader command we also describe how to transform
 a IP address range from a couple of integers to a more classic
 representation of the same data:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-lisp" data-lang="lisp"><span style="display:flex;"><span><span style="color:#a00">CL-USER&gt;</span> (<span style="color:#a00">pgloader.transforms::ip-range</span> <span style="color:#a50">&#34;16777216&#34;</span> <span style="color:#a50">&#34;16777471&#34;</span>)
-</span></span><span style="display:flex;"><span><span style="color:#a50">&#34;1.0.0.0-1.0.0.255&#34;</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-lisp" data-lang="lisp"><span class="line"><span class="cl"><span class="nv">CL-USER&gt;</span> <span class="p">(</span><span class="nv">pgloader.transforms::ip-range</span> <span class="s">&#34;16777216&#34;</span> <span class="s">&#34;16777471&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="s">&#34;1.0.0.0-1.0.0.255&#34;</span>
 </span></span></code></pre></div><p>The pgloader command also finds the files we want to load independantly of
 the real name of the directory, here <code>GeoLiteCity_20180327</code>. So when there&rsquo;s
 a new release of the <em>Geolite</em> files, you can run the pgloader all over
@@ -667,7 +250,7 @@ servers.</p>
 (2 rows)
 </code></pre><h2 id="finding-an-ip-address-in-our-ranges">Finding an IP Address in our Ranges</h2>
 <p>Here&rsquo;s what the main data look like:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">table</span><span style="color:#bbb"> </span>geolite.blocks<span style="color:#bbb"> </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">10</span>;<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">table</span><span class="w"> </span><span class="n">geolite</span><span class="p">.</span><span class="n">blocks</span><span class="w"> </span><span class="k">limit</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span><span class="w">
 </span></span></span></code></pre></div><p>The TABLE command is per SQL standard, so we might as well use it:</p>
 <pre tabindex="0"><code class="language-psql" data-lang="psql">       iprange       │ locid  
 ═════════════════════╪════════
@@ -689,11 +272,11 @@ or in the more general <em>start-end</em> notation when no CIDR applies.</p>
 <p>The <em>ip4r</em> extension provides several operators to work with the dataset we
 have, some of those operators are supported by the index we just created.
 And just for the fun of it here&rsquo;s a catalog query to inquire about them:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">select</span><span style="color:#bbb"> </span>amopopr::regoperator<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pg_opclass<span style="color:#bbb"> </span><span style="color:#00a">c</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_am<span style="color:#bbb"> </span>am<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>am.oid<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">c</span>.opcmethod<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>pg_amop<span style="color:#bbb"> </span>amop<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>amop.amopfamily<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">c</span>.opcfamily<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>opcintype<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;ip4r&#39;</span>::regtype<span style="color:#bbb"> </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>am.amname<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;gist&#39;</span>;<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">select</span><span class="w"> </span><span class="n">amopopr</span><span class="p">::</span><span class="n">regoperator</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">pg_opclass</span><span class="w"> </span><span class="k">c</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">join</span><span class="w"> </span><span class="n">pg_am</span><span class="w"> </span><span class="n">am</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">am</span><span class="p">.</span><span class="n">oid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">opcmethod</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">join</span><span class="w"> </span><span class="n">pg_amop</span><span class="w"> </span><span class="n">amop</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">amop</span><span class="p">.</span><span class="n">amopfamily</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">opcfamily</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">opcintype</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;ip4r&#39;</span><span class="p">::</span><span class="n">regtype</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">am</span><span class="p">.</span><span class="n">amname</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;gist&#39;</span><span class="p">;</span><span class="w">
 </span></span></span></code></pre></div><p>The catalog query above joins the PostgreSQL catalogs for operator classes,
 index access methods on the notion of an operator family in order to
 retrieve the list of operators associated with the <code>ip4r</code> data type and the
@@ -711,9 +294,9 @@ GiST access method:</p>
 course, but that query directly list operators that the <em>GiST</em> index knows
 how to solve. The operator <code>&gt;&gt;=</code> reads as <em>contains</em> and is the one we&rsquo;re
 going to use here.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">select</span><span style="color:#bbb"> </span>iprange,<span style="color:#bbb"> </span>locid<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>geolite.blocks<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>iprange<span style="color:#bbb"> </span>&gt;&gt;=<span style="color:#bbb"> </span><span style="color:#a50">&#39;91.121.37.122&#39;</span>;<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">select</span><span class="w"> </span><span class="n">iprange</span><span class="p">,</span><span class="w"> </span><span class="n">locid</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">geolite</span><span class="p">.</span><span class="n">blocks</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">iprange</span><span class="w"> </span><span class="o">&gt;&gt;=</span><span class="w"> </span><span class="s1">&#39;91.121.37.122&#39;</span><span class="p">;</span><span class="w">
 </span></span></span></code></pre></div><p>And here&rsquo;s the range in which we find the IP address 91.121.37.122, and the
 location it&rsquo;s associated with:</p>
 <pre tabindex="0"><code class="language-psql" data-lang="psql">         iprange          │ locid 
@@ -727,10 +310,10 @@ interesting data actually is to be found in the other table, the
 <code>geolite.location</code> one. Let&rsquo;s use another IP address now, I&rsquo;m told by the
 unix command <code>host</code> that <code>google.us has address 74.125.195.147</code> and we can
 inquire where is that IP from:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">select</span><span style="color:#bbb"> </span>*<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb">      </span>geolite.blocks<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>geolite.<span style="color:#00a">location</span><span style="color:#bbb"> </span><span style="color:#00a">using</span>(locid)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">where</span><span style="color:#bbb"> </span>iprange<span style="color:#bbb"> </span>&gt;&gt;=<span style="color:#bbb"> </span><span style="color:#a50">&#39;74.125.195.147&#39;</span>;<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="k">from</span><span class="w">      </span><span class="n">geolite</span><span class="p">.</span><span class="n">blocks</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="k">join</span><span class="w"> </span><span class="n">geolite</span><span class="p">.</span><span class="k">location</span><span class="w"> </span><span class="k">using</span><span class="p">(</span><span class="n">locid</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">where</span><span class="w"> </span><span class="n">iprange</span><span class="w"> </span><span class="o">&gt;&gt;=</span><span class="w"> </span><span class="s1">&#39;74.125.195.147&#39;</span><span class="p">;</span><span class="w">
 </span></span></span></code></pre></div><p>Our data locates the Google IP address in Mountain View, which is credible:</p>
 <pre tabindex="0"><code class="language-psql" data-lang="psql">─[ RECORD 1 ]───────────────────────────
 locid      │ 2703
@@ -751,20 +334,19 @@ pub from where they are currently? Now that you know their location from the
 right?</p>
 <p>As we downloaded a list of pubs from the UK, we are going to use an IP
 address that should be in the UK too.</p>
-<div class="alert info ">
-  <p>See my project <a href="https://github.com/dimitri/pubnames">https://github.com/dimitri/pubnames</a> for loading the same
+<div class="alert info ">See my project <a href="https://github.com/dimitri/pubnames">https://github.com/dimitri/pubnames</a> for loading the same
 set of data on your local database, or read the article <a href="/blog/2013/08/the-most-popular-pub-names/">The Most Popular
 Pub Names</a> for more about this
-OpenStreetMap data loading.</p>
-</div>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ host www.ox.ac.uk
-</span></span><span style="display:flex;"><span>www.ox.ac.uk has address 129.67.242.154
-</span></span><span style="display:flex;"><span>www.ox.ac.uk has address 129.67.242.155
+OpenStreetMap data loading.</div>
+
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ host www.ox.ac.uk
+</span></span><span class="line"><span class="cl">www.ox.ac.uk has address 129.67.242.154
+</span></span><span class="line"><span class="cl">www.ox.ac.uk has address 129.67.242.155
 </span></span></code></pre></div><p>Knowing that, we can search the geolocation of this IP address:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">select</span><span style="color:#bbb"> </span>*<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb">      </span>geolite.<span style="color:#00a">location</span><span style="color:#bbb"> </span>l<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>geolite.blocks<span style="color:#bbb"> </span><span style="color:#00a">using</span>(locid)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>iprange<span style="color:#bbb"> </span>&gt;&gt;=<span style="color:#bbb"> </span><span style="color:#a50">&#39;129.67.242.154&#39;</span>;<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">from</span><span class="w">      </span><span class="n">geolite</span><span class="p">.</span><span class="k">location</span><span class="w"> </span><span class="n">l</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">join</span><span class="w"> </span><span class="n">geolite</span><span class="p">.</span><span class="n">blocks</span><span class="w"> </span><span class="k">using</span><span class="p">(</span><span class="n">locid</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">iprange</span><span class="w"> </span><span class="o">&gt;&gt;=</span><span class="w"> </span><span class="s1">&#39;129.67.242.154&#39;</span><span class="p">;</span><span class="w">
 </span></span></span></code></pre></div><p>And the Oxford University is actually hosted in Oxford, it seems:</p>
 <pre tabindex="0"><code class="language-psql" data-lang="psql">─[ RECORD 1 ]─────────────
 locid      │ 375290
@@ -783,22 +365,22 @@ University? Well, let&rsquo;s figure that out before we get thirsty!</p>
     set parallel_setup_cost to 10000;
 
  -->
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>pubs.name,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span>round((pubs.pos<span style="color:#bbb"> </span>&lt;@&gt;<span style="color:#bbb"> </span>l.<span style="color:#00a">location</span>)::<span style="color:#0aa">numeric</span>,<span style="color:#bbb"> </span><span style="color:#099">3</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>miles,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span>ceil(<span style="color:#099">1609</span>.<span style="color:#099">34</span><span style="color:#bbb"> </span>*<span style="color:#bbb"> </span>(pubs.pos<span style="color:#bbb"> </span>&lt;@&gt;<span style="color:#bbb"> </span>l.<span style="color:#00a">location</span>)::<span style="color:#0aa">numeric</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>meters<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>geolite.<span style="color:#00a">location</span><span style="color:#bbb"> </span>l<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>geolite.blocks<span style="color:#bbb"> </span><span style="color:#00a">using</span>(locid)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#00a">left</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb"> </span><span style="color:#00a">lateral</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span>(<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>name,<span style="color:#bbb"> </span>pos<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>pubnames<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>pos<span style="color:#bbb"> </span>&lt;-&gt;<span style="color:#bbb"> </span>l.<span style="color:#00a">location</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">               </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">10</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>pubs<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span><span style="color:#00a">true</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>blocks.iprange<span style="color:#bbb"> </span>&gt;&gt;=<span style="color:#bbb"> </span><span style="color:#a50">&#39;129.67.242.154&#39;</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>meters;<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="w">   </span><span class="k">select</span><span class="w"> </span><span class="n">pubs</span><span class="p">.</span><span class="n">name</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="n">round</span><span class="p">((</span><span class="n">pubs</span><span class="p">.</span><span class="n">pos</span><span class="w"> </span><span class="o">&lt;@&gt;</span><span class="w"> </span><span class="n">l</span><span class="p">.</span><span class="k">location</span><span class="p">)::</span><span class="nb">numeric</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">miles</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="n">ceil</span><span class="p">(</span><span class="mi">1609</span><span class="p">.</span><span class="mi">34</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="n">pubs</span><span class="p">.</span><span class="n">pos</span><span class="w"> </span><span class="o">&lt;@&gt;</span><span class="w"> </span><span class="n">l</span><span class="p">.</span><span class="k">location</span><span class="p">)::</span><span class="nb">numeric</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">meters</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   
+</span></span></span><span class="line"><span class="cl"><span class="w">     </span><span class="k">from</span><span class="w"> </span><span class="n">geolite</span><span class="p">.</span><span class="k">location</span><span class="w"> </span><span class="n">l</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="k">join</span><span class="w"> </span><span class="n">geolite</span><span class="p">.</span><span class="n">blocks</span><span class="w"> </span><span class="k">using</span><span class="p">(</span><span class="n">locid</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="k">left</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="k">lateral</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">              </span><span class="k">select</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">pos</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="k">from</span><span class="w"> </span><span class="n">pubnames</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">pos</span><span class="w"> </span><span class="o">&lt;-&gt;</span><span class="w"> </span><span class="n">l</span><span class="p">.</span><span class="k">location</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">               </span><span class="k">limit</span><span class="w"> </span><span class="mi">10</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">pubs</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="k">true</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">where</span><span class="w"> </span><span class="n">blocks</span><span class="p">.</span><span class="n">iprange</span><span class="w"> </span><span class="o">&gt;&gt;=</span><span class="w"> </span><span class="s1">&#39;129.67.242.154&#39;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">meters</span><span class="p">;</span><span class="w">
 </span></span></span></code></pre></div><p>And here&rsquo;s the list, obtained in around about a millisecond on my laptop:</p>
 <pre tabindex="0"><code class="language-psql" data-lang="psql">        name        │ miles │ meters 
 ════════════════════╪═══════╪════════
@@ -813,15 +395,14 @@ University? Well, let&rsquo;s figure that out before we get thirsty!</p>
  King&#39;s Arms        │ 0.397 │    639
  White Horse        │ 0.402 │    647
 (10 rows)
-</code></pre><div class="alert warning ">
-  <p><p>The first run of this query wasn&rsquo;t very fast, until we realized with friends
+</code></pre><div class="alert warning "><p>The first run of this query wasn&rsquo;t very fast, until we realized with friends
 on the IRC channel for PostgreSQL help that the plan was using parallel
 processing. The size of the dataset means that the parallel setup cost is
 going to ruin our performance here, so I&rsquo;ve been doing the following to get
 the query to run in 1ms rather than 15ms:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">set</span><span style="color:#bbb"> </span>parallel_setup_cost<span style="color:#bbb"> </span><span style="color:#00a">to</span><span style="color:#bbb"> </span><span style="color:#099">10000</span>;<span style="color:#bbb">
-</span></span></span></code></pre></div></p>
-</div>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">set</span><span class="w"> </span><span class="n">parallel_setup_cost</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="mi">10000</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></div></div>
+
 <p>So with PostgreSQL and some easily available extensionsm, we are actually
 capable of performing advanced geolocation lookups in a single SQL query.
 The timing of this query makes it possible to use it in production and serve
@@ -842,287 +423,43 @@ able to join the draft menu of each nearby pub against your own preferences
 and offer you a nice short list ordered by what you&rsquo;re most likely to want
 to drink at this hour.</p>
 <p>Living in the future is both exciting and frightening!</p>
-              
+  </div>
 
-
-            </div>
-          </div>
-          
-
-
-
-
-
-<div style="margin-top: 1em;">
- <script async src="//tinder.thrivecart.com/embed/v1/thrivecart.js"></script>
- <a data-thrivecart-account="theartofpostgresql" data-thrivecart-tpl="v2" data-thrivecart-product="18" class="thrivecart-button ">
-  <img src="https://spark.thrivecart.com/0x0/https%3A%2F%2Fthrivecart.s3.amazonaws.com%2Fuser_assets%2FNABJ5K7H%2Fproducts%2F18%2Ftaopg-cta-1661268188.jpg"
-       style="width:90%; height: auto; margin-left: 5%"/>
- </a>
+  
+    <div class="reading">
+<section class="subscribe">
+  <h2>SQL notes, now and then</h2>
+  <p>Occasional PostgreSQL technique posts and Lab walkthroughs. No noise, unsubscribe anytime.</p>
+  
+    
+    <form class="subscribe-fallback" action="#" method="post" target="_blank">
+      <input type="email" name="email_address" placeholder="you@example.com" aria-label="Email address" required>
+      <button type="submit">Subscribe</button>
+    </form>
+  
+</section>
 </div>
+  
+</article>
 
-          <div id="post-footer" class="post-footer main-content-wrap">
-            
-              
-                
-                
-                  <div class="post-footer-tags">
-                    <span class="text-color-light text-small"></span><br/>
-                    
-  <a class="tag tag--primary tag--small" href="/tags/postgresql/">PostgreSQL</a>
-
-  <a class="tag tag--primary tag--small" href="/tags/yesql/">YeSQL</a>
-
-  <a class="tag tag--primary tag--small" href="/tags/point/">Point</a>
-
-  <a class="tag tag--primary tag--small" href="/tags/geolocation/">Geolocation</a>
-
-  <a class="tag tag--primary tag--small" href="/tags/extensions/">Extensions</a>
-
-  <a class="tag tag--primary tag--small" href="/tags/ip4r/">ip4r</a>
-
-                  </div>
-                
-              
-            
-            <div class="post-actions-wrap">
- <nav>
-    <ul class="post-actions post-action-nav">
-      
-        <li class="post-action">
-          
-            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/11/preventing-sql-injections/" data-tooltip="Preventing SQL Injections">
-          
-            <i class="fa fa-angle-left"></i>
-            <span class="hide-xs hide-sm text-small icon-ml"></span>
-          </a>
-        </li>
-        <li class="post-action">
-          
-            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/08/postgresql-concurrency-an-article-series/" data-tooltip="PostgreSQL Concurrency: an Article Series">
-          
-            <span class="hide-xs hide-sm text-small icon-mr"></span>
-            <i class="fa fa-angle-right"></i>
-          </a>
-        </li>
-      
-    </ul>
-  </nav>
-  <ul class="post-actions post-action-share">
-    
-      <li class="post-action hide-lg hide-md hide-sm">
-        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
-          <i class="fa fa-share-alt"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f08%2fgeolocation-with-postgresql%2f">
-          <i class="fa fa-google-plus"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f08%2fgeolocation-with-postgresql%2f">
-          <i class="fa fa-facebook-official"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=Geolocation%20with%20PostgreSQL with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f08%2fgeolocation-with-postgresql%2f">
-          <i class="fa fa-twitter"></i>
-        </a>
-      </li>
-    
-    
-      <li class="post-action">
-        <a class="post-action-btn btn btn--default" href="#disqus_thread">
-          <i class="fa fa-comment-o"></i>
-        </a>
-      </li>
-    
-    <li class="post-action">
-      
-        <a class="post-action-btn btn btn--default" href="#table-of-contents">
-      
-        <i class="fa fa-list"></i>
-      </a>
-    </li>
-  </ul>
-</div>
-
-
-            
-              
-                <div id="disqus_thread">
-  <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-</div>
-
-              
-            
-          </div>
-        </article>
-        <footer id="footer" class="main-content-wrap">
-  <span class="copyrights">
-    &copy; 2022 Dimitri Fontaine. 
-  </span>
+  </main>
+  <footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-bio">
+        <div class="name">Dimitri Fontaine</div>
+        <p>PostgreSQL Major Contributor. I write about getting more out of SQL.</p>
+      </div>
+      <nav class="footer-links" aria-label="Social">
+        <a href="https://github.com/dimitri" rel="me"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>GitHub</a><a href="https://www.linkedin.com/in/dimitrifontaine/" rel="me"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6Z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>LinkedIn</a>
+      </nav>
+    </div>
+    <div class="footer-eco">
+      <a href="https://theartofpostgresql.com">The Art of PostgreSQL</a><a href="https://theartofpostgresql.com/course/">Course</a><a href="https://theartofpostgresql.com/workshop/">Workshop</a><a href="https://theartofpostgresql.com/lab/">The Lab</a><a href="https://oss.theartofpostgresql.com">OSS Maintenance</a>
+      <span>© 2026 Dimitri Fontaine</span>
+    </div>
+  </div>
 </footer>
 
-      </div>
-      <div id="bottom-bar" class="post-bottom-bar" data-behavior="5">
-        <div class="post-actions-wrap">
- <nav>
-    <ul class="post-actions post-action-nav">
-      
-        <li class="post-action">
-          
-            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/11/preventing-sql-injections/" data-tooltip="Preventing SQL Injections">
-          
-            <i class="fa fa-angle-left"></i>
-            <span class="hide-xs hide-sm text-small icon-ml"></span>
-          </a>
-        </li>
-        <li class="post-action">
-          
-            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/08/postgresql-concurrency-an-article-series/" data-tooltip="PostgreSQL Concurrency: an Article Series">
-          
-            <span class="hide-xs hide-sm text-small icon-mr"></span>
-            <i class="fa fa-angle-right"></i>
-          </a>
-        </li>
-      
-    </ul>
-  </nav>
-  <ul class="post-actions post-action-share">
-    
-      <li class="post-action hide-lg hide-md hide-sm">
-        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
-          <i class="fa fa-share-alt"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f08%2fgeolocation-with-postgresql%2f">
-          <i class="fa fa-google-plus"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f08%2fgeolocation-with-postgresql%2f">
-          <i class="fa fa-facebook-official"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=Geolocation%20with%20PostgreSQL with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f08%2fgeolocation-with-postgresql%2f">
-          <i class="fa fa-twitter"></i>
-        </a>
-      </li>
-    
-    
-      <li class="post-action">
-        <a class="post-action-btn btn btn--default" href="#disqus_thread">
-          <i class="fa fa-comment-o"></i>
-        </a>
-      </li>
-    
-    <li class="post-action">
-      
-        <a class="post-action-btn btn btn--default" href="#table-of-contents">
-      
-        <i class="fa fa-list"></i>
-      </a>
-    </li>
-  </ul>
-</div>
-
-
-      </div>
-      <div id="share-options-bar" class="share-options-bar" data-behavior="5">
-  <ul class="share-options">
-    <li class="share-option">
-      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f08%2fgeolocation-with-postgresql%2f">
-        <i class="fa fa-google-plus"></i><span></span>
-      </a>
-    </li>
-    <li class="share-option">
-      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f08%2fgeolocation-with-postgresql%2f">
-        <i class="fa fa-facebook-official"></i><span></span>
-      </a>
-    </li>
-    <li class="share-option">
-      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=Geolocation%20with%20PostgreSQL with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f08%2fgeolocation-with-postgresql%2f">
-        <i class="fa fa-twitter"></i><span></span>
-      </a>
-    </li>
-  </ul>
-</div>
-<div id="share-options-mask" class="share-options-mask"></div>
-
-    </div>
-    
-    <div id="about">
-  <div id="about-card">
-    <div id="about-btn-close">
-      <i class="fa fa-times"></i>
-    </div>
-    
-      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
-    
-    <h4 id="about-card-name">Dimitri Fontaine</h4>
-    
-      <div id="about-card-bio">PostgreSQL Major Contributor</div>
-    
-    
-      <div id="about-card-job">
-        <i class="fa fa-briefcase"></i>
-        <br/>
-        Open Source Software Engineer
-      </div>
-    
-    
-      <div id="about-card-location">
-        <i class="fa fa-map-marker-alt"></i>
-        <br/>
-        France
-      </div>
-    
-  </div>
-</div>
-
-    
-
-    
-  
-    
-      
-      <div id="cover" style="background-image:url('https://tapoueh.org/images/mayan-calendar.jpg');"></div>
-    
-  
-
-
-    
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.1.0/highlight.min.js" integrity="sha512-z+/WWfyD5tccCukM4VvONpEtLmbAm5LDu7eKiyMQJ9m7OfPEDL7gENyDRL3Yfe8XAuGsS2fS4xSMnl6d30kqGQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha512-uURl+ZXMBrF4AwGaWmEetzrd+J5/8NRkWAvJx5sbPSSuOb0bZLqf+tOzniObO00BjHa/dD7gub9oCGMLPQHtQA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
-
-<script src="https://tapoueh.org/js/script-yqzy9wdlzix4lbbwdnzvwx3egsne77earqmn73v9uno8aupuph8wfguccut.min.js"></script>
-
-
-
-<script>
-$(document).ready(function() {
-  hljs.configure({ classPrefix: '', useBR: false });
-  $('pre.code-highlight > code, pre > code').each(function(i, block) {
-    if (!$(this).hasClass('codeblock')) {
-      $(this).addClass('codeblock');
-    }
-    hljs.highlightBlock(block);
-  });
-});
-</script>
-
-
-
-
-    
-  </body>
+</body>
 </html>
-

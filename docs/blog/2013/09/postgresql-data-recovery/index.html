@@ -1,337 +1,76 @@
-
-
-  
-    
-  
-
-
-  
-
-
-
-
-  
-
-
-  
-
 <!DOCTYPE html>
 <html lang="en-us">
-  <head>
-    
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.101.0">
-    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
-    <title>PostgreSQL data recovery</title>
-    <meta name="author" content="Dimitri Fontaine">
-    <meta name="keywords" content="">
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PostgreSQL data recovery · Dimitri Fontaine</title>
 
-    <link rel="icon" href="/favicon.ico">
-    
+  
+  
+  <meta name="description" content="The following story is only interesting to read if you like it when bad things happen, or if you don&rsquo;t have a trustworthy backup policy in place. By …">
+  <link rel="canonical" href="http://localhost:1313/blog/2013/09/postgresql-data-recovery/">
 
-    
-    <meta name="description" content="The following story is only interesting to read if you like it when bad things happen, or if you don&rsquo;t have a trustworthy backup policy in place. By trustworthy I mean that each backup you take must be tested with a test recovery job. Only tested backups will prove useful when you need them. So go read our Backup and Restore documentation chapter then learn how to setup Barman for handling physical backups and Point In Time Recovery.">
-    <meta property="og:description" content="The following story is only interesting to read if you like it when bad things happen, or if you don&rsquo;t have a trustworthy backup policy in place. By trustworthy I mean that each backup you take must be tested with a test recovery job. Only tested backups will prove useful when you need them. So go read our Backup and Restore documentation chapter then learn how to setup Barman for handling physical backups and Point In Time Recovery.">
-    <meta property="og:type" content="blog">
-    <meta property="og:title" content="PostgreSQL data recovery">
-    <meta property="og:url" content="https://tapoueh.org/blog/2013/09/postgresql-data-recovery/">
-    <meta property="og:site_name" content="The Art of PostgreSQL">
-    <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="PostgreSQL data recovery">
-    <meta name="twitter:description" content="The following story is only interesting to read if you like it when bad things happen, or if you don&rsquo;t have a trustworthy backup policy in place. By trustworthy I mean that each backup you take must be tested with a test recovery job. Only tested backups will prove useful when you need them. So go read our Backup and Restore documentation chapter then learn how to setup Barman for handling physical backups and Point In Time Recovery.">
-    
-      <meta name="twitter:creator" content="@tapoueh">
-    
-    
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,300;0,400;0,700;1,400&display=swap" rel="stylesheet">
 
-    
-    
+  
+  <link rel="stylesheet" href="/css/main.47d94e129c21f6f85c3b99aa6edc4fc75b72dd224364783be9d8b9d49b486ae3.css" integrity="sha256-R9lOEpwh9vhcO5mqbtxPx1ty3SJDZHg76di51JtIauM=">
+  
 
-    
-      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
-    
+  <link rel="alternate" type="application/rss+xml" title="Dimitri Fontaine" href="/index.xml">
+  <link rel="icon" href="/favicon.ico">
 
-    
-      <meta property="og:image" content="https://tapoueh.org/img/tazzine-barman-fondogrigio.png">
-    
-    
-      <meta property="og:image" content="https://tapoueh.org/img/tazzine-barman-fondogrigio.png">
-    
-    
+  
+  <meta property="og:site_name" content="Dimitri Fontaine">
+  <meta property="og:title" content="PostgreSQL data recovery">
+  <meta property="og:description" content="The following story is only interesting to read if you like it when bad things happen, or if you don&rsquo;t have a trustworthy backup policy in place. By …">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="http://localhost:1313/blog/2013/09/postgresql-data-recovery/">
+  <meta name="twitter:card" content="summary">
+  
+</head>
 
-    
-
-    
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
-    
-    
-    <link rel="stylesheet" href="/css/style-jsjn0006wyhpyzivf6yceb31gvpjatbcs3qzjvlumobfnugccvobqwxnnaj8.min.css" />
-    
-    
-      <link rel="stylesheet" href="https://tapoueh.org/css/dim.css">
-    
-      <link rel="stylesheet" href="https://tapoueh.org/css/nav.css">
-    
-
-    
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+  <div class="wrap">
+    <a class="wordmark" href="/">Dimitri Fontaine</a>
+    <nav class="site-nav" aria-label="Main navigation">
       
-<script type="application/javascript">
-var doNotTrack = false;
-if (!doNotTrack) {
-	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-	ga('create', 'UA-47059482-1', 'auto');
-	
-	ga('send', 'pageview');
-}
-</script>
-    
-    
-  </head>
-
-  <body>
-    <div id="blog">
-      <header id="header" data-behavior="5">
-  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
-  <div class="navbar-collapse collapse header-title" id="navigation">
-    <ul class="nav navbar-nav navbar-right">
+        <a href="/"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>Writing</a>
       
-      <li class="dropdown">
-        
-        <a style="color: black;" href="/" alt="blog"><i class="sidebar-button-icon fa fa-lg fa-home"></i></a>
-        
-      </li>
+        <a href="/conf/"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></span>Talks</a>
       
-      <li class="dropdown">
-        
-        <a style="color: black;" href="/conf/" alt="talks"><i class="sidebar-button-icon fa fa-lg fa-microphone"></i></a>
-        
-      </li>
+        <a href="/categories/"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span>Topics</a>
       
-      <li class="dropdown">
-        
-        <a style="color: black;" href="https://twitter.com/tapoueh" alt="Twitter"><i class="sidebar-button-icon fa fa-lg fa-twitter"></i></a>
-        
-      </li>
+        <a href="/projects/"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span>Projects</a>
       
-      <li class="dropdown">
-        
-        <a style="color: black;" href="http://theartofpostgresql.com" alt="The Art Of PostgreSQL"><i class="sidebar-button-icon fa fa-lg fa-book"></i></a>
-        
-      </li>
+        <a href="/about/"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>About</a>
       
-    </ul>
+      
+      <a class="rss" href="/index.xml" title="RSS feed" aria-label="RSS feed"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg></span></a>
+    </nav>
   </div>
-
-  
-    
-      <a class="header-right-icon "
-         href="https://theartofpostgresql.com/" target="_blank">
-    
-    
-      <i class="fa fa-lg fa-book"></i>
-    
-    
-    </a>
-  
 </header>
 
-      <nav id="sidebar" data-behavior="5">
-  <div class="sidebar-container">
+  <main id="main">
     
-      <div class="sidebar-profile">
-        <a href="/#about" aria-label="">
-          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
-        </a>
-        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
-        
-          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
-        
-      </div>
-    
-    <ul class="sidebar-buttons">
-      
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="/" title="Blog">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
-      
-      <span class="sidebar-button-desc">Blog</span>
-    </a>
-  </li>
-
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="/about/" title="About">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
-      
-      <span class="sidebar-button-desc">About</span>
-    </a>
-  </li>
-
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="/categories/yesql/" title="YeSQL">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-database"></i>
-      
-      <span class="sidebar-button-desc">YeSQL</span>
-    </a>
-  </li>
-
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener" title="The Art of PostgreSQL">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
-      
-      <span class="sidebar-button-desc">The Art of PostgreSQL</span>
-    </a>
-  </li>
-
-
-    </ul>
-    <ul class="sidebar-buttons">
-      
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener" title="GitHub">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
-      
-      <span class="sidebar-button-desc">GitHub</span>
-    </a>
-  </li>
-
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener" title="Twitter">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
-      
-      <span class="sidebar-button-desc">Twitter</span>
-    </a>
-  </li>
-
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="/categories" title="Categories">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
-      
-      <span class="sidebar-button-desc">Categories</span>
-    </a>
-  </li>
-
-
-    </ul>
-    <ul class="sidebar-buttons">
-      
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="/index.xml" title="RSS">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
-      
-      <span class="sidebar-button-desc">RSS</span>
-    </a>
-  </li>
-
-
-    </ul>
-  </div>
-</nav>
-
-      
-  <div class="post-header-cover
-              text-left
-              post-header-cover--partial"
-       style="background-image:url('/img/tazzine-barman-fondogrigio.png')"
-       data-behavior="5">
-    
-  </div>
-
-
-      <div id="main" data-behavior="5"
-        class="hasCover
-               hasCoverMetaOut
-               ">
-        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
-          
-          
-            <div class="post-header main-content-wrap text-left">
-  
-    <h1 class="post-title">
-      PostgreSQL data recovery
-    </h1>
-  
-  
-  <div class="postShorten-meta post-meta">
-    
-      <time itemprop="datePublished" datetime="2013-09-17T10:39:00&#43;02:00">
-        <span style="float: left; width: 35%">
-          <i class="fa fa-calendar"></i> 
-  
-  
-  
-  
-    Tuesday 17 Sep 2013
-  
-
-        </span>
-      </time>
-    
-    <span style="float: right; width: 65%">
-      <i class="fa fa-clock-o"></i> 15 mins read
-      
-    </span>
-    <span style="float: left; width: 35%">
-      <i class="fa fa-bookmark"></i> 
-  
-  
-    <span></span>
-    
-      <a class="category-link" href="/categories/postgresql">PostgreSQL</a>, 
-    
-      <a class="category-link" href="/categories/backups-and-recovery">Backups and Recovery</a>
-    
-  
-
-    </span>
-    <div>
-      <p>
-        
-        
-        
-        
-        <a href="/tags/recovery/">
-          <i class="fa fa-tag"></i> Recovery
-        </a>
-        
-        
-        
-        <a href="/tags/backups/">
-          <i class="fa fa-tag"></i> Backups
-        </a>
-        
-        
-      </p>
-    </div>
-  </div>
-
-
+<article class="wrap">
+  <header class="article-header reading">
+    <div class="eyebrow">PostgreSQL · Backups and Recovery</div>
+    <h1>PostgreSQL data recovery</h1>
+    <div class="post-meta">
+  <time datetime="2013-09-17">Sep 17, 2013</time>
+  <span class="dot">·</span><span>15 min read</span>
+  <span class="dot">·</span><span class="tags"><a class="tag" href="/tags/postgresql/">#PostgreSQL</a><a class="tag" href="/tags/recovery/">#Recovery</a><a class="tag" href="/tags/backups/">#Backups</a></span>
 </div>
-          
-          <div class="post-content markdown" itemprop="articleBody">
-            <div class="main-content-wrap">
-              <p>The following story is only interesting to read if you like it when bad
+
+  </header>
+
+  <div class="prose reading">
+    
+    <p>The following story is only interesting to read if you like it when bad
 things happen, or if you don&rsquo;t have a trustworthy backup policy in place. By
 trustworthy I mean that
 <em>each backup</em> you take
@@ -378,35 +117,10 @@ quite bulk advices, stop doing any
 <em>interactive</em> tool, if you are doing non-interactive scripting, that&rsquo;s
 actually called system programming and you deserve a better tool than that.</p>
 <center>
-
-
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/a-shell-scripting-story.png" data-fancybox="">
-  
-    <img class="fig-img" src="/img/old/a-shell-scripting-story.png" >
-  
-    </a>
-  
-  
-</div>
-
+<div class="figure fig50 dim-margin">
+  <a href="/img/old/a-shell-scripting-story.png">
+    <img class="fig-img" src="/img/old/a-shell-scripting-story.png" loading="lazy">
+  </a></div>
 </center>
 <center>*My take: shell script makes it harder to write production quality code.*</center>
 <p>In our very case, the customer did realize that a
@@ -445,35 +159,10 @@ more than 5 days old. Right. In.
 something can be done to recover data from a very small number of important
 tables? Let&rsquo;s now switch to the present tense and see about it.</p>
 <center>
-
-
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/data_loss.gif" data-fancybox="">
-  
-    <img class="fig-img" src="/img/old/data_loss.gif" >
-  
-    </a>
-  
-  
-</div>
-
+<div class="figure fig50 dim-margin">
+  <a href="/img/old/data_loss.gif">
+    <img class="fig-img" src="/img/old/data_loss.gif" loading="lazy">
+  </a></div>
 </center>
 <center>*Can you spell ***data loss***?*</center>
 <p>Remember, there&rsquo;s no
@@ -494,35 +183,10 @@ Well, unless maybe if we tweak the system. We need to first edit the system
 identifier, then reset the system to only begin replaying at the file we do
 have. With some luck&hellip;</p>
 <center>
-
-
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/a-broken-clock-is-right-twice-a-day-michael-flood.640.jpg" data-fancybox="">
-  
-    <img class="fig-img" src="/img/old/a-broken-clock-is-right-twice-a-day-michael-flood.640.jpg" >
-  
-    </a>
-  
-  
-</div>
-
+<div class="figure fig50 dim-margin">
+  <a href="/img/old/a-broken-clock-is-right-twice-a-day-michael-flood.640.jpg">
+    <img class="fig-img" src="/img/old/a-broken-clock-is-right-twice-a-day-michael-flood.640.jpg" loading="lazy">
+  </a></div>
 </center>
 <center>*A broken clock is still right twice a day, a broken backup never is...*</center>
 <p>Time to try our luck here:</p>
@@ -585,35 +249,10 @@ files. First thing missing is
 <code>xlogdump</code> it should be possible to recover just this file if it&rsquo;s been
 changed in the WAL archives we have, but that&rsquo;s not the case.</p>
 <center>
-
-
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/damage-case-bloat.640.jpg" data-fancybox="">
-  
-    <img class="fig-img" src="/img/old/damage-case-bloat.640.jpg" >
-  
-    </a>
-  
-  
-</div>
-
+<div class="figure fig50 dim-margin">
+  <a href="/img/old/damage-case-bloat.640.jpg">
+    <img class="fig-img" src="/img/old/damage-case-bloat.640.jpg" loading="lazy">
+  </a></div>
 </center>
 <center>*Trying to salvage a damage case*</center>
 <h3 id="pg_filenodemap">pg_filenode.map</h3>
@@ -663,35 +302,10 @@ do
     dd if=/dev/zero bs=256k count=1 | tr &#39;\0&#39; &#39;U&#39; &gt; $c
 done
 </code></pre><center>
-
-
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/LRN-LNP-database.png" data-fancybox="">
-  
-    <img class="fig-img" src="/img/old/LRN-LNP-database.png" >
-  
-    </a>
-  
-  
-</div>
-
+<div class="figure fig50 dim-margin">
+  <a href="/img/old/LRN-LNP-database.png">
+    <img class="fig-img" src="/img/old/LRN-LNP-database.png" loading="lazy">
+  </a></div>
 </center>
 <h3 id="pg_database">pg_database</h3>
 <p>The next step we are confronted to is that PostgreSQL has lost its baking
@@ -755,35 +369,10 @@ off, which is the case for
 commit
 <a href="http://git.postgresql.org/gitweb/?p=postgresql.git;a=commitdiff;h=cd3413ec3683918c9cb9cfb39ae5b2c32f231e8b">cd3413ec3683918c9cb9cfb39ae5b2c32f231e8b</a>.</p>
 <center>
-
-
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/indexing-system.jpg" data-fancybox="">
-  
-    <img class="fig-img" src="/img/old/indexing-system.jpg" >
-  
-    </a>
-  
-  
-</div>
-
+<div class="figure fig50 dim-margin">
+  <a href="/img/old/indexing-system.jpg">
+    <img class="fig-img" src="/img/old/indexing-system.jpg" loading="lazy">
+  </a></div>
 </center>
 <center>*Another kind of indexing system*</center>
 <p>So yes, it is indeed possible to start
@@ -848,35 +437,10 @@ other 9.2 system, so we can directly use files created by
 <a href="http://www.postgresql.org/docs/current/interactive/app-initdb.html">initdb</a> and copy
 them over where the error message leads.</p>
 <center>
-
-
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/namespace1.png" data-fancybox="">
-  
-    <img class="fig-img" src="/img/old/namespace1.png" >
-  
-    </a>
-  
-  
-</div>
-
+<div class="figure fig50 dim-margin">
+  <a href="/img/old/namespace1.png">
+    <img class="fig-img" src="/img/old/namespace1.png" loading="lazy">
+  </a></div>
 </center>
 <h3 id="pg_namespace">pg_namespace</h3>
 <p>Some error messages are about things we should definitely not ignore. The
@@ -904,35 +468,10 @@ relation is actually stored:</p>
 2200	public	10	{dim=UC/dim,=UC/dim}
 11755	information_schema	10	{dim=UC/dim,=U/dim}
 </code></pre><center>
-
-
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/data_factory.jpg" data-fancybox="">
-  
-    <img class="fig-img" src="/img/old/data_factory.jpg" >
-  
-    </a>
-  
-  
-</div>
-
+<div class="figure fig50 dim-margin">
+  <a href="/img/old/data_factory.jpg">
+    <img class="fig-img" src="/img/old/data_factory.jpg" loading="lazy">
+  </a></div>
 </center>
 <p>So it&rsquo;s pretty easy here, actually, when you make the right connections:
 let&rsquo;s import a default
@@ -987,35 +526,10 @@ the right command, as given by
 <a href="http://www.postgresql.org/docs/current/interactive/app-pgdump.html">pg_dump</a>. By the way, did I mention about
 backups? and automated recovery tests?</p>
 <center>
-
-
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/relation-attributes.jpg" data-fancybox="">
-  
-    <img class="fig-img" src="/img/old/relation-attributes.jpg" >
-  
-    </a>
-  
-  
-</div>
-
+<div class="figure fig50 dim-margin">
+  <a href="/img/old/relation-attributes.jpg">
+    <img class="fig-img" src="/img/old/relation-attributes.jpg" loading="lazy">
+  </a></div>
 </center>
 <center>*We need the data attributes*</center>
 <p>In some cases though, we are missing the
@@ -1072,35 +586,10 @@ possible to actually rebuild the
 <em>cluster</em> into shape piecemeal and get the
 interesting data back.</p>
 <center>
-
-
- 
-  
-  
-  
-  
-    
-      
-    
-  
-    
-  
-    
-      
-    
-  
-
-<div class="figure fig50 dim-margin" >
-  
-    <a class="fancybox" href="/img/old/resilience_logo.jpg" data-fancybox="">
-  
-    <img class="fig-img" src="/img/old/resilience_logo.jpg" >
-  
-    </a>
-  
-  
-</div>
-
+<div class="figure fig50 dim-margin">
+  <a href="/img/old/resilience_logo.jpg">
+    <img class="fig-img" src="/img/old/resilience_logo.jpg" loading="lazy">
+  </a></div>
 </center>
 <p>I should mention, maybe, that with a proper
 <em>production setup</em> including a
@@ -1119,281 +608,43 @@ have been a solution: the removing of the files did happen without
 PostgreSQL involved, it didn&rsquo;t know that was happening and wouldn&rsquo;t have
 replicated that to the standby.</p>
 
-              
+  </div>
 
-
-            </div>
-          </div>
-          
-
-
-
-
-
-<div style="margin-top: 1em;">
- <script async src="//tinder.thrivecart.com/embed/v1/thrivecart.js"></script>
- <a data-thrivecart-account="theartofpostgresql" data-thrivecart-tpl="v2" data-thrivecart-product="18" class="thrivecart-button ">
-  <img src="https://spark.thrivecart.com/0x0/https%3A%2F%2Fthrivecart.s3.amazonaws.com%2Fuser_assets%2FNABJ5K7H%2Fproducts%2F18%2Ftaopg-cta-1661268188.jpg"
-       style="width:90%; height: auto; margin-left: 5%"/>
- </a>
+  
+    <div class="reading">
+<section class="subscribe">
+  <h2>SQL notes, now and then</h2>
+  <p>Occasional PostgreSQL technique posts and Lab walkthroughs. No noise, unsubscribe anytime.</p>
+  
+    
+    <form class="subscribe-fallback" action="#" method="post" target="_blank">
+      <input type="email" name="email_address" placeholder="you@example.com" aria-label="Email address" required>
+      <button type="submit">Subscribe</button>
+    </form>
+  
+</section>
 </div>
+  
+</article>
 
-          <div id="post-footer" class="post-footer main-content-wrap">
-            
-              
-                
-                
-                  <div class="post-footer-tags">
-                    <span class="text-color-light text-small"></span><br/>
-                    
-  <a class="tag tag--primary tag--small" href="/tags/postgresql/">PostgreSQL</a>
-
-  <a class="tag tag--primary tag--small" href="/tags/recovery/">Recovery</a>
-
-  <a class="tag tag--primary tag--small" href="/tags/backups/">Backups</a>
-
-                  </div>
-                
-              
-            
-            <div class="post-actions-wrap">
- <nav>
-    <ul class="post-actions post-action-nav">
-      
-        <li class="post-action">
-          
-            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2013/09/open-world-forum-2013/" data-tooltip="Open World Forum 2013">
-          
-            <i class="fa fa-angle-left"></i>
-            <span class="hide-xs hide-sm text-small icon-ml"></span>
-          </a>
-        </li>
-        <li class="post-action">
-          
-            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2013/09/using-trigrams-against-typos/" data-tooltip="Using trigrams against typos">
-          
-            <span class="hide-xs hide-sm text-small icon-mr"></span>
-            <i class="fa fa-angle-right"></i>
-          </a>
-        </li>
-      
-    </ul>
-  </nav>
-  <ul class="post-actions post-action-share">
-    
-      <li class="post-action hide-lg hide-md hide-sm">
-        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
-          <i class="fa fa-share-alt"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2013%2f09%2fpostgresql-data-recovery%2f">
-          <i class="fa fa-google-plus"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2013%2f09%2fpostgresql-data-recovery%2f">
-          <i class="fa fa-facebook-official"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=PostgreSQL%20data%20recovery with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2013%2f09%2fpostgresql-data-recovery%2f">
-          <i class="fa fa-twitter"></i>
-        </a>
-      </li>
-    
-    
-      <li class="post-action">
-        <a class="post-action-btn btn btn--default" href="#disqus_thread">
-          <i class="fa fa-comment-o"></i>
-        </a>
-      </li>
-    
-    <li class="post-action">
-      
-        <a class="post-action-btn btn btn--default" href="#">
-      
-        <i class="fa fa-list"></i>
-      </a>
-    </li>
-  </ul>
-</div>
-
-
-            
-              
-                <div id="disqus_thread">
-  <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-</div>
-
-              
-            
-          </div>
-        </article>
-        <footer id="footer" class="main-content-wrap">
-  <span class="copyrights">
-    &copy; 2022 Dimitri Fontaine. 
-  </span>
+  </main>
+  <footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-bio">
+        <div class="name">Dimitri Fontaine</div>
+        <p>PostgreSQL Major Contributor. I write about getting more out of SQL.</p>
+      </div>
+      <nav class="footer-links" aria-label="Social">
+        <a href="https://github.com/dimitri" rel="me"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>GitHub</a><a href="https://www.linkedin.com/in/dimitrifontaine/" rel="me"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6Z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>LinkedIn</a>
+      </nav>
+    </div>
+    <div class="footer-eco">
+      <a href="https://theartofpostgresql.com">The Art of PostgreSQL</a><a href="https://theartofpostgresql.com/course/">Course</a><a href="https://theartofpostgresql.com/workshop/">Workshop</a><a href="https://theartofpostgresql.com/lab/">The Lab</a><a href="https://oss.theartofpostgresql.com">OSS Maintenance</a>
+      <span>© 2026 Dimitri Fontaine</span>
+    </div>
+  </div>
 </footer>
 
-      </div>
-      <div id="bottom-bar" class="post-bottom-bar" data-behavior="5">
-        <div class="post-actions-wrap">
- <nav>
-    <ul class="post-actions post-action-nav">
-      
-        <li class="post-action">
-          
-            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2013/09/open-world-forum-2013/" data-tooltip="Open World Forum 2013">
-          
-            <i class="fa fa-angle-left"></i>
-            <span class="hide-xs hide-sm text-small icon-ml"></span>
-          </a>
-        </li>
-        <li class="post-action">
-          
-            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2013/09/using-trigrams-against-typos/" data-tooltip="Using trigrams against typos">
-          
-            <span class="hide-xs hide-sm text-small icon-mr"></span>
-            <i class="fa fa-angle-right"></i>
-          </a>
-        </li>
-      
-    </ul>
-  </nav>
-  <ul class="post-actions post-action-share">
-    
-      <li class="post-action hide-lg hide-md hide-sm">
-        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
-          <i class="fa fa-share-alt"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2013%2f09%2fpostgresql-data-recovery%2f">
-          <i class="fa fa-google-plus"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2013%2f09%2fpostgresql-data-recovery%2f">
-          <i class="fa fa-facebook-official"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=PostgreSQL%20data%20recovery with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2013%2f09%2fpostgresql-data-recovery%2f">
-          <i class="fa fa-twitter"></i>
-        </a>
-      </li>
-    
-    
-      <li class="post-action">
-        <a class="post-action-btn btn btn--default" href="#disqus_thread">
-          <i class="fa fa-comment-o"></i>
-        </a>
-      </li>
-    
-    <li class="post-action">
-      
-        <a class="post-action-btn btn btn--default" href="#">
-      
-        <i class="fa fa-list"></i>
-      </a>
-    </li>
-  </ul>
-</div>
-
-
-      </div>
-      <div id="share-options-bar" class="share-options-bar" data-behavior="5">
-  <ul class="share-options">
-    <li class="share-option">
-      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2013%2f09%2fpostgresql-data-recovery%2f">
-        <i class="fa fa-google-plus"></i><span></span>
-      </a>
-    </li>
-    <li class="share-option">
-      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2013%2f09%2fpostgresql-data-recovery%2f">
-        <i class="fa fa-facebook-official"></i><span></span>
-      </a>
-    </li>
-    <li class="share-option">
-      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=PostgreSQL%20data%20recovery with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2013%2f09%2fpostgresql-data-recovery%2f">
-        <i class="fa fa-twitter"></i><span></span>
-      </a>
-    </li>
-  </ul>
-</div>
-<div id="share-options-mask" class="share-options-mask"></div>
-
-    </div>
-    
-    <div id="about">
-  <div id="about-card">
-    <div id="about-btn-close">
-      <i class="fa fa-times"></i>
-    </div>
-    
-      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
-    
-    <h4 id="about-card-name">Dimitri Fontaine</h4>
-    
-      <div id="about-card-bio">PostgreSQL Major Contributor</div>
-    
-    
-      <div id="about-card-job">
-        <i class="fa fa-briefcase"></i>
-        <br/>
-        Open Source Software Engineer
-      </div>
-    
-    
-      <div id="about-card-location">
-        <i class="fa fa-map-marker-alt"></i>
-        <br/>
-        France
-      </div>
-    
-  </div>
-</div>
-
-    
-
-    
-  
-    
-      
-      <div id="cover" style="background-image:url('https://tapoueh.org/images/mayan-calendar.jpg');"></div>
-    
-  
-
-
-    
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.1.0/highlight.min.js" integrity="sha512-z+/WWfyD5tccCukM4VvONpEtLmbAm5LDu7eKiyMQJ9m7OfPEDL7gENyDRL3Yfe8XAuGsS2fS4xSMnl6d30kqGQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha512-uURl+ZXMBrF4AwGaWmEetzrd+J5/8NRkWAvJx5sbPSSuOb0bZLqf+tOzniObO00BjHa/dD7gub9oCGMLPQHtQA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
-
-<script src="https://tapoueh.org/js/script-yqzy9wdlzix4lbbwdnzvwx3egsne77earqmn73v9uno8aupuph8wfguccut.min.js"></script>
-
-
-
-<script>
-$(document).ready(function() {
-  hljs.configure({ classPrefix: '', useBR: false });
-  $('pre.code-highlight > code, pre > code').each(function(i, block) {
-    if (!$(this).hasClass('codeblock')) {
-      $(this).addClass('codeblock');
-    }
-    hljs.highlightBlock(block);
-  });
-});
-</script>
-
-
-
-
-    
-  </body>
+</body>
 </html>
-

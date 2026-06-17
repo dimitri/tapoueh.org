@@ -1,357 +1,76 @@
-
-
-  
-    
-  
-
-
-  
-
-
-
-
-  
-
-
-  
-
 <!DOCTYPE html>
 <html lang="en-us">
-  <head>
-    
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="generator" content="Hugo 0.101.0">
-    <meta name="theme" content="Tranquilpeak 0.3.1-BETA">
-    <title>PostgreSQL Data Types</title>
-    <meta name="author" content="Dimitri Fontaine">
-    <meta name="keywords" content="">
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PostgreSQL Data Types · Dimitri Fontaine</title>
 
-    <link rel="icon" href="/favicon.ico">
-    
+  
+  
+  <meta name="description" content="Today it&rsquo;s time to conclude our series of PostgreSQL Data Types articles with a recap. The series cover lots of core PostgreSQL data types and shows how …">
+  <link rel="canonical" href="http://localhost:1313/blog/2018/05/postgresql-data-types/">
 
-    
-    <meta name="description" content="Today it&rsquo;s time to conclude our series of PostgreSQL Data
-Types articles with a recap. The series cover lots of
-core PostgreSQL data types and shows how to benefit from the PostgreSQL
-concept of a data type: more than input validation, a PostgreSQL data type
-also implements expected behaviors and processing functions.
-This allows an application developer to rely on PostgreSQL for more complex
-queries, having the processing happen where the data is, for instance when
-implementing advanced JOIN operations, then retrieving only the data set
-that is interesting for the application.">
-    <meta property="og:description" content="Today it&rsquo;s time to conclude our series of PostgreSQL Data
-Types articles with a recap. The series cover lots of
-core PostgreSQL data types and shows how to benefit from the PostgreSQL
-concept of a data type: more than input validation, a PostgreSQL data type
-also implements expected behaviors and processing functions.
-This allows an application developer to rely on PostgreSQL for more complex
-queries, having the processing happen where the data is, for instance when
-implementing advanced JOIN operations, then retrieving only the data set
-that is interesting for the application.">
-    <meta property="og:type" content="blog">
-    <meta property="og:title" content="PostgreSQL Data Types">
-    <meta property="og:url" content="https://tapoueh.org/blog/2018/05/postgresql-data-types/">
-    <meta property="og:site_name" content="The Art of PostgreSQL">
-    <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="PostgreSQL Data Types">
-    <meta name="twitter:description" content="Today it&rsquo;s time to conclude our series of PostgreSQL Data
-Types articles with a recap. The series cover lots of
-core PostgreSQL data types and shows how to benefit from the PostgreSQL
-concept of a data type: more than input validation, a PostgreSQL data type
-also implements expected behaviors and processing functions.
-This allows an application developer to rely on PostgreSQL for more complex
-queries, having the processing happen where the data is, for instance when
-implementing advanced JOIN operations, then retrieving only the data set
-that is interesting for the application.">
-    
-      <meta name="twitter:creator" content="@tapoueh">
-    
-    
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,300;0,400;0,700;1,400&display=swap" rel="stylesheet">
 
-    
-    
+  
+  <link rel="stylesheet" href="/css/main.47d94e129c21f6f85c3b99aa6edc4fc75b72dd224364783be9d8b9d49b486ae3.css" integrity="sha256-R9lOEpwh9vhcO5mqbtxPx1ty3SJDZHg76di51JtIauM=">
+  
 
-    
-      <meta property="og:image" content="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=640">
-    
+  <link rel="alternate" type="application/rss+xml" title="Dimitri Fontaine" href="/index.xml">
+  <link rel="icon" href="/favicon.ico">
 
-    
-      <meta property="og:image" content="https://tapoueh.org/img/boolean-logo.png">
-    
-    
-      <meta property="og:image" content="https://tapoueh.org/img/rubix_cubes.jpg">
-    
-    
+  
+  <meta property="og:site_name" content="Dimitri Fontaine">
+  <meta property="og:title" content="PostgreSQL Data Types">
+  <meta property="og:description" content="Today it&rsquo;s time to conclude our series of PostgreSQL Data Types articles with a recap. The series cover lots of core PostgreSQL data types and shows how …">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="http://localhost:1313/blog/2018/05/postgresql-data-types/">
+  <meta name="twitter:card" content="summary">
+  
+</head>
 
-    
-
-    
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/jquery.fancybox.css" />
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.4/helpers/jquery.fancybox-thumbs.min.css" />
-    
-    
-    <link rel="stylesheet" href="/css/style-jsjn0006wyhpyzivf6yceb31gvpjatbcs3qzjvlumobfnugccvobqwxnnaj8.min.css" />
-    
-    
-      <link rel="stylesheet" href="https://tapoueh.org/css/dim.css">
-    
-      <link rel="stylesheet" href="https://tapoueh.org/css/nav.css">
-    
-
-    
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+  <div class="wrap">
+    <a class="wordmark" href="/">Dimitri Fontaine</a>
+    <nav class="site-nav" aria-label="Main navigation">
       
-<script type="application/javascript">
-var doNotTrack = false;
-if (!doNotTrack) {
-	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-	ga('create', 'UA-47059482-1', 'auto');
-	
-	ga('send', 'pageview');
-}
-</script>
-    
-    
-  </head>
-
-  <body>
-    <div id="blog">
-      <header id="header" data-behavior="5">
-  <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
-  <div class="navbar-collapse collapse header-title" id="navigation">
-    <ul class="nav navbar-nav navbar-right">
+        <a href="/"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>Writing</a>
       
-      <li class="dropdown">
-        
-        <a style="color: black;" href="/" alt="blog"><i class="sidebar-button-icon fa fa-lg fa-home"></i></a>
-        
-      </li>
+        <a href="/conf/"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></span>Talks</a>
       
-      <li class="dropdown">
-        
-        <a style="color: black;" href="/conf/" alt="talks"><i class="sidebar-button-icon fa fa-lg fa-microphone"></i></a>
-        
-      </li>
+        <a href="/categories/"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span>Topics</a>
       
-      <li class="dropdown">
-        
-        <a style="color: black;" href="https://twitter.com/tapoueh" alt="Twitter"><i class="sidebar-button-icon fa fa-lg fa-twitter"></i></a>
-        
-      </li>
+        <a href="/projects/"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span>Projects</a>
       
-      <li class="dropdown">
-        
-        <a style="color: black;" href="http://theartofpostgresql.com" alt="The Art Of PostgreSQL"><i class="sidebar-button-icon fa fa-lg fa-book"></i></a>
-        
-      </li>
+        <a href="/about/"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>About</a>
       
-    </ul>
+      
+      <a class="rss" href="/index.xml" title="RSS feed" aria-label="RSS feed"><span class="nav-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg></span></a>
+    </nav>
   </div>
-
-  
-    
-      <a class="header-right-icon "
-         href="https://theartofpostgresql.com/" target="_blank">
-    
-    
-      <i class="fa fa-lg fa-book"></i>
-    
-    
-    </a>
-  
 </header>
 
-      <nav id="sidebar" data-behavior="5">
-  <div class="sidebar-container">
+  <main id="main">
     
-      <div class="sidebar-profile">
-        <a href="/#about" aria-label="">
-          <img class="sidebar-profile-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
-        </a>
-        <h4 class="sidebar-profile-name">Dimitri Fontaine</h4>
-        
-          <h5 class="sidebar-profile-bio">PostgreSQL Major Contributor</h5>
-        
-      </div>
-    
-    <ul class="sidebar-buttons">
-      
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="/" title="Blog">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-pagelines"></i>
-      
-      <span class="sidebar-button-desc">Blog</span>
-    </a>
-  </li>
-
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="/about/" title="About">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-beer"></i>
-      
-      <span class="sidebar-button-desc">About</span>
-    </a>
-  </li>
-
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="/categories/yesql/" title="YeSQL">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-database"></i>
-      
-      <span class="sidebar-button-desc">YeSQL</span>
-    </a>
-  </li>
-
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="https://theartofpostgresql.com" target="_blank" rel="noopener" title="The Art of PostgreSQL">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-book"></i>
-      
-      <span class="sidebar-button-desc">The Art of PostgreSQL</span>
-    </a>
-  </li>
-
-
-    </ul>
-    <ul class="sidebar-buttons">
-      
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="https://github.com/dimitri" target="_blank" rel="noopener" title="GitHub">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-github"></i>
-      
-      <span class="sidebar-button-desc">GitHub</span>
-    </a>
-  </li>
-
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="https://twitter.com/tapoueh" target="_blank" rel="noopener" title="Twitter">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
-      
-      <span class="sidebar-button-desc">Twitter</span>
-    </a>
-  </li>
-
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="/categories" title="Categories">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
-      
-      <span class="sidebar-button-desc">Categories</span>
-    </a>
-  </li>
-
-
-    </ul>
-    <ul class="sidebar-buttons">
-      
-  <li class="sidebar-button">
-    
-      <a class="sidebar-button-link " href="/index.xml" title="RSS">
-    
-      <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
-      
-      <span class="sidebar-button-desc">RSS</span>
-    </a>
-  </li>
-
-
-    </ul>
-  </div>
-</nav>
-
-      
-  <div class="post-header-cover
-              text-left
-              post-header-cover--partial"
-       style="background-image:url('/img/rubix_cubes.jpg')"
-       data-behavior="5">
-    
-      <div class="post-header main-content-wrap text-left">
-  
-    <h1 class="post-title">
-      PostgreSQL Data Types
-    </h1>
-  
-  
-  <div class="postShorten-meta post-meta">
-    
-      <time itemprop="datePublished" datetime="2018-05-24T14:47:05&#43;02:00">
-        <span style="float: left; width: 35%">
-          <i class="fa fa-calendar"></i> 
-  
-  
-  
-  
-    Thursday 24  2018
-  
-
-        </span>
-      </time>
-    
-    <span style="float: right; width: 65%">
-      <i class="fa fa-clock-o"></i> 10 mins read
-      
-    </span>
-    <span style="float: left; width: 35%">
-      <i class="fa fa-bookmark"></i> 
-  
-  
-    <span></span>
-    
-      <a class="category-link" href="/categories/postgresql">PostgreSQL</a>, 
-    
-      <a class="category-link" href="/categories/yesql">YeSQL</a>
-    
-  
-
-    </span>
-    <div>
-      <p>
-        
-        
-        
-        
-        
-        
-        <a href="/tags/data-types/">
-          <i class="fa fa-tag"></i> Data Types
-        </a>
-        
-        
-      </p>
-    </div>
-  </div>
-
-
+<article class="wrap">
+  <header class="article-header reading">
+    <div class="eyebrow">PostgreSQL · YeSQL</div>
+    <h1>PostgreSQL Data Types</h1>
+    <div class="post-meta">
+  <time datetime="2018-05-24">May 24, 2018</time>
+  <span class="dot">·</span><span>10 min read</span>
+  <span class="dot">·</span><span class="tags"><a class="tag" href="/tags/postgresql/">#PostgreSQL</a><a class="tag" href="/tags/yesql/">#YeSQL</a><a class="tag" href="/tags/data-types/">#Data Types</a></span>
 </div>
+
+  </header>
+
+  <div class="prose reading">
     
-  </div>
-
-
-      <div id="main" data-behavior="5"
-        class="hasCover
-               hasCoverMetaIn
-               ">
-        <article class="post" itemscope itemType="http://schema.org/BlogPosting">
-          
-          
-          <div class="post-content markdown" itemprop="articleBody">
-            <div class="main-content-wrap">
-              <p>Today it&rsquo;s time to conclude our series of <a href="/tags/data-types/">PostgreSQL Data
+    <p>Today it&rsquo;s time to conclude our series of <a href="/tags/data-types/">PostgreSQL Data
 Types</a> articles with a recap. The series cover lots of
 core PostgreSQL data types and shows how to benefit from the PostgreSQL
 concept of a data type: more than input validation, a PostgreSQL data type
@@ -360,317 +79,23 @@ also implements expected behaviors and processing functions.</p>
 queries, having the processing happen where the data is, for instance when
 implementing advanced JOIN operations, then retrieving only the data set
 that is interesting for the application.</p>
- 
-
-
-
-
-<div class="table-of-contents toc bd-callout">
-    
-    <h4 class="text-muted">Table of Contents</h4>
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2018/05/postgresql-data-types/#boolean">
-                    Boolean
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2018/05/postgresql-data-types/#text-encoding">
-                    Text Encoding
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2018/05/postgresql-data-types/#text-processing">
-                    Text Processing
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2018/05/postgresql-data-types/#date-and-time-processing">
-                    Date and Time Processing
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2018/05/postgresql-data-types/#network-addresses">
-                    Network Addresses
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2018/05/postgresql-data-types/#ranges">
-                    Ranges
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2018/05/postgresql-data-types/#arrays">
-                    Arrays
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2018/05/postgresql-data-types/#xml">
-                    XML
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2018/05/postgresql-data-types/#json">
-                    JSON
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2018/05/postgresql-data-types/#enum">
-                    ENUM
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2018/05/postgresql-data-types/#geometry-and-points">
-                    Geometry and Points
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2018/05/postgresql-data-types/#object-relational-database-management-system">
-                    Object-Relational Database Management System
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-        
-        
-            
-                
-                
-                
-                    <ul class="toc-h1">
-                
-                
-                
-                
-                <li>
-                  <a href="/blog/2018/05/postgresql-data-types/#conclusion">
-                    Conclusion
-                  </a>
-                </li>
-                
-                
-                    </ul>
-                
-            
-        
-    
-</div>
-
-
+<div class="toc"><div class="toc-title">Contents</div><nav id="TableOfContents">
+  <ul>
+    <li><a href="#boolean">Boolean</a></li>
+    <li><a href="#text-encoding">Text Encoding</a></li>
+    <li><a href="#text-processing">Text Processing</a></li>
+    <li><a href="#date-and-time-processing">Date and Time Processing</a></li>
+    <li><a href="#network-addresses">Network Addresses</a></li>
+    <li><a href="#ranges">Ranges</a></li>
+    <li><a href="#arrays">Arrays</a></li>
+    <li><a href="#xml">XML</a></li>
+    <li><a href="#json">JSON</a></li>
+    <li><a href="#enum">ENUM</a></li>
+    <li><a href="#geometry-and-points">Geometry and Points</a></li>
+    <li><a href="#object-relational-database-management-system">Object-Relational Database Management System</a></li>
+    <li><a href="#conclusion">Conclusion</a></li>
+  </ul>
+</nav></div>
 <h2 id="boolean">Boolean</h2>
 <figure style="float: right; clear: left; display: block; width: 140px; height: 140px; margin-bottom: 2em;">
     <a href="/blog/2018/04/postgresql-data-types-an-intro/">
@@ -682,16 +107,16 @@ intro</a> we learnt how
 PostgreSQL deals with booleans, including an example use of the <code>bool_and()</code>
 aggregate.</p>
 <p>The following query can be used to display a boolean Truth Table:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">select</span><span style="color:#bbb"> </span>a::<span style="color:#0aa">text</span>,<span style="color:#bbb"> </span>b::<span style="color:#0aa">text</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>(a=b)::<span style="color:#0aa">text</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;a=b&#34;</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>format(<span style="color:#a50">&#39;%s = %s&#39;</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span>coalesce(a::<span style="color:#0aa">text</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;null&#39;</span>),<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span>coalesce(b::<span style="color:#0aa">text</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;null&#39;</span>))<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>op,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>format(<span style="color:#a50">&#39;is %s&#39;</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span>coalesce((a=b)::<span style="color:#0aa">text</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;null&#39;</span>))<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">result</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>(<span style="color:#00a">values</span>(<span style="color:#00a">true</span>),<span style="color:#bbb"> </span>(<span style="color:#00a">false</span>),<span style="color:#bbb"> </span>(<span style="color:#00a">null</span>))<span style="color:#bbb"> </span>v1(a)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">cross</span><span style="color:#bbb"> </span><span style="color:#00a">join</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>(<span style="color:#00a">values</span>(<span style="color:#00a">true</span>),<span style="color:#bbb"> </span>(<span style="color:#00a">false</span>),<span style="color:#bbb"> </span>(<span style="color:#00a">null</span>))<span style="color:#bbb"> </span>v2(b);<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">select</span><span class="w"> </span><span class="n">a</span><span class="p">::</span><span class="nb">text</span><span class="p">,</span><span class="w"> </span><span class="n">b</span><span class="p">::</span><span class="nb">text</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="p">(</span><span class="n">a</span><span class="o">=</span><span class="n">b</span><span class="p">)::</span><span class="nb">text</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="s2">&#34;a=b&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;%s = %s&#39;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">              </span><span class="n">coalesce</span><span class="p">(</span><span class="n">a</span><span class="p">::</span><span class="nb">text</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;null&#39;</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">              </span><span class="n">coalesce</span><span class="p">(</span><span class="n">b</span><span class="p">::</span><span class="nb">text</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;null&#39;</span><span class="p">))</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">op</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;is %s&#39;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">              </span><span class="n">coalesce</span><span class="p">((</span><span class="n">a</span><span class="o">=</span><span class="n">b</span><span class="p">)::</span><span class="nb">text</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;null&#39;</span><span class="p">))</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="k">result</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="p">(</span><span class="k">values</span><span class="p">(</span><span class="k">true</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="k">false</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="k">null</span><span class="p">))</span><span class="w"> </span><span class="n">v1</span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">cross</span><span class="w"> </span><span class="k">join</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="p">(</span><span class="k">values</span><span class="p">(</span><span class="k">true</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="k">false</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="k">null</span><span class="p">))</span><span class="w"> </span><span class="n">v2</span><span class="p">(</span><span class="n">b</span><span class="p">);</span><span class="w">
 </span></span></span></code></pre></div><p>And we get the following result:</p>
 <pre tabindex="0"><code class="language-psql" data-lang="psql">   a   │   b   │  a=b  │      op       │  result  
 ═══════╪═══════╪═══════╪═══════════════╪══════════
@@ -741,20 +166,20 @@ then also <em>regular expression</em> functions, including the very powerful
 <p>In this article we saw how to normalize some content thanks to those text
 processing functions, as in the following query where we want to have the
 categories in their own separate columns, say <em>category</em> and <em>subcategory</em>:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">with</span><span style="color:#bbb"> </span>categories(id,<span style="color:#bbb"> </span>categories)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>id,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span>regexp_split_to_array(<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>regexp_split_to_table(themes,<span style="color:#bbb"> </span><span style="color:#a50">&#39;,&#39;</span>),<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#a50">&#39; &gt; &#39;</span>)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>categories<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>opendata.archives_planete<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>id,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>categories[<span style="color:#099">1</span>]<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>category,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>categories[<span style="color:#099">2</span>]<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>subcategory<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>categories<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>id<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;IF39599&#39;</span>;<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">with</span><span class="w"> </span><span class="n">categories</span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">categories</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="n">regexp_split_to_array</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="n">regexp_split_to_table</span><span class="p">(</span><span class="n">themes</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;,&#39;</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="s1">&#39; &gt; &#39;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="k">as</span><span class="w"> </span><span class="n">categories</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">     </span><span class="k">from</span><span class="w"> </span><span class="n">opendata</span><span class="p">.</span><span class="n">archives_planete</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">categories</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">category</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">categories</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">subcategory</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="k">from</span><span class="w"> </span><span class="n">categories</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;IF39599&#39;</span><span class="p">;</span><span class="w">
 </span></span></span></code></pre></div><p>And now we make sense of the open data:</p>
 <pre tabindex="0"><code class="language-psql" data-lang="psql">   id    │         category          │       subcategory        
 ═════════╪═══════════════════════════╪══════════════════════════
@@ -777,15 +202,15 @@ apply to your <em>timestamp with time zone values</em>.</p>
 beginning of the PostgreSQL project, in order to guess if contributors are
 working on the project on the job only, or mostly during their free time
 (weekend).</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span><span style="color:#00a">extract</span>(isodow<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>ats)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>dow,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span>to_char(ats,<span style="color:#bbb"> </span><span style="color:#a50">&#39;Day&#39;</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">day</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>commits,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span>round(<span style="color:#099">100</span>.<span style="color:#099">0</span>*<span style="color:#00a">count</span>(*)/<span style="color:#00a">sum</span>(<span style="color:#00a">count</span>(*))<span style="color:#bbb"> </span>over(),<span style="color:#bbb"> </span><span style="color:#099">2</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>pct,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span>repeat(<span style="color:#a50">&#39;■&#39;</span>,<span style="color:#bbb"> </span>(<span style="color:#099">100</span>*<span style="color:#00a">count</span>(*)/<span style="color:#00a">sum</span>(<span style="color:#00a">count</span>(*))<span style="color:#bbb"> </span>over())::<span style="color:#0aa">int</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>hist<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>commitlog<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>project<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;postgres&#39;</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>dow,<span style="color:#bbb"> </span><span style="color:#00a">day</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>dow;<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="w">  </span><span class="k">select</span><span class="w"> </span><span class="k">extract</span><span class="p">(</span><span class="n">isodow</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">ats</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">dow</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="n">to_char</span><span class="p">(</span><span class="n">ats</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Day&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="k">day</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">commits</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="n">round</span><span class="p">(</span><span class="mi">100</span><span class="p">.</span><span class="mi">0</span><span class="o">*</span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="o">/</span><span class="k">sum</span><span class="p">(</span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">))</span><span class="w"> </span><span class="n">over</span><span class="p">(),</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">pct</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="n">repeat</span><span class="p">(</span><span class="s1">&#39;■&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="mi">100</span><span class="o">*</span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="o">/</span><span class="k">sum</span><span class="p">(</span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">))</span><span class="w"> </span><span class="n">over</span><span class="p">())::</span><span class="nb">int</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">hist</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">from</span><span class="w"> </span><span class="n">commitlog</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="k">where</span><span class="w"> </span><span class="n">project</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;postgres&#39;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">group</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">dow</span><span class="p">,</span><span class="w"> </span><span class="k">day</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">dow</span><span class="p">;</span><span class="w">
 </span></span></span></code></pre></div><p>The query results show that our PostgreSQL committers tend to work whenever
 they feel like it, but less so on the weekend. The project&rsquo;s lucky enough to
 have a solid team of committers being paid to work on PostgreSQL:</p>
@@ -810,13 +235,13 @@ Addresses</a> we had a
 look at PostgreSQL support for both <em>cidr</em>, <em>inet</em>, and <em>macaddr</em> data types.</p>
 <p>Equipped with this <em>set_masklen()</em> function, we could easily analyze our
 access logs using arbitrary CIDR network definitions.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>set_masklen(ip::cidr,<span style="color:#bbb"> </span><span style="color:#099">24</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>network,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>requests,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span>array_length(array_agg(<span style="color:#00a">distinct</span><span style="color:#bbb"> </span>ip),<span style="color:#bbb"> </span><span style="color:#099">1</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>ipcount<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>access_log<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>network<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">having</span><span style="color:#bbb"> </span>array_length(array_agg(<span style="color:#00a">distinct</span><span style="color:#bbb"> </span>ip),<span style="color:#bbb"> </span><span style="color:#099">1</span>)<span style="color:#bbb"> </span>&gt;<span style="color:#bbb"> </span><span style="color:#099">1</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>requests<span style="color:#bbb"> </span><span style="color:#00a">desc</span>,<span style="color:#bbb"> </span>ipcount<span style="color:#bbb"> </span><span style="color:#00a">desc</span>;<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="w">  </span><span class="k">select</span><span class="w"> </span><span class="n">set_masklen</span><span class="p">(</span><span class="n">ip</span><span class="p">::</span><span class="n">cidr</span><span class="p">,</span><span class="w"> </span><span class="mi">24</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">network</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">requests</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="n">array_length</span><span class="p">(</span><span class="n">array_agg</span><span class="p">(</span><span class="k">distinct</span><span class="w"> </span><span class="n">ip</span><span class="p">),</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">ipcount</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">from</span><span class="w"> </span><span class="n">access_log</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">group</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">network</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">having</span><span class="w"> </span><span class="n">array_length</span><span class="p">(</span><span class="n">array_agg</span><span class="p">(</span><span class="k">distinct</span><span class="w"> </span><span class="n">ip</span><span class="p">),</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">1</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">requests</span><span class="w"> </span><span class="k">desc</span><span class="p">,</span><span class="w"> </span><span class="n">ipcount</span><span class="w"> </span><span class="k">desc</span><span class="p">;</span><span class="w">
 </span></span></span></code></pre></div><p>And we got the following result:</p>
 <pre tabindex="0"><code class="language-psql" data-lang="psql">     network      │ requests │ ipcount 
 ══════════════════╪══════════╪═════════
@@ -848,10 +273,10 @@ bound of the range as a single value. This allows PostgreSQL to implement a
 concurrent safe check against overlapping ranges.</p>
 <p>Then having a data set with the exclusion constraint, we could find the
 valid rate for a specific time with the following query:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">select</span><span style="color:#bbb"> </span>rate<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>rates<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>currency<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#a50">&#39;Euro&#39;</span><span style="color:#bbb"> 
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">and</span><span style="color:#bbb"> </span>validity<span style="color:#bbb"> </span>@&gt;<span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;2017-05-18&#39;</span>;<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">select</span><span class="w"> </span><span class="n">rate</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">rates</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">currency</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Euro&#39;</span><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="k">and</span><span class="w"> </span><span class="n">validity</span><span class="w"> </span><span class="o">@&gt;</span><span class="w"> </span><span class="nb">date</span><span class="w"> </span><span class="s1">&#39;2017-05-18&#39;</span><span class="p">;</span><span class="w">
 </span></span></span></code></pre></div><p>The operator <em>@&gt;</em> reads <em>contains</em>, and PostgreSQL uses the exclusion
 constraint&rsquo;s index to solve that query efficiently:</p>
 <pre tabindex="0"><code class="language-psql" data-lang="psql">   rate   
@@ -872,11 +297,11 @@ if you might at times search for elements in the array. Heavier processing
 is going to be more complex than a lookup table.</p>
 <p>In this article we added hashtags arrays to tweets, allowing us to then
 discover popular tags easily with the following query:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>tag,<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>hashtag,<span style="color:#bbb"> </span><span style="color:#00a">unnest</span>(hashtags)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>t(tag)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>tag<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span><span style="color:#00a">count</span><span style="color:#bbb"> </span><span style="color:#00a">desc</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span><span style="color:#00a">limit</span><span style="color:#bbb"> </span><span style="color:#099">10</span>;<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="w">  </span><span class="k">select</span><span class="w"> </span><span class="n">tag</span><span class="p">,</span><span class="w"> </span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">from</span><span class="w"> </span><span class="n">hashtag</span><span class="p">,</span><span class="w"> </span><span class="k">unnest</span><span class="p">(</span><span class="n">hashtags</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">t</span><span class="p">(</span><span class="n">tag</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">group</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">tag</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="k">count</span><span class="w"> </span><span class="k">desc</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="k">limit</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span><span class="w">
 </span></span></span></code></pre></div><p>We got the following result of popular hashtags in our extract of 200,000
 tweets that we used:</p>
 <pre tabindex="0"><code class="language-psql" data-lang="psql">     tag      │ count 
@@ -901,24 +326,24 @@ tweets that we used:</p>
 <p>In <a href="/blog/2018/04/postgresql-data-types-xml/">PostgreSQL Data Types: XML</a> we
 introduced the SQL standard type XML, and also the PL/XSTL processing
 facility for it.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">create</span><span style="color:#bbb"> </span>extension<span style="color:#bbb"> </span>plxslt;<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">CREATE</span><span style="color:#bbb"> </span><span style="color:#00a">OR</span><span style="color:#bbb"> </span><span style="color:#00a">REPLACE</span><span style="color:#bbb"> </span><span style="color:#00a">FUNCTION</span><span style="color:#bbb"> </span>striptags(xml)<span style="color:#bbb"> </span><span style="color:#00a">RETURNS</span><span style="color:#bbb"> </span><span style="color:#0aa">text</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">	</span><span style="color:#00a">LANGUAGE</span><span style="color:#bbb"> </span>xslt<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">AS</span><span style="color:#bbb"> </span><span style="color:#f00;background-color:#faa">$$</span>&lt;?xml<span style="color:#bbb"> </span><span style="color:#00a">version</span>=<span style="color:#a50">&#34;1.0&#34;</span>?&gt;<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>&lt;xsl:stylesheet<span style="color:#bbb"> </span><span style="color:#00a">version</span>=<span style="color:#a50">&#34;1.0&#34;</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span>xmlns:xsl=<span style="color:#a50">&#34;http://www.w3.org/1999/XSL/Transform&#34;</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span>xmlns=<span style="color:#a50">&#34;http://www.w3.org/1999/xhtml&#34;</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>&gt;<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>&lt;xsl:<span style="color:#00a">output</span><span style="color:#bbb"> </span><span style="color:#00a">method</span>=<span style="color:#a50">&#34;text&#34;</span><span style="color:#bbb"> </span>omit-xml-declaration=<span style="color:#a50">&#34;yes&#34;</span>/&gt;<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>&lt;xsl:<span style="color:#00a">template</span><span style="color:#bbb"> </span><span style="color:#00a">match</span>=<span style="color:#a50">&#34;/&#34;</span>&gt;<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span>&lt;xsl:apply-templates/&gt;<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>&lt;/xsl:<span style="color:#00a">template</span>&gt;<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span>&lt;/xsl:stylesheet&gt;<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#f00;background-color:#faa">$$</span>;<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="n">plxslt</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">CREATE</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="k">REPLACE</span><span class="w"> </span><span class="k">FUNCTION</span><span class="w"> </span><span class="n">striptags</span><span class="p">(</span><span class="n">xml</span><span class="p">)</span><span class="w"> </span><span class="k">RETURNS</span><span class="w"> </span><span class="nb">text</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">	</span><span class="k">LANGUAGE</span><span class="w"> </span><span class="n">xslt</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">AS</span><span class="w"> </span><span class="err">$$</span><span class="o">&lt;?</span><span class="n">xml</span><span class="w"> </span><span class="k">version</span><span class="o">=</span><span class="s2">&#34;1.0&#34;</span><span class="o">?&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="o">&lt;</span><span class="n">xsl</span><span class="p">:</span><span class="n">stylesheet</span><span class="w"> </span><span class="k">version</span><span class="o">=</span><span class="s2">&#34;1.0&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">xmlns</span><span class="p">:</span><span class="n">xsl</span><span class="o">=</span><span class="s2">&#34;http://www.w3.org/1999/XSL/Transform&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">xmlns</span><span class="o">=</span><span class="s2">&#34;http://www.w3.org/1999/xhtml&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="o">&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">&lt;</span><span class="n">xsl</span><span class="p">:</span><span class="k">output</span><span class="w"> </span><span class="k">method</span><span class="o">=</span><span class="s2">&#34;text&#34;</span><span class="w"> </span><span class="n">omit</span><span class="o">-</span><span class="n">xml</span><span class="o">-</span><span class="n">declaration</span><span class="o">=</span><span class="s2">&#34;yes&#34;</span><span class="o">/&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">&lt;</span><span class="n">xsl</span><span class="p">:</span><span class="k">template</span><span class="w"> </span><span class="k">match</span><span class="o">=</span><span class="s2">&#34;/&#34;</span><span class="o">&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="o">&lt;</span><span class="n">xsl</span><span class="p">:</span><span class="n">apply</span><span class="o">-</span><span class="n">templates</span><span class="o">/&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">&lt;/</span><span class="n">xsl</span><span class="p">:</span><span class="k">template</span><span class="o">&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="o">&lt;/</span><span class="n">xsl</span><span class="p">:</span><span class="n">stylesheet</span><span class="o">&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="err">$$</span><span class="p">;</span><span class="w">
 </span></span></span></code></pre></div><h2 id="json">JSON</h2>
 <figure style="float: right; clear: left; display: block; width: 140px; height: 140px; margin-bottom: 2em;">
     <a href="/blog/2018/04/postgresql-data-types-json/">
@@ -929,7 +354,7 @@ facility for it.</p>
 we had a look at the built-in support for JSON and its great range of
 processing functions and operators, and complete indexing support.</p>
 <p>We introduced JSON specific queries for PostgreSQL, such as the following:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">select</span><span style="color:#bbb"> </span>*<span style="color:#bbb"> </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>js<span style="color:#bbb"> </span><span style="color:#00a">where</span><span style="color:#bbb"> </span>extra<span style="color:#bbb"> </span>@&gt;<span style="color:#bbb"> </span><span style="color:#a50">&#39;[2,4]&#39;</span>;<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">js</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">extra</span><span class="w"> </span><span class="o">@&gt;</span><span class="w"> </span><span class="s1">&#39;[2,4]&#39;</span><span class="p">;</span><span class="w">
 </span></span></span></code></pre></div><p>In our test case, that found a single row:</p>
 <pre tabindex="0"><code class="language-psql" data-lang="psql"> id │    extra     
 ════╪══════════════
@@ -957,29 +382,29 @@ easier to support migrations from MySQL. Proper relational design would use
 a reference table and a foreign key instead.</p>
 <p>This article also showed how to do a reference table lookup at INSERT INTO
 time, with a SELECT and that implements a JOIN for us:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>color(id<span style="color:#bbb"> </span><span style="color:#0aa">serial</span><span style="color:#bbb"> </span><span style="color:#00a">primary</span><span style="color:#bbb"> </span><span style="color:#00a">key</span>,<span style="color:#bbb"> </span>name<span style="color:#bbb"> </span><span style="color:#0aa">text</span>);<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">create</span><span style="color:#bbb"> </span><span style="color:#00a">table</span><span style="color:#bbb"> </span>cars<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>brand<span style="color:#bbb">   </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>model<span style="color:#bbb">   </span><span style="color:#0aa">text</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">   </span>color<span style="color:#bbb">   </span><span style="color:#0aa">integer</span><span style="color:#bbb"> </span><span style="color:#00a">references</span><span style="color:#bbb"> </span>color(id)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"> </span>);<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>color(name)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">values</span><span style="color:#bbb"> </span>(<span style="color:#a50">&#39;blue&#39;</span>),<span style="color:#bbb"> </span>(<span style="color:#a50">&#39;red&#39;</span>),<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>(<span style="color:#a50">&#39;gray&#39;</span>),<span style="color:#bbb"> </span>(<span style="color:#a50">&#39;black&#39;</span>);<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">insert</span><span style="color:#bbb"> </span><span style="color:#00a">into</span><span style="color:#bbb"> </span>cars(brand,<span style="color:#bbb"> </span>model,<span style="color:#bbb"> </span>color)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">     </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>brand,<span style="color:#bbb"> </span>model,<span style="color:#bbb"> </span>color.id<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>(<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#00a">values</span>(<span style="color:#a50">&#39;ferari&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;testarosa&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;red&#39;</span>),<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                  </span>(<span style="color:#a50">&#39;aston martin&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;db2&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;blue&#39;</span>),<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                  </span>(<span style="color:#a50">&#39;bentley&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;mulsanne&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;gray&#39;</span>),<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                  </span>(<span style="color:#a50">&#39;ford&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;T&#39;</span>,<span style="color:#bbb"> </span><span style="color:#a50">&#39;black&#39;</span>)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">           </span>)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">             </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#00a">data</span>(brand,<span style="color:#bbb"> </span>model,<span style="color:#bbb"> </span>color)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">           </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>color<span style="color:#bbb"> </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>color.name<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span><span style="color:#00a">data</span>.color;<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">create</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">color</span><span class="p">(</span><span class="n">id</span><span class="w"> </span><span class="nb">serial</span><span class="w"> </span><span class="k">primary</span><span class="w"> </span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">create</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cars</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">brand</span><span class="w">   </span><span class="nb">text</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">model</span><span class="w">   </span><span class="nb">text</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">   </span><span class="n">color</span><span class="w">   </span><span class="nb">integer</span><span class="w"> </span><span class="k">references</span><span class="w"> </span><span class="n">color</span><span class="p">(</span><span class="n">id</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">color</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">     </span><span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;blue&#39;</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;red&#39;</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="p">(</span><span class="s1">&#39;gray&#39;</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;black&#39;</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">cars</span><span class="p">(</span><span class="n">brand</span><span class="p">,</span><span class="w"> </span><span class="n">model</span><span class="p">,</span><span class="w"> </span><span class="n">color</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">     </span><span class="k">select</span><span class="w"> </span><span class="n">brand</span><span class="p">,</span><span class="w"> </span><span class="n">model</span><span class="p">,</span><span class="w"> </span><span class="n">color</span><span class="p">.</span><span class="n">id</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="k">from</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">values</span><span class="p">(</span><span class="s1">&#39;ferari&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;testarosa&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;red&#39;</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                  </span><span class="p">(</span><span class="s1">&#39;aston martin&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;db2&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;blue&#39;</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                  </span><span class="p">(</span><span class="s1">&#39;bentley&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;mulsanne&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;gray&#39;</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                  </span><span class="p">(</span><span class="s1">&#39;ford&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;T&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;black&#39;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">           </span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">             </span><span class="k">as</span><span class="w"> </span><span class="k">data</span><span class="p">(</span><span class="n">brand</span><span class="p">,</span><span class="w"> </span><span class="n">model</span><span class="p">,</span><span class="w"> </span><span class="n">color</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">           </span><span class="k">join</span><span class="w"> </span><span class="n">color</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">color</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">data</span><span class="p">.</span><span class="n">color</span><span class="p">;</span><span class="w">
 </span></span></span></code></pre></div><h2 id="geometry-and-points">Geometry and Points</h2>
 <figure style="float: right; clear: left; display: block; width: 140px; height: 140px; margin-bottom: 2em;">
     <a href="/blog/2018/04/postgresql-data-types-point/">
@@ -993,15 +418,15 @@ the normalization good practice and those other PostgreSQL data types we’ve
 been learning about in the previous articles of this series.</p>
 <p>Once the data set is fully normalized, we can do some reports query to
 understand how it&rsquo;s distributed:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">select</span><span style="color:#bbb"> </span>continent.name,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">count</span>(*),<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span>round(<span style="color:#099">100</span>.<span style="color:#099">0</span><span style="color:#bbb"> </span>*<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>/<span style="color:#bbb"> </span><span style="color:#00a">sum</span>(<span style="color:#00a">count</span>(*))<span style="color:#bbb"> </span>over(),<span style="color:#bbb"> </span><span style="color:#099">2</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>pct,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span>repeat(<span style="color:#a50">&#39;■&#39;</span>,<span style="color:#bbb"> </span>(<span style="color:#099">100</span><span style="color:#bbb"> </span>*<span style="color:#bbb"> </span><span style="color:#00a">count</span>(*)<span style="color:#bbb"> </span>/<span style="color:#bbb"> </span><span style="color:#00a">sum</span>(<span style="color:#00a">count</span>(*))<span style="color:#bbb"> </span>over())::<span style="color:#0aa">int</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>hist<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>geoname.geoname<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>geoname.country<span style="color:#bbb"> </span><span style="color:#00a">using</span>(isocode)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">         </span><span style="color:#00a">join</span><span style="color:#bbb"> </span>geoname.continent<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">           </span><span style="color:#00a">on</span><span style="color:#bbb"> </span>continent.code<span style="color:#bbb"> </span>=<span style="color:#bbb"> </span>country.continent<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#00a">group</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>continent.name<span style="color:#bbb"> </span><span style="color:#00a">order</span><span style="color:#bbb"> </span><span style="color:#00a">by</span><span style="color:#bbb"> </span>continent.name;<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="w">  </span><span class="k">select</span><span class="w"> </span><span class="n">continent</span><span class="p">.</span><span class="n">name</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="n">round</span><span class="p">(</span><span class="mi">100</span><span class="p">.</span><span class="mi">0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="k">sum</span><span class="p">(</span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">))</span><span class="w"> </span><span class="n">over</span><span class="p">(),</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">pct</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="n">repeat</span><span class="p">(</span><span class="s1">&#39;■&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="k">sum</span><span class="p">(</span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">))</span><span class="w"> </span><span class="n">over</span><span class="p">())::</span><span class="nb">int</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">hist</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">from</span><span class="w"> </span><span class="n">geoname</span><span class="p">.</span><span class="n">geoname</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="k">join</span><span class="w"> </span><span class="n">geoname</span><span class="p">.</span><span class="n">country</span><span class="w"> </span><span class="k">using</span><span class="p">(</span><span class="n">isocode</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="k">join</span><span class="w"> </span><span class="n">geoname</span><span class="p">.</span><span class="n">continent</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">           </span><span class="k">on</span><span class="w"> </span><span class="n">continent</span><span class="p">.</span><span class="n">code</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">country</span><span class="p">.</span><span class="n">continent</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">group</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">continent</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">continent</span><span class="p">.</span><span class="n">name</span><span class="p">;</span><span class="w">
 </span></span></span></code></pre></div><p>We can see that the <em>GeoNames</em> data is highly skewed towards Asia, North
 America, and then Europe. Of course, the Antartica data is not very dense.</p>
 <pre tabindex="0"><code class="language-psql" data-lang="psql">     name      │  count  │  pct  │               hist                
@@ -1025,14 +450,14 @@ implementing advanced behavior tailored to the data type.</p>
 add the same number of days depending on if your <em>anchor</em> date is in
 February or August, and PostgreSQL knows that! It also knows how to count
 with IP addresses, and more:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#00a">select</span><span style="color:#bbb"> </span>x,<span style="color:#bbb"> 
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#099">1</span><span style="color:#bbb"> </span>+<span style="color:#bbb"> </span>x<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;1+&#34;</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#a50">&#39;127.0.2.252&#39;</span>::inet<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span>x<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;ip address&#34;</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span>set_masklen((<span style="color:#a50">&#39;127.0.2.252&#39;</span>::inet<span style="color:#bbb"> </span>+<span style="color:#bbb"> </span>x)::cidr,<span style="color:#bbb"> </span><span style="color:#099">28</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;CIDR/28&#34;</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;2016-02-26&#39;</span><span style="color:#bbb"> </span>+<span style="color:#bbb"> </span>x<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>,<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">       </span><span style="color:#00a">cast</span>(date_trunc(<span style="color:#a50">&#39;month&#39;</span>,<span style="color:#bbb"> </span><span style="color:#0aa">date</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;2016-02-26&#39;</span><span style="color:#bbb"> </span>+x)<span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span>+<span style="color:#bbb"> </span><span style="color:#0aa">interval</span><span style="color:#bbb"> </span><span style="color:#a50">&#39;1 month - 1 day&#39;</span><span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#0aa">date</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span><span style="color:#a50">&#34;last day&#34;</span><span style="color:#bbb">
-</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#00a">from</span><span style="color:#bbb"> </span>generate_series(<span style="color:#099">0</span>,<span style="color:#bbb"> </span><span style="color:#099">6</span>)<span style="color:#bbb"> </span><span style="color:#00a">as</span><span style="color:#bbb"> </span>t(x);<span style="color:#bbb">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">select</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="mi">1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="s2">&#34;1+&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="s1">&#39;127.0.2.252&#39;</span><span class="p">::</span><span class="n">inet</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="s2">&#34;ip address&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="n">set_masklen</span><span class="p">((</span><span class="s1">&#39;127.0.2.252&#39;</span><span class="p">::</span><span class="n">inet</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">x</span><span class="p">)::</span><span class="n">cidr</span><span class="p">,</span><span class="w"> </span><span class="mi">28</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="s2">&#34;CIDR/28&#34;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="nb">date</span><span class="w"> </span><span class="s1">&#39;2016-02-26&#39;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nb">date</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">cast</span><span class="p">(</span><span class="n">date_trunc</span><span class="p">(</span><span class="s1">&#39;month&#39;</span><span class="p">,</span><span class="w"> </span><span class="nb">date</span><span class="w"> </span><span class="s1">&#39;2016-02-26&#39;</span><span class="w"> </span><span class="o">+</span><span class="n">x</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="o">+</span><span class="w"> </span><span class="nb">interval</span><span class="w"> </span><span class="s1">&#39;1 month - 1 day&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nb">date</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="s2">&#34;last day&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">generate_series</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">t</span><span class="p">(</span><span class="n">x</span><span class="p">);</span><span class="w">
 </span></span></span></code></pre></div><p>We can see that PostgreSQL <code>+</code> operator depend on the data types it&rsquo;s being
 used with:</p>
 <pre tabindex="0"><code> x │ 1+ │ ip address  │    CIDR/28     │    date    │  last day  
@@ -1059,281 +484,43 @@ PostgreSQL</a>, which teaches SQL to developers
 so that they may replace thousands of lines of code with very simple
 queries. The book has a full chapter about data types in PostgreSQL, check
 it out!</p>
-              
+  </div>
 
-
-            </div>
-          </div>
-          
-
-
-
-
-
-<div style="margin-top: 1em;">
- <script async src="//tinder.thrivecart.com/embed/v1/thrivecart.js"></script>
- <a data-thrivecart-account="theartofpostgresql" data-thrivecart-tpl="v2" data-thrivecart-product="18" class="thrivecart-button ">
-  <img src="https://spark.thrivecart.com/0x0/https%3A%2F%2Fthrivecart.s3.amazonaws.com%2Fuser_assets%2FNABJ5K7H%2Fproducts%2F18%2Ftaopg-cta-1661268188.jpg"
-       style="width:90%; height: auto; margin-left: 5%"/>
- </a>
+  
+    <div class="reading">
+<section class="subscribe">
+  <h2>SQL notes, now and then</h2>
+  <p>Occasional PostgreSQL technique posts and Lab walkthroughs. No noise, unsubscribe anytime.</p>
+  
+    
+    <form class="subscribe-fallback" action="#" method="post" target="_blank">
+      <input type="email" name="email_address" placeholder="you@example.com" aria-label="Email address" required>
+      <button type="submit">Subscribe</button>
+    </form>
+  
+</section>
 </div>
+  
+</article>
 
-          <div id="post-footer" class="post-footer main-content-wrap">
-            
-              
-                
-                
-                  <div class="post-footer-tags">
-                    <span class="text-color-light text-small"></span><br/>
-                    
-  <a class="tag tag--primary tag--small" href="/tags/postgresql/">PostgreSQL</a>
-
-  <a class="tag tag--primary tag--small" href="/tags/yesql/">YeSQL</a>
-
-  <a class="tag tag--primary tag--small" href="/tags/data-types/">Data Types</a>
-
-                  </div>
-                
-              
-            
-            <div class="post-actions-wrap">
- <nav>
-    <ul class="post-actions post-action-nav">
-      
-        <li class="post-action">
-          
-            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/06/postgresql-concurrency-data-modification-language/" data-tooltip="PostgreSQL Concurrency: Data Modification Language">
-          
-            <i class="fa fa-angle-left"></i>
-            <span class="hide-xs hide-sm text-small icon-ml"></span>
-          </a>
-        </li>
-        <li class="post-action">
-          
-            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/05/postgresql-data-types-point/" data-tooltip="PostgreSQL Data Types: Point">
-          
-            <span class="hide-xs hide-sm text-small icon-mr"></span>
-            <i class="fa fa-angle-right"></i>
-          </a>
-        </li>
-      
-    </ul>
-  </nav>
-  <ul class="post-actions post-action-share">
-    
-      <li class="post-action hide-lg hide-md hide-sm">
-        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
-          <i class="fa fa-share-alt"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f05%2fpostgresql-data-types%2f">
-          <i class="fa fa-google-plus"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f05%2fpostgresql-data-types%2f">
-          <i class="fa fa-facebook-official"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=PostgreSQL%20Data%20Types with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f05%2fpostgresql-data-types%2f">
-          <i class="fa fa-twitter"></i>
-        </a>
-      </li>
-    
-    
-      <li class="post-action">
-        <a class="post-action-btn btn btn--default" href="#disqus_thread">
-          <i class="fa fa-comment-o"></i>
-        </a>
-      </li>
-    
-    <li class="post-action">
-      
-        <a class="post-action-btn btn btn--default" href="#table-of-contents">
-      
-        <i class="fa fa-list"></i>
-      </a>
-    </li>
-  </ul>
-</div>
-
-
-            
-              
-                <div id="disqus_thread">
-  <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-</div>
-
-              
-            
-          </div>
-        </article>
-        <footer id="footer" class="main-content-wrap">
-  <span class="copyrights">
-    &copy; 2022 Dimitri Fontaine. 
-  </span>
+  </main>
+  <footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-bio">
+        <div class="name">Dimitri Fontaine</div>
+        <p>PostgreSQL Major Contributor. I write about getting more out of SQL.</p>
+      </div>
+      <nav class="footer-links" aria-label="Social">
+        <a href="https://github.com/dimitri" rel="me"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>GitHub</a><a href="https://www.linkedin.com/in/dimitrifontaine/" rel="me"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6Z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>LinkedIn</a>
+      </nav>
+    </div>
+    <div class="footer-eco">
+      <a href="https://theartofpostgresql.com">The Art of PostgreSQL</a><a href="https://theartofpostgresql.com/course/">Course</a><a href="https://theartofpostgresql.com/workshop/">Workshop</a><a href="https://theartofpostgresql.com/lab/">The Lab</a><a href="https://oss.theartofpostgresql.com">OSS Maintenance</a>
+      <span>© 2026 Dimitri Fontaine</span>
+    </div>
+  </div>
 </footer>
 
-      </div>
-      <div id="bottom-bar" class="post-bottom-bar" data-behavior="5">
-        <div class="post-actions-wrap">
- <nav>
-    <ul class="post-actions post-action-nav">
-      
-        <li class="post-action">
-          
-            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/06/postgresql-concurrency-data-modification-language/" data-tooltip="PostgreSQL Concurrency: Data Modification Language">
-          
-            <i class="fa fa-angle-left"></i>
-            <span class="hide-xs hide-sm text-small icon-ml"></span>
-          </a>
-        </li>
-        <li class="post-action">
-          
-            <a class="post-action-btn btn btn--default tooltip--top" href="/blog/2018/05/postgresql-data-types-point/" data-tooltip="PostgreSQL Data Types: Point">
-          
-            <span class="hide-xs hide-sm text-small icon-mr"></span>
-            <i class="fa fa-angle-right"></i>
-          </a>
-        </li>
-      
-    </ul>
-  </nav>
-  <ul class="post-actions post-action-share">
-    
-      <li class="post-action hide-lg hide-md hide-sm">
-        <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions">
-          <i class="fa fa-share-alt"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f05%2fpostgresql-data-types%2f">
-          <i class="fa fa-google-plus"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f05%2fpostgresql-data-types%2f">
-          <i class="fa fa-facebook-official"></i>
-        </a>
-      </li>
-      <li class="post-action hide-xs">
-        <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=PostgreSQL%20Data%20Types with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f05%2fpostgresql-data-types%2f">
-          <i class="fa fa-twitter"></i>
-        </a>
-      </li>
-    
-    
-      <li class="post-action">
-        <a class="post-action-btn btn btn--default" href="#disqus_thread">
-          <i class="fa fa-comment-o"></i>
-        </a>
-      </li>
-    
-    <li class="post-action">
-      
-        <a class="post-action-btn btn btn--default" href="#table-of-contents">
-      
-        <i class="fa fa-list"></i>
-      </a>
-    </li>
-  </ul>
-</div>
-
-
-      </div>
-      <div id="share-options-bar" class="share-options-bar" data-behavior="5">
-  <ul class="share-options">
-    <li class="share-option">
-      <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f05%2fpostgresql-data-types%2f">
-        <i class="fa fa-google-plus"></i><span></span>
-      </a>
-    </li>
-    <li class="share-option">
-      <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f05%2fpostgresql-data-types%2f">
-        <i class="fa fa-facebook-official"></i><span></span>
-      </a>
-    </li>
-    <li class="share-option">
-      <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=PostgreSQL%20Data%20Types with @tapoueh: https%3a%2f%2ftapoueh.org%2fblog%2f2018%2f05%2fpostgresql-data-types%2f">
-        <i class="fa fa-twitter"></i><span></span>
-      </a>
-    </li>
-  </ul>
-</div>
-<div id="share-options-mask" class="share-options-mask"></div>
-
-    </div>
-    
-    <div id="about">
-  <div id="about-card">
-    <div id="about-btn-close">
-      <i class="fa fa-times"></i>
-    </div>
-    
-      <img id="about-card-picture" src="//www.gravatar.com/avatar/7b615d104c506aa0a49e17151fa94d9f?s=110" alt="" />
-    
-    <h4 id="about-card-name">Dimitri Fontaine</h4>
-    
-      <div id="about-card-bio">PostgreSQL Major Contributor</div>
-    
-    
-      <div id="about-card-job">
-        <i class="fa fa-briefcase"></i>
-        <br/>
-        Open Source Software Engineer
-      </div>
-    
-    
-      <div id="about-card-location">
-        <i class="fa fa-map-marker-alt"></i>
-        <br/>
-        France
-      </div>
-    
-  </div>
-</div>
-
-    
-
-    
-  
-    
-      
-      <div id="cover" style="background-image:url('https://tapoueh.org/images/mayan-calendar.jpg');"></div>
-    
-  
-
-
-    
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.1.0/highlight.min.js" integrity="sha512-z+/WWfyD5tccCukM4VvONpEtLmbAm5LDu7eKiyMQJ9m7OfPEDL7gENyDRL3Yfe8XAuGsS2fS4xSMnl6d30kqGQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha512-uURl+ZXMBrF4AwGaWmEetzrd+J5/8NRkWAvJx5sbPSSuOb0bZLqf+tOzniObO00BjHa/dD7gub9oCGMLPQHtQA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
-
-<script src="https://tapoueh.org/js/script-yqzy9wdlzix4lbbwdnzvwx3egsne77earqmn73v9uno8aupuph8wfguccut.min.js"></script>
-
-
-
-<script>
-$(document).ready(function() {
-  hljs.configure({ classPrefix: '', useBR: false });
-  $('pre.code-highlight > code, pre > code').each(function(i, block) {
-    if (!$(this).hasClass('codeblock')) {
-      $(this).addClass('codeblock');
-    }
-    hljs.highlightBlock(block);
-  });
-});
-</script>
-
-
-
-
-    
-  </body>
+</body>
 </html>
-
