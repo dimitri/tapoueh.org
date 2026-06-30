@@ -197,8 +197,3 @@ at all times, and EXCLUDE USING is an extension of the unicity constraint:
 it benefits from this capacity and guarantee your data set even when dealing
 with concurrency updates to it!
 
-This article is an extract from my book [The Art of
-PostgreSQL](https://theartofpostgresql.com), which teaches SQL to developers
-so that they may replace thousands of lines of code with very simple
-queries. The book has a full chapter about data types in PostgreSQL, check
-it out!

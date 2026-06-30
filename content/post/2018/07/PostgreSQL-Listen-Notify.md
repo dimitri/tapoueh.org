@@ -207,21 +207,6 @@ Asynchronous notification "tweet.activity" with payload        ⏎
 server process with PID 73216.
 ~~~
 
-<hr />
-
-{{< figure class="right"
-             src="/img/TAOP_Book_Cover_200x260.png"
-            link="https://theartofpostgresql.com" >}}
-            
-This article is extracted from my book [The Art of
-PostgreSQL](https://theartofpostgresql.com), which teaches SQL to developers
-so that they may replace thousands of lines of code with very simple
-queries. The book has a full chapter about *Data Manipulation and
-Concurrency Control* in PostgreSQL, including caching with materialized
-views, check it out!
-
-<hr />
-
 ## Notifications and Cache Maintenance
 
 Now that we have the basic server-side infrastructure in place, where

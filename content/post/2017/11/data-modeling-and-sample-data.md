@@ -22,14 +22,6 @@ feedback, and we can also have that with modeling too.
 
 <!--more-->
 
-{{< figure class="right"
-           src="/img/TAOP_Book_Cover_200x260.png"
-          link="https://theartofpostgresql.com" >}}
-
-This article is extracted from my book [The Art of
-PostgreSQL](https://theartofpostgresql.com). If you like what you read here,
-you might enjoy a full book of SQL learning material!
-
 <!--toc-->
 
 ## How to Write a Database Model

@@ -535,9 +535,4 @@ Use PostgreSQL data types and rely on their advanced processing functions
 and operators to distribute computations near to the data when it makes
 sense for you!
 
-This articles in this series are an extract from my book [The Art of
-PostgreSQL](https://theartofpostgresql.com), which teaches SQL to developers
-so that they may replace thousands of lines of code with very simple
-queries. The book has a full chapter about data types in PostgreSQL, check
-it out!
 

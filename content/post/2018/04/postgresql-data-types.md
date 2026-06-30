@@ -271,10 +271,3 @@ For more about this topic, you can read [What is the deal with
 NULLs?](http://thoughts.davisjeff.com/2009/08/02/what-is-the-deal-with-nulls/)
 from PostgreSQL Contributor [Jeff Davis](http://thoughts.davisjeff.com/).
 
-## Conclusion
-
-This article is an extract from my book [The Art of
-PostgreSQL](https://theartofpostgresql.com), which teaches SQL to developers
-so that they may replace thousands of lines of code with very simple
-queries. The book has a full chapter about data types in PostgreSQL, check
-it out!

@@ -291,12 +291,3 @@ searches of documents that you manage in PostgreSQL please read the
 documentation about it. There are also many online resources on the topic
 too.
 
-{{< figure class="right"
-             src="/img/TAOP_Book_Cover_200x260.png"
-            link="https://theartofpostgresql.com" >}}
-
-This article is an extract from my book [The Art of
-PostgresQL](https://theartofpostgresql.com), which teaches SQL to developers
-so that they may replace thousands of lines of code with very simple
-queries. The book has a full chapter about data types in PostgreSQL, check
-it out!

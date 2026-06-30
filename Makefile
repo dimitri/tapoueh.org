@@ -1,8 +1,15 @@
 .PHONY: serve build check new
 
-## serve: live dev server at http://localhost:1313 (drafts + future posts visible)
+PORT ?= 1313
+
+## serve: live dev server at http://localhost:$(PORT) (drafts + future posts visible)
+##        override port: make serve PORT=1314
 serve:
-	hugo server --buildDrafts --buildFuture --disableFastRender
+	hugo server --buildDrafts --buildFuture --disableFastRender --port $(PORT)
+
+## serve-pub: dev server as production renders it (no drafts, no future posts)
+serve-pub:
+	hugo server --disableFastRender --port $(PORT)
 
 ## build: production build into ./docs (no drafts, no future-dated posts)
 build:

@@ -99,9 +99,4 @@ The XML support in PostgreSQL might be handy in cases. It's mainly been
 added for standard compliance, though, and is not found a lot in the field.
 XML processing function and XML indexing is pretty limited in PostgreSQL.
 
-This article is an extract from my book [The Art of
-PostgresQL](https://theartofpostgresql.com), which teaches SQL to developers
-so that they may replace thousands of lines of code with very simple
-queries. The book has a full chapter about data types in PostgreSQL, check
-it out!
 

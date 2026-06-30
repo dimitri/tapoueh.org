@@ -336,8 +336,3 @@ instead, and filter elements with a *where* clause. If you see yourself
 doing that a lot, it might be a good sign that you really needed a lookup
 table!
             
-This article is an extract from my book [The Art of
-PostgresQL](https://theartofpostgresql.com), which teaches SQL to developers
-so that they may replace thousands of lines of code with very simple
-queries. The book has a full chapter about data types in PostgreSQL, check
-it out!

@@ -1,18 +1,34 @@
 {{ define "main" }}
+{{ if eq .Type "post" }}
+<div class="article-grid">
+  <article>
+    <header class="article-header">
+      {{ with .Params.categories }}<div class="eyebrow">{{ delimit . " · " }}</div>{{ end }}
+      <h1>{{ .Title }}</h1>
+      {{ if and (not .Date.IsZero) (ne .Params.showDate false) }}{{ partial "post-meta.html" . }}{{ end }}
+    </header>
+    <div class="prose">
+      {{ $toc := printf "<div class=\"toc\"><div class=\"toc-title\">Contents</div>%s</div>" .TableOfContents }}
+      {{ (replaceRE "<!--\\s*[tT][oO][cC]\\s*-->" $toc .Content) | safeHTML }}
+    </div>
+    {{ partial "author-card.html" . }}
+    {{ partial "subscribe.html" . }}
+  </article>
+  <aside class="article-sidebar">
+    {{ partial "book-sidebar.html" . }}
+  </aside>
+</div>
+{{ else }}
 <article class="wrap">
   <header class="article-header reading">
     {{ with .Params.categories }}<div class="eyebrow">{{ delimit . " · " }}</div>{{ end }}
     <h1>{{ .Title }}</h1>
-    {{ if not .Date.IsZero }}{{ partial "post-meta.html" . }}{{ end }}
+    {{ if and (not .Date.IsZero) (ne .Params.showDate false) }}{{ partial "post-meta.html" . }}{{ end }}
   </header>
-
   <div class="prose reading">
     {{ $toc := printf "<div class=\"toc\"><div class=\"toc-title\">Contents</div>%s</div>" .TableOfContents }}
     {{ (replaceRE "<!--\\s*[tT][oO][cC]\\s*-->" $toc .Content) | safeHTML }}
   </div>
-
-  {{ if eq .Type "post" }}
-    <div class="reading">{{ partial "subscribe.html" . }}</div>
-  {{ end }}
 </article>
+{{ end }}
 {{ end }}

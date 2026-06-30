@@ -253,21 +253,6 @@ Starting benchmark for inserts
 Inserting took 3.739505 seconds, did 5000 rts
 ~~~
 
-<hr />
-
-{{< figure class="right"
-             src="/img/TAOP_Book_Cover_200x260.png"
-            link="https://theartofpostgresql.com" >}}
-
-This article is extracted from my book [The Art of
-PostgreSQL](https://theartofpostgresql.com), which teaches SQL to developers
-so that they may replace thousands of lines of code with very simple
-queries. The book has a full chapter about *Data Manipulation and
-Concurrency Control* in PostgreSQL, including caching with materialized
-views, check it out!
-
-<hr />
-
 ## Conclusion
 
 If you know that your application has to scale, think about how to avoid
