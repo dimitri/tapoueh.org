@@ -1,6 +1,6 @@
 +++
 title = "pgcopydb v0.18"
-date = "2026-06-30T15:00:00+02:00"
+date = "2026-06-30T19:51:38+0200"
 tags = ["PostgreSQL", "pgcopydb", "Migration", "CDC", "Logical Replication"]
 categories = ["Projects", "pgcopydb"]
 icon = "🗞️"
