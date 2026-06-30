@@ -53,21 +53,6 @@ detail, including concurrency behavior.
 PostgreSQL implementation of the concurrency behavior is dependable and
 allows some user control in terms of locking aspects of your queries.
 
-<hr />
-
-{{< figure class="right"
-             src="/img/TAOP_Book_Cover_200x260.png"
-            link="https://theartofpostgresql.com" >}}
-            
-This article is extracted from my book [The Art of
-PostgreSQL](https://theartofpostgresql.com), which teaches SQL to developers
-so that they may replace thousands of lines of code with very simple
-queries. The book has a full chapter about *Data Manipulation and
-Concurrency Control* in PostgreSQL, including caching with materialized
-views, check it out!
-
-<hr />
-
 ## Transactions and Isolation
 
 Given the *ACID* properties, a transaction must be *Isolated* from other

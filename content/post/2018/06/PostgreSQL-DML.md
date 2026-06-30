@@ -127,21 +127,6 @@ instead of doing a series of *inserts*. If for some reason you can't use
 *copy*, for performance reasons, consider using a single transaction doing
 several *insert* statements each with many *values*.
 
-<hr />
-
-{{< figure class="right"
-             src="/img/TAOP_Book_Cover_200x260.png"
-            link="https://theartofpostgresql.com" >}}
-            
-This article is extracted from my book [The Art of
-PostgreSQL](https://theartofpostgresql.com), which teaches SQL to developers
-so that they may replace thousands of lines of code with very simple
-queries. The book has a full chapter about *Data Manipulation and
-Concurrency Control* in PostgreSQL, including caching with materialized
-views, check it out!
-
-<hr />
-
 ## Insert Into ... Select
 
 The *insert* statement can also use a query as a data source. We could, for

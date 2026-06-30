@@ -252,20 +252,3 @@ them a *primary key*. So we both have a *surrogate* key that's easy to
 reference from other tables in our model, and also a strong *1NF* guarantee
 about our data set.
 
-## Conclusion
-
-{{< figure class="right"
-             src="/img/TAOP_Book_Cover_200x260.png"
-            link="https://theartofpostgresql.com" >}}
-            
-This article is an extract from my book [The Art of
-PostgresQL](https://theartofpostgresql.com) where we dive into more details
-and examples around database modeling in Chapter 6. Before that you can read
-whole chapters about how to be proficient at advanced SQL so that it's
-easier to make the right choices when designing a database model. After all,
-an important trade-off in the database design is that we're able to write
-the queries we need to implement and support users workflows.
-
-After that, Chapter 7 is titled “Data Manipulation and Concurrency Control”
-and deals with concurrent accesses to your data, which is the most important
-aspect of a relational database management system!

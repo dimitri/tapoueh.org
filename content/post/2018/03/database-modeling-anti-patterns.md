@@ -22,19 +22,12 @@ schedule and a strong focus on the needs of application developers!
 
 <!--more-->
 
-{{< figure class="right"
-             src="/img/TAOP_Book_Cover_200x260.png"
-            link="https://theartofpostgresql.com" >}}
-
 So in today's article I wanted to share some of the bits I'm going to talk
 about next week at the Nordic pgDay conference: database modeling. To get
 your interest into database normalization, we see what could happen when you
 neglect to normalize properly, with a selection of three classic
 anti-patterns: the infamous EAV, using multiple values in a single column,
 and how using UUIDs might be an anti-pattern too.
-
-The content of this article is extracted from my book [The Art of
-PostgresQL](https://theartofpostgresql.com), check it out!
 
 <!--toc-->
 

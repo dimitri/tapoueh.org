@@ -142,21 +142,6 @@ numbers, a shared *truth*.
 The view embeds the computation details, and still it computes the result
 each time it's referenced in a query.
 
-<hr />
-
-{{< figure class="right"
-             src="/img/TAOP_Book_Cover_200x260.png"
-            link="https://theartofpostgresql.com" >}}
-            
-This article is extracted from my book [The Art of
-PostgreSQL](https://theartofpostgresql.com), which teaches SQL to developers
-so that they may replace thousands of lines of code with very simple
-queries. The book has a full chapter about *Data Manipulation and
-Concurrency Control* in PostgreSQL, including caching with materialized
-views, check it out!
-
-<hr />
-
 ## Materialized Views
 
 It is easy enough to cache a snapshot of the database into a permanent

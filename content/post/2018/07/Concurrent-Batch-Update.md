@@ -206,21 +206,6 @@ it considers the *constituentid* from MoMA to be a reliable primary key for
 our data set. This assumption should, of course, be checked before deploying
 such an update script to production.
 
-<hr />
-
-{{< figure class="right"
-             src="/img/TAOP_Book_Cover_200x260.png"
-            link="https://theartofpostgresql.com" >}}
-
-This article is extracted from my book [The Art of
-PostgreSQL](https://theartofpostgresql.com), which teaches SQL to developers
-so that they may replace thousands of lines of code with very simple
-queries. The book has a full chapter about *Data Manipulation and
-Concurrency Control* in PostgreSQL, including caching with materialized
-views, check it out!
-
-<hr />
-
 ## Concurrency Patterns
 
 While in this solution the update or insert happens in a single query, which

@@ -185,9 +185,4 @@ in every situation because some important data is found only there. At this
 point, it's worth promoting parts of the *extra* field content into proper
 PostgreSQL attributes in your relational schema.
 
-This article is an extract from my book [The Art of
-PostgresQL](https://theartofpostgresql.com), which teaches SQL to developers
-so that they may replace thousands of lines of code with very simple
-queries. The book has a full chapter about data types in PostgreSQL, check
-it out!
 
