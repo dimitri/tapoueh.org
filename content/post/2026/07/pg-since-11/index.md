@@ -77,7 +77,7 @@ Change counts are approximate (±15%) and cover user-visible items in each versi
 ---
 
 What follows is my personal selection of SQL-level improvements from those
-seven releases — features I consider key to writing efficient PostgreSQL, grouped
+seven releases — features I consider key to writing efficient PostgreSQL queries, grouped
 by theme.  Knowing what PostgreSQL can do also matters more than ever in the AI
 era: you cannot ask an AI to write a window function or a range query — or reach
 for a multi-range datatype in your schema — if you do not know those tools
@@ -96,40 +96,61 @@ unit for ranked or tied data.
 
 PostgreSQL 14 added the `EXCLUDE` sub-clause, which removes specific rows
 from the frame — `EXCLUDE CURRENT ROW`, `EXCLUDE TIES`, or `EXCLUDE GROUP`.
-`EXCLUDE TIES` computes a sum-of-others aggregate without a self-join:
-
-For the 2007 Australian Grand Prix:
+`EXCLUDE TIES` keeps the current row in the frame but removes other rows that
+share the same ORDER BY value.  A single race is a bad showcase — every
+scoring position has a unique points value, so no ties ever appear.  The 2007
+season standings are the right dataset: Hamilton and Alonso both ended on 109
+points in the closest championship in F1 history.
 
 ```sql
-select drivers.surname,
-       results.points,
-       sum(results.points) over (
-           order by results.points desc
+select surname,
+       sum(results.points) as season_pts,
+       sum(sum(results.points)) over (
+           order by sum(results.points) desc
+           rows between unbounded preceding and current row
+       ) as running,
+       sum(sum(results.points)) over (
+           order by sum(results.points) desc
            rows between unbounded preceding and current row
            exclude ties
-       )                                                    as running_excl_ties
+       ) as running_excl_ties
 from results
 join drivers using(driverid)
 join races   using(raceid)
-where raceid = (select raceid from races
-                where name = 'Australian Grand Prix'
-                  and year = 2007)
-order by results.points desc;
+where extract(year from races.date) = 2007
+group by driverid, drivers.surname
+order by season_pts desc;
 ```
 
 ```results
-  surname   | points | running_excl_ties 
-------------+--------+-------------------
- Räikkönen  |     10 |                10
- Alonso     |      8 |                18
- Hamilton   |      6 |                24
- Heidfeld   |      5 |                29
- Fisichella |      4 |                33
- Massa      |      3 |                36
- Rosberg    |      2 |                38
- Schumacher |      1 |                39
-(8 rows)
+   surname    | season_pts | running | running_excl_ties
+--------------+------------+---------+------------------
+ Räikkönen    |        110 |     110 |               110
+ Hamilton     |        109 |     219 |               219
+ Alonso       |        109 |     328 |               219
+ Massa        |         94 |     422 |               422
+ Heidfeld     |         61 |     483 |               483
+ Kubica       |         39 |     522 |               522
+ Kovalainen   |         30 |     552 |               552
+ Fisichella   |         21 |     573 |               573
+ Rosberg      |         20 |     593 |               593
+ Coulthard    |         14 |     607 |               607
+ Wurz         |         13 |     620 |               620
+ Webber       |         10 |     630 |               630
+ Trulli       |          8 |     638 |               638
+ Button       |          6 |     644 |               644
+ Vettel       |          6 |     650 |               644
+ R Schumacher |          5 |     655 |               649
+ Sato         |          4 |     659 |               653
+ Liuzzi       |          3 |     662 |               656
+ Davidson     |          2 |     664 |               658
+ Sutil        |          1 |     665 |               659
+(20 rows)
 ```
+
+Hamilton and Alonso both show 219 in `running_excl_ties` — Räikkönen's 110
+plus their own 109, with the peer's 109 excluded from the frame.  Button and
+Vettel, tied at 6, both show 644 for the same reason.
 
 Both `GROUPS` and `EXCLUDE` are standard SQL, now available in PostgreSQL.
 
