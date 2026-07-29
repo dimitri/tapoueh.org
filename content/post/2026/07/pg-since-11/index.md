@@ -528,28 +528,84 @@ PostgreSQL 17 ships a built-in `C.UTF-8` collation (also accessible as
 - **Immutable** — the sort order is part of the PostgreSQL release; it never changes on an OS upgrade.
 - **Fast** — it avoids locale-aware comparison functions and is roughly as fast as the classic `C` locale.
 
+The built-in locale is named `C.UTF-8` in `BUILTIN_LOCALE`, but the
+corresponding SQL collation is `pg_c_utf8`.  Creating a database with it
+requires `TEMPLATE template0` when the cluster default is `libc` (which it
+is unless you changed it at `initdb` time):
+
 ```sql
--- Create a database with the portable built-in collation
-create database myapp
-    encoding      'UTF8'
-    locale_provider builtin
-    builtin_locale 'C.UTF-8';
-
--- Or apply it per-column on an existing table
-alter table articles
-    alter column title type text collate "C.UTF-8";
-
--- Or per-expression in a query
-select title from articles order by title collate "C.UTF-8";
+-- cluster default is libc:
+select datname, datlocprovider, datlocale
+  from pg_database
+ where datname = 'template1';
 ```
 
-Use `C.UTF-8` whenever you need reproducible `ORDER BY` across environments:
-multi-region deployments, CI pipelines that compare sort order against a
-fixture, or logical replicas on different OS versions.  Its code-point sort
-order is less human-friendly than a language-aware ICU collation (accented
-characters sort after all ASCII letters), so prefer a named ICU collation for
-end-user-facing sorted lists and save `C.UTF-8` for internal keys and system
-tables where stability matters more than linguistic naturalness.
+```results
+  datname  | datlocprovider | datlocale
+-----------+----------------+-----------
+ template1 | c              |
+```
+
+```sql
+-- create a database with the portable built-in collation
+-- template0 is required when switching locale provider
+create database myapp
+    encoding        'UTF8'
+    locale_provider builtin
+    builtin_locale  'C.UTF-8'
+    template        template0;
+```
+
+```results
+CREATE DATABASE
+```
+
+```sql
+-- reconnect and confirm
+select datname, datlocprovider, datlocale
+  from pg_database
+ where datname = 'myapp';
+```
+
+```results
+ datname | datlocprovider | datlocale
+---------+----------------+-----------
+ myapp   | b              | C.UTF-8
+```
+
+```sql
+-- default ORDER BY now uses pg_c_utf8: code-point order
+-- (uppercase before lowercase; ASCII before extended Unicode)
+select word from words order by word;
+```
+
+```results
+   word
+----------
+ Azure
+ azure
+ banana
+ Ångström
+ ångström
+```
+
+```sql
+-- apply per-column on an existing database
+alter table articles
+    alter column title type text collate pg_c_utf8;
+
+-- or per-expression in a query
+select title from articles order by title collate pg_c_utf8;
+```
+
+Use `pg_c_utf8` whenever you need reproducible `ORDER BY` across
+environments: multi-region deployments, CI pipelines that compare sort order
+against a fixture, or logical replicas on different OS versions.  Its
+code-point sort order is less human-friendly than a language-aware ICU
+collation (accented characters sort after all ASCII letters), so prefer a
+named ICU collation for end-user-facing sorted lists and save `pg_c_utf8` for
+internal keys and system tables where stability matters more than linguistic
+naturalness.
 
 ### Incremental Sort (PG 13)
 
