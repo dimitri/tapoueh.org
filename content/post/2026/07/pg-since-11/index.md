@@ -66,7 +66,7 @@ user-visible changes from the official release notes.
 | PG 11 | Oct 2018 | 180 | Stored procedures (`CREATE PROCEDURE` / `CALL`), JIT compilation, covering indexes (`INCLUDE`) |
 | PG 12 | Oct 2019 | 200 | Generated columns, JSON path language (`@?` / `@@`), CTE inlining, `REINDEX CONCURRENTLY` |
 | PG 13 | Sep 2020 | 150 | Incremental sort, B-tree deduplication, `gen_random_uuid()` built-in |
-| PG 14 | Sep 2021 | 200 | Multirange types, JSONB subscript syntax (`doc['key']`), `FETCH … WITH TIES`, SEARCH/CYCLE |
+| PG 14 | Sep 2021 | 200 | Multirange types, JSONB subscript syntax (`doc['key']`), SEARCH/CYCLE in CTEs |
 | PG 15 | Oct 2022 | 180 | SQL `MERGE`, `NULLS NOT DISTINCT`, row/column filters in logical replication |
 | PG 16 | Sep 2023 | 150 | Logical replication on standbys, `pg_stat_io`, `ANY_VALUE()`, `IS JSON` predicate |
 | PG 17 | Sep 2024 | 180 | `JSON_TABLE()`, incremental backups, `COPY ON_ERROR IGNORE`, built-in `C.UTF-8` collation |
@@ -85,7 +85,7 @@ exist.  [There is a longer write-up on SQL and AI here](https://theartofpostgres
 
 ## Query execution
 
-### Window frame GROUPS mode and EXCLUDE (PG 11 / PG 14)
+### Window frame GROUPS mode and EXCLUDE (PG 11)
 
 The `ROWS` frame mode counts physical rows; `RANGE` counts by value distance.
 PostgreSQL 11 added a third mode, `GROUPS`, which counts *peer groups* —
@@ -94,8 +94,9 @@ unit for ranked or tied data.
 
 {{< image src="fig-window-frame-spec.svg" title="Three window frame specifications shown on a 7-row result set: UNBOUNDED PRECEDING to CURRENT ROW (running total), 1 PRECEDING to 1 FOLLOWING (sliding window), and CURRENT ROW to UNBOUNDED FOLLOWING (remaining total)." >}}
 
-PostgreSQL 14 added the `EXCLUDE` sub-clause, which removes specific rows
-from the frame — `EXCLUDE CURRENT ROW`, `EXCLUDE TIES`, or `EXCLUDE GROUP`.
+PostgreSQL 11 also added the `EXCLUDE` sub-clause as part of the same
+SQL:2011 compliance push — `EXCLUDE CURRENT ROW`, `EXCLUDE TIES`, or
+`EXCLUDE GROUP` — which removes specific rows from the frame.
 `EXCLUDE TIES` keeps the current row in the frame but removes other rows that
 share the same ORDER BY value.  A single race is a bad showcase — every
 scoring position has a unique points value, so no ties ever appear.  The 2007
@@ -741,20 +742,6 @@ PG 11.  The highlights, in version order:
   constraint already exists, eliminating the full-table scan.
 - **PG 15** — `MERGE` statement support on partitioned tables; foreign key
   references *from* a partitioned table.
-- **PG 17** — `SPLIT PARTITION` and `MERGE PARTITIONS` for online
-  restructuring without recreating the table.
-
-```sql
--- Split a year partition into quarters (PG 17)
-alter table measurements
-    split partition measurements_2024
-    into (
-        partition measurements_2024_q1
-            for values from ('2024-01-01') to ('2024-04-01'),
-        partition measurements_2024_rest
-            for values from ('2024-04-01') to ('2025-01-01')
-    );
-```
 
 ---
 
@@ -929,10 +916,13 @@ extend operations broken down by backend type (client backend, autovacuum,
 checkpointer) and I/O context (heap, index, WAL).  The missing piece for
 diagnosing I/O-bound workloads without reaching for OS-level tools.
 
-**ICU as default locale provider (PG 15)** — new clusters created with PG 15+
-default to ICU for locale-aware collation, giving stable, OS-independent
-sort behaviour for non-C locales — a complement to the built-in `C.UTF-8`
-collation for cases where linguistic sort order matters.
+**ICU locale provider at cluster level (PG 15)** — before PG 15, ICU
+collations could only be attached to individual columns via an explicit
+`COLLATE` clause; `libc` was the only option at `initdb` or `CREATE DATABASE`
+time.  PG 15 lifted that restriction: you can now choose ICU as the
+locale provider for the whole cluster or database, getting stable,
+OS-independent sort behaviour for non-C locales.  The default remains
+`libc` unless you opt in.
 
 **Logical replication: row and column filters (PG 15)** — publications can
 now include a `WHERE` clause to replicate only matching rows and a column
