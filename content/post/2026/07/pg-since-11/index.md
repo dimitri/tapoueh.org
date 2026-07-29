@@ -728,9 +728,9 @@ create table customer (
 );
 ```
 
-### Partition improvements (PG 12–17)
+### Partition improvements (PG 12–19)
 
-{{< image src="fig-partition-timeline.svg" title="Declarative partitioning milestones, PG 10–17." >}}
+{{< image src="fig-partition-timeline.svg" title="Declarative partitioning milestones, PG 10–19." >}}
 
 Declarative partitioning has received a steady stream of improvements since
 PG 11.  The highlights, in version order:
@@ -742,6 +742,8 @@ PG 11.  The highlights, in version order:
   constraint already exists, eliminating the full-table scan.
 - **PG 15** — `MERGE` statement support on partitioned tables; foreign key
   references *from* a partitioned table.
+- **PG 19 (planned)** — `SPLIT PARTITION` and `MERGE PARTITIONS` for online
+  restructuring without recreating the table.
 
 ---
 
