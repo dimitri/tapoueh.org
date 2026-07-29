@@ -66,7 +66,7 @@ user-visible changes from the official release notes.
 | PG 11 | Oct 2018 | 180 | Stored procedures (`CREATE PROCEDURE` / `CALL`), JIT compilation, covering indexes (`INCLUDE`) |
 | PG 12 | Oct 2019 | 200 | Generated columns, JSON path language (`@?` / `@@`), CTE inlining, `REINDEX CONCURRENTLY` |
 | PG 13 | Sep 2020 | 150 | Incremental sort, B-tree deduplication, `gen_random_uuid()` built-in |
-| PG 14 | Sep 2021 | 200 | Multirange types, JSONB subscript syntax (`doc['key']`), `FETCH … WITH TIES`, SEARCH/CYCLE |
+| PG 14 | Sep 2021 | 200 | Multirange types, JSONB subscript syntax (`doc['key']`), SEARCH/CYCLE in CTEs |
 | PG 15 | Oct 2022 | 180 | SQL `MERGE`, `NULLS NOT DISTINCT`, row/column filters in logical replication |
 | PG 16 | Sep 2023 | 150 | Logical replication on standbys, `pg_stat_io`, `ANY_VALUE()`, `IS JSON` predicate |
 | PG 17 | Sep 2024 | 180 | `JSON_TABLE()`, incremental backups, `COPY ON_ERROR IGNORE`, built-in `C.UTF-8` collation |
@@ -85,7 +85,7 @@ exist.  [There is a longer write-up on SQL and AI here](https://theartofpostgres
 
 ## Query execution
 
-### Window frame GROUPS mode and EXCLUDE (PG 11 / PG 14)
+### Window frame GROUPS mode and EXCLUDE (PG 11)
 
 The `ROWS` frame mode counts physical rows; `RANGE` counts by value distance.
 PostgreSQL 11 added a third mode, `GROUPS`, which counts *peer groups* —
@@ -94,8 +94,9 @@ unit for ranked or tied data.
 
 {{< image src="fig-window-frame-spec.svg" title="Three window frame specifications shown on a 7-row result set: UNBOUNDED PRECEDING to CURRENT ROW (running total), 1 PRECEDING to 1 FOLLOWING (sliding window), and CURRENT ROW to UNBOUNDED FOLLOWING (remaining total)." >}}
 
-PostgreSQL 14 added the `EXCLUDE` sub-clause, which removes specific rows
-from the frame — `EXCLUDE CURRENT ROW`, `EXCLUDE TIES`, or `EXCLUDE GROUP`.
+PostgreSQL 11 also added the `EXCLUDE` sub-clause as part of the same
+SQL:2011 compliance push — `EXCLUDE CURRENT ROW`, `EXCLUDE TIES`, or
+`EXCLUDE GROUP` — which removes specific rows from the frame.
 `EXCLUDE TIES` keeps the current row in the frame but removes other rows that
 share the same ORDER BY value.  A single race is a bad showcase — every
 scoring position has a unique points value, so no ties ever appear.  The 2007
@@ -527,28 +528,83 @@ PostgreSQL 17 ships a built-in `C.UTF-8` collation (also accessible as
 - **Immutable** — the sort order is part of the PostgreSQL release; it never changes on an OS upgrade.
 - **Fast** — it avoids locale-aware comparison functions and is roughly as fast as the classic `C` locale.
 
+The built-in locale is named `C.UTF-8` in `BUILTIN_LOCALE`, but the
+corresponding SQL collation is `pg_c_utf8`.  Creating a database with it
+requires `TEMPLATE template0` when the cluster default is `libc` (which it
+is unless you changed it at `initdb` time):
+
 ```sql
--- Create a database with the portable built-in collation
-create database myapp
-    encoding      'UTF8'
-    locale_provider builtin
-    builtin_locale 'C.UTF-8';
-
--- Or apply it per-column on an existing table
-alter table articles
-    alter column title type text collate "C.UTF-8";
-
--- Or per-expression in a query
-select title from articles order by title collate "C.UTF-8";
+-- cluster default is libc:
+select datname, datlocprovider, datlocale
+  from pg_database
+ where datname = 'template1';
 ```
 
-Use `C.UTF-8` whenever you need reproducible `ORDER BY` across environments:
-multi-region deployments, CI pipelines that compare sort order against a
-fixture, or logical replicas on different OS versions.  Its code-point sort
-order is less human-friendly than a language-aware ICU collation (accented
-characters sort after all ASCII letters), so prefer a named ICU collation for
-end-user-facing sorted lists and save `C.UTF-8` for internal keys and system
-tables where stability matters more than linguistic naturalness.
+```results
+  datname  | datlocprovider | datlocale
+-----------+----------------+-----------
+ template1 | c              |
+```
+
+```sql
+-- create a database with the portable built-in collation
+-- template0 is required when switching locale provider
+create database myapp
+    encoding        'UTF8'
+    locale_provider builtin
+    builtin_locale  'C.UTF-8'
+    template        template0;
+```
+
+```results
+CREATE DATABASE
+```
+
+```sql
+-- reconnect and confirm
+select datname, datlocprovider, datlocale
+  from pg_database
+ where datname = 'myapp';
+```
+
+```results
+ datname | datlocprovider | datlocale
+---------+----------------+-----------
+ myapp   | b              | C.UTF-8
+```
+
+```sql
+-- code-point order: uppercase before lowercase, ASCII before extended Unicode
+-- pg_c_utf8 works in any database, regardless of its own locale provider
+select word
+  from (values ('ångström'), ('banana'), ('Ångström'), ('Azure'), ('azure')) as t(word)
+ order by word collate pg_c_utf8;
+```
+
+```results
+   word
+----------
+ Azure
+ azure
+ banana
+ Ångström
+ ångström
+```
+
+```sql
+-- apply per-column on an existing table
+alter table articles
+    alter column title type text collate pg_c_utf8;
+```
+
+Use `pg_c_utf8` whenever you need reproducible `ORDER BY` across
+environments: multi-region deployments, CI pipelines that compare sort order
+against a fixture, or logical replicas on different OS versions.  Its
+code-point sort order is less human-friendly than a language-aware ICU
+collation (accented characters sort after all ASCII letters), so prefer a
+named ICU collation for end-user-facing sorted lists and save `pg_c_utf8` for
+internal keys and system tables where stability matters more than linguistic
+naturalness.
 
 ### Incremental Sort (PG 13)
 
@@ -727,9 +783,9 @@ create table customer (
 );
 ```
 
-### Partition improvements (PG 12–17)
+### Partition improvements (PG 12–19)
 
-{{< image src="fig-partition-timeline.svg" title="Declarative partitioning milestones, PG 10–17." >}}
+{{< image src="fig-partition-timeline.svg" title="Declarative partitioning milestones, PG 10–19." >}}
 
 Declarative partitioning has received a steady stream of improvements since
 PG 11.  The highlights, in version order:
@@ -741,20 +797,8 @@ PG 11.  The highlights, in version order:
   constraint already exists, eliminating the full-table scan.
 - **PG 15** — `MERGE` statement support on partitioned tables; foreign key
   references *from* a partitioned table.
-- **PG 17** — `SPLIT PARTITION` and `MERGE PARTITIONS` for online
+- **PG 19 (planned)** — `SPLIT PARTITION` and `MERGE PARTITIONS` for online
   restructuring without recreating the table.
-
-```sql
--- Split a year partition into quarters (PG 17)
-alter table measurements
-    split partition measurements_2024
-    into (
-        partition measurements_2024_q1
-            for values from ('2024-01-01') to ('2024-04-01'),
-        partition measurements_2024_rest
-            for values from ('2024-04-01') to ('2025-01-01')
-    );
-```
 
 ---
 
@@ -929,10 +973,13 @@ extend operations broken down by backend type (client backend, autovacuum,
 checkpointer) and I/O context (heap, index, WAL).  The missing piece for
 diagnosing I/O-bound workloads without reaching for OS-level tools.
 
-**ICU as default locale provider (PG 15)** — new clusters created with PG 15+
-default to ICU for locale-aware collation, giving stable, OS-independent
-sort behaviour for non-C locales — a complement to the built-in `C.UTF-8`
-collation for cases where linguistic sort order matters.
+**ICU locale provider at cluster level (PG 15)** — before PG 15, ICU
+collations could only be attached to individual columns via an explicit
+`COLLATE` clause; `libc` was the only option at `initdb` or `CREATE DATABASE`
+time.  PG 15 lifted that restriction: you can now choose ICU as the
+locale provider for the whole cluster or database, getting stable,
+OS-independent sort behaviour for non-C locales.  The default remains
+`libc` unless you opt in.
 
 **Logical replication: row and column filters (PG 15)** — publications can
 now include a `WHERE` clause to replicate only matching rows and a column
