@@ -574,9 +574,11 @@ select datname, datlocprovider, datlocale
 ```
 
 ```sql
--- default ORDER BY now uses pg_c_utf8: code-point order
--- (uppercase before lowercase; ASCII before extended Unicode)
-select word from words order by word;
+-- code-point order: uppercase before lowercase, ASCII before extended Unicode
+-- pg_c_utf8 works in any database, regardless of its own locale provider
+select word
+  from (values ('ångström'), ('banana'), ('Ångström'), ('Azure'), ('azure')) as t(word)
+ order by word collate pg_c_utf8;
 ```
 
 ```results
@@ -590,12 +592,9 @@ select word from words order by word;
 ```
 
 ```sql
--- apply per-column on an existing database
+-- apply per-column on an existing table
 alter table articles
     alter column title type text collate pg_c_utf8;
-
--- or per-expression in a query
-select title from articles order by title collate pg_c_utf8;
 ```
 
 Use `pg_c_utf8` whenever you need reproducible `ORDER BY` across
