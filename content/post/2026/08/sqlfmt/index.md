@@ -60,7 +60,8 @@ exception for those keywords.
 
 The full rule set is documented in
 [`STYLE.md`](https://github.com/dimitri/sqlfmt/blob/main/STYLE.md) in the
-repository, derived by analysing 1389 real queries from the book corpus.
+repository, reverse-engineered from the 343 hand-formatted `.sql` files in
+the book's own query corpus.
 A few highlights:
 
 - All SQL keywords and function names are **lowercase** — `count(*)`, `coalesce(...)`, `row_number() over(...)`.
