@@ -797,8 +797,10 @@ PG 11.  The highlights, in version order:
   constraint already exists, eliminating the full-table scan.
 - **PG 15** — `MERGE` statement support on partitioned tables; foreign key
   references *from* a partitioned table.
-- **PG 19 (planned)** — `SPLIT PARTITION` and `MERGE PARTITIONS` for online
-  restructuring without recreating the table.
+- **PG 19** — `SPLIT PARTITION` and `MERGE PARTITIONS` restructure a
+  partitioned table in a single statement, without detaching and recreating
+  partitions by hand. Not an online operation, though: both take `ACCESS
+  EXCLUSIVE` on the parent and on every partition involved.
 
 ---
 

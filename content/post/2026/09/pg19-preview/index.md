@@ -6,14 +6,14 @@ categories = ["PostgreSQL", "SQL"]
 icon      = "🐘"
 +++
 
-PostgreSQL 19 Beta 3 shipped on August 13, 2026, [the release notes are
-already
-frozen](https://www.postgresql.org/docs/19/release-19.html) even though the
-exact GA date isn't announced yet — following the project's usual September/October
-cadence, general availability should land within the next few weeks. That
-makes now the right time to read through what's changing, the same way I did
-for [PostgreSQL 11 through 18 a few weeks
-ago](/blog/2026/07/pg-since-11/).
+PostgreSQL 19 Beta 3 shipped on August 13, 2026, and [the release
+notes](https://www.postgresql.org/docs/19/release-19.html) have been filled
+in as of 2026-07-18 — still marked subject to change, and the GA date isn't
+announced yet, but following the project's usual September/October cadence
+general availability should land within the next few weeks. That makes now
+the right time to read through what's changing, the same way I did for
+[PostgreSQL 11 through 18 a few weeks
+ago](/blog/2026/07/sql-improvements-in-postgresql-1118-a-personal-selection/).
 
 This is not a changelog dump. It's the subset of PG 19 I think is worth
 knowing about before you upgrade: a handful of compatibility breaks that
@@ -54,17 +54,23 @@ know to look for it.
 - **MD5 password authentication now issues a warning** on every successful
   login (`md5_password_warnings` controls it). MD5 was deprecated in
   PostgreSQL 18; this is the next step toward removing it. Migrate to `scram-sha-256`.
-- **The default opclass for `inet`/`cidr` GiST indexing changes.** The old
-  default excluded rows that should have matched. `pg_upgrade` will refuse
-  to upgrade a cluster with indexes built on the broken opclass — you'll
-  need to `REINDEX` them first.
+- **The default opclass for `inet`/`cidr` GiST indexing changes**, from the
+  ones the `btree_gist` extension supplies to new core GiST opclasses. The
+  old ones are broken: they can exclude rows that should have been returned.
+  `pg_upgrade` refuses to upgrade a cluster carrying `btree_gist`
+  `inet`/`cidr` indexes, so `REINDEX` them first.
 - **CR/LF characters are disallowed in database, role, and tablespace
   names**, for security reasons. `pg_upgrade` also refuses clusters that use
   such names.
-- **`max_locks_per_transaction` default doubles**, from 64 to 128 — lock
-  size accounting changed internally, so an explicit setting you tuned
-  under PG ≤18 now covers half the locks it used to. Double it if you set
-  it explicitly.
+- **`max_locks_per_transaction` default doubles**, from 64 to 128. This is
+  not extra headroom: lock size allocation changed, so as the release notes
+  put it, settings must now be doubled to match the capacity they had in
+  previous releases. If you tuned this explicitly under PG ≤18, double your
+  value.
+- **`default_toast_compression` changes from `pglz` to `lz4`.** A silent,
+  cluster-wide change to how out-of-line values are compressed — generally
+  faster, but it shifts both storage and CPU behaviour with no action on
+  your part.
 
 None of these are difficult to handle. All of them are easy to miss if you
 only skim the highlights section.
@@ -80,15 +86,16 @@ partway through the interval has always meant hand-rolling the split:
 you in one statement.
 
 ```sql
-create table demo_driver_contract (
+create table demo_driver_contract
+ (
   driverid     bigint not null,
-  team         text   not null,
+  team         text not null,
   valid_period daterange not null,
-  exclude using gist (driverid with =, valid_period with &&)
+  exclude      using gist(driverid with =, valid_period with &&)
 );
 
-insert into demo_driver_contract (driverid, team, valid_period)
-values (1, 'McLaren', daterange('2007-01-01', '2013-01-01'));
+insert into demo_driver_contract(driverid, team, valid_period)
+     values (1, 'McLaren', daterange('2007-01-01', '2013-01-01'));
 
 select * from demo_driver_contract;
 ```
@@ -103,10 +110,10 @@ Now split the middle of that period out with a different value, in a single
 `UPDATE`:
 
 ```sql
-update demo_driver_contract
-for portion of valid_period from '2010-01-01' to '2013-01-01'
-set team = 'McLaren (final years)'
-where driverid = 1;
+update demo_driver_contract for portion of valid_period
+  from '2010-01-01' to '2013-01-01'
+   set team = 'McLaren (final years)'
+ where driverid = 1;
 
 select * from demo_driver_contract order by valid_period;
 ```
@@ -132,19 +139,22 @@ leaving the rest of the row(s) intact.
 neither one gives you back the *existing* row when a conflict happens — you
 had to follow up with a separate `SELECT`. PG 19 adds a third branch,
 `DO SELECT`, that returns the conflicting row directly, optionally locked
-with `FOR UPDATE`/`FOR SHARE`.
+with `FOR UPDATE`, `FOR NO KEY UPDATE`, `FOR SHARE` or `FOR KEY SHARE`, and
+optionally filtered with its own `WHERE`.
 
 ```sql
-create table demo_driver_seen (
+create table demo_driver_seen
+ (
   driverid      bigint primary key,
   surname       text not null,
   first_seen_at timestamptz not null default now()
 );
 
-insert into demo_driver_seen (driverid, surname)
-values (1, 'Hamilton')
-on conflict (driverid) do select
-returning driverid, surname, first_seen_at;
+insert into demo_driver_seen(driverid, surname)
+     values (1, 'Hamilton')
+on conflict (driverid) do
+     select
+  returning driverid, surname, first_seen_at;
 ```
 
 ```results
@@ -158,10 +168,11 @@ and returns the *existing* row instead of erroring or inserting a
 duplicate:
 
 ```sql
-insert into demo_driver_seen (driverid, surname)
-values (1, 'Hamilton')
-on conflict (driverid) do select
-returning driverid, surname, first_seen_at;
+insert into demo_driver_seen(driverid, surname)
+     values (1, 'Hamilton')
+on conflict (driverid) do
+     select
+  returning driverid, surname, first_seen_at;
 ```
 
 ```results
@@ -189,16 +200,20 @@ Kimi Räikkönen's 2017 season is a clean example: a DNF at the Spanish Grand
 Prix leaves a `NULL` finishing position for that round.
 
 ```sql
-select races.round, races.name, results.position as finish,
-       lag(results.position) over (order by races.round) as prev_plain,
-       lag(results.position) ignore nulls over (order by races.round) as prev_ignore_nulls
-from f1db.results
-join f1db.races using(raceid)
-join f1db.drivers using(driverid)
-where drivers.surname = 'Räikkönen'
-  and extract(year from races.date) = 2017
+  select races.round,
+         races.name,
+         results.position as finish,
+         lag(results.position) over(order by races.round) as prev_plain,
+         lag(results.position) ignore nulls over(
+                                                 order by races.round
+                                            ) as prev_ignore_nulls
+    from f1db.results
+    join f1db.races using(raceid)
+    join f1db.drivers using(driverid)
+   where drivers.surname = 'Räikkönen'
+     and extract(year from races.date) = 2017
 order by races.round
-limit 8;
+   limit 8;
 ```
 
 ```results
@@ -225,19 +240,23 @@ built in.
 
 ## CHECK constraints can be un-enforced
 
-PostgreSQL 17 added `NOT ENFORCED` for foreign key constraints — useful for
-staging a migration where you know historical data violates a constraint
-you want to add. PG 19 extends the same mechanism to `CHECK` constraints.
+PostgreSQL 18 added `NOT ENFORCED` as a way to *declare* a constraint —
+`CHECK` or foreign key — that the server records but never checks. PG 19
+fills in the missing half: `ALTER TABLE ... ALTER CONSTRAINT ... [NOT]
+ENFORCED` now works for `CHECK` constraints, so you can flip enforcement on
+an existing one. Previously only foreign keys could be altered that way.
 
 ```sql
-create table demo_driver (
+create table demo_driver
+ (
   driverid bigint primary key,
   points   numeric check (points >= 0)
 );
 
 insert into demo_driver values (1, 10);
 
-alter table demo_driver alter constraint demo_driver_points_check not enforced;
+alter table demo_driver
+  alter constraint demo_driver_points_check not enforced;
 
 -- would normally violate the check, but enforcement is off
 insert into demo_driver values (2, -5);
@@ -263,9 +282,16 @@ alter table demo_driver alter constraint demo_driver_points_check enforced;
 ERROR:  check constraint "demo_driver_points_check" of relation "demo_driver" is violated by some row
 ```
 
-This is the standard "add the constraint now, clean up the data later"
-workflow — previously available only for foreign keys — generalized to any
-`CHECK` constraint.
+Worth being precise about what this is and isn't. If what you want is "add
+the constraint now, validate the existing rows later", that's `ADD
+CONSTRAINT ... NOT VALID` followed by `VALIDATE CONSTRAINT`, and it has
+worked for `CHECK` constraints since PostgreSQL 9.2 — a `NOT VALID`
+constraint still enforces itself against every *new* row. `NOT ENFORCED` is
+the stronger, and rarer, thing: the constraint is documented in the catalog
+and checked against nothing at all, new rows included. Reach for it when you
+want the schema to record an invariant that some other layer is responsible
+for enforcing; reach for `NOT VALID` when you just have a backlog to clean
+up.
 
 ---
 
@@ -279,8 +305,16 @@ for compatibility), and adds a `CONCURRENTLY` option that avoids the
 access-exclusive lock both predecessors required.
 
 ```sql
-create table demo_bloat (id int primary key, val text);
-insert into demo_bloat select g, repeat('x', 100) from generate_series(1,1000) g;
+create table demo_bloat
+ (
+  id  int primary key,
+  val text
+);
+
+insert into demo_bloat
+     select g, repeat('x', 100)
+       from generate_series(1, 1000) g;
+
 delete from demo_bloat where id % 2 = 0;
 
 select pg_size_pretty(pg_total_relation_size('demo_bloat')) as before_repack;
@@ -304,31 +338,56 @@ select pg_size_pretty(pg_total_relation_size('demo_bloat')) as after_repack;
  112 kB
 ```
 
-Same space reclamation you'd get from `VACUUM FULL`, one clearer command
-name, and `REPACK CONCURRENTLY table_name` when you can't afford the lock.
+Same space reclamation you'd get from `VACUUM FULL`, under one clearer
+command name. `REPACK CONCURRENTLY table_name` is the version that avoids
+holding the lock for the whole rewrite — but read its restrictions before
+reaching for it. It isn't MVCC-safe; it's rejected for unlogged,
+partitioned, catalog and TOAST tables, and for any table without a primary
+key or replica-identity index; it needs a free slot from the new
+`max_repack_replication_slots`; and it still takes a brief `ACCESS
+EXCLUSIVE` at the end to swap the files in.
 
 ---
 
-## Merging and splitting partitions online
+## Merging and splitting partitions in one statement
 
 Restructuring a partitioned table used to mean detaching partitions,
 recreating them with new bounds, and reattaching — each step a separate
 operation, each one requiring you to reason about visibility in between. PG
 19 adds `ALTER TABLE ... MERGE PARTITIONS` and `... SPLIT PARTITION` to do
-this as a single, online operation.
+this as a single operation. Note that "single" is not "online": both take an
+`ACCESS EXCLUSIVE` lock on the parent table as well as on every partition
+involved, so plan them into a maintenance window.
 
 ```sql
-create table demo_races (raceid bigint, season int, name text)
-  partition by range (season);
-create table demo_races_2015 partition of demo_races for values from (2015) to (2016);
-create table demo_races_2016 partition of demo_races for values from (2016) to (2017);
-create table demo_races_2017 partition of demo_races for values from (2017) to (2018);
+create table demo_races
+ (
+  raceid bigint,
+  season int,
+  name   text
+) partition by range (season);
+
+create table demo_races_2015
+  partition of demo_races
+  for values from (2015) to (2016);
+
+create table demo_races_2016
+  partition of demo_races
+  for values from (2016) to (2017);
+
+create table demo_races_2017
+  partition of demo_races
+  for values from (2017) to (2018);
 
 insert into demo_races
-select raceid, extract(year from date)::int, name
-from f1db.races where extract(year from date) between 2015 and 2017;
+     select raceid, extract(year from date)::int, name
+       from f1db.races
+      where extract(year from date) between 2015 and 2017;
 
-select tableoid::regclass, count(*) from demo_races group by 1 order by 1;
+  select tableoid::regclass, count(*)
+    from demo_races
+group by 1
+order by 1;
 ```
 
 ```results
@@ -340,11 +399,14 @@ select tableoid::regclass, count(*) from demo_races group by 1 order by 1;
 ```
 
 ```sql
-alter table demo_races merge partitions
-  (demo_races_2015, demo_races_2016, demo_races_2017)
-  into demo_races_2015_2017;
+alter table demo_races
+  merge partitions (demo_races_2015, demo_races_2016, demo_races_2017)
+      into demo_races_2015_2017;
 
-select tableoid::regclass, count(*) from demo_races group by 1 order by 1;
+  select tableoid::regclass, count(*)
+    from demo_races
+group by 1
+order by 1;
 ```
 
 ```results
@@ -356,7 +418,10 @@ select tableoid::regclass, count(*) from demo_races group by 1 order by 1;
 All 60 rows survived the merge, now living in one partition instead of
 three. `SPLIT PARTITION` runs the same idea in reverse — useful once a
 single partition has grown large enough that you want to break it apart by
-a finer-grained boundary, without a full table rebuild.
+a finer-grained boundary, without detach/recreate/reattach gymnastics.
+(For where this sits in the longer arc of declarative partitioning, PG 10
+onwards, see the [partitioning section of the PG 11–18
+round-up](/blog/2026/07/sql-improvements-in-postgresql-1118-a-personal-selection/#partition-improvements-pg-1219).)
 
 ---
 
@@ -388,9 +453,12 @@ select pg_get_database_ddl('taop'::regdatabase);
  ALTER DATABASE taop OWNER TO taop;
 ```
 
-Each function returns a `SETOF text`, one row per statement, in the order
+Each function returns a `setof text`, one row per statement, in the order
 they need to run — the role's own `CREATE ROLE` first, then any `ALTER ROLE
-... SET` session defaults. Previously this meant reaching for `pg_dumpall
+... SET` session defaults. Each also takes optional flags beyond the object
+itself: `pretty` on all three, plus `memberships` for roles and
+`owner`/`tablespace` for databases. What comes back is a decompiled
+reconstruction, not the text you originally typed. Previously this meant reaching for `pg_dumpall
 --roles-only` or a third-party script; now it's a plain SQL query, scriptable
 from inside any migration tool that already talks to the database.
 
@@ -398,18 +466,18 @@ from inside any migration tool that already talks to the database.
 
 ## Ranges: subtracting with gaps
 
-`range_agg()` has existed since PG 14 for building a multirange out of
-several ranges. PG 19 adds the inverse operation for subtraction:
-`range_minus_multi()` and `multirange_minus_multi()`, both returning a set
-of the fragments left over after removing one range from another —
-correctly producing *two* fragments when the subtracted range falls in the
-middle.
+Subtracting a range out of the middle of another has been possible since
+multiranges arrived in PG 14 — `datemultirange(a) - datemultirange(b)`
+returns a multirange with a gap in it. What PG 19 adds is the convenient
+form: `range_minus_multi()` and `multirange_minus_multi()` take plain
+ranges and hand you back a `setof anyrange`, one row per surviving
+fragment, with no multirange wrapping and unwrapping in between.
 
 ```sql
 select range_minus_multi(
-  daterange('2007-01-01', '2013-01-01'),
-  daterange('2010-01-01', '2011-01-01')
-);
+         daterange('2007-01-01', '2013-01-01'),
+         daterange('2010-01-01', '2011-01-01')
+       );
 ```
 
 ```results
@@ -422,7 +490,8 @@ select range_minus_multi(
 Plain range subtraction (`-`) has always required the subtracted range to
 sit at one end — subtracting from the middle raises an error, because the
 result isn't representable as a single range. `range_minus_multi()` sidesteps
-that restriction entirely by returning a set.
+that by returning a set instead. (`multirange_minus_multi()` always returns
+a single row, since one multirange can already hold any result.)
 
 ---
 
@@ -444,15 +513,15 @@ later, once they've had time to settle:
   read-your-writes against a read replica without polling `pg_stat_replication`.
 - **Parallel autovacuum** and a **priority scoring system** for which
   tables get vacuumed first — genuinely useful operationally, but outside
-  this article's SQL-level focus.
+  this article's SQL-level focus. Note that the parallel part is opt-in:
+  `autovacuum_max_parallel_workers` defaults to 0, and it only parallelizes
+  the index vacuuming phases.
 
 ---
 
-I'm currently updating [*The Art of
-PostgreSQL*](https://theartofpostgresql.com) for PostgreSQL 19 — several of
-the queries above map directly onto existing chapters (temporal ranges,
-partitioning, constraints, window functions) and will be folded into the
-relevant sections rather than bolted on as a separate appendix. That work
-isn't finished yet; it'll ship to everyone who already owns the book, at no
-extra cost, once it's ready — timed for PostgreSQL 19's general
-availability rather than rushed ahead of it.
+Working these examples up for the new edition of [*The Art of
+PostgreSQL*](https://theartofpostgresql.com) is what sent me through the PG
+19 notes in this much detail — several of them map straight onto existing
+chapters on temporal ranges, partitioning, constraints and window functions,
+which is a good sign that the release is filling real gaps rather than
+adding surface area.
