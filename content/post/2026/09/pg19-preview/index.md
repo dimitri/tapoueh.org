@@ -125,6 +125,8 @@ select * from demo_driver_contract order by valid_period;
         1 | McLaren (final years) | [2010-01-01,2013-01-01)
 ```
 
+{{< image src="fig-for-portion-of.svg" title="One contract row valid 2007–2013, before and after an UPDATE ... FOR PORTION OF covering 2010–2013. The original row shrinks to the untouched 2007–2010 portion and a second row is inserted for the updated sub-range, so the two never overlap." >}}
+
 One `UPDATE` produced two rows: the original row shrank to the untouched
 portion, and a new row was inserted for the updated sub-range — the
 exclusion constraint stayed satisfied throughout. `FOR PORTION OF` also
@@ -428,6 +430,8 @@ order by 1;
 ----------------------+-------
  demo_races_2015_2017 |    60
 ```
+
+{{< image src="fig-partition-merge.svg" title="Three yearly range partitions of demo_races holding 19, 21 and 20 races, merged into a single partition covering 2015–2018 with all 60 rows. The statement is atomic but not online: ACCESS EXCLUSIVE is taken on the parent and on every partition involved." >}}
 
 All 60 rows survived the merge, now living in one partition instead of
 three. `SPLIT PARTITION` runs the same idea in reverse — useful once a
