@@ -23,7 +23,7 @@ ran against a real PostgreSQL 19 Beta 3 instance — no hand-waving about
 syntax that might work.
 
 {{< lab >}}
-Every query in this article ran against [the Lab](https://theartofpostgresql.com/lab/), the same free dataset bundle used in the rest of this blog (F1 data, geopolitical data, music data, and more), pinned to a real PostgreSQL 19 Beta 3 instance. PG 19 support isn't the Lab's default yet — there's no published beta image yet, so build one locally with `POSTGRES_VERSION=19beta3 PG_MAJOR=19 docker compose build postgres`, then bring it up with the same two variables set. That build bakes every dataset in, so give it a few minutes the first time. Plain `docker compose up` still pulls the prebuilt PG 16 image, and stays the default until 19 reaches general availability.
+Every query in this article ran against [the Lab](https://theartofpostgresql.com/lab/), the same free dataset bundle used in the rest of this blog (F1 data, geopolitical data, music data, and more), pinned to a real PostgreSQL 19 Beta 3 instance. PG 19 support isn't the Lab's default yet, but there is a prebuilt beta image on the registry, for both `linux/amd64` and `linux/arm64` — so `POSTGRES_VERSION=19beta3 PG_MAJOR=19 docker compose up` pulls it rather than building anything, and every query below reproduces on it exactly as printed. (`PG_MAJOR` only matters if Compose ends up building; it costs nothing to set.) Plain `docker compose up` still pulls the PG 16 image, and stays the default until 19 reaches general availability.
 {{< /lab >}}
 
 <!--more-->
@@ -450,12 +450,14 @@ recreate an object, straight from the catalog — no external tool required:
 `pg_get_role_ddl()`, `pg_get_tablespace_ddl()`, and `pg_get_database_ddl()`.
 
 ```sql
+alter role taop set search_path to 'f1db', 'chinook', 'public', 'scan34';
+
 select pg_get_role_ddl('taop'::regrole);
 ```
 
 ```results
                                    pg_get_role_ddl                                   
---------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------
  CREATE ROLE taop SUPERUSER INHERIT CREATEROLE CREATEDB LOGIN REPLICATION BYPASSRLS;
  ALTER ROLE taop SET search_path TO 'f1db', 'chinook', 'public', 'scan34';
 ```
@@ -466,7 +468,7 @@ select pg_get_database_ddl('taop'::regdatabase);
 
 ```results
                                               pg_get_database_ddl                                               
-------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------
  CREATE DATABASE taop WITH TEMPLATE = template0 ENCODING = 'UTF8' LOCALE_PROVIDER = libc LOCALE = 'en_US.utf8';
  ALTER DATABASE taop OWNER TO taop;
 ```
