@@ -142,6 +142,22 @@ had to follow up with a separate `SELECT`. PG 19 adds a third branch,
 with `FOR UPDATE`, `FOR NO KEY UPDATE`, `FOR SHARE` or `FOR KEY SHARE`, and
 optionally filtered with its own `WHERE`.
 
+The spelling takes a moment to get used to, because `DO SELECT` has no
+select list:
+
+```
+DO SELECT [ FOR { UPDATE | NO KEY UPDATE | SHARE | KEY SHARE } ] [ WHERE condition ]
+```
+
+`SELECT` here is an *action name*, exactly parallel to `NOTHING` in `DO
+NOTHING` — not a query. There is nothing to project, because the conflicting
+row is already pinned down by the conflict target; `DO UPDATE` needs its
+`SET` because you have to say what changes, and `DO SELECT` needs nothing
+because you don't. The projection goes in the slot `INSERT` already has,
+which is why `DO SELECT` is the one conflict action for which `RETURNING` is
+*mandatory*: leave it off and the statement would have nothing to give back,
+which would rather defeat the point.
+
 ```sql
 create table demo_driver_seen
  (
@@ -152,8 +168,7 @@ create table demo_driver_seen
 
 insert into demo_driver_seen(driverid, surname)
      values (1, 'Hamilton')
-on conflict (driverid) do
-     select
+on conflict (driverid) do select
   returning driverid, surname, first_seen_at;
 ```
 
@@ -170,8 +185,7 @@ duplicate:
 ```sql
 insert into demo_driver_seen(driverid, surname)
      values (1, 'Hamilton')
-on conflict (driverid) do
-     select
+on conflict (driverid) do select
   returning driverid, surname, first_seen_at;
 ```
 
