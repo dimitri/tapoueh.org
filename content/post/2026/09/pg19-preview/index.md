@@ -23,7 +23,7 @@ ran against a real PostgreSQL 19 Beta 3 instance — no hand-waving about
 syntax that might work.
 
 {{< lab >}}
-Every query in this article ran against [the Lab](https://theartofpostgresql.com/lab/), the same free dataset bundle used in the rest of this blog (F1 data, geopolitical data, music data, and more), pinned to a real PostgreSQL 19 Beta 3 instance. PG 19 support isn't the Lab's default yet — pass `POSTGRES_VERSION=19beta3 PG_MAJOR=19` to `docker compose up` to reproduce these results yourself; plain `docker compose up` still runs PG 16 until 19 reaches general availability.
+Every query in this article ran against [the Lab](https://theartofpostgresql.com/lab/), the same free dataset bundle used in the rest of this blog (F1 data, geopolitical data, music data, and more), pinned to a real PostgreSQL 19 Beta 3 instance. PG 19 support isn't the Lab's default yet — there's no published beta image yet, so build one locally with `POSTGRES_VERSION=19beta3 PG_MAJOR=19 docker compose build postgres`, then bring it up with the same two variables set. That build bakes every dataset in, so give it a few minutes the first time. Plain `docker compose up` still pulls the prebuilt PG 16 image, and stays the default until 19 reaches general availability.
 {{< /lab >}}
 
 <!--more-->
