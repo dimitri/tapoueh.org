@@ -827,22 +827,83 @@ fit together twenty years on.
 
 ## Worth watching, not yet covered here
 
-A few PG 19 additions are large enough to deserve their own treatment
-later, once they've had time to settle:
+This article stops at the SQL layer, and PostgreSQL 19 is a large release.
+Here is what I left out, with a note on why each one is worth its own
+treatment rather than a paragraph.
+
+**Planner stability**
 
 - **`pg_plan_advice`** and **`pg_stash_advice`** — two new extensions for
   stabilizing planner decisions: the first lets you record and replay a
   known-good plan shape, the second applies stored advice automatically
   based on the incoming query. Aimed squarely at the "the plan changed
-  after a statistics update and now everything is slow" problem.
-- **`WAIT FOR`** — a new command that blocks until a standby has replayed
-  WAL up to a given point, giving you a clean way to implement
-  read-your-writes against a read replica without polling `pg_stat_replication`.
+  after a statistics update and now everything is slow" problem. This is
+  the release's most consequential feature for anyone running a large
+  OLTP system, and it deserves a proper workout rather than a summary —
+  plan hinting has been the single longest-running argument in this
+  community, and what shipped is a more interesting answer than either
+  camp was asking for.
+
+**Replication**
+
+- **Logical replication now replicates sequence values.** If you have ever
+  cut over to a logical replica and discovered every `nextval()` handing
+  back a number the publisher used months ago, this is the release that
+  fixes it. `CREATE PUBLICATION ... FOR ALL SEQUENCES`, `ALTER
+  SUBSCRIPTION ... REFRESH PUBLICATION SEQUENCES`, and a new
+  `pg_get_sequence_data()` to see what the subscriber thinks it has.
+- **Logical replication no longer needs a restart.** With `wal_level =
+  replica`, PG 19 raises the effective level automatically when a slot
+  first needs it, and reports what is actually in force through the new
+  read-only `effective_wal_level`. The prerequisite that made "just add
+  logical replication" a maintenance-window conversation is gone.
+- **`WAIT FOR`** — blocks until a standby has replayed WAL to a given
+  point, giving read-your-writes against a replica without polling
+  `pg_stat_replication`. Small in surface area, but it changes what you
+  can safely route to a standby, which is an architecture question.
+- Also in this area: `retain_dead_tuples` on a publication for conflict
+  detection (with a new `update_deleted` count in
+  `pg_stat_subscription_stats`), publications that can *exclude* tables,
+  and subscriptions that can borrow `postgres_fdw` connection parameters
+  instead of repeating a connection string.
+
+**Operations**
+
+- **Data checksums can be turned on and off while the server runs**
+  (`pg_enable_data_checksums()` / `pg_disable_data_checksums()`).
+  Previously this meant `pg_checksums` against a stopped cluster, which
+  in practice meant most clusters that started without checksums stayed
+  without them forever. Now it is a decision you can revisit.
 - **Parallel autovacuum** and a **priority scoring system** for which
-  tables get vacuumed first — genuinely useful operationally, but outside
-  this article's SQL-level focus. Note that the parallel part is opt-in:
-  `autovacuum_max_parallel_workers` defaults to 0, and it only parallelizes
-  the index vacuuming phases.
+  tables get vacuumed first. The parallel part is opt-in —
+  `autovacuum_max_parallel_workers` defaults to 0 — and only covers the
+  index phases. The scoring half is the more interesting one: five
+  weighting variables and a `pg_stat_autovacuum_scores` view, which turns
+  "why has this table not been vacuumed" into a question with an answer.
+- **Automatic scaling of I/O workers**, following through on PG 18's
+  asynchronous I/O. If you tuned `io_method = worker` last year, revisit
+  it: `io_min_workers` and `io_max_workers` now let the pool size itself.
+- **New observability surface**: `pg_stat_lock` for per-lock-type
+  statistics, `pg_stat_recovery`, `pg_get_multixact_stats()`, and WAL
+  full-page-image byte accounting in `VACUUM`/`ANALYZE` logging. Also
+  worth knowing before your log volume changes: `log_lock_waits` is now on
+  by default, autovacuum's analyze logging moved to its own
+  `log_autoanalyze_min_duration`, and wraparound warnings now start at 100
+  million transactions instead of 40 million.
+- **Server-side SNI**, so one instance can present different certificates
+  by requested hostname.
+
+**Smaller SQL additions I did not have a good example for**
+
+- `oid8`, a 64-bit unsigned integer type.
+- `random(min, max)` for `date`, `timestamp` and `timestamptz` — a
+  genuinely nice way to generate test data over a period.
+- `error_on_null(x)`, which returns its argument or raises: an assertion
+  you can drop into an expression.
+- `encode()`/`decode()` gain `base64url` and `base32hex`.
+- Casts between `bytea` and `uuid`, and more `jsonpath` string methods.
+- `GRANT`/`REVOKE ... GRANTED BY`, to name the role doing the granting.
+- Full-text stemmers for Polish and Esperanto.
 
 ---
 
