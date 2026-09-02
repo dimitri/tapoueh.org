@@ -652,14 +652,144 @@ a single row, since one multirange can already hold any result.)
 
 ---
 
+## SQL/PGQ: graph patterns over the tables you already have
+
+PostgreSQL 19 implements [SQL/PGQ](https://www.iso.org/standard/79473.html),
+Part 16 of the SQL standard, which lets you query relational tables using
+graph pattern syntax. It is worth being clear about what that does and does
+not mean. A property graph is *not* a new storage engine and not a copy of
+your data: `CREATE PROPERTY GRAPH` behaves like `CREATE VIEW`, recording a
+logical structure that is resolved at query time against the same tables you
+already have. Permissions come from the base relations, not from the graph.
+
+You declare which tables are vertices, which are edges, and how the edges
+connect. The Lab's `geoname` schema has exactly this shape already: `country`
+keyed by `isocode`, and `neighbour` holding pairs of bordering countries with
+a foreign key at each end.
+
+```sql
+create property graph borders
+  vertex tables (
+    geoname.country key (isocode) label country properties (name, iso)
+  )
+  edge tables (
+    geoname.neighbour
+      key (isocode, neighbour)
+      source key (isocode) references country (isocode)
+      destination key (neighbour) references country (isocode)
+      label borders
+  );
+```
+
+Now the graph can be pattern-matched with `GRAPH_TABLE`, which takes a
+`MATCH` pattern and a `COLUMNS` projection and returns an ordinary relation:
+
+```sql
+  select neighbour
+    from graph_table (borders
+           match (c is country where c.name = 'France')
+                   -[is borders]->(n is country)
+           columns (n.name as neighbour))
+order by neighbour;
+```
+
+```results
+  neighbour  
+-------------
+ Andorra
+ Belgium
+ Germany
+ Italy
+ Luxembourg
+ Monaco
+ Spain
+ Switzerland
+```
+
+`(c is country)` is a vertex with a label, `-[is borders]->` is a directed
+edge, and `columns` decides what comes back. That query is a join written in
+a different shape, and the documentation says so itself — it gives the
+equivalent `SELECT ... JOIN` right beside its own example.
+
+### What it can't do yet
+
+The interesting graph questions are not "who borders France" but "how far
+does France reach". In the SQL/PGQ standard you say that with a quantifier
+on the edge pattern — one to four hops:
+
+```sql
+  select distinct reachable
+    from graph_table (borders
+           match (c is country where c.name = 'France')
+                   -[is borders]->{1,4}(n is country)
+           columns (n.name as reachable))
+order by reachable;
+```
+
+```results
+ERROR:  element pattern quantifier is not supported
+```
+
+That is the whole story of PGQ in PostgreSQL 19, in one error message.
+Variable-length paths are not implemented, and neither is anything else that
+would let you work around them: nested path patterns, several path patterns
+in one `GRAPH_TABLE`, subqueries inside it, or aggregates and window
+functions in `COLUMNS`. There is no `ANY SHORTEST` or `ALL SHORTEST` either.
+
+You can spell a fixed number of hops out by hand, and that does work:
+
+```sql
+  select distinct two_hops
+    from graph_table (borders
+           match (a is country where a.name = 'France')
+                   -[is borders]->(b is country)
+                   -[is borders]->(c is country)
+           columns (c.name as two_hops))
+order by two_hops
+   limit 8;
+```
+
+```results
+ two_hops  
+-----------
+ Andorra
+ Austria
+ Belgium
+ Czechia
+ Denmark
+ France
+ Germany
+ Gibraltar
+```
+
+But that is one pattern per depth, it cannot be unioned inside a single
+`GRAPH_TABLE`, and it returns France itself because nothing stops the walk
+revisiting a vertex — the standard's `TRAIL` and `ACYCLIC` modifiers, which
+exist to say "don't do that", aren't implemented either.
+
+So the honest summary is that PG 19 ships the declaration layer and
+fixed-length pattern matching. Reachability, shortest paths and transitive
+closure — the questions people actually reach for a graph language to answer
+— still belong to `WITH RECURSIVE`, which has handled them since PG 8.4 and
+which I used for exactly this dataset in the [PG 11–18
+round-up](/blog/2026/07/sql-improvements-in-postgresql-1118-a-personal-selection/).
+That map of everywhere you can drive from France in four hops is a recursive
+CTE, and in PostgreSQL 19 it still has to be.
+
+None of which makes this a bad first cut. It is a substantial amount of
+catalog and parser infrastructure — five new system catalogs — landing with
+a conservative, review-friendly feature set, which after the `MERGE
+PARTITIONS` story above looks like exactly the right instinct. Oracle 23ai
+shipped SQL/PGQ first; PostgreSQL now has the standard's foundations, and
+the quantifiers are the obvious next patch.
+
+---
+
 ## Worth watching, not yet covered here
 
 A few PG 19 additions are large enough to deserve their own treatment
 later, once they've had time to settle:
 
-- **SQL/PGQ** — SQL-standard property graph queries, processed internally
-  as views over regular relational data. A genuinely new query paradigm on
-  top of PostgreSQL's existing storage model, not a new storage engine.
 - **`pg_plan_advice`** and **`pg_stash_advice`** — two new extensions for
   stabilizing planner decisions: the first lets you record and replay a
   known-good plan shape, the second applies stored advice automatically
