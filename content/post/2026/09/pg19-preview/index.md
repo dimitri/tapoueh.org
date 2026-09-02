@@ -670,6 +670,99 @@ a single row, since one multirange can already hold any result.)
 
 ---
 
+## Two small functions that pull their weight
+
+Not everything in a release needs a section of its own, but these two are
+short enough to show and useful often enough to remember.
+
+### random() over dates and timestamps
+
+`random()` has returned a `double precision` between 0 and 1 since forever,
+and PG 17 added integer and numeric ranges. PG 19 completes the set with
+`date`, `timestamp` and `timestamptz` versions, which is exactly what you
+want when generating test data over a period:
+
+```sql
+select setseed(0.42);
+
+select random('2017-03-26'::date, '2017-11-26'::date) as race_day,
+       random(
+         timestamp '2017-03-26 12:00', timestamp '2017-03-26 16:00'
+       ) as lights_out
+  from generate_series(1, 5);
+```
+
+```results
+  race_day  |         lights_out         
+------------+----------------------------
+ 2017-10-02 | 2017-03-26 13:43:47.198578
+ 2017-11-20 | 2017-03-26 12:18:25.009763
+ 2017-04-19 | 2017-03-26 13:01:14.162498
+ 2017-07-29 | 2017-03-26 13:51:27.212232
+ 2017-08-20 | 2017-03-26 15:35:52.873462
+```
+
+Bounds are inclusive, and the `setseed()` call is there so that run
+repeats — drop it and you get fresh values each time. Before this you wrote
+the arithmetic yourself, something like `'2017-03-26'::date + (random() *
+245)::int`, which works but has to be re-derived every time and quietly gets
+the endpoints wrong about half the time anybody writes it.
+
+### error_on_null()
+
+`error_on_null(x)` returns `x`, or raises if `x` is `NULL`. That sounds
+almost too small to bother with until you think about where `NULL` comes
+from in a query you did not expect it in — a scalar subquery that matched
+nothing:
+
+```sql
+select (select driverid from f1db.drivers where surname = 'Raikkonen');
+```
+
+```results
+ driverid 
+----------
+         
+```
+
+No error. One row, one `NULL`, because the surname is spelled `Räikkönen`
+and a scalar subquery that matches nothing is a perfectly legal `NULL`. That
+value then flows into whatever comes next — a join that quietly returns no
+rows, an `IN` list that never matches, an arithmetic expression that turns
+the whole column `NULL`. It is one of the great silent bugs in SQL, and the
+usual advice is to notice it in review.
+
+Now you can just say what you meant:
+
+```sql
+select error_on_null(
+  (select driverid from f1db.drivers where surname = 'Raikkonen')) as driverid;
+```
+
+```results
+ERROR:  null value not allowed
+```
+
+Spell it correctly and it returns the value and gets out of the way:
+
+```sql
+select error_on_null(
+  (select driverid from f1db.drivers where surname = 'Räikkönen')) as driverid;
+```
+
+```results
+ driverid 
+----------
+        8
+```
+
+It is polymorphic — `anyelement` in, the same type out — so it drops into an
+expression anywhere without a cast, and it costs you a comparison. Think of
+it as an assertion you can write inline, in the place where the assumption
+actually lives, rather than in a comment above the query.
+
+---
+
 ## SQL/PGQ: graph patterns over the tables you already have
 
 PostgreSQL 19 implements [SQL/PGQ](https://www.iso.org/standard/79473.html),
@@ -893,13 +986,9 @@ treatment rather than a paragraph.
 - **Server-side SNI**, so one instance can present different certificates
   by requested hostname.
 
-**Smaller SQL additions I did not have a good example for**
+**Smaller SQL additions, for completeness**
 
 - `oid8`, a 64-bit unsigned integer type.
-- `random(min, max)` for `date`, `timestamp` and `timestamptz` — a
-  genuinely nice way to generate test data over a period.
-- `error_on_null(x)`, which returns its argument or raises: an assertion
-  you can drop into an expression.
 - `encode()`/`decode()` gain `base64url` and `base32hex`.
 - Casts between `bytea` and `uuid`, and more `jsonpath` string methods.
 - `GRANT`/`REVOKE ... GRANTED BY`, to name the role doing the granting.
