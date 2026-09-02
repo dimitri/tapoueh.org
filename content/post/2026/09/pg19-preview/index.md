@@ -365,7 +365,7 @@ EXCLUSIVE` at the end to swap the files in.
 
 ---
 
-## MERGE PARTITIONS: the one that got away, twice
+## MERGE PARTITIONS: held back for another release
 
 This section was going to be about `ALTER TABLE ... MERGE PARTITIONS` and
 `... SPLIT PARTITION`, which restructure a partitioned table in a single
@@ -374,7 +374,8 @@ queries against Beta 3, and drew a diagram for it.
 
 Then, on August 27, [Alexander Korotkov reverted the whole
 feature](https://git.postgresql.org/gitweb/?p=postgresql.git;a=commit;h=3e8bcc864)
-from the PostgreSQL 19 branch:
+from the PostgreSQL 19 branch. I am leaving the section in, because how that
+decision got made is more interesting than the feature would have been:
 
 > The feature is reverted due to multiple design issues which are too late to
 > address in this release cycle.
@@ -383,9 +384,16 @@ from the PostgreSQL 19 branch:
 
 That commit takes out 1,631 lines of `tablecmds.c`, 1,054 lines of
 `partbounds.c`, both isolation test suites, the documentation, and the
-`PARTITIONS` keyword. **It is the second time this feature has been reverted
-late in a release cycle** — it was pulled from PostgreSQL 17 in August 2024
-too, that time over `CVE-2014-0062` repeatable-name-lookup issues.
+`PARTITIONS` keyword. It is the second time this feature has been held back
+late in a cycle — it was pulled from PostgreSQL 17 in August 2024 too, that
+time over `CVE-2014-0062` repeatable-name-lookup issues.
+
+Reverting two years of work a month before a release is not a failure of the
+process. It *is* the process. Somebody found real problems, the people who
+would have to live with them agreed they were real, and the feature went back
+in the oven rather than into your database. That decision is available to a
+project where the engineers have the final say on what ships. It is much
+harder to make when a release date has been promised to a market.
 
 There is a trap here worth knowing about. At the time of writing the
 [release notes](https://www.postgresql.org/docs/19/release-19.html) still
@@ -559,20 +567,30 @@ The fifth issue in the thread — losing `UPDATE`s on a subscriber when
 `REFRESH PUBLICATION` runs with `copy_data = false` — needs two instances to
 show, and I did not try it.
 
-### What to do instead
+### What this costs you, and what it buys
 
-Nothing changes for you today: keep detaching, recreating and reattaching
-partitions the way you already do. `SPLIT`/`MERGE PARTITIONS` will presumably
-be back for PG 20 or later, and on this evidence the rework is real work
-rather than polish — every one of the problems above is about what a
-partition *carries* (constraints, generated columns, replication identity)
-rather than about moving rows between files.
+Today, nothing changes: keep detaching, recreating and reattaching partitions
+the way you already do. That path works, and it has the advantage that every
+step is one you can see.
 
-It is also a useful reminder about beta software. Every other feature in this
-article is in the release branch and staying there; this one ran perfectly in
-Beta 3 and is gone. Reading release notes is not enough — for anything you
-intend to depend on, check that it is still in the branch you will actually
-run.
+Look at what the five problems have in common, though, and the delay starts
+to look like good news. Not one of them is about moving rows between files —
+that part evidently works, and I ran it. They are all about what a partition
+*carries*: its constraints, its generated columns, its publication membership,
+its replica identity. Those are the questions that decide whether the command
+is safe to run on a database you care about, and they are exactly the
+questions worth taking another release to answer properly. A version of this
+feature that moved rows correctly and lost your `CHECK` constraints would have
+been worse than not having it, because you would have trusted it.
+
+So `SPLIT`/`MERGE PARTITIONS` will land when the semantics are settled, and
+when it does it will be the version that keeps what your partitions carry. On
+the evidence above, that is worth waiting for.
+
+One practical note while it is in flight: every other feature in this article
+is in the release branch and staying there, but this one ran perfectly in Beta
+3 and is gone. For anything you intend to depend on before GA, check the
+branch you will actually run rather than the notes alone.
 
 (For where partitioning stands without it, see the [partitioning section of
 the PG 11–18
@@ -709,13 +727,15 @@ order by neighbour;
 `(c is country)` is a vertex with a label, `-[is borders]->` is a directed
 edge, and `columns` decides what comes back. That query is a join written in
 a different shape, and the documentation says so itself — it gives the
-equivalent `SELECT ... JOIN` right beside its own example.
+equivalent `SELECT ... JOIN` right beside its own example. Which is rather
+the point: the graph is a *way of asking*, over data that stays exactly where
+it was, with the permissions it already had.
 
-### What it can't do yet
+### What lands in a later release
 
-The interesting graph questions are not "who borders France" but "how far
-does France reach". In the SQL/PGQ standard you say that with a quantifier
-on the edge pattern — one to four hops:
+The next thing you will want is a longer question. Not "who borders France"
+but "how far does France reach". In the SQL/PGQ standard you say that with a
+quantifier on the edge pattern — one to four hops:
 
 ```sql
   select distinct reachable
@@ -730,11 +750,15 @@ order by reachable;
 ERROR:  element pattern quantifier is not supported
 ```
 
-That is the whole story of PGQ in PostgreSQL 19, in one error message.
-Variable-length paths are not implemented, and neither is anything else that
-would let you work around them: nested path patterns, several path patterns
-in one `GRAPH_TABLE`, subqueries inside it, or aggregates and window
-functions in `COLUMNS`. There is no `ANY SHORTEST` or `ALL SHORTEST` either.
+Not yet, then. Variable-length paths are the next patch, and with them the
+things that surround them: nested path patterns, several path patterns in one
+`GRAPH_TABLE`, subqueries inside it, aggregates and window functions in
+`COLUMNS`, `ANY SHORTEST` and `ALL SHORTEST`.
+
+Notice what the error message is, though. It is not a syntax error — the
+parser understood the quantifier perfectly and told you precisely which part
+of the standard has not been wired up yet. The grammar is in place, and it
+knows the shape of what is coming.
 
 You can spell a fixed number of hops out by hand, and that does work:
 
@@ -762,26 +786,43 @@ order by two_hops
  Gibraltar
 ```
 
-But that is one pattern per depth, it cannot be unioned inside a single
-`GRAPH_TABLE`, and it returns France itself because nothing stops the walk
-revisiting a vertex — the standard's `TRAIL` and `ACYCLIC` modifiers, which
-exist to say "don't do that", aren't implemented either.
+That is one pattern per depth, and it returns France itself, because nothing
+stops the walk revisiting a vertex — `TRAIL` and `ACYCLIC`, the standard's way
+of saying "don't do that", arrive with the quantifiers. So for reachability,
+shortest paths and transitive closure, keep reaching for `WITH RECURSIVE`,
+which has answered those questions since PostgreSQL 8.4 and is not going
+anywhere. It is what I used on this very dataset in the [PG 11–18
+round-up](/blog/2026/07/sql-improvements-in-postgresql-1118-a-personal-selection/):
+that map of everywhere you can drive from France in four hops is a recursive
+CTE, and a good one.
 
-So the honest summary is that PG 19 ships the declaration layer and
-fixed-length pattern matching. Reachability, shortest paths and transitive
-closure — the questions people actually reach for a graph language to answer
-— still belong to `WITH RECURSIVE`, which has handled them since PG 8.4 and
-which I used for exactly this dataset in the [PG 11–18
-round-up](/blog/2026/07/sql-improvements-in-postgresql-1118-a-personal-selection/).
-That map of everywhere you can drive from France in four hops is a recursive
-CTE, and in PostgreSQL 19 it still has to be.
+### Why this is the right amount to ship
 
-None of which makes this a bad first cut. It is a substantial amount of
-catalog and parser infrastructure — five new system catalogs — landing with
-a conservative, review-friendly feature set, which after the `MERGE
-PARTITIONS` story above looks like exactly the right instinct. Oracle 23ai
-shipped SQL/PGQ first; PostgreSQL now has the standard's foundations, and
-the quantifiers are the obvious next patch.
+It would be easy to read "no variable-length paths" as PGQ arriving
+half-finished. I would read it the other way round.
+
+What landed is the part that is tedious, invasive and hard to change later:
+five new system catalogs, a parser that understands the full pattern grammar,
+name and label resolution, permission checks that defer to the base tables,
+and a rewriter that turns a matched pattern into an ordinary plan. None of
+that is glamorous, and all of it is load-bearing. Variable-length paths are a
+genuinely hard planning problem — you are asking the optimizer to cost a
+recursive walk — and they are much better attempted on top of a settled
+foundation than alongside one.
+
+That ordering is a choice, and it is the same one visible in the `MERGE
+PARTITIONS` story earlier: get the semantics right, ship the part you are sure
+of, leave the hard part for when it can be done properly. It is what a release
+process looks like when the engineers decide what is ready, rather than a
+calendar or a feature-comparison table. Oracle 23ai shipped SQL/PGQ first, and
+PostgreSQL is not racing it.
+
+What you get today is real: property graphs are declared over tables you
+already have, cost nothing to maintain, and let you write a pattern instead of
+a join chain — with the standard's syntax, so what you learn now is what you
+will use later. The rest builds on this, one release at a time. That is how
+PostgreSQL has always gotten where it is going, and it is why the pieces still
+fit together twenty years on.
 
 ---
 
