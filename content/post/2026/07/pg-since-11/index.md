@@ -797,10 +797,12 @@ PG 11.  The highlights, in version order:
   constraint already exists, eliminating the full-table scan.
 - **PG 15** — `MERGE` statement support on partitioned tables; foreign key
   references *from* a partitioned table.
-- **PG 19** — `SPLIT PARTITION` and `MERGE PARTITIONS` restructure a
-  partitioned table in a single statement, without detaching and recreating
-  partitions by hand. Not an online operation, though: both take `ACCESS
-  EXCLUSIVE` on the parent and on every partition involved.
+- **PG 19 — withdrawn.** `SPLIT PARTITION` and `MERGE PARTITIONS` were
+  committed for PG 19 and then [reverted on 27 August
+  2026](https://git.postgresql.org/gitweb/?p=postgresql.git;a=commit;h=3e8bcc864),
+  the second time this feature has been pulled late in a cycle. I go through
+  what went wrong, with reproductions, in [Getting Ready for PostgreSQL
+  19](/blog/2026/09/getting-ready-for-postgresql-19/).
 
 ---
 

@@ -365,80 +365,217 @@ EXCLUSIVE` at the end to swap the files in.
 
 ---
 
-## Merging and splitting partitions in one statement
+## MERGE PARTITIONS: the one that got away, twice
 
-Restructuring a partitioned table used to mean detaching partitions,
-recreating them with new bounds, and reattaching — each step a separate
-operation, each one requiring you to reason about visibility in between. PG
-19 adds `ALTER TABLE ... MERGE PARTITIONS` and `... SPLIT PARTITION` to do
-this as a single operation. Note that "single" is not "online": both take an
-`ACCESS EXCLUSIVE` lock on the parent table as well as on every partition
-involved, so plan them into a maintenance window.
+This section was going to be about `ALTER TABLE ... MERGE PARTITIONS` and
+`... SPLIT PARTITION`, which restructure a partitioned table in a single
+statement instead of the detach/recreate/reattach dance. I wrote it, ran the
+queries against Beta 3, and drew a diagram for it.
+
+Then, on August 27, [Alexander Korotkov reverted the whole
+feature](https://git.postgresql.org/gitweb/?p=postgresql.git;a=commit;h=3e8bcc864)
+from the PostgreSQL 19 branch:
+
+> The feature is reverted due to multiple design issues which are too late to
+> address in this release cycle.
+
+{{< image src="fig-partition-merge.svg" title="What MERGE PARTITIONS did in Beta 3: three yearly range partitions of demo_races holding 19, 21 and 20 races, folded into a single partition covering 2015-2018 with all 60 rows. The command was reverted from PostgreSQL 19 on August 27, 2026." >}}
+
+That commit takes out 1,631 lines of `tablecmds.c`, 1,054 lines of
+`partbounds.c`, both isolation test suites, the documentation, and the
+`PARTITIONS` keyword. **It is the second time this feature has been reverted
+late in a release cycle** — it was pulled from PostgreSQL 17 in August 2024
+too, that time over `CVE-2014-0062` repeatable-name-lookup issues.
+
+There is a trap here worth knowing about. At the time of writing the
+[release notes](https://www.postgresql.org/docs/19/release-19.html) still
+list the feature, because the entry is *still in the release-note source on
+the release branch* — that file was edited on September 1, five days after
+the revert, and the entry survived. So if you check the official notes and
+conclude that PG 19 merges partitions, you are reading something the binary
+will not do. Beta 3, released August 13, still has the feature; anything
+built after August 27 does not.
+
+### What went wrong
+
+The [thread that killed
+it](https://www.postgresql.org/message-id/CAN4CZFNCU%3Dt09M%3D%2Br2t9hHLJuujdM4oQ8hCK_Sx-GpfiwMAicw%40mail.gmail.com)
+was opened by Zsolt Parragi of Percona on July 23, listing five design
+problems. Since Beta 3 still ships the feature, I went back and reproduced
+them. Four of the five fall out in a handful of statements.
+
+**A `CHECK` constraint quietly evaporates.** Attributes that belong to the
+individual partitions — indexes, constraints, defaults, storage options,
+comments — are simply dropped rather than carried across or refused:
 
 ```sql
-create table demo_races
+create table demo_chk
  (
-  raceid bigint,
-  season int,
-  name   text
-) partition by range (season);
+  id  int not null,
+  val text
+) partition by range (id);
 
-create table demo_races_2015
-  partition of demo_races
-  for values from (2015) to (2016);
+create table demo_chk_lo partition of demo_chk for values from (0) to (10);
 
-create table demo_races_2016
-  partition of demo_races
-  for values from (2016) to (2017);
+create table demo_chk_hi partition of demo_chk for values from (10) to (20);
 
-create table demo_races_2017
-  partition of demo_races
-  for values from (2017) to (2018);
+alter table demo_chk_lo
+  add constraint val_not_forbidden check (val <> 'forbidden');
 
-insert into demo_races
-     select raceid, extract(year from date)::int, name
-       from f1db.races
-      where extract(year from date) between 2015 and 2017;
+insert into demo_chk values (1, 'ok');
 
-  select tableoid::regclass, count(*)
-    from demo_races
-group by 1
-order by 1;
+insert into demo_chk values (2, 'forbidden');
 ```
 
 ```results
-    tableoid     | count 
------------------+-------
- demo_races_2015 |    19
- demo_races_2016 |    21
- demo_races_2017 |    20
+ERROR:  new row for relation "demo_chk_lo" violates check constraint "val_not_forbidden"
+DETAIL:  Failing row contains (2, forbidden).
+```
+
+Good — that is the constraint doing its job. Now merge, and run the very
+same statement again:
+
+```sql
+alter table demo_chk
+  merge partitions (demo_chk_lo, demo_chk_hi) into demo_chk_all;
+
+insert into demo_chk values (2, 'forbidden');
+
+  select id, val
+    from demo_chk
+order by id;
+```
+
+```results
+ id |    val    
+----+-----------
+  1 | ok
+  2 | forbidden
+```
+
+No error, no warning, and the row your schema was explicitly rejecting a
+moment ago is now sitting in the table. The index and the column default
+went the same way.
+
+**Stored generated columns are silently recomputed.** A partition can be
+attached with a generation expression that differs from its parent's, which
+is fine until two such partitions are merged and one expression wins:
+
+```sql
+create table demo_gen
+ (
+  id int not null,
+  g  int generated always as (id * 100) stored
+) partition by range (id);
+
+create table demo_gen_lo partition of demo_gen for values from (0) to (10);
+
+create table demo_gen_hi
+ (
+  id int not null,
+  g  int generated always as (id * 2) stored
+);
+
+alter table demo_gen
+  attach partition demo_gen_hi for values from (10) to (20);
+
+insert into demo_gen values (3), (13);
+
+  select tableoid::regclass as partition, id, g
+    from demo_gen
+order by id;
+```
+
+```results
+  partition  | id |  g  
+-------------+----+-----
+ demo_gen_lo |  3 | 300
+ demo_gen_hi | 13 |  26
 ```
 
 ```sql
-alter table demo_races
-  merge partitions (demo_races_2015, demo_races_2016, demo_races_2017)
-      into demo_races_2015_2017;
+alter table demo_gen
+  merge partitions (demo_gen_lo, demo_gen_hi) into demo_gen_all;
 
-  select tableoid::regclass, count(*)
-    from demo_races
-group by 1
-order by 1;
+  select tableoid::regclass as partition, id, g
+    from demo_gen
+order by id;
 ```
 
 ```results
-       tableoid       | count 
-----------------------+-------
- demo_races_2015_2017 |    60
+  partition   | id |  g   
+--------------+----+------
+ demo_gen_all |  3 |  300
+ demo_gen_all | 13 | 1300
 ```
 
-{{< image src="fig-partition-merge.svg" title="Three yearly range partitions of demo_races holding 19, 21 and 20 races, merged into a single partition covering 2015–2018 with all 60 rows. The statement is atomic but not online: ACCESS EXCLUSIVE is taken on the parent and on every partition involved." >}}
+Row 13 stored `26` before the merge and stores `1300` after it. Nothing in
+the statement asked for that, and nothing reported it.
 
-All 60 rows survived the merge, now living in one partition instead of
-three. `SPLIT PARTITION` runs the same idea in reverse — useful once a
-single partition has grown large enough that you want to break it apart by
-a finer-grained boundary, without detach/recreate/reattach gymnastics.
-(For where this sits in the longer arc of declarative partitioning, PG 10
-onwards, see the [partitioning section of the PG 11–18
+**Logical replication sees inserts that never happened.** The rows are moved
+with plain heap inserts, so a decoding slot reports them as fresh `INSERT`s
+into the new partition — with no matching `DELETE`s from the old ones:
+
+```sql
+create table demo_rep
+ (
+  id  int not null,
+  val text
+) partition by range (id);
+
+create table demo_rep_lo partition of demo_rep for values from (0) to (10);
+
+create table demo_rep_hi partition of demo_rep for values from (10) to (20);
+
+insert into demo_rep values (1, 'one'), (11, 'eleven');
+
+select slot_name
+  from pg_create_logical_replication_slot('demo_slot', 'test_decoding');
+
+alter table demo_rep
+  merge partitions (demo_rep_lo, demo_rep_hi) into demo_rep_all;
+
+select data from pg_logical_slot_get_changes('demo_slot', null, null);
+```
+
+```results
+                                 data                                 
+----------------------------------------------------------------------
+ BEGIN 1280
+ table public.demo_rep_all: INSERT: id[integer]:1 val[text]:'one'
+ table public.demo_rep_all: INSERT: id[integer]:11 val[text]:'eleven'
+ COMMIT 1280
+```
+
+A subscriber replaying that stream keeps the rows it already had in the old
+partitions and adds the new copies on top.
+
+**A publication can quietly empty itself.** If a publication named one of the
+merged partitions directly, it loses it and gains nothing; `REPLICA IDENTITY
+FULL` set on a partition reverts to the default too. The publication is still
+there, still enabled, and now replicating nothing.
+
+The fifth issue in the thread — losing `UPDATE`s on a subscriber when
+`REFRESH PUBLICATION` runs with `copy_data = false` — needs two instances to
+show, and I did not try it.
+
+### What to do instead
+
+Nothing changes for you today: keep detaching, recreating and reattaching
+partitions the way you already do. `SPLIT`/`MERGE PARTITIONS` will presumably
+be back for PG 20 or later, and on this evidence the rework is real work
+rather than polish — every one of the problems above is about what a
+partition *carries* (constraints, generated columns, replication identity)
+rather than about moving rows between files.
+
+It is also a useful reminder about beta software. Every other feature in this
+article is in the release branch and staying there; this one ran perfectly in
+Beta 3 and is gone. Reading release notes is not enough — for anything you
+intend to depend on, check that it is still in the branch you will actually
+run.
+
+(For where partitioning stands without it, see the [partitioning section of
+the PG 11–18
 round-up](/blog/2026/07/sql-improvements-in-postgresql-1118-a-personal-selection/#partition-improvements-pg-1219).)
 
 ---
