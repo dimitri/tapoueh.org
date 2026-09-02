@@ -691,10 +691,9 @@ create property graph borders
     geoname.country key (isocode) label country properties (name, iso)
   )
   edge tables (
-    geoname.neighbour
-      key (isocode, neighbour)
-      source key (isocode) references country (isocode)
-      destination key (neighbour) references country (isocode)
+    geoname.neighbour key (isocode, neighbour)
+      source key (isocode) references country(isocode)
+      destination key (neighbour) references country(isocode)
       label borders
   );
 ```
@@ -705,9 +704,9 @@ Now the graph can be pattern-matched with `GRAPH_TABLE`, which takes a
 ```sql
   select neighbour
     from graph_table (borders
-           match (c is country where c.name = 'France')
-                   -[is borders]->(n is country)
-           columns (n.name as neighbour))
+               match (c is country where c.name = 'France')
+                     -[is borders]->(n is country)
+             columns (n.name as neighbour))
 order by neighbour;
 ```
 
@@ -740,9 +739,9 @@ quantifier on the edge pattern — one to four hops:
 ```sql
   select distinct reachable
     from graph_table (borders
-           match (c is country where c.name = 'France')
-                   -[is borders]->{1,4}(n is country)
-           columns (n.name as reachable))
+               match (c is country where c.name = 'France')
+                     -[is borders]->{1,4}(n is country)
+             columns (n.name as reachable))
 order by reachable;
 ```
 
@@ -765,10 +764,10 @@ You can spell a fixed number of hops out by hand, and that does work:
 ```sql
   select distinct two_hops
     from graph_table (borders
-           match (a is country where a.name = 'France')
-                   -[is borders]->(b is country)
-                   -[is borders]->(c is country)
-           columns (c.name as two_hops))
+               match (a is country where a.name = 'France')
+                     -[is borders]->(b is country)
+                     -[is borders]->(c is country)
+             columns (c.name as two_hops))
 order by two_hops
    limit 8;
 ```
