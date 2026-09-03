@@ -1,6 +1,6 @@
 +++
 title     = "Getting Ready for PostgreSQL 19"
-date      = "2026-09-01T09:00:00+0200"
+date      = "2026-09-03T15:09:30+0200"
 tags      = ["PostgreSQL", "SQL"]
 categories = ["PostgreSQL", "SQL"]
 icon      = "🐘"
