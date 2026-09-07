@@ -183,8 +183,47 @@ result. So it is a comparison key, not a round-trippable advice string —
 do not feed its output to `pg_plan_advice` and expect it to apply. And the
 two do not agree byte for byte: on the forced plan above, 19 orders the
 `NO_GATHER` relations `results races drivers` where `sqlfmt` writes
-`drivers results races`. Compare `sqlfmt` output against `sqlfmt` output
-and that never bites you.
+`drivers results races`.
+
+### Comparing across versions
+
+That last one sounds like a footnote until you want the comparison that
+matters most. You are about to upgrade. You have the plan your PostgreSQL
+16 server produces for a query you care about, and you have what a
+PostgreSQL 19 server says about the same query, printed by
+`pg_plan_advice` itself. Did the planner change its mind? That is the
+single most useful plan comparison anybody makes, and it is inherently
+one plan from each side.
+
+Reading `contrib/pg_plan_advice` shows why the two disagree, and that
+neither is wrong. `pgpa_output_no_gather()` emits its targets from a
+`Bitmapset`, walked in range-table order — so 19's order is stable per
+*query*. `sqlfmt` walks the plan tree, so its order is stable per *plan*.
+That is exactly why 19 printed `NO_GATHER(results races drivers)` for both
+the default and the forced plan above, while `sqlfmt` reordered with the
+join. Neither order is recoverable from the other, and for a set of
+relations it means nothing anyway — 19 is not even self-consistent about
+it, since `pgpa_output_scan_strategy()` iterates a list in plan order
+while `NO_GATHER` uses a bitmapset.
+
+So the fix is not to imitate 19, which text cannot do — range-table
+indexes are not in `EXPLAIN` output. It is to normalize both sides:
+
+```sh
+$ diff <(sqlfmt explain advice -canonical pg16-plan.txt) \
+       <(sqlfmt explain canonical pg19-plan.txt)
+```
+
+`-canonical` sorts what is a set, leaves `JOIN_ORDER` alone because there
+the order *is* the meaning, keeps index pairs together as pairs, and drops
+the schema qualifiers — 19 always writes `public.foo_pkey`, text `EXPLAIN`
+never does. `explain canonical` is the other half: it reads the advice
+block a server already printed, finding it inside a whole
+`EXPLAIN (PLAN_ADVICE)` capture. On the two plans above, that closes the
+`NO_GATHER` difference exactly.
+
+Canonical output is even further from being usable advice than the
+default. That is the trade: it is a comparison key and nothing else.
 
 ---
 
