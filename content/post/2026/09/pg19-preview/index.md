@@ -763,10 +763,53 @@ actually lives, rather than in a comment above the query.
 
 ---
 
-## SQL/PGQ: graph patterns over the tables you already have
+## SQL/PGQ: withdrawn from 19, four days after this went out
 
-PostgreSQL 19 implements [SQL/PGQ](https://www.iso.org/standard/79473.html),
-Part 16 of the SQL standard, which lets you query relational tables using
+**Update, 7 September 2026.** This section described a feature that is no
+longer in PostgreSQL 19. On the evening of the 7th, Peter Eisentraut —
+SQL/PGQ's own author — [reverted the whole
+thing](https://git.postgresql.org/gitweb/?p=postgresql.git;a=commit;h=2b9e1aff4)
+from the release branch, 47 commits of it. I published this on the 3rd.
+Everything below ran on Beta 3 and is what the feature did; none of it is
+what PostgreSQL 19 will ship.
+
+I am leaving it, for the same reason the `MERGE PARTITIONS` section above
+is still here, and because two independent withdrawals from one release
+cycle say something the working feature would not have.
+
+The call came from Melanie Plageman writing for the Release Management
+Team, in [the thread on catalog representation and `pg_dump`
+support](https://www.postgresql.org/message-id/CAAKRu_bEtjWYWhYxSo0o_t3DaZYRQd5PkC0abA0g9Mp4%2BovH0w%40mail.gmail.com),
+over four unresolved problems. `DROP TABLE ... CASCADE` left orphaned
+label and property metadata behind — phantom rows in `information_schema`
+that could make later alterations fail and, worse, "render the graph
+undumpable/unrestorable". Labels and properties were scoped globally
+rather than per-label, so a view over a `GRAPH_TABLE` could become
+"silently unqueryable" after a property was dropped from one element while
+still existing on another, a case the standard does not settle. There were
+open questions about whether property graphs should have `pg_class` entries
+at all. And there was an unresolved `pg_dump` dependency loop when a
+materialized view queries a `GRAPH_TABLE`.
+
+The RMT's argument was about time, not merit: reverting "would take off the
+time pressure now and would make it easier to fix these things properly in
+20 without having to be burdened by backwards compatibility and
+backpatching." Note what that has in common with the partitions story — both
+features were pulled over what an object *carries* and how it is *dumped*,
+not over whether the headline feature worked. It worked. I ran it.
+
+One practical note, and it is the same trap as before: at the time of
+writing the docs site still serves
+[`ddl-property-graphs.html`](https://www.postgresql.org/docs/19/ddl-property-graphs.html)
+because it has not rebuilt yet. The release notes, to the project's credit,
+were corrected in the revert commit itself this time.
+
+The rest of this section is preserved as written.
+
+---
+
+PostgreSQL 19 implemented [SQL/PGQ](https://www.iso.org/standard/79473.html),
+Part 16 of the SQL standard, which let you query relational tables using
 graph pattern syntax. It is worth being clear about what that does and does
 not mean. A property graph is *not* a new storage engine and not a copy of
 your data: `CREATE PROPERTY GRAPH` behaves like `CREATE VIEW`, recording a
@@ -888,10 +931,11 @@ round-up](/blog/2026/07/sql-improvements-in-postgresql-1118-a-personal-selection
 that map of everywhere you can drive from France in four hops is a recursive
 CTE, and a good one.
 
-### Why this is the right amount to ship
+### Why it was still the right amount to ship
 
 It would be easy to read "no variable-length paths" as PGQ arriving
-half-finished. I would read it the other way round.
+half-finished. I would read it the other way round — and the revert does
+not change that reading, it sharpens it.
 
 What landed is the part that is tedious, invasive and hard to change later:
 five new system catalogs, a parser that understands the full pattern grammar,
@@ -909,12 +953,22 @@ process looks like when the engineers decide what is ready, rather than a
 calendar or a feature-comparison table. Oracle 23ai shipped SQL/PGQ first, and
 PostgreSQL is not racing it.
 
-What you get today is real: property graphs are declared over tables you
-already have, cost nothing to maintain, and let you write a pattern instead of
-a join chain — with the standard's syntax, so what you learn now is what you
-will use later. The rest builds on this, one release at a time. That is how
-PostgreSQL has always gotten where it is going, and it is why the pieces still
-fit together twenty years on.
+What the revert adds is that the same standard gets applied to the
+foundation, not only to the parts left out of it. The query layer worked —
+that is the part I demonstrated, and it is the part a release under
+commercial pressure would have shipped. What was not finished was catalog
+housekeeping: what happens to a label when a `CASCADE` sweeps past it,
+whether `pg_dump` can put the thing back. Nobody writes a launch blog post
+about `pg_dump` round-tripping. It is exactly the sort of unglamorous
+correctness that gets deferred when a date is promised, and exactly what
+you are relying on the day you restore a backup.
+
+Two features pulled from one release for that reason is not a project
+struggling to ship. It is a project that would rather be a year late than
+be wrong in your database, twice in the same cycle, from people who had
+every incentive to let their own work through. The rest builds on this, one
+release at a time. That is how PostgreSQL has always gotten where it is
+going, and it is why the pieces still fit together twenty years on.
 
 ---
 
