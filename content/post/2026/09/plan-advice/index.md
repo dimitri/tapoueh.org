@@ -112,6 +112,82 @@ statistics: it does not mention any.
 
 ---
 
+## You do not need PostgreSQL 19 for this part
+
+There is an obvious problem with everything above: `pg_plan_advice` is a
+PostgreSQL 19 contrib module, and you are probably not running PostgreSQL
+19. Most people will not be for years.
+
+The useful half of that four-line block does not actually depend on the
+server, though. It is a *description of a plan* — and the plan text is
+something every version has been printing all along. So it can be
+reconstructed. [`sqlfmt`](https://github.com/dimitri/sqlfmt) does that,
+from ordinary `EXPLAIN` output, on any version:
+
+```sh
+$ sqlfmt explain advice plans/default.txt
+```
+
+```results
+JOIN_ORDER(results races drivers)
+HASH_JOIN(races drivers)
+SEQ_SCAN(results races drivers)
+NO_GATHER(results races drivers)
+```
+
+That is the same four lines PostgreSQL 19 printed above, from a plan
+captured on a server that has never heard of `pg_plan_advice`.
+
+### Why this is the right way to compare two plans
+
+Putting two plans side by side works fine at the size of the ones in this
+article. It stops working at twenty nodes, and twenty-node plans are the
+ones you actually need to compare. The mechanical answer — run `diff` over
+two `EXPLAIN` outputs — does not help either: every line carries a cost or
+a timing, so *every line differs*, and the one change that matters drowns
+in the noise.
+
+Leaving the numbers out is what makes the comparison tractable. Because no
+cost or timing appears, two runs of the same plan produce identical output,
+and any difference is a real difference. Here is the planner's own plan
+against the one the advice forced, earlier in this article:
+
+```sh
+$ sqlfmt explain diff plans/default.txt plans/forced.txt
+```
+
+```diff
+--- plans/default.txt
++++ plans/forced.txt
+@@ plan structure @@
+-JOIN_ORDER(results races drivers)
++JOIN_ORDER(drivers results races)
+-HASH_JOIN(races drivers)
++HASH_JOIN(races)
+-SEQ_SCAN(results races drivers)
++SEQ_SCAN(drivers results races)
+-NO_GATHER(results races drivers)
++NO_GATHER(drivers results races)
++MERGE_JOIN_PLAIN(results)
+```
+
+The driving table moved, one hash join became a merge join, and nothing
+else changed. With `EXPLAIN (ANALYZE)` plans the timings are reported too,
+as context lines under the structural hunk, so you can see whether the
+shape change actually bought anything. It exits non-zero when the plans
+differ, which makes it usable as a check in CI.
+
+Two honest limits. PostgreSQL 19 computes this *inside the planner*, which
+knows the whole query; `sqlfmt` reconstructs it from a rendering of the
+result. So it is a comparison key, not a round-trippable advice string —
+do not feed its output to `pg_plan_advice` and expect it to apply. And the
+two do not agree byte for byte: on the forced plan above, 19 orders the
+`NO_GATHER` relations `results races drivers` where `sqlfmt` writes
+`drivers results races`. Compare `sqlfmt` output against `sqlfmt` output
+and that never bites you.
+
+---
+
 ## Making the planner take it
 
 Feed a string back through `pg_plan_advice.advice` and the planner is
@@ -327,38 +403,31 @@ Both modules' documentation carries the same warning, and it is worth
 repeating rather than paraphrasing: the planner's ability to change its
 mind as the data changes is a feature. Advice takes that away. If the
 distribution shifts under a pinned plan, you get the old plan applied to
-new data, which is exactly the failure the planner exists to prevent.
+new data, which is exactly the failure the planner exists to prevent. The
+README is blunter still — bad advice producing a bad plan is "user error,
+not a defect in this module".
 
-The README is blunter still — bad advice producing a bad plan is
-"user error, not a defect in this module".
-
-So the discipline that makes this useful is *trimming*. The generated
-string describes every decision, but you almost never want to pin every
-decision. If the problem is that the join order flipped, keep
-`JOIN_ORDER(...)` and delete the rest; the planner keeps its freedom
-everywhere else, and the one thing you needed stays fixed. The README
-works through a star-schema example on exactly this point: dropping the
-`JOIN_ORDER` line while keeping the join methods gives the planner room to
-reorder while still forcing hash joins where you wanted them.
-
-Advice is also not free. Applying it costs planning time even when the plan
-does not change, which is another reason to reach for it per-query rather
-than cluster-wide.
+So the discipline that makes advice useful is *trimming*: the generated
+string describes every decision, and you almost never want to pin every
+decision. If the join order flipped, keep `JOIN_ORDER(...)` and delete the
+rest, so the planner keeps its freedom everywhere else. Applying advice
+also costs planning time even when the plan does not change, which argues
+for reaching for it per-query rather than cluster-wide.
 
 ---
 
 ## What this replaces
 
-If you have run PostgreSQL at scale you have met the alternatives. There is
-`pg_hint_plan`, which is an out-of-tree extension with hints embedded in
-query comments. There is the `enable_*` family, which is a blunt
-per-session instrument. There is `plan_cache_mode`, which addresses a
-narrower problem. And there is the traditional answer — restructure the
-query until the planner agrees with you — which works but is not available
-when the query comes out of an ORM you do not control.
+You have met the alternatives if you have run PostgreSQL at scale:
+`pg_hint_plan`'s out-of-tree hints in query comments, the blunt
+per-session `enable_*` family, or rewriting the query until the planner
+agrees with you — which is not available when the query comes out of an
+ORM you do not control.
 
-What is new here is the round trip: a plan can be *read out*, and the same
-string put back. You are not writing hints from first principles and hoping
-they describe the plan you remember. You are keeping a plan you measured.
+What is new is the round trip: a plan can be *read out*, and the same
+string put back. You are not writing hints from first principles and
+hoping they describe the plan you remember; you are keeping a plan you
+measured. That is a smaller feature than a hint language, and a much more
+useful one.
 
-That is a smaller feature than a hint language, and a much more useful one.
+And the reading-out half, as above, you can have today.
