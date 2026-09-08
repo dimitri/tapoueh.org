@@ -177,53 +177,38 @@ as context lines under the structural hunk, so you can see whether the
 shape change actually bought anything. It exits non-zero when the plans
 differ, which makes it usable as a check in CI.
 
-Two honest limits. PostgreSQL 19 computes this *inside the planner*, which
-knows the whole query; `sqlfmt` reconstructs it from a rendering of the
-result. So it is a comparison key, not a round-trippable advice string —
-do not feed its output to `pg_plan_advice` and expect it to apply. And the
-two do not agree byte for byte: on the forced plan above, 19 orders the
-`NO_GATHER` relations `results races drivers` where `sqlfmt` writes
-`drivers results races`.
+One thing this is not: PostgreSQL 19 computes advice *inside the planner*,
+which knows the whole query, while `sqlfmt` reconstructs it from a
+rendering of the result. It is a comparison key, not a round-trippable
+advice string — do not feed its output to `pg_plan_advice` and expect it
+to apply.
 
 ### Comparing across versions
 
-That last one sounds like a footnote until you want the comparison that
-matters most. You are about to upgrade. You have the plan your PostgreSQL
-16 server produces for a query you care about, and you have what a
-PostgreSQL 19 server says about the same query, printed by
-`pg_plan_advice` itself. Did the planner change its mind? That is the
-single most useful plan comparison anybody makes, and it is inherently
-one plan from each side.
+The comparison worth making most is the one you make before an upgrade.
+You have the plan your PostgreSQL 16 server produces for a query you care
+about, and you have what a PostgreSQL 19 server says about the same query,
+printed by `pg_plan_advice` itself. Did the planner change its mind?
 
-Reading `contrib/pg_plan_advice` shows why the two disagree, and that
-neither is wrong. `pgpa_output_no_gather()` emits its targets from a
-`Bitmapset`, walked in range-table order — so 19's order is stable per
-*query*. `sqlfmt` walks the plan tree, so its order is stable per *plan*.
-That is exactly why 19 printed `NO_GATHER(results races drivers)` for both
-the default and the forced plan above, while `sqlfmt` reordered with the
-join. Neither order is recoverable from the other, and for a set of
-relations it means nothing anyway — 19 is not even self-consistent about
-it, since `pgpa_output_scan_strategy()` iterates a list in plan order
-while `NO_GATHER` uses a bitmapset.
-
-So the fix is not to imitate 19, which text cannot do — range-table
-indexes are not in `EXPLAIN` output. It is to normalize both sides:
+One plan from each side, and the two write the same decisions down
+slightly differently — 19 orders a set of relations by its own internal
+numbering and schema-qualifies index names, neither of which is in plain
+`EXPLAIN` text. `-canonical` puts both into one normal form:
 
 ```sh
 $ diff <(sqlfmt explain advice -canonical pg16-plan.txt) \
        <(sqlfmt explain canonical pg19-plan.txt)
 ```
 
-`-canonical` sorts what is a set, leaves `JOIN_ORDER` alone because there
-the order *is* the meaning, keeps index pairs together as pairs, and drops
-the schema qualifiers — 19 always writes `public.foo_pkey`, text `EXPLAIN`
-never does. `explain canonical` is the other half: it reads the advice
-block a server already printed, finding it inside a whole
-`EXPLAIN (PLAN_ADVICE)` capture. On the two plans above, that closes the
-`NO_GATHER` difference exactly.
+It sorts what is a set, leaves `JOIN_ORDER` alone because there the order
+*is* the meaning, keeps index pairs together as pairs, and drops schema
+qualifiers. `explain canonical` is the counterpart for the other side: it
+reads an advice block a server already printed, finding it inside a whole
+`EXPLAIN (PLAN_ADVICE)` capture.
 
-Canonical output is even further from being usable advice than the
-default. That is the trade: it is a comparison key and nothing else.
+What is left after that is only real difference. Which is the point — you
+are asking whether the upgrade changed your plans, and you want the answer
+to be a short list or an empty one, not a page of notation.
 
 ---
 
