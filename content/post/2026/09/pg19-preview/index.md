@@ -373,7 +373,7 @@ statement instead of the detach/recreate/reattach dance. I wrote it, ran the
 queries against Beta 3, and drew a diagram for it.
 
 Then, on August 27, [Alexander Korotkov reverted the whole
-feature](https://git.postgresql.org/gitweb/?p=postgresql.git;a=commit;h=3e8bcc864)
+feature](https://git.postgresql.org/cgit/postgresql.git/commit/?id=3e8bcc8644feaa9ca1cc954197b6994817af4290)
 from the PostgreSQL 19 branch. I am leaving the section in, because how that
 decision got made is more interesting than the feature would have been:
 
@@ -770,7 +770,7 @@ actually lives, rather than in a comment above the query.
 **Update, 7 September 2026.** This section described a feature that is no
 longer in PostgreSQL 19. On the evening of the 7th, Peter Eisentraut —
 SQL/PGQ's own author — [reverted the whole
-thing](https://git.postgresql.org/gitweb/?p=postgresql.git;a=commit;h=2b9e1aff4)
+thing](https://git.postgresql.org/cgit/postgresql.git/commit/?id=b1f106c80cbeb18d3a0219994d98a51a6eca8ede)
 from the release branch, 47 commits of it. I published this on the 3rd.
 Everything below ran on Beta 3 and is what the feature did; none of it is
 what PostgreSQL 19 will ship.
