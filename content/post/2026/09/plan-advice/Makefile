@@ -9,6 +9,7 @@
 ##   make clean    — remove generated files
 
 DIAGRAMS := \
+	fig-plan-tree \
 	fig-advice-anatomy \
 	fig-advice-lifecycle
 
@@ -25,7 +26,8 @@ all: $(SVGS)
 	@echo "  LaTeX  $<"
 	@tmpdir=$$(mktemp -d) && \
 	  printf '%s\n' '\documentclass[border=4pt]{standalone}' > $$tmpdir/doc.tex && \
-	  printf '%s\n' '\usepackage[dvipsnames,svgnames,x11names]{xcolor}' >> $$tmpdir/doc.tex && \
+	  printf '%s\n' '\usepackage[dvipsnames,svgnames,x11names,table]{xcolor}' >> $$tmpdir/doc.tex && \
+	  printf '%s\n' '\usepackage{array}' >> $$tmpdir/doc.tex && \
 	  printf '%s\n' '\usepackage{tikz,pgfplots,adjustbox,amsmath,amssymb,fontawesome5}' >> $$tmpdir/doc.tex && \
 	  printf '%s\n' '\usetikzlibrary{arrows.meta,positioning,shapes,fit,backgrounds,calc,decorations.pathreplacing,patterns}' >> $$tmpdir/doc.tex && \
 	  printf '%s\n' '\pgfplotsset{compat=1.18}' >> $$tmpdir/doc.tex && \

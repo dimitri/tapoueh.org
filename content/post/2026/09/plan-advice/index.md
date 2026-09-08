@@ -92,10 +92,16 @@ group by drivers.surname;
    NO_GATHER(results races drivers)
 ```
 
-That trailing block is the whole idea. Four lines, describing four
-decisions the planner made: which table drives the join and in what order,
-which join method to use, how to reach each relation, and whether to go
-parallel.
+Indented `EXPLAIN` output is a tree written sideways, and it is worth
+seeing as one before going further — the plan below is what those four
+lines of advice are describing:
+
+{{< image src="fig-plan-tree.svg" title="The plan as a tree, rows flowing upward: three sequential scans at the bottom, two of them feeding hash builds, two hash joins above those, and a Hash Aggregate under the query. Nothing in the tree carries a number, because this plan was taken with COSTS OFF." >}}
+
+That trailing block under the plan is the whole idea. Four lines,
+describing four decisions the planner made: which table drives the join
+and in what order, which join method to use, how to reach each relation,
+and whether to go parallel.
 
 {{< image src="fig-advice-anatomy.svg" title="The same plan expressed twice: as a plan tree on the left, and as four lines of advice on the right. Join order, join method, scan method and parallelism each get one line, colour-matched to the part of the tree they describe." >}}
 
