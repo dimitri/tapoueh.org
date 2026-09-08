@@ -763,6 +763,8 @@ actually lives, rather than in a comment above the query.
 
 ---
 
+<div id="sqlpgq-graph-patterns-over-the-tables-you-already-have"></div>
+
 ## SQL/PGQ: withdrawn from 19, four days after this went out
 
 **Update, 7 September 2026.** This section described a feature that is no
