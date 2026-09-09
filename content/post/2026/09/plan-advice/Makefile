@@ -1,46 +1,13 @@
-## Makefile — compile TikZ diagrams to SVG for the article
-##
-## Prerequisites:
-##   brew install texlive   (or MacTeX / TeX Live with lualatex + standalone)
-##   brew install pdf2svg
-##
-## Usage:
-##   make          — build all SVGs
-##   make clean    — remove generated files
+# Opt-in: this article is authored with the TAOP markdown directives and
+# built with taopmd. Every target lives in ../../../../../taop.mk; no
+# other post on this site is affected.
+#
+#   make          fmt, run the queries, render index.md from index.src.md
+#   make render   render only, without touching a database
+#   make figs     compile the TikZ figures (fig-*.tex) to SVG
+#
+# index.src.md is the source: prose plus \include{} directives naming the
+# files in sql/ and results/. index.md is generated from it and committed,
+# so the site still builds for anyone without taopmd.
 
-DIAGRAMS := \
-	fig-plan-tree \
-	fig-advice-anatomy \
-	fig-advice-lifecycle
-
-SVGS := $(addsuffix .svg, $(DIAGRAMS))
-
-.PHONY: all clean
-
-all: $(SVGS)
-
-## Wrap each .tex snippet in a standalone document, compile to PDF, convert to PNG.
-## Strips \begin{figure}/\end{figure}/\adjustbox wrappers that don't work in standalone.
-## Uses printf '%s\n' (not echo) because zsh echo interprets \e as ESC (0x1b).
-%.pdf: %.tex
-	@echo "  LaTeX  $<"
-	@tmpdir=$$(mktemp -d) && \
-	  printf '%s\n' '\documentclass[border=4pt]{standalone}' > $$tmpdir/doc.tex && \
-	  printf '%s\n' '\usepackage[dvipsnames,svgnames,x11names,table]{xcolor}' >> $$tmpdir/doc.tex && \
-	  printf '%s\n' '\usepackage{array}' >> $$tmpdir/doc.tex && \
-	  printf '%s\n' '\usepackage{tikz,pgfplots,adjustbox,amsmath,amssymb,fontawesome5}' >> $$tmpdir/doc.tex && \
-	  printf '%s\n' '\usetikzlibrary{arrows.meta,positioning,shapes,fit,backgrounds,calc,decorations.pathreplacing,patterns}' >> $$tmpdir/doc.tex && \
-	  printf '%s\n' '\pgfplotsset{compat=1.18}' >> $$tmpdir/doc.tex && \
-	  printf '%s\n' '\begin{document}' >> $$tmpdir/doc.tex && \
-	  grep -v '\\begin{figure}\|\\end{figure}\|\\centering\|\\caption\|\\label' $< >> $$tmpdir/doc.tex && \
-	  printf '%s\n' '\end{document}' >> $$tmpdir/doc.tex && \
-	  lualatex -interaction=nonstopmode -output-directory=$$tmpdir $$tmpdir/doc.tex > /dev/null 2>&1 && \
-	  cp $$tmpdir/doc.pdf $@ && \
-	  rm -rf $$tmpdir
-
-%.svg: %.pdf
-	@echo "  SVG    $@"
-	pdf2svg $< $@
-
-clean:
-	rm -f $(SVGS) $(addsuffix .pdf, $(DIAGRAMS))
+include ../../../../../taop.mk

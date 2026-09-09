@@ -36,61 +36,16 @@ contrib, and the Lab image ships them. Add them to
 
 Start with a query that joins three F1 tables:
 
-```sql
-  select drivers.surname, count(*) as races
-    from f1db.results
-    join f1db.races using(raceid)
-    join f1db.drivers using(driverid)
-   where races.year = 2017
-group by drivers.surname
-order by races desc, drivers.surname
-   limit 5;
-```
+\include{sql/1-the-query.sql}
 
-```results
-  surname   | races 
-------------+-------
- Bottas     |    11
- Ericsson   |    11
- Grosjean   |    11
- Hamilton   |    11
- Hülkenberg |    11
-```
+\include{results/1-the-query.out}
 
 Nothing remarkable. Now ask the planner not just what it did, but to
 describe what it did in a form it can read back:
 
-```sql
- explain (costs off, plan_advice)
-  select drivers.surname, count(*) as races
-    from f1db.results
-    join f1db.races using(raceid)
-    join f1db.drivers using(driverid)
-   where races.year = 2017
-group by drivers.surname;
-```
+\include{sql/2-plan-advice.sql}
 
-```results
-                        QUERY PLAN                        
-----------------------------------------------------------
- HashAggregate
-   Group Key: drivers.surname
-   ->  Hash Join
-         Hash Cond: (results.driverid = drivers.driverid)
-         ->  Hash Join
-               Hash Cond: (results.raceid = races.raceid)
-               ->  Seq Scan on results
-               ->  Hash
-                     ->  Seq Scan on races
-                           Filter: (year = 2017)
-         ->  Hash
-               ->  Seq Scan on drivers
- Generated Plan Advice:
-   JOIN_ORDER(results races drivers)
-   HASH_JOIN(races drivers)
-   SEQ_SCAN(results races drivers)
-   NO_GATHER(results races drivers)
-```
+\include{results/2-plan-advice.out}
 
 Indented `EXPLAIN` output is a tree written sideways, and it is worth
 seeing as one before going further — the plan below is what those four
@@ -134,12 +89,7 @@ from ordinary `EXPLAIN` output, on any version:
 $ sqlfmt explain advice plans/default.txt
 ```
 
-```results
-JOIN_ORDER(results races drivers)
-HASH_JOIN(races drivers)
-SEQ_SCAN(results races drivers)
-NO_GATHER(results races drivers)
-```
+\include{results/7-advice-any-version.out}
 
 That is the same four lines PostgreSQL 19 printed above, from a plan
 captured on a server that has never heard of `pg_plan_advice`.
@@ -224,50 +174,9 @@ Feed a string back through `pg_plan_advice.advice` and the planner is
 obliged to follow it. Here is the same query, told to drive from `drivers`
 instead:
 
-```sql
-set pg_plan_advice.advice = 'JOIN_ORDER(drivers results races)';
+\include{sql/3-force-join-order.sql}
 
- explain (costs off, plan_advice)
-  select drivers.surname, count(*) as races
-    from f1db.results
-    join f1db.races using(raceid)
-    join f1db.drivers using(driverid)
-   where races.year = 2017
-group by drivers.surname;
-```
-
-```results
-SET
-                                 QUERY PLAN                                  
------------------------------------------------------------------------------
- Finalize GroupAggregate
-   Group Key: drivers.surname
-   ->  Sort
-         Sort Key: drivers.surname
-         ->  Hash Join
-               Hash Cond: (results.raceid = races.raceid)
-               ->  Merge Join
-                     Merge Cond: (drivers.driverid = results.driverid)
-                     ->  Sort
-                           Sort Key: drivers.driverid
-                           ->  Seq Scan on drivers
-                     ->  Sort
-                           Sort Key: results.driverid
-                           ->  Partial HashAggregate
-                                 Group Key: results.raceid, results.driverid
-                                 ->  Seq Scan on results
-               ->  Hash
-                     ->  Seq Scan on races
-                           Filter: (year = 2017)
- Supplied Plan Advice:
-   JOIN_ORDER(drivers results races) /* matched */
- Generated Plan Advice:
-   JOIN_ORDER(drivers results races)
-   MERGE_JOIN_PLAIN(results)
-   HASH_JOIN(races)
-   SEQ_SCAN(drivers results races)
-   NO_GATHER(results races drivers)
-```
+\include{results/3-force-join-order.out}
 
 Two things to notice. The plan really did change — `drivers` is now the
 outer relation, and the planner reached for a merge join to get there.
@@ -287,47 +196,9 @@ Advice constrains the planner's choice *among plans it would consider*. It
 does not resurrect plans that have been taken off the table. Turn off hash
 joins and ask for one anyway:
 
-```sql
-reset pg_plan_advice.advice;
+\include{sql/4-advice-that-fails.sql}
 
-set enable_hashjoin = off;
-
-set pg_plan_advice.advice = 'JOIN_ORDER(results races drivers) HASH_JOIN(races)';
-
- explain (costs off)
-  select drivers.surname, count(*) as races
-    from f1db.results
-    join f1db.races using(raceid)
-    join f1db.drivers using(driverid)
-   where races.year = 2017
-group by drivers.surname;
-```
-
-```results
-RESET
-SET
-SET
-                              QUERY PLAN                               
------------------------------------------------------------------------
- Finalize GroupAggregate
-   Group Key: drivers.surname
-   ->  Sort
-         Sort Key: drivers.surname
-         ->  Nested Loop
-               ->  Nested Loop
-                     Disabled: true
-                     ->  Partial HashAggregate
-                           Group Key: results.raceid, results.driverid
-                           ->  Seq Scan on results
-                     ->  Index Scan using idx_49556_primary on races
-                           Index Cond: (raceid = results.raceid)
-                           Filter: (year = 2017)
-               ->  Index Scan using idx_49514_primary on drivers
-                     Index Cond: (driverid = results.driverid)
- Supplied Plan Advice:
-   JOIN_ORDER(results races drivers) /* matched */
-   HASH_JOIN(races) /* matched, failed */
-```
+\include{results/4-advice-that-fails.out}
 
 `JOIN_ORDER` matched. `HASH_JOIN(races)` reports `matched, failed` — the
 advice was understood, it applied to the right part of the query, and the
@@ -347,75 +218,18 @@ cannot ask an application to do it. `pg_stash_advice` closes that gap: it
 maps query ids to advice strings in shared memory, and applies them to any
 query whose id matches.
 
-```sql
-create extension if not exists pg_stash_advice;
+\include{sql/5-stash.sql}
 
-select pg_create_advice_stash('production');
-
-select pg_set_stashed_advice(
-         'production', -5243066567089054587,
-         'JOIN_ORDER(drivers results races)'
-       );
-
-select * from pg_get_advice_stash_contents('production');
-```
-
-```results
-NOTICE:  extension "pg_stash_advice" already exists, skipping
-CREATE EXTENSION
- pg_create_advice_stash 
-------------------------
- 
-
- pg_set_stashed_advice 
------------------------
- 
-
- stash_name |       query_id       |           advice_string           
-------------+----------------------+-----------------------------------
- production | -5243066567089054587 | JOIN_ORDER(drivers results races)
-```
+\include{results/5-stash.out}
 
 The query id comes from `EXPLAIN (VERBOSE)`, or — more usefully — from
 `pg_stat_statements`, which is where you were already looking when you
 noticed the query had got slow. From then on, the application changes
 nothing:
 
-```sql
-set pg_stash_advice.stash_name = 'production';
+\include{sql/6-stash-applies.sql}
 
- explain (costs off)
-  select drivers.surname, count(*) as races
-    from f1db.results
-    join f1db.races using(raceid)
-    join f1db.drivers using(driverid)
-   where races.year = 2017
-group by drivers.surname;
-```
-
-```results
-SET
-                                 QUERY PLAN                                  
------------------------------------------------------------------------------
- Finalize GroupAggregate
-   Group Key: drivers.surname
-   ->  Sort
-         Sort Key: drivers.surname
-         ->  Hash Join
-               Hash Cond: (results.raceid = races.raceid)
-               ->  Hash Join
-                     Hash Cond: (drivers.driverid = results.driverid)
-                     ->  Seq Scan on drivers
-                     ->  Hash
-                           ->  Partial HashAggregate
-                                 Group Key: results.raceid, results.driverid
-                                 ->  Seq Scan on results
-               ->  Hash
-                     ->  Seq Scan on races
-                           Filter: (year = 2017)
- Supplied Plan Advice:
-   JOIN_ORDER(drivers results races) /* matched */
-```
+\include{results/6-stash-applies.out}
 
 No `LOAD`, no `SET advice`, no rewritten query. The plan changed because
 the stash matched the query id.
@@ -458,4 +272,3 @@ measured. That is a smaller feature than a hint language, and a much more
 useful one.
 
 And the reading-out half, as above, you can have today.
-
