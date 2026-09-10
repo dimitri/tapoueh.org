@@ -1,44 +1,35 @@
-## Makefile — compile TikZ diagrams to SVG for the article
-##
-## Prerequisites:
-##   brew install texlive   (or MacTeX / TeX Live with lualatex + standalone)
-##   brew install pdf2svg
-##
-## Usage:
-##   make          — build all SVGs
-##   make clean    — remove generated files
+# The TikZ figures in this article, compiled to SVG.
+#
+# This was thirty lines of shell: a preamble written with printf, a grep
+# to strip \caption and \label out of each fragment, then lualatex and
+# pdf2svg driven by hand. The same loop had been copied into the
+# plan-advice article, which is how one build step becomes two that
+# disagree -- so it lives in taopmd now, wrapper and all.
+#
+# taopmd is from the app.taop.xyz repository. It is not published: build
+# it there and put it on PATH, or point TAOPMD at it.
+#
+#   cd ~/dev/TAOP/app.taop.xyz && make taopmd && cp bin/taopmd ~/bin/
+#
+#   make        compile any fig-*.tex whose .svg is out of date
+#   make force  compile them all
+#
+# This article has no \include{} directives, so it needs none of the
+# other taop.mk targets: the prose is written directly in index.md.
 
-DIAGRAMS := \
-	fig-for-portion-of \
-	fig-partition-merge
+TAOPMD ?= taopmd
 
-SVGS := $(addsuffix .svg, $(DIAGRAMS))
+.PHONY: all force check
 
-.PHONY: all clean
+all: check
+	$(TAOPMD) figs
 
-all: $(SVGS)
+force: check
+	$(TAOPMD) figs -f
 
-## Wrap each .tex snippet in a standalone document, compile to PDF, convert to PNG.
-## Strips \begin{figure}/\end{figure}/\adjustbox wrappers that don't work in standalone.
-## Uses printf '%s\n' (not echo) because zsh echo interprets \e as ESC (0x1b).
-%.pdf: %.tex
-	@echo "  LaTeX  $<"
-	@tmpdir=$$(mktemp -d) && \
-	  printf '%s\n' '\documentclass[border=4pt]{standalone}' > $$tmpdir/doc.tex && \
-	  printf '%s\n' '\usepackage[dvipsnames,svgnames,x11names]{xcolor}' >> $$tmpdir/doc.tex && \
-	  printf '%s\n' '\usepackage{tikz,pgfplots,adjustbox,amsmath,amssymb,fontawesome5}' >> $$tmpdir/doc.tex && \
-	  printf '%s\n' '\usetikzlibrary{arrows.meta,positioning,shapes,fit,backgrounds,calc,decorations.pathreplacing,patterns}' >> $$tmpdir/doc.tex && \
-	  printf '%s\n' '\pgfplotsset{compat=1.18}' >> $$tmpdir/doc.tex && \
-	  printf '%s\n' '\begin{document}' >> $$tmpdir/doc.tex && \
-	  grep -v '\\begin{figure}\|\\end{figure}\|\\centering\|\\caption\|\\label' $< >> $$tmpdir/doc.tex && \
-	  printf '%s\n' '\end{document}' >> $$tmpdir/doc.tex && \
-	  lualatex -interaction=nonstopmode -output-directory=$$tmpdir $$tmpdir/doc.tex > /dev/null 2>&1 && \
-	  cp $$tmpdir/doc.pdf $@ && \
-	  rm -rf $$tmpdir
-
-%.svg: %.pdf
-	@echo "  SVG    $@"
-	pdf2svg $< $@
-
-clean:
-	rm -f $(SVGS) $(addsuffix .pdf, $(DIAGRAMS))
+check:
+	@command -v $(TAOPMD) >/dev/null 2>&1 || { \
+	  echo "Makefile: $(TAOPMD) not found on PATH."; \
+	  echo "  cd ~/dev/TAOP/app.taop.xyz && make taopmd && cp bin/taopmd ~/bin/"; \
+	  echo "  (or: make TAOPMD=/path/to/taopmd)"; \
+	  exit 1; }

@@ -78,28 +78,15 @@ fmt: check
 prune: check
 	$(TAOPMD) prune .
 
-# The conceptual TikZ figures are not plan diagrams and still need a real
-# LaTeX toolchain. Only run when the article has any.
-figs:
-	@if ls fig-*.tex >/dev/null 2>&1; then \
-	  for f in fig-*.tex; do \
-	    b=$${f%.tex}; \
-	    [ $$b.svg -nt $$f ] && continue; \
-	    echo "  TikZ  $$f"; \
-	    tmp=$$(mktemp -d); \
-	    printf '%s\n' '\documentclass[border=4pt]{standalone}' \
-	      '\usepackage[dvipsnames,svgnames,x11names,table]{xcolor}' \
-	      '\usepackage{array}' \
-	      '\usepackage{tikz,pgfplots,adjustbox,amsmath,amssymb,fontawesome5}' \
-	      '\usetikzlibrary{arrows.meta,positioning,shapes,fit,backgrounds,calc,decorations.pathreplacing,patterns}' \
-	      '\pgfplotsset{compat=1.18}' '\begin{document}' > $$tmp/doc.tex; \
-	    grep -v '\\begin{figure}\|\\end{figure}\|\\centering\|\\caption\|\\label' $$f >> $$tmp/doc.tex; \
-	    printf '%s\n' '\end{document}' >> $$tmp/doc.tex; \
-	    lualatex -interaction=nonstopmode -output-directory=$$tmp $$tmp/doc.tex > /dev/null 2>&1 || exit 1; \
-	    pdf2svg $$tmp/doc.pdf $$b.svg; \
-	    rm -rf $$tmp; \
-	  done; \
-	else echo "  no fig-*.tex here"; fi
+# The conceptual TikZ figures: hand-drawn TikZ that only a LaTeX run can
+# turn into a picture, unlike the plan diagrams, which are rendered by Go.
+#
+# This used to be thirty lines of shell here -- a preamble written with
+# printf, a grep stripping \caption out of each fragment, lualatex and
+# pdf2svg driven by hand. taopmd carries the wrapper now, so the two
+# articles that have figures stopped keeping two copies of the same loop.
+figs: check
+	$(TAOPMD) figs
 
 check:
 	@command -v $(TAOPMD) >/dev/null 2>&1 || { \
