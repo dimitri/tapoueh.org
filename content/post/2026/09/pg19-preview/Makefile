@@ -6,30 +6,40 @@
 # plan-advice article, which is how one build step becomes two that
 # disagree -- so it lives in taopmd now, wrapper and all.
 #
-# taopmd is from the app.taop.xyz repository. It is not published: build
-# it there and put it on PATH, or point TAOPMD at it.
+# It then grew a second copy of taop.mk's own "is taopmd installed?"
+# check, for the same reason: taop.mk's check also insisted on an
+# index.src.md, and this article has none. taop.mk splits that in two now
+# (tool, then check), so this file includes it like any other article and
+# keeps nothing of its own but the default goal.
 #
-#   cd ~/dev/TAOP/app.taop.xyz && make taopmd && cp bin/taopmd ~/bin/
+#   make            compile any fig-*.tex whose .svg is out of date
+#   make figs-force recompile them all
 #
-#   make        compile any fig-*.tex whose .svg is out of date
-#   make force  compile them all
-#
-# This article has no \include{} directives, so it needs none of the
-# other taop.mk targets: the prose is written directly in index.md.
+# This article has no \include{} directives: the prose is written
+# directly in index.md, so figs is the only target here that applies.
 
-TAOPMD ?= taopmd
+# Where the site's taop.mk lives -- git first, walking up as the fallback
+# for a checkout without .git. See plan-advice/Makefile for why this is
+# not a row of "..".
+TOPDIR := $(shell git -C '$(dir $(abspath $(lastword $(MAKEFILE_LIST))))' \
+                      rev-parse --show-toplevel 2>/dev/null)
+ifeq ($(TOPDIR),)
+TOPDIR := $(shell d='$(abspath $(dir $(lastword $(MAKEFILE_LIST))))'; \
+                  while [ "$$d" != / ]; do \
+                    [ -f "$$d/taop.mk" ] && { echo "$$d"; break; }; \
+                    d=$$(dirname "$$d"); \
+                  done)
+endif
+ifeq ($(TOPDIR),)
+$(error cannot find the repository root: no git checkout and no taop.mk above $(CURDIR))
+endif
 
-.PHONY: all force check
+include $(TOPDIR)/taop.mk
 
-all: check
-	$(TAOPMD) figs
+# taop.mk's own default is the whole fmt/run/render pipeline, which needs
+# a source document this article does not have.
+.DEFAULT_GOAL := figs
 
-force: check
-	$(TAOPMD) figs -f
-
-check:
-	@command -v $(TAOPMD) >/dev/null 2>&1 || { \
-	  echo "Makefile: $(TAOPMD) not found on PATH."; \
-	  echo "  cd ~/dev/TAOP/app.taop.xyz && make taopmd && cp bin/taopmd ~/bin/"; \
-	  echo "  (or: make TAOPMD=/path/to/taopmd)"; \
-	  exit 1; }
+# The name this article's own Makefile used before it included taop.mk.
+.PHONY: force
+force: figs-force
