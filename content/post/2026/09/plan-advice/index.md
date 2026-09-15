@@ -1,6 +1,6 @@
 +++
 title     = "Plan Advice in PostgreSQL 19"
-date      = "2026-09-16T09:00:00+0200"
+date      = "2026-09-15T18:27:53+0200"
 tags      = ["PostgreSQL", "SQL", "Performance"]
 categories = ["PostgreSQL", "Performance"]
 icon      = "🐘"
