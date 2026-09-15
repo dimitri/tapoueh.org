@@ -48,8 +48,8 @@ comparison needs is statistics that do not reflect the data yet:
 
 \include{results/1-the-query.out}
 
-Nothing remarkable about the query itself. Now ask the planner not just what it did, but to
-describe what it did in a form it can read back:
+Nothing remarkable about the query itself. Now ask the planner not just
+what it did, but to describe what it did in a form it can read back:
 
 \include{sql/2-plan-advice.sql}
 
@@ -138,10 +138,10 @@ $ sqlfmt explain diff plans/default.txt plans/forced.txt
 The driving table moved and both join methods stayed hash joins — the
 `HASH_JOIN` line just names a different pair, because forcing `drivers`
 to drive puts a different relation on the inner side. With `EXPLAIN
-(ANALYZE)` plans the timings are reported too,
-as context lines under the structural hunk, so you can see whether the
-shape change actually bought anything. It exits non-zero when the plans
-differ, which makes it usable as a check in CI.
+(ANALYZE)` plans the timings are reported too, as context lines under
+the structural hunk, so you can see whether the shape change actually
+bought anything. It exits non-zero when the plans differ, which makes it
+usable as a check in CI.
 
 One thing this is not: PostgreSQL 19 computes advice *inside the planner*,
 which knows the whole query, while `sqlfmt` reconstructs it from a
@@ -258,10 +258,10 @@ other saw. From then on, the application changes nothing:
 The only thing set is `pg_stash_advice.stash_name` — no
 `pg_plan_advice.advice` string, no rewritten query, no `LOAD`. That last
 one is not an accident: this session never asked for the module, and it
-was there anyway, because `session_preload_libraries` put it there before
-the connection existed. The plan changed because the stash matched the
-query id, not because anything about this query mentioned advice at
-all.
+was there anyway, because `shared_preload_libraries` put it there before
+the server even accepted its first connection. The plan changed because
+the stash matched the query id, not because anything about this query
+mentioned advice at all.
 
 {{< image src="fig-advice-lifecycle.svg" title="The plan advice workflow: find the query in pg_stat_statements, read its plan back with EXPLAIN (PLAN_ADVICE), keep only the lines that matter, and stash it by query id. The dashed return path is the step people forget." >}}
 
@@ -307,5 +307,3 @@ you already run: paste any `EXPLAIN` output into a file and run
 ```sh
 $ sqlfmt explain advice plan.txt
 ```
-
-— no PostgreSQL 19 and no `pg_plan_advice` required.
