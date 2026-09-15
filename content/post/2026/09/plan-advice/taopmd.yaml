@@ -1,0 +1,39 @@
+# Which PostgreSQL this article's queries are written against.
+#
+# It belongs here rather than in a flag: the article is *about* plan
+# advice in PostgreSQL 19, so the version is part of what the document
+# says, and a flag somebody has to remember is a flag somebody forgets.
+#
+# taopmd starts this image, runs the queries in sql/ against it, writes
+# results/, and stops it again. Nothing has to be running first.
+capture:
+  image: ghcr.io/dimitri/theartofpostgresql/postgres-seeded:19beta3
+  database: taop
+  user: taop
+  # pg_plan_advice needs nothing at postmaster start, so
+  # session_preload_libraries is enough: every new connection has it,
+  # no server restart required. pg_stash_advice goes in
+  # shared_preload_libraries instead, because its optional
+  # pg_stash_advice.persist setting -- surviving a restart -- only
+  # exists when the module was loaded that way; loaded any other way
+  # it is silently unavailable. pg_stat_statements sits alongside it,
+  # for real -- the article finds sql/5-stash.sql's query id by
+  # querying pg_stat_statements, not by asserting the number.
+  shared_preload_libraries:
+    - pg_stash_advice
+    - pg_stat_statements
+  session_preload_libraries:
+    - pg_plan_advice
+queries:
+  1-the-query:
+    sha256: 1b134ae51bc870382042d0926c0948ea3c83908e421c28c7d92fb382d63969f2
+  2-plan-advice:
+    sha256: 62c64d8ffd0af2ba9500400990d47180ccd9d00879d26bc776009d1ce569ad7b
+  3-force-join-order:
+    sha256: f84d570fa9afb9244d56a3419b87153d6cf328dc85d190c83388b736d0ff255d
+  4-advice-that-fails:
+    sha256: 154207ea7b57dfe7b15230ff0b710447f526d1c9b2044a75e7083a639842200a
+  5-stash:
+    sha256: 7d4c9b6ce216fb4063699c3fa8d6d4f2f169d9702ff52a46f98af6e44daa97ce
+  6-stash-applies:
+    sha256: c54ff7cad6a07ff1f8d54b59a806691233a3e96413d536aaa2fc1f996461e27e

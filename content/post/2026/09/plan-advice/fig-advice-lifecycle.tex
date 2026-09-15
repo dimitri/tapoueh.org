@@ -1,0 +1,41 @@
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[font=\small]
+
+\colorlet{cFind}{blue!55!black}
+\colorlet{cRead}{green!45!black}
+\colorlet{cTrim}{orange!70!black}
+\colorlet{cApply}{violet!60!black}
+
+\tikzset{
+  step/.style = {
+    draw=#1, fill=#1!8, line width=0.9pt, rounded corners=3pt,
+    text width=3.1cm, align=center, font=\scriptsize, inner sep=7pt
+  },
+  lbl/.style = {font=\tiny\ttfamily, black!55, align=center},
+  arr/.style = {-latex, black!35, line width=0.9pt},
+}
+
+\node[step=cFind]  (find)  at (0,0)    {\textbf{find the query}\\[2pt] the one that got slow};
+\node[step=cRead]  (read)  at (4.2,0)  {\textbf{read its plan back}\\[2pt] while the plan is still good};
+\node[step=cTrim]  (trim)  at (8.4,0)  {\textbf{keep only what matters}\\[2pt] delete the rest of the advice};
+\node[step=cApply] (apply) at (12.6,0) {\textbf{stash it}\\[2pt] applied by query id, every session};
+
+\node[lbl, below=3pt of find]  {pg\_stat\_statements};
+\node[lbl, below=3pt of read]  {explain (plan\_advice)};
+\node[lbl, below=3pt of trim]  {one or two lines};
+\node[lbl, below=3pt of apply] {pg\_set\_stashed\_advice()};
+
+\draw[arr] (find)  -- (read);
+\draw[arr] (read)  -- (trim);
+\draw[arr] (trim)  -- (apply);
+
+%% the loop back: advice is not forever
+\draw[arr, dashed, black!30]
+  (apply.north) .. controls +(0,1.5) and +(0,1.5) .. (find.north)
+  node[midway, above, font=\scriptsize, black!45]
+  {re-check when the data changes --- advice does not adapt, the planner would have};
+
+\end{tikzpicture}
+\caption{The plan advice workflow. The dashed return path is the part that is easy to forget.}
+\end{figure}

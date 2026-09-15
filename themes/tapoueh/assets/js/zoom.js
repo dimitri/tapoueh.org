@@ -170,7 +170,54 @@
     opener = null;
   }
 
+  /* An inline <svg> has no src, and the overlay shows an <img>. Serialising
+     it to a data: URL bridges the two and reuses every bit of the machinery
+     above -- wheel zoom, pan, pinch, keyboard -- with nothing new.
+   *
+   * It works because these diagrams are self-contained by construction:
+   * internal/explainplan embeds its @font-face rules with the font bytes as
+   * data: URLs, and every colour is var(--name, #fallback), so the picture
+   * still carries its own typeface and still resolves its own colours once
+   * detached from the page's stylesheet. A diagram that relied on the page
+   * for either would render bare here, which is the reason the article
+   * variant embeds fonts and the in-app one does not. */
+  function svgDataURL(svg) {
+    var clone = svg.cloneNode(true);
+    /* The overlay sizes the picture itself; a max-width meant for a prose
+       column would cap it at the column's width inside a fullscreen view. */
+    clone.removeAttribute("style");
+    var text = new XMLSerializer().serializeToString(clone);
+    if (!/^<svg[^>]+xmlns=/.test(text)) {
+      text = text.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"');
+    }
+    return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(text);
+  }
+
+  function initInlineSVG() {
+    var svgs = document.querySelectorAll(".prose figure svg, .figure svg");
+    Array.prototype.forEach.call(svgs, function (svg) {
+      /* Not an icon: only a figure's own diagram, and only once. */
+      if (svg.closest("a") || svg.dataset.zoomable) return;
+      svg.dataset.zoomable = "1";
+      svg.classList.add("zoomable");
+      svg.setAttribute("tabindex", "0");
+      svg.setAttribute("role", "button");
+      var fig = svg.closest("figure");
+      var cap = fig && fig.querySelector("figcaption");
+      var alt = svg.getAttribute("aria-label") || (cap ? cap.textContent : "");
+      function show(e) {
+        e.preventDefault();
+        open(svgDataURL(svg), alt, svg);
+      }
+      svg.addEventListener("click", show);
+      svg.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") show(e);
+      });
+    });
+  }
+
   function init() {
+    initInlineSVG();
     var imgs = document.querySelectorAll(".prose img, .figure img");
     Array.prototype.forEach.call(imgs, function (el) {
       var link = el.closest("a");
