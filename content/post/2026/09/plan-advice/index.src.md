@@ -109,7 +109,8 @@ in the noise.
 Leaving the numbers out is what makes the comparison tractable. Because no
 cost or timing appears, two runs of the same plan produce identical output,
 and any difference is a real difference. Here is the planner's own plan
-against the one the advice forced, earlier in this article:
+against one with a different join order forced onto it — the same forced
+plan the next section walks through in full:
 
 ```sh
 $ sqlfmt explain diff plans/default.txt plans/forced.txt
