@@ -10,17 +10,17 @@ capture:
   image: ghcr.io/dimitri/theartofpostgresql/postgres-seeded:19beta3
   database: taop
   user: taop
-  # session_preload_libraries, not shared: neither module reserves
-  # shared memory or registers a background worker at postmaster start
-  # merely by being loaded (pg_stash_advice's background worker only
-  # starts when pg_stash_advice.persist is on, which itself requires
-  # shared_preload_libraries -- see the article's "Running this in
-  # production" section for the trade-off). session_preload_libraries
-  # takes effect for every new connection with no server restart, which
-  # is what changing this file and re-running wants.
+  # pg_plan_advice needs nothing at postmaster start, so
+  # session_preload_libraries is enough: every new connection has it,
+  # no server restart required. pg_stash_advice goes in
+  # shared_preload_libraries instead, because its optional
+  # pg_stash_advice.persist setting -- surviving a restart -- only
+  # exists when the module was loaded that way; loaded any other way
+  # it is silently unavailable.
+  shared_preload_libraries:
+    - pg_stash_advice
   session_preload_libraries:
     - pg_plan_advice
-    - pg_stash_advice
 queries:
   1-the-query:
     sha256: 1b134ae51bc870382042d0926c0948ea3c83908e421c28c7d92fb382d63969f2
