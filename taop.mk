@@ -51,9 +51,19 @@ TAOPROOT ?= $(HOME)/dev/TAOP/app.taop.xyz
 SRC ?= index.src.md
 OUT ?= index.md
 
-# The lab image every TAOP query is written against. Override CONTAINER
-# for a different instance, or set DSN to skip Docker entirely.
-CONTAINER ?= apptaopxyz-lab-1
+# CONTAINER and DSN are both empty by default, which matters: an empty
+# RUN_TARGET passes neither -db nor -container, and "taopmd run"'s own
+# documented default then applies -- it reads the article's taopmd.yaml
+# capture block, starts that image, uses it, and stops it again. That is
+# per-article configuration, the same way SRC and OUT are, and a
+# Makefile default used to defeat it: CONTAINER hard-coded
+# apptaopxyz-lab-1, which -container always overrides the metadata for
+# (see "taopmd run -h"), so an article's own capture.image was silently
+# ignored the moment `make` (rather than `taopmd build` by hand) ran it.
+#
+# Set CONTAINER for a running instance to reuse across many articles
+# sharing one lab, or DSN to skip Docker and the metadata's image both.
+CONTAINER ?=
 DSN       ?=
 
 # The render conventions moved to taopmd.yaml at the repository root,
@@ -64,8 +74,10 @@ DSN       ?=
 
 ifneq ($(DSN),)
   RUN_TARGET := -db $(DSN)
-else
+else ifneq ($(CONTAINER),)
   RUN_TARGET := -container $(CONTAINER)
+else
+  RUN_TARGET :=
 endif
 
 .PHONY: all article render run fmt figs figs-force prune check tool clean-rendered
