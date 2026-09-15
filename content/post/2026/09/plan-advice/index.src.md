@@ -1,6 +1,6 @@
 +++
 title     = "Plan Advice in PostgreSQL 19"
-date      = "2026-09-15T09:00:00+0200"
+date      = "2026-09-16T09:00:00+0200"
 tags      = ["PostgreSQL", "SQL", "Performance"]
 categories = ["PostgreSQL", "Performance"]
 icon      = "🐘"
@@ -34,13 +34,16 @@ contrib, and the Lab image ships them. Add them to
 
 ## Reading a plan back out
 
-Start with a query that joins three F1 tables:
+Start with a query that joins three F1 tables. A freshly restored Lab
+image has never been analyzed, so the setup below includes the `ANALYZE`
+from the opening paragraph before running the query — the last thing a
+comparison needs is statistics that do not reflect the data yet:
 
 \include{sql/1-the-query.sql}
 
 \include{results/1-the-query.out}
 
-Nothing remarkable. Now ask the planner not just what it did, but to
+Nothing remarkable about the query itself. Now ask the planner not just what it did, but to
 describe what it did in a form it can read back:
 
 \include{sql/2-plan-advice.sql}
@@ -51,7 +54,7 @@ Indented `EXPLAIN` output is a tree written sideways, and it is worth
 seeing as one before going further — the plan below is what those four
 lines of advice are describing:
 
-{{< image src="fig-plan-tree.svg" title="The plan as a tree, rows flowing upward: three sequential scans at the bottom, two of them feeding hash builds, two hash joins above those, and a Hash Aggregate under the query. Nothing in the tree carries a number, because this plan was taken with COSTS OFF." >}}
+\include-explain-plan-diagram{The plan as a tree, rows flowing upward: three sequential scans at the bottom, two of them feeding hash builds, two hash joins above those, and a Hash Aggregate under the query. Nothing in the tree carries a number, because this plan was taken with COSTS OFF.}
 
 That trailing block under the plan is the whole idea. Four lines,
 describing four decisions the planner made: which table drives the join
@@ -119,16 +122,17 @@ $ sqlfmt explain diff plans/default.txt plans/forced.txt
 -JOIN_ORDER(results races drivers)
 +JOIN_ORDER(drivers results races)
 -HASH_JOIN(races drivers)
-+HASH_JOIN(races)
++HASH_JOIN(results races)
 -SEQ_SCAN(results races drivers)
 +SEQ_SCAN(drivers results races)
 -NO_GATHER(results races drivers)
 +NO_GATHER(drivers results races)
-+MERGE_JOIN_PLAIN(results)
 ```
 
-The driving table moved, one hash join became a merge join, and nothing
-else changed. With `EXPLAIN (ANALYZE)` plans the timings are reported too,
+The driving table moved and both join methods stayed hash joins — the
+`HASH_JOIN` line just names a different pair, because forcing `drivers`
+to drive puts a different relation on the inner side. With `EXPLAIN
+(ANALYZE)` plans the timings are reported too,
 as context lines under the structural hunk, so you can see whether the
 shape change actually bought anything. It exits non-zero when the plans
 differ, which makes it usable as a check in CI.
@@ -179,8 +183,15 @@ instead:
 \include{results/3-force-join-order.out}
 
 Two things to notice. The plan really did change — `drivers` is now the
-outer relation, and the planner reached for a merge join to get there.
-And the output now carries *two* blocks: `Supplied Plan Advice`, echoing
+driving table — and the shape of the change is a PostgreSQL 19 feature in
+its own right: `Partial HashAggregate` moved *below* the join, on
+`results` alone, with `Finalize GroupAggregate` combining the partial
+groups once every relation is joined. That is `enable_eager_aggregate`
+(on by default), pushing as much of the `GROUP BY` down as it safely can
+so the join has fewer rows to process. Forcing `results` to drive left no
+room for that; forcing `drivers` to drive did.
+
+The output also now carries *two* blocks: `Supplied Plan Advice`, echoing
 what you asked for with a `/* matched */` annotation, and
 `Generated Plan Advice` describing the plan you actually got.
 
@@ -231,8 +242,12 @@ nothing:
 
 \include{results/6-stash-applies.out}
 
-No `LOAD`, no `SET advice`, no rewritten query. The plan changed because
-the stash matched the query id.
+The only thing set is `pg_stash_advice.stash_name` — no
+`pg_plan_advice.advice` string, no rewritten query. (`LOAD` appears here
+only because this session is fresh; in production the module sits in
+`shared_preload_libraries` once and every session already has it.) The
+plan changed because the stash matched the query id, not because anything
+about this query mentioned advice at all.
 
 {{< image src="fig-advice-lifecycle.svg" title="The plan advice workflow: find the query in pg_stat_statements, read its plan back with EXPLAIN (PLAN_ADVICE), keep only the lines that matter, and stash it by query id. The dashed return path is the step people forget." >}}
 
