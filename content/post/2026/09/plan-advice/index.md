@@ -22,8 +22,10 @@ Every query below ran against [the Lab](https://theartofpostgresql.com/lab/),
 the free dataset bundle used throughout this blog, on PostgreSQL 19 Beta 3:
 `POSTGRES_VERSION=19beta3 PG_MAJOR=19 docker compose up`. Both modules are
 contrib, and the Lab image ships them. Add them to
-`shared_preload_libraries` — `pg_plan_advice,pg_stash_advice` — or load
-`pg_plan_advice` into a single session with `LOAD 'pg_plan_advice'`.
+`session_preload_libraries` — `pg_plan_advice,pg_stash_advice` — so every
+new connection has them without a server restart, or load either one into
+a single session by hand with `LOAD 'pg_plan_advice'`. More on why
+`session_preload_libraries` rather than `shared_preload_libraries` below.
 {{< /lab >}}
 
 <!--more-->
@@ -67,8 +69,6 @@ Nothing remarkable about the query itself. Now ask the planner not just what it 
 describe what it did in a form it can read back:
 
 ```sql
-load 'pg_plan_advice';
-
  explain (costs off, plan_advice)
   select drivers.surname, count(*) as races
     from f1db.results
@@ -79,7 +79,6 @@ group by drivers.surname;
 ```
 
 ```results
-LOAD
                         QUERY PLAN                        
 ----------------------------------------------------------
  HashAggregate
@@ -327,8 +326,6 @@ obliged to follow it. Here is the same query, told to drive from `drivers`
 instead:
 
 ```sql
-load 'pg_plan_advice';
-
 set pg_plan_advice.advice = 'JOIN_ORDER(drivers results races)';
 
  explain (costs off, plan_advice)
@@ -341,7 +338,6 @@ group by drivers.surname;
 ```
 
 ```results
-LOAD
 SET
                                  QUERY PLAN                                  
 -----------------------------------------------------------------------------
@@ -396,8 +392,6 @@ does not resurrect plans that have been taken off the table. Turn off hash
 joins and ask for one anyway:
 
 ```sql
-load 'pg_plan_advice';
-
 reset pg_plan_advice.advice;
 
 set enable_hashjoin = off;
@@ -414,7 +408,6 @@ group by drivers.surname;
 ```
 
 ```results
-LOAD
 RESET
 SET
 SET
@@ -459,8 +452,6 @@ maps query ids to advice strings in shared memory, and applies them to any
 query whose id matches.
 
 ```sql
-load 'pg_stash_advice';
-
 create extension if not exists pg_stash_advice;
 
 select pg_create_advice_stash('production');
@@ -474,7 +465,6 @@ select * from pg_get_advice_stash_contents('production');
 ```
 
 ```results
-LOAD
 CREATE EXTENSION
  pg_create_advice_stash 
 ------------------------
@@ -495,8 +485,6 @@ noticed the query had got slow. From then on, the application changes
 nothing:
 
 ```sql
-load 'pg_stash_advice';
-
 set pg_stash_advice.stash_name = 'production';
 
  explain (costs off)
@@ -509,7 +497,6 @@ group by drivers.surname;
 ```
 
 ```results
-LOAD
 SET
                                  QUERY PLAN                                  
 -----------------------------------------------------------------------------
@@ -534,11 +521,12 @@ SET
 ```
 
 The only thing set is `pg_stash_advice.stash_name` — no
-`pg_plan_advice.advice` string, no rewritten query. (`LOAD` appears here
-only because this session is fresh; in production the module sits in
-`shared_preload_libraries` once and every session already has it.) The
-plan changed because the stash matched the query id, not because anything
-about this query mentioned advice at all.
+`pg_plan_advice.advice` string, no rewritten query, no `LOAD`. That last
+one is not an accident: this session never asked for the module, and it
+was there anyway, because `session_preload_libraries` put it there before
+the connection existed. The plan changed because the stash matched the
+query id, not because anything about this query mentioned advice at
+all.
 
 {{< image src="fig-advice-lifecycle.svg" title="The plan advice workflow: find the query in pg_stat_statements, read its plan back with EXPLAIN (PLAN_ADVICE), keep only the lines that matter, and stash it by query id. The dashed return path is the step people forget." >}}
 
@@ -560,6 +548,84 @@ decision. If the join order flipped, keep `JOIN_ORDER(...)` and delete the
 rest, so the planner keeps its freedom everywhere else. Applying advice
 also costs planning time even when the plan does not change, which argues
 for reaching for it per-query rather than cluster-wide.
+
+---
+
+## Is it safe to leave these loaded everywhere?
+
+Both are contrib modules — nothing runs until something loads them — which
+raises the obvious question before you put either in front of an
+application: is it safe to just leave them on, cluster-wide, all the time?
+
+The two things that sound like "no" turn out to say less than they seem
+to. The warning above is about *applying* advice broadly, not about the
+module merely being present — `pg_plan_advice.advice` set on every
+connection is a very different thing from `pg_plan_advice` loaded on every
+connection with nothing configured. And PostgreSQL 19 hooks the planner at
+several fine-grained points rather than one — join setup, scan setup, rel
+setup — which sounds expensive by construction. Reading the source
+settles both. `pgpa_get_join_state()`, called from every one of those
+hook points, opens with:
+
+```c
+pps = GetPlannerGlobalExtensionState(root->glob, planner_extension_id);
+if (pps == NULL || pps->trove == NULL)
+{
+	/* No advice applies to this query, hence none to this joinrel. */
+	return NULL;
+}
+```
+
+One pointer lookup and a `NULL` check, then out — that runs regardless of
+how many join points the planner visits. `pg_stash_advice`'s hook opens
+the same way, and says so in its own comment:
+
+```c
+/*
+ * Exit quickly if the stash name is empty or there's no query ID.
+ */
+if (pg_stash_advice_stash_name[0] == '\0' || parse->queryId == 0)
+	return NULL;
+```
+
+So: yes, loaded and idle is cheap by design, on both sides. What *is*
+costly, per the documentation quoted above, is advice that actually
+matches and gets applied on every query — which is a configuration
+choice you make afterward, not a consequence of the module being on
+the connection.
+
+### Why `session_preload_libraries`, and one thing it costs you
+
+Given that, `session_preload_libraries` is the right default for both
+modules: it takes effect for every new connection with no server restart,
+so adding a module here is a config change and a reconnect, not a
+maintenance window. Compare `shared_preload_libraries`, which only takes
+effect at server start — exactly what you want for a module that reserves
+shared memory or registers a background worker before the postmaster
+forks its first backend, and exactly what you do not want for one that
+does not need to.
+
+Neither `pg_plan_advice` nor `pg_stash_advice` needs shared memory or a
+background worker *by default*. `pg_stash_advice` can grow one, though: if
+you turn on `pg_stash_advice.persist`, so that stashed advice survives a
+`pg_ctl restart` or a crash instead of living only in the current
+postmaster's shared memory, that GUC becomes visible — and the worker that
+writes it to disk gets registered — *only* when the module was named in
+`shared_preload_libraries` in the first place. The module's own
+`_PG_init()` checks `process_shared_preload_libraries_in_progress` and
+skips defining the setting entirely otherwise; loaded any other way,
+`pg_stash_advice.persist` silently stays off, with no warning that you
+asked for something the loading method could not give you.
+
+So the choice is really about that one feature, not about safety or
+overhead: `session_preload_libraries` for the common case in this article,
+where a stash you rebuild after a restart is an acceptable cost — this
+Lab, or a system whose deploy step reapplies advice anyway. Reach for
+`shared_preload_libraries` and `pg_stash_advice.persist = on` when a
+stashed plan needs to survive the server going down. `local_preload_libraries`
+exists too, for either module, but it only loads a library that lives
+under `$libdir/plugins/`, which a contrib module is not installed into by
+default — check the image before reaching for it.
 
 ---
 

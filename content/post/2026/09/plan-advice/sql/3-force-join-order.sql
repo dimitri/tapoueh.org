@@ -1,5 +1,3 @@
-load 'pg_plan_advice';
-
 set pg_plan_advice.advice = 'JOIN_ORDER(drivers results races)';
 
  explain (costs off, plan_advice)

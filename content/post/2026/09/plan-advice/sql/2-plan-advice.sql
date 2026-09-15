@@ -1,5 +1,3 @@
-load 'pg_plan_advice';
-
  explain (costs off, plan_advice)
   select drivers.surname, count(*) as races
     from f1db.results
