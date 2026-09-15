@@ -454,7 +454,27 @@ cannot ask an application to do it. `pg_stash_advice` closes that gap: it
 maps query ids to advice strings in shared memory, and applies them to any
 query whose id matches.
 
+The id could come from `EXPLAIN (VERBOSE)`, but more usefully it comes
+from `pg_stat_statements`, which is where you were already looking when
+you noticed the query had got slow — and not typed in from memory. Run
+the query as the application actually sends it, no `EXPLAIN` wrapper, and
+look it up:
+
 ```sql
+create extension if not exists pg_stat_statements;
+
+  select drivers.surname, count(*) as races
+    from f1db.results
+    join f1db.races using(raceid)
+    join f1db.drivers using(driverid)
+   where races.year = 2017
+group by drivers.surname;
+
+select queryid
+  from pg_stat_statements
+ where query like 'select drivers.surname%'
+   and query not like '%order by%';
+
 create extension if not exists pg_stash_advice;
 
 select pg_create_advice_stash('production');
@@ -469,6 +489,37 @@ select * from pg_get_advice_stash_contents('production');
 
 ```results
 CREATE EXTENSION
+  surname   | races 
+------------+-------
+ Alonso     |    10
+ Bottas     |    11
+ Button     |     1
+ di Resta   |     1
+ Ericsson   |    11
+ Giovinazzi |     2
+ Grosjean   |    11
+ Hamilton   |    11
+ Hülkenberg |    11
+ Kvyat      |    11
+ Magnussen  |    11
+ Massa      |    10
+ Ocon       |    11
+ Palmer     |    11
+ Pérez      |    11
+ Räikkönen  |    11
+ Ricciardo  |    11
+ Sainz      |    11
+ Stroll     |    11
+ Vandoorne  |    11
+ Verstappen |    11
+ Vettel     |    11
+ Wehrlein   |     9
+
+       queryid        
+----------------------
+ -5243066567089054587
+
+CREATE EXTENSION
  pg_create_advice_stash 
 ------------------------
  
@@ -482,10 +533,11 @@ CREATE EXTENSION
  production | -5243066567089054587 | JOIN_ORDER(drivers results races)
 ```
 
-The query id comes from `EXPLAIN (VERBOSE)`, or — more usefully — from
-`pg_stat_statements`, which is where you were already looking when you
-noticed the query had got slow. From then on, the application changes
-nothing:
+`-5243066567089054587` is not a number this article picked; it is what
+`pg_stat_statements` reports for that exact query text, and it is the same
+number the plan advice above was generated for — `pg_stat_statements` and
+`pg_plan_advice` compute query ids the same way, so one can name what the
+other saw. From then on, the application changes nothing:
 
 ```sql
 set pg_stash_advice.stash_name = 'production';

@@ -235,14 +235,21 @@ cannot ask an application to do it. `pg_stash_advice` closes that gap: it
 maps query ids to advice strings in shared memory, and applies them to any
 query whose id matches.
 
+The id could come from `EXPLAIN (VERBOSE)`, but more usefully it comes
+from `pg_stat_statements`, which is where you were already looking when
+you noticed the query had got slow — and not typed in from memory. Run
+the query as the application actually sends it, no `EXPLAIN` wrapper, and
+look it up:
+
 \include{sql/5-stash.sql}
 
 \include{results/5-stash.out}
 
-The query id comes from `EXPLAIN (VERBOSE)`, or — more usefully — from
-`pg_stat_statements`, which is where you were already looking when you
-noticed the query had got slow. From then on, the application changes
-nothing:
+`-5243066567089054587` is not a number this article picked; it is what
+`pg_stat_statements` reports for that exact query text, and it is the same
+number the plan advice above was generated for — `pg_stat_statements` and
+`pg_plan_advice` compute query ids the same way, so one can name what the
+other saw. From then on, the application changes nothing:
 
 \include{sql/6-stash-applies.sql}
 
