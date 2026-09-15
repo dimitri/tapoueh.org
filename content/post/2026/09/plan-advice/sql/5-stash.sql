@@ -1,3 +1,5 @@
+load 'pg_stash_advice';
+
 create extension if not exists pg_stash_advice;
 
 select pg_create_advice_stash('production');

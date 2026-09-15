@@ -1,3 +1,5 @@
+load 'pg_stash_advice';
+
 set pg_stash_advice.stash_name = 'production';
 
  explain (costs off)

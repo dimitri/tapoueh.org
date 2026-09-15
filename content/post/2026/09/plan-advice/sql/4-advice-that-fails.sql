@@ -1,3 +1,5 @@
+load 'pg_plan_advice';
+
 reset pg_plan_advice.advice;
 
 set enable_hashjoin = off;

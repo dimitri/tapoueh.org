@@ -1,3 +1,5 @@
+analyze f1db.results, f1db.races, f1db.drivers;
+
   select drivers.surname, count(*) as races
     from f1db.results
     join f1db.races using(raceid)
