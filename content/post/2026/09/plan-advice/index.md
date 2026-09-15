@@ -620,5 +620,13 @@ hoping they describe the plan you remember; you are keeping a plan you
 measured. That is a smaller feature than a hint language, and a much more
 useful one.
 
-And the reading-out half, as above, you can have today.
+And the reading-out half you can have today, on whatever PostgreSQL
+you already run: paste any `EXPLAIN` output into a file and run
+[`sqlfmt`](https://github.com/dimitri/sqlfmt) `explain advice` over it —
+
+```sh
+$ sqlfmt explain advice plan.txt
+```
+
+— no PostgreSQL 19 and no `pg_plan_advice` required.
 
