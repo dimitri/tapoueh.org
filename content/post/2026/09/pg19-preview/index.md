@@ -22,8 +22,18 @@ I found genuinely useful once I started poking at them. Every query below
 ran against a real PostgreSQL 19 Beta 3 instance — no hand-waving about
 syntax that might work.
 
+**Update, 21 September 2026.** Five features below have been withdrawn from
+PostgreSQL 19 since this went out: `MERGE PARTITIONS` and SQL/PGQ (already
+marked in their own sections), `FOR PORTION OF` on 15 September, the
+`pg_get_*_ddl()` functions on 12 September, and — from the watch list at the
+end — online data checksums on 16 September. Each section keeps what I ran on
+Beta 3 and now says what happened to it. The `pg_get_*_ddl()` functions and
+online checksums came out of the 19 branch only and are still in the
+development branch for 20; the other three came out of both. Everything else
+in this article is still in the release branch.
+
 {{< lab >}}
-Every query in this article ran against [the Lab](https://theartofpostgresql.com/lab/), the same free dataset bundle used in the rest of this blog (F1 data, geopolitical data, music data, and more), pinned to a real PostgreSQL 19 Beta 3 instance. PG 19 support isn't the Lab's default yet, but there is a prebuilt beta image on the registry, for both `linux/amd64` and `linux/arm64` — so `POSTGRES_VERSION=19beta3 PG_MAJOR=19 docker compose up` pulls it rather than building anything, and every query below reproduces on it exactly as printed. (`PG_MAJOR` only matters if Compose ends up building; it costs nothing to set.) Plain `docker compose up` still pulls the PG 16 image, and stays the default until 19 reaches general availability.
+Every query in this article ran against [the Lab](https://theartofpostgresql.com/lab/), the same free dataset bundle used in the rest of this blog (F1 data, geopolitical data, music data, and more), pinned to a real PostgreSQL 19 Beta 3 instance. PG 19 support isn't the Lab's default yet, but there is a prebuilt beta image on the registry, for both `linux/amd64` and `linux/arm64` — so `POSTGRES_VERSION=19beta3 PG_MAJOR=19 docker compose up` pulls it rather than building anything, and every query below ran on it. One caveat added after publication: the image behind that tag has since been rebuilt, and the rebuild crashes the server on every `FOR PORTION OF` statement I tried; the captures in this article are from the original build. (`PG_MAJOR` only matters if Compose ends up building; it costs nothing to set.) Plain `docker compose up` still pulls the PG 16 image, and stays the default until 19 reaches general availability.
 {{< /lab >}}
 
 <!--more-->
@@ -77,7 +87,18 @@ only skim the highlights section.
 
 ---
 
-## Temporal updates: FOR PORTION OF
+<div id="temporal-updates-for-portion-of"></div>
+
+## Temporal updates: FOR PORTION OF, withdrawn from 19
+
+**Update, 21 September 2026.** `FOR PORTION OF` was [reverted on 15
+September](https://git.postgresql.org/cgit/postgresql.git/commit/?id=a4b26b8f7cd07a3e7f0cba550c30db142329e065) by Peter Eisentraut, from PostgreSQL 19 and from the
+development branch alike, in the last weeks of the beta. Everything below ran
+on Beta 3 and is what the feature did, not what 19 will ship. The reason is a
+concurrency problem at `READ COMMITTED`, PostgreSQL's default isolation level,
+and it is one the feature's own documentation described before the revert; it
+is reproduced at the end of this section. The rest of it is preserved as
+written.
 
 Modeling a fact that's true "from X to Y" and then having that fact change
 partway through the interval has always meant hand-rolling the split:
@@ -132,6 +153,114 @@ portion, and a new row was inserted for the updated sub-range — the
 exclusion constraint stayed satisfied throughout. `FOR PORTION OF` also
 applies to `DELETE`, removing just the requested slice of the range and
 leaving the rest of the row(s) intact.
+
+### What went wrong
+
+Start again from a single row, and use two sessions, both at the default
+isolation level:
+
+```sql
+create table demo_contract
+ (
+  driverid     bigint not null,
+  team         text not null,
+  valid_period daterange not null,
+  exclude      using gist(driverid with =, valid_period with &&)
+);
+
+insert into demo_contract(driverid, team, valid_period)
+     values (1, 'McLaren', daterange('2007-01-01', '2013-01-01'));
+```
+
+Session 1 rewrites the first three years of the contract and has not
+committed yet:
+
+```sql
+-- session 1
+begin;
+
+update demo_contract for portion of valid_period
+  from '2007-01-01' to '2010-01-01'
+   set team = 'Ferrari'
+ where driverid = 1;
+```
+
+Session 2 wants to change a stretch of the same contract that session 1 is not
+touching. It finds the row, sees that session 1 is modifying it, and waits:
+
+```sql
+-- session 2
+update demo_contract for portion of valid_period
+  from '2011-01-01' to '2012-01-01'
+   set team = 'Williams'
+ where driverid = 1;
+```
+
+Session 1 commits, and session 2 wakes up. It re-checks the row it was waiting
+on, which now covers 2007–2010 only and no longer matches, and it cannot see
+the leftover row session 1 inserted for 2010–2013, because that row did not
+exist when its statement began. There is nothing left for it to update:
+
+```results
+UPDATE 0
+```
+
+No error and no warning, and no Williams:
+
+```results
+ driverid |  team   |      valid_period       
+----------+---------+-------------------------
+        1 | Ferrari | [2007-01-01,2010-01-01)
+        1 | McLaren | [2010-01-01,2013-01-01)
+```
+
+Session 2 was told it changed nothing, which was true. The change it meant to
+make is simply not in the table. The documentation the feature shipped with
+described exactly this, with a diagram, along with the workaround: take a lock
+on the range first, so that the statement doing the work starts only after
+session 1 is finished. From the same single row, with session 1 doing the same
+thing:
+
+```sql
+-- session 2, again
+begin;
+
+select *
+  from demo_contract
+ where driverid = 1
+   and valid_period && daterange('2011-01-01', '2012-01-01')
+   for update;
+
+update demo_contract for portion of valid_period
+  from '2011-01-01' to '2012-01-01'
+   set team = 'Williams'
+ where driverid = 1;
+
+commit;
+```
+
+```results
+ driverid |   team   |      valid_period       
+----------+----------+-------------------------
+        1 | Ferrari  | [2007-01-01,2010-01-01)
+        1 | McLaren  | [2010-01-01,2011-01-01)
+        1 | Williams | [2011-01-01,2012-01-01)
+        1 | McLaren  | [2012-01-01,2013-01-01)
+```
+
+Same two sessions, and both changes survive. The workaround is sound, and it
+is also the problem: a feature whose correct use at the default isolation level
+depends on remembering a separate locking query first. Andres Freund suggested
+raising a serialization failure instead, so that clients retry; Peter
+Eisentraut's answer was that he did not find it "a convincing feature with that
+limitation", and that the week before the last beta was not the time to explore
+alternatives.
+
+Shipping it with a footnote would have been easier. The authors had already
+written the anomaly into the documentation and built a 597-line isolation test
+suite around the feature, which is the kind of care that makes withdrawing it
+while there is still time to think an ordinary thing for a release process to
+do, not a failure of one.
 
 ---
 
@@ -598,7 +727,15 @@ round-up](/blog/2026/07/sql-improvements-in-postgresql-1118-a-personal-selection
 
 ---
 
-## Dumping DDL from the catalog directly
+<div id="dumping-ddl-from-the-catalog-directly"></div>
+
+## Dumping DDL from the catalog directly, withdrawn from 19
+
+**Update, 21 September 2026.** These three functions were [reverted from the
+19 branch on 12 September](https://git.postgresql.org/cgit/postgresql.git/commit/?id=db169985c10f02fa6d97920b0fafdde0ade3fde8) by Andrew Dunstan, after a thread Noah Misch
+opened on 27 August titled "pg_get_*_ddl() needs a redesign". They are still in
+the development branch for 20. Everything below ran on Beta 3, and what went
+wrong is reproduced at the end of this section.
 
 Three new functions return the `CREATE`/`ALTER` statements needed to
 recreate an object, straight from the catalog — no external tool required:
@@ -636,6 +773,64 @@ itself: `pretty` on all three, plus `memberships` for roles and
 reconstruction, not the text you originally typed. Previously this meant reaching for `pg_dumpall
 --roles-only` or a third-party script; now it's a plain SQL query, scriptable
 from inside any migration tool that already talks to the database.
+
+### What went wrong
+
+Misch's objections were several; two of them can be seen in one small
+experiment. A role with a password, a search path and a per-database setting:
+
+```sql
+create role demo_app login password 'correct horse battery staple';
+
+alter role demo_app set search_path = f1db;
+
+alter role demo_app in database taop set work_mem = '64MB';
+
+select pg_get_role_ddl('demo_app'::regrole);
+```
+
+```results
+                                          pg_get_role_ddl                                          
+---------------------------------------------------------------------------------------------------
+ CREATE ROLE demo_app NOSUPERUSER INHERIT NOCREATEROLE NOCREATEDB LOGIN NOREPLICATION NOBYPASSRLS;
+ ALTER ROLE demo_app SET search_path TO 'f1db';
+ ALTER ROLE demo_app IN DATABASE taop SET work_mem TO '64MB';
+```
+
+**The password is missing.** The function leaves it out, on the grounds that
+exposing one through a SQL function would be a security problem. The tool it
+was meant to replace does not:
+
+```sh
+$ pg_dumpall --roles-only | grep -A1 '^CREATE ROLE demo_app'
+```
+
+```results
+CREATE ROLE demo_app;
+ALTER ROLE demo_app WITH NOSUPERUSER INHERIT NOCREATEROLE NOCREATEDB LOGIN NOREPLICATION NOBYPASSRLS PASSWORD 'SCRAM-SHA-256$4096:…';
+```
+
+That is the stored hash, shortened here, never the plaintext, and it is what
+makes a restored role one somebody can log in as. Misch's point was that a
+function which cannot produce it is not a way to migrate roles.
+
+**The order is wrong for a restore.** The last line of the output above,
+`IN DATABASE taop SET`, cannot run until database `taop` exists, and the
+databases may be owned by the roles. Restoring into an empty cluster means
+roles first, then databases, then those settings, and `pg_dumpall` does exactly
+that: `CREATE ROLE` on line 16 of its output, `CREATE DATABASE taop` on line
+139, and `ALTER ROLE demo_app IN DATABASE taop` on line 164. One function
+returning one role's statements in one payload leaves the caller to do that
+dependency analysis, which was the work it was supposed to take away.
+
+The third objection I cannot demonstrate, only report: the patch added a second
+implementation, 361 lines in `ddlutils.c`, of translating catalog state into SQL
+next to the one `pg_dump` already has, and Misch's position was that the tree
+should carry one. Together they say something useful about the problem itself.
+`pg_dumpall` is an ordering and dependency algorithm at least as much as a text
+generator, and any function that returns its statements has to make the same
+decisions. That is not a small feature, and it is a better reason to keep it out
+of a release than a bug would have been.
 
 ---
 
@@ -1010,19 +1205,24 @@ treatment rather than a paragraph.
   point, giving read-your-writes against a replica without polling
   `pg_stat_replication`. Small in surface area, but it changes what you
   can safely route to a standby, which is an architecture question.
-- Also in this area: `retain_dead_tuples` on a publication for conflict
-  detection (with a new `update_deleted` count in
-  `pg_stat_subscription_stats`), publications that can *exclude* tables,
-  and subscriptions that can borrow `postgres_fdw` connection parameters
-  instead of repeating a connection string.
+- Also in this area: `retain_dead_tuples` on a *subscription*, for
+  conflict detection (with a `max_retention_duration` cap, and a new
+  `update_deleted` count in `pg_stat_subscription_stats`), publications
+  that can *exclude* tables, and subscriptions that can borrow
+  `postgres_fdw` connection parameters instead of repeating a connection
+  string.
 
 **Operations**
 
-- **Data checksums can be turned on and off while the server runs**
-  (`pg_enable_data_checksums()` / `pg_disable_data_checksums()`).
-  Previously this meant `pg_checksums` against a stopped cluster, which
-  in practice meant most clusters that started without checksums stayed
-  without them forever. Now it is a decision you can revisit.
+- **Online data checksums were withdrawn on 16 September.** The plan was
+  that `pg_enable_data_checksums()` and `pg_disable_data_checksums()` would
+  let you turn checksums on and off while the server runs, where today it
+  means `pg_checksums` against a stopped cluster, which is why most clusters
+  that started without checksums stayed without them. The feature collected
+  a number of post-commit fixes during the beta, and rather than ship it with
+  the risk of more surfacing after GA, Daniel Gustafsson [reverted
+  it](https://git.postgresql.org/cgit/postgresql.git/commit/?id=c05d5ce12366f1008e95b09a0a9b08a49818b0e1) from the 19 branch; a few independent fixes stayed. It is still
+  in the development branch for 20.
 - **Parallel autovacuum** and a **priority scoring system** for which
   tables get vacuumed first. The parallel part is opt-in —
   `autovacuum_max_parallel_workers` defaults to 0 — and only covers the
@@ -1054,7 +1254,8 @@ treatment rather than a paragraph.
 
 Working these examples up for the new edition of [*The Art of
 PostgreSQL*](https://theartofpostgresql.com) is what sent me through the PG
-19 notes in this much detail — several of them map straight onto existing
-chapters on temporal ranges, partitioning, constraints and window functions,
-which is a good sign that the release is filling real gaps rather than
-adding surface area.
+19 notes in this much detail. What is left maps straight onto existing chapters
+on constraints, upserts and window functions. The two features that would have
+landed in the temporal-ranges and partitioning chapters were both withdrawn,
+which suits me fine: I would rather write those chapters against the version
+that ships.
