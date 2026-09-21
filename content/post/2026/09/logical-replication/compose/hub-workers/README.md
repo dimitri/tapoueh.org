@@ -197,6 +197,6 @@ docker-compose.pglogical.yml   pghub, pgw1, pgw2 on postgres:14 + pglogical
 pglogical/Dockerfile
 Makefile  run.sh  compare.sh
 lib/lr-helpers.sql             test scaffolding (see above)
-sql/01..20-*.sql               core steps      sql/70..74,79-*.sql   pglogical steps
+sql/01..21-*.sql               core steps      sql/70..74,79-*.sql   pglogical steps
 results/*.out                  psql output      results/timings.txt   measured durations
 ```
