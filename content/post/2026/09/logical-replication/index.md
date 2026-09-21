@@ -1328,15 +1328,79 @@ writing tables, which is a story for another article.
 ## Architecture 3: a zero-downtime major upgrade, with a way back
 
 This one is the most common reason to touch logical replication, and the one
-where the small details cost the most. I upgraded Postgres 16 to 18 with a traffic
-generator running the whole time (about 50 commits per second), so the
+where the small details cost the most. I upgraded Postgres 16 to 18 with a
+traffic generator running the whole time (about 50 commits per second), so the
 "zero" is measured rather than claimed.
 
-The steps are known: restore the schema on the new server
-(`pg_dump --schema-only`), create a publication for all tables on the old
-one, create a subscription with the initial copy on the new one, wait until
-every table is in state `r`, then cut over. About 100 MB took a second to
-copy here. The details are in what *is not* there when the copy finishes:
+{{< image src="fig-upgrade-setup.svg" title="Before the cutover. The application writes to the old server. A subscription on the new server copies the tables and then follows the changes. A reverse subscription on the old server, prepared in advance, will carry back what the new server writes, for the way back." >}}
+
+### Setting it up
+
+The schema goes first, because DDL is not replicated. The roles come from
+`pg_dumpall`, then the database and its schema from `pg_dump`, run with the
+*new* major version's tools against the old server:
+
+```sh
+pg_dumpall -h old --roles-only | psql -X -q -h new -d postgres
+psql -X -h new -d postgres -c 'create database app owner app'
+pg_dump -h old -d app --schema-only | psql -X -q -v ON_ERROR_STOP=1 -h new -d app
+```
+
+The roles restore reports one error, `role "postgres" already exists`, which is
+harmless. The schema dump also carries the publication and the
+`REPLICA IDENTITY FULL` settings, which matters below.
+
+On the old server, one publication for everything:
+
+```sql
+create publication app_pub for all tables;
+```
+
+This is where a table without a primary key shows itself. Publishing changes
+nothing until an `update` or a `delete` hits the table:
+
+```results
+ERROR:  cannot update table "audit_log" because it does not have a replica identity and publishes updates
+HINT:  To enable updating the table, set REPLICA IDENTITY using ALTER TABLE.
+ERROR:  cannot delete from table "audit_log" because it does not have a replica identity and publishes deletes
+HINT:  To enable deleting from the table, set REPLICA IDENTITY using ALTER TABLE.
+```
+
+The fix is `replica identity full`, which logs the whole old row, or a unique
+index over `not null` columns used with `replica identity using index`:
+
+```sql
+alter table audit_log replica identity full;
+```
+
+Then on the new server, the subscription with the initial copy, while the
+traffic keeps running on the old one:
+
+```sql
+create subscription app_sub
+       connection 'host=old dbname=app user=repl password=repl'
+       publication app_pub
+       with (copy_data = true);
+```
+
+and a query to watch the copy. The states are `i` initialize, `d` data being
+copied, `f` finished copy, `s` synchronized, `r` ready:
+
+```sql
+select srrelid::regclass as tbl, srsubstate
+  from pg_subscription_rel
+ order by srrelid::regclass::text;
+```
+
+```results
+[poll] +26ms rel_states: d=2 i=1 r=5
+[poll] +546ms rel_states: d=1 r=7
+[poll] +1064ms rel_states: r=8
+initial sync of all tables finished
+```
+
+About 100 MB took a second to copy here. The details are in what *is not*
+there when the copy finishes:
 
 - **Sequences** have `last_value` NULL on the new server, and the first
   insert fails on a duplicate primary key.
@@ -1351,6 +1415,42 @@ copy here. The details are in what *is not* there when the copy finishes:
   replicated column: "note"`, and a table created on the old side is not
   even known to the subscription until `alter subscription … refresh
   publication`.
+
+### Preparing the way back
+
+The way back is set up before the cutover, not after. The idea is a second
+subscription in the other direction, so that writes made on the new server
+after the switch reach the old one, and the old server stays current and ready to take the traffic
+again. Two subscriptions in opposite directions on the same tables loop unless
+they use `origin = none`, so both get it. The forward subscription first:
+
+```sql
+-- on the new server
+alter subscription app_sub set (origin = none);
+```
+
+then the reverse one, on the old server, pulling from the new one. The
+`app_pub` publication already exists on the new server, since the schema dump
+carried it:
+
+```sql
+-- on the old server
+create subscription app_rev
+       connection 'host=new dbname=app user=repl password=repl'
+       publication app_pub
+       with (copy_data = false, origin = none);
+```
+
+I tested it with a row inserted on each side: each arrives on the other side
+once, and nothing bounces back. Three things to know:
+
+- the *forward* subscription has to use `origin = none` too, otherwise the
+  changes you replicate back would come around again (that is my reasoning,
+  I did not test the failure);
+- the reverse subscription needs `copy_data = false`: with it on, you get
+  `duplicate key value violates unique constraint "t_pkey"` and a tablesync
+  stuck in state `d`;
+- rolling back means copying the sequence values back, the other way.
 
 ### Knowing when it has caught up
 
@@ -1369,8 +1469,19 @@ subscriber's *own* WAL passes the number, a false positive against a
 publisher's LSN.
 
 The working tool is what has always worked: compare the old server's
-`pg_current_wal_lsn()` with the position the subscription has applied. There
-is a subtlety. The freeze on the old server (a
+`pg_current_wal_lsn()` with the position the subscription has applied:
+
+```sql
+-- on the old server
+select pg_current_wal_lsn();
+
+-- on the new server
+select remote_lsn
+  from pg_replication_origin_status
+ where external_id = 'pg_' || (select oid from pg_subscription where subname = 'app_sub');
+```
+
+There is a subtlety. The freeze on the old server (a
 `default_transaction_read_only` setting) is itself a commit, on the
 publisher side, that is never replicated, so it sits *ahead* of anything
 the subscriber will ever report, and the comparison never converges. And
@@ -1378,45 +1489,91 @@ the subscriber will ever report, and the comparison never converges. And
 *received*, not when it is applied, so it proves nothing on its own.
 
 What worked is a marker row: after the freeze, write one row on the old
-server, and wait for it to appear on the new one. With the marker in
-place, all three measures agreed within a millisecond or two.
+server, and wait for it to appear on the new one:
 
-### Sequences and the switch
+```sql
+-- on the old server, once frozen
+insert into cutover_markers (id) values ('cutover-old-to-new');
 
-The sequence values are generated from the old server:
+-- on the new server, repeated until it returns true
+select exists (select 1 from cutover_markers where id = 'cutover-old-to-new');
+```
+
+With the marker in place, all three measures agreed within a millisecond or two.
+
+### The cutover
+
+{{< image src="fig-upgrade-cutover.svg" title="The cutover in four steps, with the time at which each one finished, counted from the start of the freeze. The application sees a write stall of 181 ms, the time between its last commit on the old server and its first on the new one." >}}
+
+The freeze makes the database read-only by default, and ends the sessions of
+the application role, so that nothing can start a write on the old server.
+Reads still work, and the DBA, who overrides the setting in their own session,
+is not affected:
+
+```sql
+alter database app set default_transaction_read_only = on;
+
+select count(pg_terminate_backend(pid))
+  from pg_stat_activity
+ where datname = 'app' and usename = 'app';
+```
+
+Once the marker shows on the new server, the sequences. The `setval`
+statements are generated from the old server and run on the new one:
 
 ```sql
 select format('select setval(%L, %s, %L);',
-              schemaname || '.' || sequencename,
+              quote_ident(schemaname) || '.' || quote_ident(sequencename),
               last_value,
               true)
   from pg_sequences
  where last_value is not null;
 ```
 
-The whole cutover, from freezing the old server to the first commit on the
-new one, took **181 ms** in my run. The application saw four failed attempts
-in that window (`cannot execute INSERT in a read-only transaction`), then the
-first commit on the new server. No acknowledged write was lost, and the
-content hash of every table matched on both servers afterwards. My traffic
-loop reconnects for every transaction, so no session had to be terminated:
-your connection pool will behave differently.
+```results
+select setval('public.customers_id_seq', 53084, true);
+select setval('public.invoice_no', 604083, true);
+select setval('public.measurements_id_seq', 303084, true);
+select setval('public.orders_id_seq', 603084, true);
+```
 
-### The way back
+Then the application's connection target changes to the new server. The
+timings the script recorded, and what the application saw:
 
-The reverse direction is what lets you roll back after the switch. Before
-cutover, subscribe old to new, with `origin = none`, so writes made on the
-new server flow back and nothing loops. Three things to know:
+```results
+[time] +34 ms old frozen, 0 app sessions terminated
+[time] +100 ms new caught up (marker row visible: 98)
+[time] +136 ms sequences copied (4 setval statements)
+[time] +138 ms app switched to new
+WRITE STALL old -> new: 181 ms
+failed attempts inside the window: 4 (of 5 logged attempts, incl. the first success)
+for scale: median gap between two commits 18 ms, p99 25 ms, over 3244 commits
+```
 
-- the *forward* subscription has to use `origin = none` too, otherwise the
-  changes you replicate back would come around again (that is my reasoning,
-  I did not test the failure);
-- the reverse subscription needs `copy_data = false`: with it on, you get
-  `duplicate key value violates unique constraint "t_pkey"` and a tablesync
-  stuck in state `d`;
-- rolling back means copying the sequence values back, the other way.
+The procedure took 138 ms from the freeze to the switch, and the application
+saw a write stall of 181 ms, with four failed attempts (`cannot execute INSERT
+in a read-only transaction`) and then its first commit on the new server. No
+acknowledged write was lost, and the content hash of every table matched on
+both servers afterwards. My traffic loop reconnects for every transaction, so
+no session had to be terminated: your connection pool will behave differently.
 
-A rollback took 179 ms in the same measurement.
+### Rolling back
+
+{{< image src="fig-upgrade-back.svg" title="After the switch, the reverse subscription applies on the old server whatever the new server writes. To roll back, the same four steps run in the other direction." >}}
+
+Because `app_rev` has been carrying the new server's writes back, the old server
+is current, and rolling back is the same four steps in the other direction:
+freeze the new server, wait for the marker to show on the old one, copy the
+sequence values back, switch the application. It took 179 ms in the same
+measurement:
+
+```results
+[time] +34 ms new frozen, 0 app sessions terminated
+[time] +101 ms old caught up (marker row visible: 99)
+[time] +155 ms old unfrozen, sequences copied back (4 statements)
+[time] +156 ms app switched back to old
+WRITE STALL new -> old: 179 ms
+```
 
 ### Privileges
 
