@@ -15,7 +15,7 @@ table, a queue per node, a ticker, and a Python daemon per hop. It worked,
 and it was a lot of moving parts to explain to anyone new.
 
 Postgres 10 shipped logical replication in 2017, and 19 is the tenth release
-that has it. Every release since 10 has taken a piece of that plumbing and
+that has it. Every release since Postgres 10 has taken a piece of that plumbing and
 made it a line of SQL.
 
 So the question for this article is the application developer's one, not the
@@ -51,11 +51,11 @@ section.
 
 ## What each release changed
 
-Here is the whole story as a table, written from the release notes of 10
+Here is the whole story as a table, written from the release notes of Postgres 10
 through 19. Read it as "the first release where this stops needing an
 extension or a workaround", for the things that matter to an application.
 
-| You want to… | First in core | Before that |
+| You want to… | First in core (Postgres) | Before that |
 |---|---|---|
 | replicate tables between servers | 10 | pglogical (9.4+), Londiste, Slony |
 | replicate `TRUNCATE` | 11 | pglogical |
@@ -65,7 +65,7 @@ extension or a workaround", for the things that matter to an application.
 | skip one bad transaction | 15 (`ALTER SUBSCRIPTION … SKIP`) | edit the catalog, or drop the subscription |
 | avoid loops in two-way setups | 16 (`origin = none`) | pglogical `forward_origins` |
 | decode from a standby; apply in parallel | 16 | |
-| keep slots and subscriptions across `pg_upgrade`; slots survive a failover | 17 | external tooling |
+| keep slots and subscriptions across `pg_upgrade` (from a 17 or later cluster); slots survive a failover | 17 | external tooling |
 | log conflicts with their kind | 18 | pglogical detects them too |
 | **resolve** conflicts (last update wins…) | not in core, up to and including 19 | pglogical, and its descendants |
 | replicate sequences | 19 (beta) | `pglogical.synchronize_sequence()`, or a script |
@@ -104,11 +104,11 @@ The subscription name is also the name of the replication slot created on
 the hub, so it must be unique per worker. Reuse `sub_ref` on a second worker
 and you get `replication slot "sub_ref" already exists`. Also notice that the
 tables are created by hand on each worker first: DDL is not replicated, in
-any version, including the 19 beta.
+any version, including the Postgres 19 beta.
 
 With `ref_all`, every worker sees all nine customers, along with
 `billing_notes`, which is for the finance team and nobody else. That is what
-15 fixed: a row filter and a column list per worker.
+Postgres 15 fixed: a row filter and a column list per worker.
 
 ```sql
 create publication ref_w1 for table plans, prices,
@@ -145,7 +145,7 @@ column that used to be published, and cleanup is yours.
 ### Events come up
 
 Each worker writes its own `usage_events`. The hub subscribes to all of them
-into **one table partitioned by `worker_id`**, which has worked since 13:
+into **one table partitioned by `worker_id`**, which has worked since Postgres 13:
 
 ```sql
 create table usage_events
@@ -182,7 +182,7 @@ DETAIL:  Key already exists in unique index "usage_naive_pkey", modified by orig
 
 Only that subscription is stuck. The others keep flowing. The counters in
 `pg_stat_subscription_stats` say so: `apply_error_count` keeps growing for
-that one. That message, with both rows spelled out, is the 18 way of reporting it.
+that one. That message, with both rows spelled out, is the Postgres 18 way of reporting it.
 
 So the rule for this architecture is to make collisions impossible by
 construction: `(worker_id, event_id)` as the key, or UUIDs.
@@ -202,7 +202,7 @@ DETAIL:  Key (customer_id)=(1) already exists.
 ```
 
 In this architecture the workers never mint ids for hub-owned tables, so
-this is a rule rather than a problem. 19 changes the situation, see below.
+this is a rule rather than a problem. Postgres 19 changes the situation, see below.
 
 ### Minting ids on the workers
 
@@ -293,7 +293,7 @@ them:
 The price is 16 bytes instead of 8, and the creation time is now readable
 from the id (`uuid_extract_timestamp(event_id)`), which matters if the id
 is ever shown to users. The ordering across workers is only as good as their
-clocks and the millisecond resolution. On a version before 18 you generate
+clocks and the millisecond resolution. On a version before Postgres 18 you generate
 the value in the application or with an extension.
 
 **Reserving ranges, the BDR way.** The BDR extension had a sequence access
@@ -302,22 +302,23 @@ between nodes when one ran out; its successor, EDB Postgres Distributed, still
 has it under the name `galloc`, next to a `snowflakeid` kind that is computed
 in memory. That is not in Postgres. The sequence access method patch sets
 date back to 2015 and 2016, and a new one was under discussion on the
-mailing list in late 2025. As far as I can tell from the 19 source tree it
+mailing list in late 2025. As far as I can tell from the Postgres 19 source tree it
 has not been committed: there is no sequence access method API in it. What
-19 does contain is groundwork, a refactoring that moves the sequence WAL
+Postgres 19 does contain is groundwork, a refactoring that moves the sequence WAL
 code into its own file, described in its commit message as preparation for a
 sequence patch. Until an API lands, ranges are something you build in the
 application, or get from PGD.
 
-What 19's replicated sequences do *not* do is help here: the values travel
+What Postgres 19's replicated sequences do *not* do is help here: the values travel
 from the publisher to the subscribers, and workers minting their own ids
 need the opposite.
 
 ### Big batches and many streams
 
 A worker that inserts 300,000 rows in one transaction used to make the hub
-wait for the commit before it could apply anything. With 14's streaming, and
-16's parallel apply, the hub starts working before the commit. On 18 the
+wait for the commit before it could apply anything. With Postgres 14's streaming, and
+Postgres 16's parallel apply, the hub starts working before the commit. On
+Postgres 18 the
 default for a new subscription is already `streaming = parallel`
 (`pg_subscription.substream` is `p` when you leave the option out), so to
 compare you have to say `streaming = off` explicitly. What I measured, on
@@ -363,7 +364,7 @@ create subscription sub_usage_w4
 
 The three existing apply workers keep the same pids through the whole thing.
 
-When something does break, 15 gave us the tool to get out of it:
+When something does break, Postgres 15 gave us the tool to get out of it:
 
 ```results
 logical replication starts skipping transaction at LSN ...
@@ -515,7 +516,7 @@ replication is running on data that no longer matches.
 In the layout above the reference tables go down and the usage tables go up,
 so no change ever comes back to where it was made. What if the same table
 has to travel both ways? Two-way replication on one table is exactly where
-16 helped: the `origin` option of `create subscription`. With `origin = none`
+Postgres 16 helped: the `origin` option of `create subscription`. With `origin = none`
 the publisher sends only the changes that were made locally on it, not the ones
 that arrived there through replication. See the
 [`origin` parameter](https://www.postgresql.org/docs/current/sql-createsubscription.html#SQL-CREATESUBSCRIPTION-PARAMS-WITH-ORIGIN)
@@ -644,7 +645,7 @@ select pglogical.replication_set_add_table('usage', 'usage_events_w1');
 
 The hub then subscribes to each worker's `usage` set the same way. Compare
 that with the core version above: a publication and a subscription per
-worker, no node to declare, no extension, and 15's row filter and column list
+worker, no node to declare, no extension, and Postgres 15's row filter and column list
 are part of `create publication`. That is the answer to "what did each release
 buy": the same architecture, in less to set up, to learn and to keep running.
 
@@ -794,7 +795,12 @@ in `replication/logical/relation.c`), and neither `create subscription` nor
 
 That matters because the typical application does not have a schema of its
 own: its tables are in `public`. I tried the natural thing. The shop has
-`public.orders`, and the warehouse has `shopapp.orders`, where I want it:
+`public.orders`, and the warehouse has `shopapp.orders`, where I want it.
+The figure shows that attempt, and the one that works:
+
+{{< image src="fig-schema-rename.svg" title="A subscription looks up the publisher's own schema and table name on the subscriber. Tables in public on the publisher cannot land in shopapp on the warehouse. Tables moved to their own schema on the publisher land in the same schema on the warehouse." >}}
+
+The attempt:
 
 ```sql
 create schema shopapp;
@@ -859,7 +865,9 @@ replicated column: "company"`.
 
 This warehouse is the EU warehouse. It must never hold the customers' email
 addresses and phone numbers, and it should only receive the `eu` tenant's
-rows. Since 15 the publisher does both, with a column list and a row filter.
+rows. Since Postgres 15 the publisher does both, with a column list and a row filter.
+
+{{< image src="fig-filters.svg" title="The publication sits between the two tables. The column list drops email and phone, the row filter drops the us customer. Neither the columns nor the row are ever sent to the warehouse." >}}
 
 The subscriber's copy of `shop.customers` is created without the personal
 columns, because a table only needs the columns that will be sent. On the
@@ -1082,56 +1090,232 @@ subscriber up yourself.
 
 ### Re-exporting as a change stream
 
-Now the interesting part. The warehouse gets rows through
-apply workers, which write WAL like any other session. So a second
-publication on the warehouse, and a logical slot for a Debezium-like
-consumer, sees them. I checked with `pg_recvlogical` and `pgoutput` (what
-Debezium uses) and with `test_decoding` for readability.
+The warehouse gets its rows through apply workers, and apply workers write WAL
+like any other session. So the warehouse tables are ordinary tables as far as
+logical decoding is concerned: a publication on them and a logical slot give a
+Debezium-like consumer the consolidated stream.
 
-- The applied rows do show up downstream.
-- They carry a **replication origin** (`pg_<subscription oid>`). The consumer
-  that asks for `origin 'none'`, or `only-local` with `test_decoding`,
-  sees none of the consolidated data, only writes made locally on the
-  warehouse. A consumer that asks for `origin 'any'` gets them, each with
-  an origin message.
+{{< image src="fig-cdc.svg" title="The apply workers write the changes of the three sources into the warehouse. Logical decoding reads them from the WAL like any other change, together with the writes made directly on the warehouse. The origin option of the consumer decides which of the two it gets." >}}
 
-That is the trap: 16's origin filter, which is what protects you from
-loops, is also what hides replicated data from a consumer that opted in.
-For a CDC consumer of a consolidated database, set it to `any`.
+On the warehouse, one publication for the three schemas, and two slots created
+with the client tools of the server: `pgoutput`, which is what Debezium uses,
+and `test_decoding`, which is readable:
 
-- A source transaction that touches two tables arrives downstream as **one
-  transaction**.
-- A 20,000-row transaction streams downstream before the source commits,
-  while its rows are still invisible on the warehouse. If the source rolls
-  back, the consumer sees `aborting streamed (sub)transaction` after
-  thousands of changes were already delivered. Your consumer has to handle
-  that. I checked streaming with `test_decoding` only.
+```sql
+create publication cdc_pub for tables in schema shop, crm, billing;
+```
+
+```sh
+pg_recvlogical -U postgres -d warehouse --slot cdc_pg --create-slot -P pgoutput
+pg_recvlogical -U postgres -d warehouse --slot cdc_td --create-slot -P test_decoding
+```
+
+A slot belongs to one database, so a slot created in the `postgres` database
+sees nothing of `warehouse`. Then some activity on the sources: one transaction
+on the shop that inserts a customer and an order together, and later a write
+made directly on the warehouse, to a payment. Reading the `test_decoding` slot
+without consuming it:
+
+```sql
+select data
+  from pg_logical_slot_peek_changes('cdc_td', null, null,
+                                    'include-xids', '0',
+                                    'skip-empty-xacts', '1');
+```
+
+```results
+ BEGIN
+ table shop.customers: INSERT: id[integer]:10 account_id[integer]:3 name[text]:'Ivy' country[text]:'FR' tenant[text]:'eu'
+ table shop.orders: INSERT: id[integer]:7 customer_id[integer]:10 amount[numeric]:42.00 status[text]:'new' tenant[text]:'eu'
+ COMMIT
+ ...
+ BEGIN
+ table billing.payments: INSERT: id[integer]:900 invoice_id[integer]:3 amount[numeric]:1.00
+ COMMIT
+```
+
+Two things to read there. The applied rows do show up downstream, and the
+customer's `email` and `phone` are not in the stream, because the publication
+that feeds the warehouse never sent them. And the source transaction that
+touched two tables arrives as one downstream transaction.
+
+The rows applied by a subscription carry a **replication origin**, named
+`pg_<subscription oid>`, and the consumer chooses whether it wants them. The
+same slot, read with `pgoutput` messages, with `origin` set to `any` and to
+`none` (the letters are the message types: `B` begin, `O` origin, `R` relation,
+`I` insert, `U` update, `C` commit):
+
+```sql
+select 'origin any' as option, string_agg(chr(get_byte(data, 0)), '' order by lsn) as messages
+  from pg_logical_slot_peek_binary_changes('cdc_pg', null, null,
+         'proto_version', '1', 'publication_names', 'cdc_pub', 'origin', 'any')
+union all
+select 'origin none', string_agg(chr(get_byte(data, 0)), '' order by lsn)
+  from pg_logical_slot_peek_binary_changes('cdc_pg', null, null,
+         'proto_version', '1', 'publication_names', 'cdc_pub', 'origin', 'none');
+```
+
+```results
+   option    |           messages
+-------------+-------------------------------
+ origin any  | BORIRICBOICBOUCBORICBORICBRIC
+ origin none | BRIC
+```
+
+With `origin = any` the consumer gets every transaction, each applied one
+preceded by an `O` message with the origin. With `origin = none` it gets only
+`BRIC`, the payment written locally on the warehouse. `test_decoding` has the
+same switch under another name: `only-local`. That is the trap: Postgres 16's
+origin filter, which is what protects you from loops, is also what hides
+replicated data from a consumer that asks for it. A consumer of a consolidated
+database must use `any`.
+
+Large transactions stream. With `logical_decoding_work_mem` at 64kB, a source
+transaction that inserts 20,000 rows reaches the downstream slot while it is
+still open, with the option that asks for it (`stream-changes` for
+`test_decoding`). The rows are not visible on the warehouse yet, because the
+source transaction has not committed:
+
+```results
+downstream already streams while the source transaction is open: yes
+rows tagged 'bulk_c' visible on the warehouse while the source transaction is open: 0
+streamed changes delivered before the end of the transaction: more than 10000
+rows tagged 'bulk_c' visible on the warehouse at the end: 20000
+```
+
+If the source rolls back instead, the downstream consumer has already received
+thousands of changes, and the last line it sees is `aborting streamed
+(sub)transaction`. The consumer has to be able to throw them away. I checked
+streaming with `test_decoding` only, not with `pgoutput`.
 
 ### Keeping the CDC load off the primary
 
-Since 16, a logical slot can live on a physical standby of the warehouse.
-It works, and I collected the requirements one error at a time:
+Since Postgres 16, a logical slot can live on a physical standby, which keeps
+the CDC consumer off the warehouse primary.
 
-- the standby needs its own `max_worker_processes` at least as large as the
-  primary's: `recovery aborted because of insufficient parameter settings`;
-- the standby needs `wal_level = logical` itself, or slot creation fails with
-  `logical decoding requires "wal_level" >= "logical"`;
-- creating the slot **blocks** on an idle primary until somebody runs
-  `pg_log_standby_snapshot()` there;
-- with `hot_standby_feedback = off`, catalog vacuum on the primary
-  invalidates the slot: `This replication slot has been invalidated due to
-  "rows_removed"`.
+{{< image src="fig-standby.svg" title="The logical slot lives on the physical standby and decodes the WAL the standby replays. The standby reports its needs to the primary with hot_standby_feedback, so that the primary keeps the catalog rows the slot needs." >}}
+
+The standby is a base backup of the warehouse. `-R` writes the recovery
+settings, and `-C -S` creates the physical slot on the primary:
+
+```sh
+pg_basebackup -h warehouse -U postgres -D $PGDATA -X stream -R -C -S standby1 -v
+```
+
+Creating the logical slot on it with `pg_recvlogical` needs four things, and I
+collected them one error at a time:
+
+- The standby needs the primary's sizing. With the default `max_worker_processes`
+  it does not start: `FATAL: recovery aborted because of insufficient parameter
+  settings`, `DETAIL: max_worker_processes = 8 is a lower setting than on the
+  primary server, where its value was 24.`
+- It needs `wal_level = logical` itself, it does not inherit it from the primary:
+  `ERROR: logical decoding requires "wal_level" >= "logical"`.
+- Creating the slot **blocks** on an idle primary, until a running-transactions
+  record reaches the standby. On the primary:
+
+  ```sql
+  select pg_log_standby_snapshot();
+  ```
+
+- It needs `hot_standby_feedback = on`. With it off, catalog vacuum on the
+  primary removes rows the slot needs and the slot is invalidated:
+
+```results
+ slot_name | wal_status | conflicting | invalidation_reason
+-----------+------------+-------------+---------------------
+ cdc_sb    | lost       | t           | rows_removed
+
+ERROR:  can no longer access replication slot "cdc_sb"
+DETAIL:  This replication slot has been invalidated due to "rows_removed".
+```
+
+So the standby's `postgresql.conf` carries three settings that the primary does
+not force on it:
+
+```
+max_worker_processes = 24          # at least the primary's
+wal_level = logical
+hot_standby_feedback = on
+```
 
 ### What breaks
 
-DDL, again. If a publisher adds a column first, the subscriber's apply worker
-stops with `logical replication target relation "shop.orders" is missing
-replicated column: "note"`, and every later transaction queues behind it. The
-fix is to add the column on the subscriber, and replication resumes on its
-own. The order is therefore: additive changes go to the subscriber first,
-drops go to the publisher first. Sequences are the other one: the publisher
+DDL, again, and this time it is not a design decision you can avoid: the
+schema of the warehouse has to follow the schema of the sources by hand.
+
+{{< image src="fig-ddl-order.svg" title="DDL is not replicated. For an added column the subscriber gets it first, otherwise its apply worker stops. For a dropped column the publisher goes first, and the subscriber keeps a column that stays NULL." >}}
+
+If the publisher adds a column that the subscriber does not have yet, on the
+shop:
+
+```sql
+alter table shop.orders add column note text;
+insert into shop.orders (customer_id, amount, status, tenant, note) values (1, 5.00, 'new', 'eu', 'first with note');
+insert into shop.orders (customer_id, amount, status, tenant) values (2, 6.00, 'new', 'eu');
+```
+
+the subscriber's apply worker stops, and every later transaction queues behind
+the first one, including the second insert, which has nothing to do with the
+new column:
+
+```results
+ERROR:  logical replication target relation "shop.orders" is missing replicated column: "note"
+
+ subname  | apply_is_failing
+----------+------------------
+ sub_shop | t
+
+ orders_after_note_insert
+--------------------------
+                        0
+
+ slot_name | unconfirmed_wal
+-----------+-----------------
+ sub_shop  | t
+```
+
+The publisher keeps that WAL until the subscriber catches up, which is what the
+last line shows. The fix is to add the column on the subscriber, and the worker
+retries by itself at the next `wal_retrieve_retry_interval` (5 seconds by
+default):
+
+```sql
+alter table shop.orders add column note text;   -- on the warehouse
+```
+
+```results
+ amount |      note
+--------+-----------------
+   5.00 | first with note
+   6.00 |
+```
+
+So the order for an added column is the subscriber first, then the publisher,
+and the same test with that order does not stop:
+
+```sql
+alter table shop.orders add column priority int;   -- on the warehouse, then on the shop
+```
+
+Dropping a column goes the other way. The publisher goes first, and the
+subscriber keeps a column that is NULL for the new rows, until you drop it:
+
+```results
+ amount | priority
+--------+----------
+   7.00 |        1
+   8.00 |
+```
+
+Sequences are the other thing that does not follow. The publisher's sequence
 was at 40013, the warehouse's copy at 1, and a local insert on the warehouse
-fails on `orders_pkey`.
+reuses an id that a replicated row already has:
+
+```results
+ERROR:  duplicate key value violates unique constraint "orders_pkey"
+DETAIL:  Key (id)=(1) already exists.
+```
 
 That is where the tables-as-a-buffer approach shows its cost. Every change
 is written to the warehouse and then written again to be re-decoded. It
@@ -1144,7 +1328,7 @@ writing tables, which is a story for another article.
 ## Architecture 3: a zero-downtime major upgrade, with a way back
 
 This one is the most common reason to touch logical replication, and the one
-where the small details cost the most. I upgraded 16 to 18 with a traffic
+where the small details cost the most. I upgraded Postgres 16 to 18 with a traffic
 generator running the whole time (about 50 commits per second), so the
 "zero" is measured rather than claimed.
 
@@ -1171,7 +1355,7 @@ copy here. The details are in what *is not* there when the copy finishes:
 ### Knowing when it has caught up
 
 Everything hangs on one question at cutover time: has the new server
-received everything the old one committed? 19 added `WAIT FOR LSN`, which
+received everything the old one committed? Postgres 19 added `WAIT FOR LSN`, which
 looks like the perfect tool for this. It is not, for a logical subscriber:
 
 ```results
@@ -1241,13 +1425,16 @@ A rollback took 179 ms in the same measurement.
 `permission denied for database`. The connection needs a password, or
 `password is required`. And the initial copy then fails with `role
 "migrator" cannot SET ROLE to "postgres"` until the subscription owner owns
-the tables. All three are 16 behaviour, and each is a security feature, but
+the tables. All three are Postgres 16 behaviour, and each is a security feature, but
 none was in the way I expected.
 
 ### Or just `pg_upgrade`
 
-17 changed the picture for the in-place route. I upgraded a 17 cluster to 18
-with `pg_upgrade --link`:
+`pg_upgrade --link` has been there since 9.0, so the in-place route is not new.
+What Postgres 17 added is that `pg_upgrade` carries the logical replication
+state across: its release notes say it migrates valid logical slots and
+subscriptions, and that this only works when the *old* cluster is version 17 or
+later. I upgraded a Postgres 17 cluster to 18 with `pg_upgrade --link`:
 
 - A **subscriber** keeps its subscription, the state of each table, and its
   origin position, and stays enabled.
@@ -1256,7 +1443,7 @@ with `pg_upgrade --link`:
   `wal_level = logical` from the start.
 - `postgresql.conf` and `pg_hba.conf` are yours to write; statistics
   counters are not carried over.
-- 18 refuses to upgrade a cluster that does not use data checksums
+- Postgres 18 refuses to upgrade a cluster that does not use data checksums
   (`old cluster does not use data checksums but the new one does`), unless
   the new one is initialised with `--no-data-checksums`.
 
@@ -1275,8 +1462,8 @@ tool for that one case.
 
 From what I built and what its README says:
 
-- **Conflict resolution.** Core detects and counts conflicts (18) and lets you
-  skip a transaction (15). It does not resolve them. pglogical has five
+- **Conflict resolution.** Core detects and counts conflicts (Postgres 18) and lets you
+  skip a transaction (Postgres 15). It does not resolve them. pglogical has five
   policies: `error`, `apply_remote`, `keep_local`, `last_update_wins`,
   `first_update_wins`, and the timestamp-based ones need
   `track_commit_timestamp`. If your architecture is genuinely multi-active,
@@ -1339,7 +1526,7 @@ connection details live in a foreign server rather than a string.
 Two lines from the run worth keeping. `WAIT FOR LSN` is standby-only, as shown
 above. And a hub with many subscriptions runs out of two limits without a
 friendly error: `max_logical_replication_workers` (the default is 4), and,
-since 18, `max_active_replication_origins` (the default is 10), because every
+since Postgres 18, `max_active_replication_origins` (the default is 10), because every
 subscription and every table being copied holds a replication origin. Past
 that, the log repeats `could not find free replication state slot for
 replication origin with ID 11`, and the subscriptions sit in the `i` or `d` state
