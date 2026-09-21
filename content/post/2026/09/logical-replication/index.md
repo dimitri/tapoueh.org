@@ -845,7 +845,7 @@ Now the same `create subscription` as before finds `shopapp.orders` on both
 sides, and the copy runs. If you have several applications in `public` on
 several servers, this is the migration to do first, and it is cheap; if you
 cannot touch the source, the alternatives are a database per source on the
-warehouse (below), or a component that renames as the changes flow, the kind
+warehouse server, or a component that renames as the changes flow, the kind
 I come back to at the end of this architecture.
 
 I also tried what happens when you do not do this. Two sources with a
@@ -854,62 +854,6 @@ I also tried what happens when you do not do this. Two sources with a
 stays in state `d` and retries every five seconds. Same name and a different
 shape: `logical replication target relation "public.contacts" is missing
 replicated column: "company"`.
-
-The layouts I compared:
-
-- **A schema per application**, as above. It works, and it is what I recommend:
-  cross-application joins are plain SQL.
-- **A database per source** on the warehouse server. It works, and needs no
-  change at the source, but Postgres gives you `cross-database references are not
-  implemented`, and each database needs its own slot and apply worker.
-- **A shared table fed by several sources**, with a `source` column. It works
-  only when the keys are disjoint across sources, and it is the one with the
-  most to say, so here are the results.
-
-### Stamping the source
-
-A subscriber table can have extra columns, filled by a default. I wanted the
-default to say which source a row came from. The identity you can see in the
-apply worker turns out to be:
-
-- `session_user` is always the **subscription owner**.
-- `current_user` is the table owner with the default `run_as_owner = false`,
-  and the subscription owner with `run_as_owner = true`.
-- No function returns the replication origin name. The functions that come
-  closest (`pg_replication_origin_session_is_setup()` and friends) are
-  superuser-only, and a trigger calling them fails with `permission denied`
-  in the apply worker.
-
-That leads to a pattern that needs no trigger: one subscription owner role
-per source, and a default that reads it.
-
-```sql
-create table public.customers
-(
-  id     int  not null,
-  name   text not null,
-  source text not null default regexp_replace(session_user, '^sub_', ''),
-  primary key (id)
-);
-```
-
-Two caveats, both real: a superuser-owned subscription stamps `postgres`,
-and a local write stamps the local user. And the primary key still has to be
-`(id)`. Making it `(source, id)` fails on the first `UPDATE`, because the
-publisher does not send `source`:
-
-```results
-ERROR:  publisher did not send replica identity column expected by the logical replication target relation "public.customers"
-```
-
-I also tried the two obvious workarounds. `replica identity full` on the
-subscriber does nothing for this. `replica identity full` on the publishers
-plus a plain unique index on `(id, source)` is worse: it fails silently
-(`conflict=update_missing`, "Could not find the row to be updated"), the
-change is skipped, and the data diverges. With overlapping keys, nothing on
-the subscriber side is reliable. Use a schema per source and a `union all`
-view that adds the constant. (Adding a real namespace column at the source is
-the other answer. I did not test it.)
 
 ### Less data: filters and column lists
 
