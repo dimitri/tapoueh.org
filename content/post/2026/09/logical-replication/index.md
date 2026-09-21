@@ -452,7 +452,7 @@ DETAIL:  Key already exists in unique index "conf_demo_code_key", modified local
 
 When the incoming row collides on the primary key and on the unique `code`
 together, it is counted under its own name, `multiple_unique_conflicts`, not
-under `insert_exists`. That one I did not expect: a monitor that only watches
+under `insert_exists`. So a monitor that only watches
 `confl_insert_exists` misses it.
 
 While the conflict stands, the apply worker restarts every
@@ -657,7 +657,7 @@ how:
 LOG:  CONFLICT: remote INSERT on relation public.usage_events_w1 (local index usage_events_w1_pkey). Resolution: apply_remote.
 ```
 
-It also gave me three things I would rather not have had, on 2.4.8:
+It also has three problems, on 2.4.8:
 
 - Replicating into a **partitioned parent** crashed the apply worker on the
   first row after the initial copy. The postmaster restarted every backend,
@@ -857,19 +857,232 @@ replicated column: "company"`.
 
 ### Less data: filters and column lists
 
-Column lists drop what the warehouse must never see (emails, phone
-numbers), and row filters keep a tenant's rows apart. The behaviour matches
-the hub demo: a filter column that is outside the replica identity breaks
-`UPDATE` at the source with the same error as before, and neither filters
-nor column lists clean up what was copied before they existed. Two more
-observations. An `UPDATE` that touches only a filtered-out column still
-sends an update message, with no PII in it. And `for tables in schema` refuses
-column lists: `Column lists cannot be specified in publications containing
-FOR TABLES IN SCHEMA elements.`
+This warehouse is the EU warehouse. It must never hold the customers' email
+addresses and phone numbers, and it should only receive the `eu` tenant's
+rows. Since 15 the publisher does both, with a column list and a row filter.
+
+The subscriber's copy of `shop.customers` is created without the personal
+columns, because a table only needs the columns that will be sent. On the
+warehouse:
+
+```sql
+create table shop.customers
+(
+  id         int  primary key,
+  account_id int  not null,
+  name       text not null,
+  country    text,
+  tenant     text not null
+);
+alter table shop.customers owner to sub_shop;
+```
+
+On the shop server, the publication is changed to list its tables with their
+column lists and row filters. `shop.orders` was already published and gets a
+filter, `shop.customers` is new:
+
+```sql
+alter publication pub_shop set table
+  shop.orders where (tenant = 'eu'),
+  shop.customers (id, account_id, name, country, tenant) where (tenant = 'eu');
+
+select schemaname, tablename, attnames, rowfilter
+  from pg_publication_tables
+ where pubname = 'pub_shop'
+ order by tablename;
+```
+
+```results
+ schemaname | tablename |               attnames                |       rowfilter
+------------+-----------+---------------------------------------+-----------------------
+ shop       | customers | {id,account_id,name,country,tenant}   | (tenant = 'eu'::text)
+ shop       | orders    | {id,customer_id,amount,status,tenant} | (tenant = 'eu'::text)
+```
+
+The first trap comes right after. The row filter uses `tenant`, which is not
+part of the primary key, and the primary key is the replica identity. The
+publication is accepted, and the next `update` on the publisher fails, whatever
+column it changes:
+
+```sql
+update shop.orders set status = 'paid' where id = 4;
+```
+
+```results
+ERROR:  cannot update table "orders"
+DETAIL:  Column used in the publication WHERE expression is not part of the replica identity.
+```
+
+Same fix as in the hub-and-workers demo: a unique index that contains the
+filter column, used as the replica identity.
+
+```sql
+create unique index orders_id_tenant on shop.orders (id, tenant);
+alter table shop.orders replica identity using index orders_id_tenant;
+
+create unique index customers_id_tenant on shop.customers (id, tenant);
+alter table shop.customers replica identity using index customers_id_tenant;
+```
+
+Then the subscriber picks up the new table. `refresh publication` copies
+only tables that are new to the subscription, and `shop.customers` is one, so
+its initial copy honours the filter and the column list:
+
+```sql
+alter subscription sub_shop refresh publication;
+```
+
+```results
+ id | account_id | name  | country | tenant
+----+------------+-------+---------+--------
+  1 |          1 | Alice | FR      | eu
+  2 |          1 | Bob   | FR      | eu
+  4 |          3 | Dan   | DE      | eu
+```
+
+Carol, the US customer, is not there, and neither are the email and phone
+columns. The second trap is in `shop.orders`, which was already being
+replicated when the filter was added. A filter only applies to what is sent
+from then on, so the US order that was copied before it existed is still on the
+warehouse:
+
+```sql
+select id, tenant, status from shop.orders order by id;
+```
+
+```results
+ id | tenant | status
+----+--------+--------
+  1 | eu     | paid
+  2 | eu     | paid
+  3 | us     | paid
+  4 | eu     | paid
+```
+
+Row 3 stays until somebody deletes it by hand, and it will not follow later
+changes either, since those are filtered out. After `update shop.orders set
+status = 'shipped' where id = 3` on the shop, the warehouse's row 3 still says
+`paid`.
+
+### What the publisher sends
+
+The column list is a promise that the personal columns never leave the
+publisher, and I wanted to check it on the wire and not only on the subscriber.
+A scratch logical slot with the `pgoutput` plugin, read with
+`pg_logical_slot_get_binary_changes()`, returns the protocol messages the
+subscriber would get. The function below lists the first byte of every message
+(`B` begin, `R` relation, `I` insert, `U` update, `D` delete, `C` commit) and
+whether any message contains an email or a phone number:
+
+```sql
+create function peek(slot text default 'peek', pub text default 'pub_shop')
+  returns table (messages text, pii_bytes boolean)
+  language sql as $$
+  select coalesce(string_agg(chr(get_byte(data, 0)), '' order by lsn), '(nothing)'),
+         coalesce(bool_or(encode(data, 'escape') ~ '(@example\.com|\+33|\+49|\+1 555)'), false)
+    from pg_logical_slot_get_binary_changes(slot, null, null,
+                                            'proto_version', '1',
+                                            'publication_names', pub)
+$$;
+
+select pg_create_logical_replication_slot('peek', 'pgoutput');
+```
+
+Then one statement at a time, followed by `select * from peek();`:
+
+| Statement on the publisher | Messages | PII on the wire |
+|---|---|---|
+| `update shop.customers set phone = '…' where id = 1` (a column that is not published) | `BRUC` | no |
+| `update shop.customers set name = 'Alicia' where id = 1` | `BRUC` | no |
+| `update shop.customers set tenant = 'us' where id = 4` (the row leaves the filter) | `BRDC` | no |
+| `update shop.customers set tenant = 'eu' where id = 3` (the row enters the filter) | `BRIC` | no |
+| `insert into shop.orders … 'us'` | nothing | no |
+| `update shop.orders set status = 'shipped' where id = 3` (a row outside the filter) | nothing | no |
+| `insert into shop.orders … 'eu'` | `BRIC` | no |
+
+Three things to read in that table. An `update` of a column that is not in the
+list still sends an update message, only without the value: the subscriber gets
+a no-op update. A row that leaves the filter arrives as a `delete` and a row
+that enters it as an `insert`, so the warehouse follows the tenant changes. And
+a change to a row outside the filter sends nothing.
+
+To be sure the check can fail, a control: a publication on the same table
+*without* a column list, and the same phone update:
+
+```results
+ messages | pii_bytes
+----------+-----------
+ BRUC     | t
+```
+
+The warehouse ends up consistent with the filter, apart from the row that
+predates it:
+
+```results
+ id | account_id |  name  | country | tenant
+----+------------+--------+---------+--------
+  1 |          1 | Alicia | FR      | eu
+  2 |          1 | Bob    | FR      | eu
+  3 |          2 | Carol  | US      | eu
+```
+
+(Carol is `eu` now, because the demo moved her tenant. Dan, moved to `us`, was
+deleted from the warehouse.)
+
+### Filters when the publication is a whole schema
+
+The CRM's publication is `for tables in schema crm`, which is convenient: a
+new table in the schema is published without anybody touching the publication.
+It comes with a limit. A column list is refused in a publication that has a
+`tables in schema` element:
+
+```sql
+alter publication pub_crm add table crm.contacts (id, account_id, name);
+```
+
+```results
+ERROR:  cannot use column list for relation "crm.contacts" in publication "pub_crm"
+DETAIL:  Column lists cannot be specified in publications containing FOR TABLES IN SCHEMA elements.
+```
+
+To hide the email of a contact you leave the schema form and list the tables,
+which gives up the "new tables follow automatically" behaviour:
+
+```sql
+alter publication pub_crm drop tables in schema crm;
+alter publication pub_crm add table crm.accounts, crm.contacts (id, account_id, name);
+```
+
+```results
+ tablename |       attnames
+-----------+----------------------
+ accounts  | {id,name,tier}
+ contacts  | {id,account_id,name}
+```
+
+And as with the row filter, it applies from now on. A contact inserted after
+the change arrives without its email, and the emails copied before stay where
+the initial copy put them:
+
+```sql
+insert into crm.contacts values (3, 3, 'Jane', 'jane@initech.example');
+```
+
+```results
+ id | name |        email
+----+------+---------------------
+  1 | Wile | wile@acme.example
+  2 | Hank | hank@globex.example
+  3 | Jane |
+```
+
+If the personal data must not be on the warehouse at all, the order matters:
+set the column list *before* the first copy of the table, or clean the
+subscriber up yourself.
 
 ### Re-exporting as a change stream
 
-Now the part that surprised me the most. The warehouse gets rows through
+Now the interesting part. The warehouse gets rows through
 apply workers, which write WAL like any other session. So a second
 publication on the warehouse, and a logical slot for a Debezium-like
 consumer, sees them. I checked with `pg_recvlogical` and `pgoutput` (what
@@ -958,9 +1171,8 @@ copy here. The details are in what *is not* there when the copy finishes:
 ### Knowing when it has caught up
 
 Everything hangs on one question at cutover time: has the new server
-received everything the old one committed? 19 added `WAIT FOR LSN`, and it
-is the first thing I tried, because it looks like the perfect tool. It is
-not, for a logical subscriber:
+received everything the old one committed? 19 added `WAIT FOR LSN`, which
+looks like the perfect tool for this. It is not, for a logical subscriber:
 
 ```results
 16, 18:      ERROR:  syntax error at or near "WAIT"
@@ -1010,7 +1222,7 @@ your connection pool will behave differently.
 
 The reverse direction is what lets you roll back after the switch. Before
 cutover, subscribe old to new, with `origin = none`, so writes made on the
-new server flow back and nothing loops. Three things I learned the hard way:
+new server flow back and nothing loops. Three things to know:
 
 - the *forward* subscription has to use `origin = none` too, otherwise the
   changes you replicate back would come around again (that is my reasoning,
