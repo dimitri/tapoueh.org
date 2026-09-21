@@ -160,6 +160,8 @@ create table usage_events
 partition by list (worker_id);
 
 create table usage_events_w1 partition of usage_events for values in (1);
+create table usage_events_w2 partition of usage_events for values in (2);
+create table usage_events_w3 partition of usage_events for values in (3);
 ```
 
 The rows are routed to their partition, and the invoicing query is a plain
