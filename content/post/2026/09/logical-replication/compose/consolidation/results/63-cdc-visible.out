@@ -1,0 +1,46 @@
+-- @service: warehouse
+-- Step 4d (i) + (iii): what does the downstream slot see? PEEK does not consume.
+-- (i) Rows applied by the subscription workers ARE decoded downstream (default options).
+-- (iii) Each source transaction is ONE downstream transaction, tables together.
+select data from pg_logical_slot_peek_changes('cdc_td', null, null, 'include-xids', '0', 'include-timestamp', '0', 'skip-empty-xacts', '1') order by lsn;
+                                                            data                                                             
+-----------------------------------------------------------------------------------------------------------------------------
+ BEGIN
+ table shop.customers: INSERT: id[integer]:10 account_id[integer]:3 name[text]:'Ivy' country[text]:'FR' tenant[text]:'eu'
+ table shop.orders: INSERT: id[integer]:7 customer_id[integer]:10 amount[numeric]:42.00 status[text]:'new' tenant[text]:'eu'
+ COMMIT
+ BEGIN
+ table shop.orders: INSERT: id[integer]:8 customer_id[integer]:10 amount[numeric]:1.00 status[text]:'new' tenant[text]:'eu'
+ COMMIT
+ BEGIN
+ table shop.orders: UPDATE: id[integer]:8 customer_id[integer]:10 amount[numeric]:1.00 status[text]:'paid' tenant[text]:'eu'
+ COMMIT
+ BEGIN
+ table crm.accounts: INSERT: id[integer]:4 name[text]:'Umbrella' tier[text]:'gold'
+ COMMIT
+ BEGIN
+ table billing.invoices: INSERT: id[integer]:4 account_id[integer]:4 amount[numeric]:99.00 status[text]:'open'
+ COMMIT
+ BEGIN
+ table billing.payments: INSERT: id[integer]:900 invoice_id[integer]:3 amount[numeric]:1.00
+ COMMIT
+(19 rows)
+
+-- the same, folded per downstream transaction
+with l as (
+  select row_number() over () as n, data
+    from pg_logical_slot_peek_changes('cdc_td', null, null, 'include-xids', '0', 'skip-empty-xacts', '1')
+), t as (select n, data, count(*) filter (where data like 'BEGIN%') over (order by n) as txn from l)
+select txn, count(*) filter (where data like 'table %') as changes,
+       string_agg(distinct substring(data from 'table ([a-z_.]+):'), ', ') as tables
+  from t group by txn order by txn;
+ txn | changes |           tables            
+-----+---------+-----------------------------
+   1 |       2 | shop.customers, shop.orders
+   2 |       1 | shop.orders
+   3 |       1 | shop.orders
+   4 |       1 | crm.accounts
+   5 |       1 | billing.invoices
+   6 |       1 | billing.payments
+(6 rows)
+

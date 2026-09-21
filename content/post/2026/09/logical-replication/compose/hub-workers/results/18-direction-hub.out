@@ -1,0 +1,34 @@
+-- @service: hub
+-- Step 5a. Direction rule. For each node: the tables it publishes and the tables it
+-- subscribes to. The two sets are disjoint on every node, so a change cannot come back.
+CREATE TEMP TABLE pubs AS
+  SELECT 'hub' AS node, tablename::text AS tbl FROM pg_publication_tables
+  UNION
+  SELECT 'worker1', tbl FROM dblink(lr.conn('worker1'), 'SELECT tablename::text FROM pg_publication_tables') t(tbl text);
+SELECT 5
+CREATE TEMP TABLE subs AS
+  SELECT 'hub' AS node, c.relname::text AS tbl
+  FROM pg_subscription_rel r JOIN pg_class c ON c.oid = coalesce(pg_partition_root(r.srrelid), r.srrelid)
+  UNION
+  SELECT 'worker1', tbl FROM dblink(lr.conn('worker1'), $$SELECT c.relname::text FROM pg_subscription_rel r
+    JOIN pg_class c ON c.oid = r.srrelid$$) t(tbl text);
+SELECT 5
+SELECT node, 'publishes' AS direction, string_agg(tbl, ', ' ORDER BY tbl) AS tables FROM pubs GROUP BY node
+UNION ALL
+SELECT node, 'subscribes to', string_agg(DISTINCT tbl, ', ' ORDER BY tbl) FROM subs GROUP BY node
+ORDER BY node, direction DESC;
+  node   |   direction   |          tables           
+---------+---------------+---------------------------
+ hub     | subscribes to | usage_events, usage_naive
+ hub     | publishes     | customers, plans, prices
+ worker1 | subscribes to | customers, plans, prices
+ worker1 | publishes     | usage_events, usage_naive
+(4 rows)
+
+SELECT p.node, count(*) AS tables_both_published_and_subscribed FROM pubs p JOIN subs s USING (node, tbl) GROUP BY p.node
+UNION ALL SELECT 'all nodes', 0 WHERE NOT EXISTS (SELECT 1 FROM pubs JOIN subs USING (node, tbl));
+   node    | tables_both_published_and_subscribed 
+-----------+--------------------------------------
+ all nodes |                                    0
+(1 row)
+

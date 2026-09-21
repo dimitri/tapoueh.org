@@ -1,0 +1,102 @@
+name: lrupg
+
+x-pg-common: &pg-common
+  environment:
+    POSTGRES_PASSWORD: postgres
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d postgres"]
+    interval: 1s
+    timeout: 3s
+    retries: 60
+
+services:
+  # ---------------- part A: 16 -> 18 upgrade ----------------
+  old:
+    <<: *pg-common
+    profiles: [a]
+    image: postgres:16
+    command: >
+      postgres -c wal_level=logical -c max_wal_senders=20
+      -c max_replication_slots=20 -c max_worker_processes=24
+      -c log_line_prefix='[%p] ' -c log_min_messages=warning
+    ports: ["127.0.0.1:5730:5432"]
+    volumes: ["old-data:/var/lib/postgresql/data"]
+
+  new:
+    <<: *pg-common
+    profiles: [a]
+    image: postgres:18
+    command: >
+      postgres -c wal_level=logical -c max_wal_senders=20
+      -c max_replication_slots=20 -c max_worker_processes=24
+      -c max_logical_replication_workers=16
+      -c log_line_prefix='[%p] ' -c log_min_messages=warning
+    ports: ["127.0.0.1:5731:5432"]
+    volumes: ["new-data:/var/lib/postgresql"]
+
+  # the "application": a psql loop + the ops scripts (has psql 18)
+  traffic:
+    profiles: [a]
+    image: postgres:18
+    entrypoint: ["sleep", "infinity"]
+    environment:
+      PGPASSWORD: postgres
+      PGUSER: postgres
+    volumes: ["./traffic:/work:ro"]
+    depends_on:
+      old: {condition: service_healthy}
+      new: {condition: service_healthy}
+
+  # ---------------- part B: pg_upgrade preserving subscriptions/slots ----------------
+  upg:
+    profiles: [b]
+    build: ./upg
+    image: lrupg-upg:latest
+    entrypoint: ["sleep", "infinity"]
+    user: postgres
+    volumes:
+      - "upg-data:/pgdata"
+      - "./upg:/work:ro"
+
+  # ---------------- part C: PostgreSQL 19 beta ----------------
+  pg19a:
+    <<: *pg-common
+    profiles: [c]
+    image: postgres:19beta3-bookworm
+    command: >
+      postgres -c wal_level=logical -c max_wal_senders=20
+      -c max_replication_slots=20 -c max_worker_processes=24
+      -c log_line_prefix='[%p] ' -c log_min_messages=warning
+    ports: ["127.0.0.1:5732:5432"]
+    volumes: ["pg19a-data:/var/lib/postgresql", "./traffic:/work:ro"]
+
+  pg19b:
+    <<: *pg-common
+    profiles: [c]
+    image: postgres:19beta3-bookworm
+    command: >
+      postgres -c wal_level=logical -c max_wal_senders=20
+      -c max_replication_slots=20 -c max_worker_processes=24
+      -c track_commit_timestamp=on -c wal_receiver_status_interval=1
+      -c max_logical_replication_workers=32 -c max_sync_workers_per_subscription=4
+      -c log_line_prefix='[%p] ' -c log_min_messages=log
+    ports: ["127.0.0.1:5733:5432"]
+    volumes: ["pg19b-data:/var/lib/postgresql"]
+
+  # wal_level left at its default (replica): effective_wal_level tests
+  pg19c:
+    <<: *pg-common
+    profiles: [c]
+    image: postgres:19beta3-bookworm
+    command: >
+      postgres -c log_line_prefix='[%p] ' -c log_min_messages=log
+    ports: ["127.0.0.1:5734:5432"]
+    volumes: ["pg19c-data:/var/lib/postgresql"]
+
+volumes:
+  old-data:
+  new-data:
+  upg-data:
+  pg19a-data:
+  pg19b-data:
+  pg19c-data:

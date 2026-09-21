@@ -1,0 +1,71 @@
+-- @service: pghub
+-- Step 7f (optional: ./run.sh pglogical-crash). What happens if the hub table that pglogical writes
+-- into is the PARTITIONED PARENT (as with core logical replication in step 2b).
+-- Expected on pglogical 2.4.8 / PostgreSQL 14.24: the initial copy works, then the apply worker
+-- crashes with SIGSEGV on the first replicated INSERT, the postmaster restarts every backend, and the
+-- subscription crash-loops until dropped. This session is killed by the crash: that is the result.
+CREATE TABLE ue_crash (worker_id int NOT NULL, event_id bigint NOT NULL, qty int NOT NULL, PRIMARY KEY (worker_id, event_id))
+  PARTITION BY LIST (worker_id);
+CREATE TABLE
+CREATE TABLE ue_crash_w1 PARTITION OF ue_crash FOR VALUES IN (1);
+CREATE TABLE
+SELECT lr.on('pgw1', 'CREATE TABLE ue_crash (worker_id int NOT NULL DEFAULT 1, event_id bigint NOT NULL, qty int NOT NULL, PRIMARY KEY (worker_id, event_id))');
+      on      
+--------------
+ CREATE TABLE
+(1 row)
+
+SELECT lr.on('pgw1', 'INSERT INTO ue_crash (event_id, qty) VALUES (1, 1)');
+     on     
+------------
+ INSERT 0 1
+(1 row)
+
+SELECT * FROM dblink(lr.conn('pgw1'), $$SELECT pglogical.create_replication_set('crash')$$) t(x oid);
+     x     
+-----------
+ 707577157
+(1 row)
+
+SELECT * FROM dblink(lr.conn('pgw1'), $$SELECT pglogical.replication_set_add_table('crash', 'ue_crash')$$) t(x bool);
+ x 
+---
+ t
+(1 row)
+
+SELECT pglogical.create_subscription(subscription_name := 'sub_crash',
+  provider_dsn := 'host=pgw1 dbname=app user=postgres', replication_sets := ARRAY['crash'],
+  synchronize_data := true, forward_origins := '{}') IS NOT NULL AS created;
+ created 
+---------
+ t
+(1 row)
+
+SELECT pglogical.wait_for_subscription_sync_complete('sub_crash');
+ wait_for_subscription_sync_complete 
+-------------------------------------
+ 
+(1 row)
+
+SELECT count(*) AS rows_copied_by_initial_sync FROM ue_crash;
+ rows_copied_by_initial_sync 
+-----------------------------
+                           1
+(1 row)
+
+SELECT lr.on('pgw1', 'INSERT INTO ue_crash (event_id, qty) VALUES (2, 2)');
+     on     
+------------
+ INSERT 0 1
+(1 row)
+
+SELECT lr.wait_for($$SELECT count(*) = 2 FROM ue_crash$$, 30);
+psql:<stdin>:20: WARNING:  terminating connection because of crash of another server process
+DETAIL:  The postmaster has commanded this server process to roll back the current transaction and exit, because another server process exited abnormally and possibly corrupted shared memory.
+HINT:  In a moment you should be able to reconnect to the database and repeat your command.
+psql:<stdin>:20: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+psql:<stdin>:20: fatal: connection to server was lost
+== after the crash ==
+[] LOG:  background worker "pglogical apply 16384:SUB" (PID N) was terminated by signal 11: Segmentation fault
