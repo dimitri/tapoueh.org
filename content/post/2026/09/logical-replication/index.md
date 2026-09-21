@@ -204,6 +204,115 @@ DETAIL:  Key (customer_id)=(1) already exists.
 In this architecture the workers never mint ids for hub-owned tables, so
 this is a rule rather than a problem. 19 changes the situation, see below.
 
+### Minting ids on the workers
+
+The events need an id that two workers cannot mint twice. The key
+`(worker_id, event_id)` I used above is the first answer, and it needs no
+coordination at all, at the cost of a wider key on every table and every
+foreign key that points at it. If you want a single-column id, here are the
+options, simplest first.
+
+**Modulo and offset.** With `n` workers, give worker `k` a sequence that
+starts at `k` and steps by a number at least as large as the largest
+worker count you will ever have:
+
+```sql
+-- on worker 1; worker 2 uses start 2, worker 3 start 3
+create sequence mod_seq start 1 increment 10;
+
+create table usage_mod
+(
+  event_id bigint primary key default nextval('mod_seq'),
+  qty      int    not null
+);
+```
+
+That is the classic approach, and it works on every version and needs
+nothing from the replication layer. After three inserts on each worker, the
+hub has:
+
+```results
+ event_id | minted_by_worker
+----------+------------------
+        1 |                1
+        2 |                2
+        3 |                3
+       11 |                1
+       12 |                2
+       13 |                3
+       21 |                1
+       22 |                2
+       23 |                3
+```
+
+The worker is `event_id % 10`, all three subscriptions had
+`apply_error_count = 0`, and no server ever talked to another to get its
+ids. The catch is the increment. It is a promise about the largest fleet you
+will ever run: a worker number 11 would start at 11, which is exactly the id
+worker 1 already handed out, and the hub would stop on `insert_exists`.
+Pick the increment with headroom (`bigint` has room for a step of a
+thousand for a very long time), because changing it later means auditing
+every id already issued. The ids are also not time-ordered across workers,
+and they have gaps, as any sequence does.
+
+**UUIDv7, which is what I would use.** Postgres 18 has `uuidv7()`: a UUID
+whose first 48 bits are a millisecond timestamp, followed by random bits.
+
+```sql
+create table usage_uuid
+(
+  event_id uuid primary key default uuidv7(),
+  worker   int  not null,
+  qty      int  not null
+);
+```
+
+There is no headroom to plan, no worker number to assign, and no registry of
+who owns which range. A worker that joins next year, or a system you merge
+into the hub, mints ids that cannot collide. And, unlike the random UUIDs
+that gave UUID keys their reputation, these are time-ordered, so new rows
+land at the right edge of the index like a sequence's do. I had the workers
+insert in turn, a few milliseconds apart, and sorting by `event_id` on the
+hub returned the rows in the order they were written, whichever worker wrote
+them:
+
+```results
+ worker | version
+--------+---------
+      2 |       7
+      3 |       7
+      1 |       7
+      2 |       7
+      3 |       7
+      1 |       7
+      2 |       7
+      3 |       7
+      1 |       7
+```
+
+The price is 16 bytes instead of 8, and the creation time is now readable
+from the id (`uuid_extract_timestamp(event_id)`), which matters if the id
+is ever shown to users. The ordering across workers is only as good as their
+clocks and the millisecond resolution. On a version before 18 you generate
+the value in the application or with an extension.
+
+**Reserving ranges, the BDR way.** The BDR extension had a sequence access
+method that allocated a chunk of values to each node and agreed on new chunks
+between nodes when one ran out; its successor, EDB Postgres Distributed, still
+has it under the name `galloc`, next to a `snowflakeid` kind that is computed
+in memory. That is not in Postgres. The sequence access method patch sets
+date back to 2015 and 2016, and a new one was under discussion on the
+mailing list in late 2025. As far as I can tell from the 19 source tree it
+has not been committed: there is no sequence access method API in it. What
+19 does contain is groundwork, a refactoring that moves the sequence WAL
+code into its own file, described in its commit message as preparation for a
+sequence patch. Until an API lands, ranges are something you build in the
+application, or get from PGD.
+
+What 19's replicated sequences do *not* do is help here: the values travel
+from the publisher to the subscribers, and workers minting their own ids
+need the opposite.
+
 ### Big batches and many streams
 
 A worker that inserts 300,000 rows in one transaction used to make the hub
