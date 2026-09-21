@@ -331,11 +331,37 @@ setting is for.
 
 ### Operating it
 
-Adding a fourth worker is the reason to build it this way. `create table … 
-partition of` takes an `ACCESS EXCLUSIVE` lock on the parent, but `attach
-partition` only takes `SHARE UPDATE EXCLUSIVE`, so the recipe is to create
-the table standalone, then attach it. Create the subscription, and the three
-existing apply workers keep the same pids through the whole thing.
+Adding a fourth worker is the reason to build it this way, and the
+partition is where the care goes. `create table … partition of` takes an
+`ACCESS EXCLUSIVE` lock on the parent, which blocks everything that touches
+`usage_events`, including the apply workers already running. `attach
+partition` only takes `SHARE UPDATE EXCLUSIVE`. I asked `pg_locks` from
+inside a transaction for both:
+
+```results
+attach partition:              ShareUpdateExclusiveLock
+create table … partition of:   AccessExclusiveLock
+```
+
+So the recipe is to create the table standalone first, give it the check
+constraint that matches its partition bound (the documentation says this lets
+`attach partition` skip the validation scan), attach it, then subscribe:
+
+```sql
+create table usage_events_w4 (like usage_events including all);
+
+alter table usage_events_w4
+  add constraint w4_only check (worker_id = 4);
+
+alter table usage_events
+  attach partition usage_events_w4 for values in (4);
+
+create subscription sub_usage_w4
+       connection 'host=worker4 dbname=app user=postgres'
+       publication pub_usage;
+```
+
+The three existing apply workers keep the same pids through the whole thing.
 
 When something does break, 15 gave us the tool to get out of it:
 
@@ -349,57 +375,303 @@ whole transaction, not the row that conflicted. In the demo, worker 2's
 three events never reached the hub, and the two sides now disagree until
 somebody repairs them by hand.
 
-18 also made conflicts countable. `pg_stat_subscription_stats` grows one
-column per conflict kind: `confl_insert_exists`, `confl_update_missing`,
-`confl_update_origin_differs`, `confl_delete_missing`,
-`confl_delete_origin_differs`, `confl_update_exists` and
-`confl_multiple_unique_conflicts`. Only `insert_exists` is an error. The
-others log at `LOG` level and carry on: `update_missing`, `delete_missing`
-and `update_origin_differs` are all "the change is applied or skipped, the
-subscription lives, and you find out by looking at a counter". For
-`update_origin_differs` the remote change is applied.
+### Reading the conflict counters
+
+Postgres 18 also made conflicts countable. `pg_stat_subscription_stats` has one
+row per subscription. Beyond the two error counters
+(`apply_error_count`, `sync_error_count`) it now has one column per kind of
+conflict. This is what a fresh subscription looks like. I reset the counters
+first with `pg_stat_reset_subscription_stats()`, which is what you want to do
+before any experiment, since they are cumulative:
+
+```results
+-[ RECORD 1 ]-------------------+------------
+subname                         | sub_conf_w1
+apply_error_count               | 0
+sync_error_count                | 0
+confl_insert_exists             | 0
+confl_update_origin_differs     | 0
+confl_update_exists             | 0
+confl_update_missing            | 0
+confl_delete_origin_differs     | 0
+confl_delete_missing            | 0
+confl_multiple_unique_conflicts | 0
+```
+
+To learn what each counter means, I provoked all seven on a small table
+replicated from a worker to the hub, `conf_demo (id int primary key, code text
+unique, note text)`, each time by writing the same row on both sides. They fall
+in two families:
+
+| Counter | What I did | What happened |
+|---|---|---|
+| `update_missing` | the hub deleted row 1, the worker updated it | the update was dropped, no error |
+| `delete_missing` | the hub deleted row 2, the worker deleted it | nothing to delete, no error |
+| `update_origin_differs` | the hub edited row 3, then the worker edited it | the worker's version was applied over the hub's |
+| `delete_origin_differs` | the hub edited row 4, the worker deleted it | the delete was applied |
+| `insert_exists` | both inserted id 6 | **the apply worker stops** and retries |
+| `multiple_unique_conflicts` | both inserted id 7 with the same `code` | **the apply worker stops** and retries |
+| `update_exists` | the worker set a `code` the hub holds on another row | **the apply worker stops** and retries |
+
+After the first four, the counters say so and `apply_error_count` is still
+zero, because nothing stopped:
+
+```results
+-[ RECORD 1 ]---------------+--
+apply_error_count           | 0
+confl_update_missing        | 1
+confl_delete_missing        | 1
+confl_update_origin_differs | 1
+confl_delete_origin_differs | 1
+```
+
+Those four are the dangerous ones, because nothing raised an alarm. The data is
+already different on the two sides: row 1's update is lost, and row 3 holds the
+worker's note while the hub's edit is gone. A counter that moves here means two
+servers are writing the same rows, which is a design problem, not an
+operational one.
+
+The other three stop replication, and the log says exactly what to fix. The
+duplicate key from the hub's `insert_exists`:
+
+```results
+ERROR:  conflict detected on relation "public.conf_demo": conflict=insert_exists
+DETAIL:  Key already exists in unique index "conf_demo_pkey", modified locally in transaction N at TS.
+         Key (id)=(6); existing local row (6, hub-6, inserted on the hub); remote row (6, worker-6, inserted on the worker).
+CONTEXT:  processing remote data for replication origin pg_OID during message type "INSERT" for replication target relation "public.conf_demo" in transaction N, finished at X/X
+```
+
+and the `update_exists`, which also names the row the worker was trying to
+change (`replica identity (id)=(5)`):
+
+```results
+ERROR:  conflict detected on relation "public.conf_demo": conflict=update_exists
+DETAIL:  Key already exists in unique index "conf_demo_code_key", modified locally in transaction N at TS.
+         Key (code)=(code-8); existing local row (8, code-8, inserted on the hub); remote row (5, code-8, from worker); replica identity (id)=(5).
+```
+
+When the incoming row collides on the primary key and on the unique `code`
+together, it is counted under its own name, `multiple_unique_conflicts`, not
+under `insert_exists`. That one I did not expect: a monitor that only watches
+`confl_insert_exists` misses it.
+
+While the conflict stands, the apply worker restarts every
+`wal_retrieve_retry_interval` and fails again, so `apply_error_count` and the
+conflict counter climb together. The fix is on the subscriber: delete or
+correct the local row that is in the way, and the next retry succeeds. The
+counters stop moving and the row arrives:
+
+```sql
+delete from conf_demo where id = 6;
+```
+
+If the remote change is the one to give up, `alter subscription … skip`,
+shown above, drops it, with the caveat that it drops the whole transaction.
+
+A query to turn the counters into something a person can act on, that lists
+only the kinds that happened and says which of them stop replication:
+
+```sql
+select c.kind, c.stops_apply, c.what_it_means
+  from pg_stat_subscription_stats s
+       cross join lateral (values
+         ('insert_exists',             s.confl_insert_exists,             true,
+          'a row with this key exists locally: fix or delete one side, or SKIP the transaction'),
+         ('update_exists',             s.confl_update_exists,             true,
+          'the new value violates a unique index on the subscriber: fix the local row that holds it'),
+         ('multiple_unique_conflicts', s.confl_multiple_unique_conflicts, true,
+          'the incoming row violates more than one unique index'),
+         ('update_missing',            s.confl_update_missing,            false,
+          'the row to update is not here: the change was dropped, the data diverged'),
+         ('delete_missing',            s.confl_delete_missing,            false,
+          'the row to delete is not here: harmless if it was deleted on purpose'),
+         ('update_origin_differs',     s.confl_update_origin_differs,     false,
+          'the row was changed locally: the remote change won'),
+         ('delete_origin_differs',     s.confl_delete_origin_differs,     false,
+          'the row was changed locally: the delete was applied')
+       ) as c(kind, n, stops_apply, what_it_means)
+ where s.subname = 'sub_conf_w1' and c.n > 0
+ order by c.stops_apply desc, c.kind;
+```
+
+```results
+           kind            | stops_apply |                                      what_it_means
+---------------------------+-------------+------------------------------------------------------------------------------------------
+ insert_exists             | t           | a row with this key exists locally: fix or delete one side, or SKIP the transaction
+ multiple_unique_conflicts | t           | the incoming row violates more than one unique index: fix the local row(s) holding those keys
+ update_exists             | t           | the new value violates a unique index on the subscriber: fix the local row that holds it
+ delete_missing            | f           | the row to delete is not here: harmless if it was deleted on purpose
+ delete_origin_differs     | f           | the row was changed locally: the delete was applied
+ update_missing            | f           | the row to update is not here: the change was dropped, the data diverged
+ update_origin_differs     | f           | the row was changed locally: the remote change won
+```
+
+Alert on `apply_error_count` and `sync_error_count` moving, because that is
+replication stopped. Review the other counters on a schedule, because they mean
+replication is running on data that no longer matches.
 
 ### The loop question
 
 In the layout above the reference tables go down and the usage tables go up,
 so no change ever comes back to where it was made. What if the same table
 has to travel both ways? Two-way replication on one table is exactly where
-16 helped: `origin = none` on the subscription tells the publisher to send
-only the changes that were made locally, not the ones that arrived through
-replication.
+16 helped: the `origin` option of `create subscription`. With `origin = none`
+the publisher sends only the changes that were made locally on it, not the ones
+that arrived there through replication. See the
+[`origin` parameter](https://www.postgresql.org/docs/current/sql-createsubscription.html#SQL-CREATESUBSCRIPTION-PARAMS-WITH-ORIGIN)
+of `create subscription` in the documentation.
 
-I built the case. With `origin = any` and a table without a primary key, one
-inserted row multiplies without end. With a primary key, the returning row
-hits `insert_exists` and the subscription stalls. With `origin = none`,
-each row exists once and there are no errors. Two things to remember: you
-have to set the option on both subscriptions, and it only breaks loops, it
-does not resolve conflicts.
+The setup is two subscriptions, one in each direction, on the same publication.
+On the hub, receive the worker's changes:
+
+```sql
+create subscription sub_set_from_w1
+       connection 'host=worker1 dbname=app user=postgres'
+       publication pub_set
+       with (origin = none, copy_data = false);
+```
+
+and on the worker, the mirror image:
+
+```sql
+create subscription sub_set_from_hub
+       connection 'host=hub dbname=app user=postgres'
+       publication pub_set
+       with (origin = none, copy_data = false);
+```
+
+Both tables start empty in this demo, hence `copy_data = false`; with rows on
+both sides, the documentation has a section on initial data that is worth
+reading first. I ran three rounds on the same pair of tables, one with a
+primary key and one without:
+
+| Subscriptions | Table without a primary key | Table with a primary key |
+|---|---|---|
+| `origin = any` (the default) | one row inserted once multiplies, forever | the returning row hits `insert_exists` and the subscription stalls |
+| `origin = none`, both directions | each row exists once | each row exists once, `apply_error_count = 0` |
+
+Two things to remember: you have to set the option on both subscriptions, and
+it only breaks loops. It does not resolve conflicts, and the conflict
+counters above still apply if both sides write the same row.
 
 ### The same thing with pglogical
 
-To find out what the older tools cost, I built the same hub-and-workers on
-PostgreSQL 14 with pglogical 2.4.8. It works, with a different shape: nodes
-and replication sets instead of publications, `row_filter` on a set member,
-and a conflict policy per node. One setting the documentation does not
-foreground: on 14 the subscription never starts until
-`output_plugin_libraries` includes `pglogical_output`.
+Before 15 and 16, this architecture meant pglogical. To find out what that
+cost, I built the hub-and-workers again on PostgreSQL 14, with two workers,
+and here is exactly what I used, since the crash below depends on it.
 
-What pglogical gave me that core still does not is a conflict *policy*.
-With `pglogical.conflict_resolution = 'last_update_wins'`, which needs
-`track_commit_timestamp`, a deliberate conflict resolves itself, and the
-log says how: `CONFLICT: remote INSERT on relation public.usage_events_w1
-(local index usage_events_w1_pkey). Resolution: apply_remote.`
+{{< image src="fig-pglogical.svg" title="The same hub and workers with pglogical. A replication set on the provider holds the tables, with the row filter and the column list on the set membership, and each subscriber subscribes to a set." >}}
 
-It also gave me three things I would rather not have had. Replicating into a
-partitioned parent crashed the apply worker with a segmentation fault on the
-first row after the initial copy, and the whole hub went into a crash loop
-until I dropped the subscription, so the pglogical version replicates each
-worker into its own hub partition instead. Moving a customer between two
-workers' filters was applied on neither side: worker 1 kept a stale row and
-worker 2 never got it, which the core version handles. And a `keep_local`
-resolution leaves the two nodes with different values and no error
-anywhere, which is what the policy says on the tin, and is worth knowing
-before you pick it.
+**Installation.** The official `postgres:14` Docker image (PostgreSQL 14.24,
+Debian 13) already has the PGDG apt repository configured, so pglogical is one
+package, version 2.4.8:
+
+```
+FROM postgres:14
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends postgresql-14-pglogical
+```
+
+```results
+postgres (PostgreSQL) 14.24 (Debian 14.24-1.pgdg13+2)
+postgresql-14-pglogical 2.4.8-1.pgdg13+1
+```
+
+**Server settings.** Each node runs with:
+
+```
+shared_preload_libraries = 'pglogical'
+wal_level = logical
+track_commit_timestamp = on
+output_plugin_libraries = 'pglogical_output'
+```
+
+The last line is the one to explain, because without it nothing starts:
+`could not create replication slot on provider: ERROR:  library
+"pglogical_output" may not be used as an output plugin`. It is a security
+hardening that first shipped in the 14.24 minor release: until then, users with
+the `REPLICATION` privilege were not subject to the restrictions that `LOAD`
+applies to library paths, and could ask for any library as the output plugin of
+a logical slot. The new setting,
+`output_plugin_libraries`, lists the plugins the server trusts for that, and
+the default is `'pgoutput, test_decoding'`, the two that ship with Postgres.
+Every third-party plugin, and `pglogical_output` is one, must now be added by the
+administrator. It is documented in the
+[`output_plugin_libraries`](https://www.postgresql.org/docs/devel/runtime-config-replication.html#GUC-OUTPUT-PLUGIN-LIBRARIES)
+entry of the replication settings, along with a query on `pg_replication_slots`
+that lists the plugins your existing slots need before you upgrade. It is in the
+14 and 19 branches of the source; look for it in the minor release you run.
+
+**The hub.** It is a node, with a replication set per worker. The row filter and
+the column list live on the membership of the table in the set, not in a
+publication:
+
+```sql
+create extension pglogical;
+
+select pglogical.create_node(node_name := 'hub',
+                             dsn := 'host=pghub dbname=app user=postgres');
+
+select pglogical.create_replication_set('ref_w1');
+
+select pglogical.replication_set_add_table(
+         set_name := 'ref_w1',
+         relation := 'customers',
+         synchronize_data := false,
+         columns := array['customer_id', 'name', 'worker_id', 'plan_id'],
+         row_filter := 'worker_id = 1');
+```
+
+**A worker.** Also a node. It subscribes to its set, and publishes its own events
+through a set named `usage`:
+
+```sql
+create extension pglogical;
+
+select pglogical.create_node(node_name := 'worker1',
+                             dsn := 'host=pgw1 dbname=app user=postgres');
+
+select pglogical.create_subscription(
+         subscription_name := 'sub_ref_w1',
+         provider_dsn := 'host=pghub dbname=app user=postgres',
+         replication_sets := array['ref_w1'],
+         synchronize_data := true,
+         forward_origins := '{}');
+
+select pglogical.create_replication_set('usage');
+select pglogical.replication_set_add_table('usage', 'usage_events_w1');
+```
+
+The hub then subscribes to each worker's `usage` set the same way. Compare
+that with the core version above: a publication and a subscription per
+worker, no node to declare, no extension, and 15's row filter and column list
+are part of `create publication`. That is the answer to "what did each release
+buy": the same architecture, in less to set up, to learn and to keep running.
+
+What pglogical gave me that core still does not is a conflict *policy*. With
+`pglogical.conflict_resolution = 'last_update_wins'`, which needs
+`track_commit_timestamp`, a deliberate conflict resolves itself, and the log says
+how:
+
+```results
+LOG:  CONFLICT: remote INSERT on relation public.usage_events_w1 (local index usage_events_w1_pkey). Resolution: apply_remote.
+```
+
+It also gave me three things I would rather not have had, on 2.4.8:
+
+- Replicating into a **partitioned parent** crashed the apply worker on the
+  first row after the initial copy. The postmaster restarted every backend,
+  and the hub crash-looped until I dropped the subscription:
+  `background worker "pglogical apply 16384:SUB" was terminated by signal 11:
+  Segmentation fault`. That is why the pglogical version replicates each
+  worker into its own hub partition, named like the worker's table, instead of
+  into the parent.
+- Moving a customer between two workers' filters was applied on neither
+  side: worker 1 kept a stale row and worker 2 never got it. The core version
+  handles it, as a `DELETE` on one worker and an `INSERT` on the other.
+- A `keep_local` resolution leaves the two nodes with different values and no
+  error anywhere. That is what the policy says on the tin, and it is worth
+  knowing before you pick it.
 
 ---
 
@@ -412,30 +684,187 @@ CRM, a billing system), each with its own schema and its own server, all
 feeding a warehouse; and then the warehouse's changes exported to something
 that is not Postgres.
 
-### The naming constraint
+{{< image src="fig-consolidation.svg" title="Three application servers, one schema each, subscribe into one warehouse database that keeps a schema per application. The warehouse then publishes its own change stream, read through a logical slot by a Debezium-like consumer." >}}
 
-A subscription maps `schema.table` on the publisher to the same
-`schema.table` on the subscriber. There is no rename. That single fact is
-the design constraint, and I tried the failure modes:
+### The sources
 
-- Two sources with a `public.customers` and overlapping keys: the initial
-  copy stops with `duplicate key value violates unique constraint
-  "customers_pkey"`, and the table stays in state `d` and retries every five
-  seconds.
-- Same name, different shape: `logical replication target relation
-  "public.contacts" is missing replicated column: "company"`.
+Each application owns a schema named after it, on its own server. These are
+the three, trimmed to the tables that matter here (the demo has the full
+DDL and the rows):
 
-So the layouts I compared:
+```sql
+-- on the shop server
+create schema shop;
+create table shop.customers
+(
+  id         int primary key,
+  account_id int  not null,
+  name       text not null,
+  email      text,          -- personal data, the warehouse will not get it
+  phone      text,
+  country    text,
+  tenant     text not null
+);
+create table shop.orders
+(
+  id          serial primary key,
+  customer_id int            not null references shop.customers(id),
+  amount      numeric(10, 2) not null,
+  status      text           not null,
+  tenant      text           not null
+);
+create publication pub_shop for table shop.orders;
 
-- **A schema per source** (`shop.orders`, `crm.accounts`, `billing.invoices`)
-  in one warehouse database. It works and it is what I recommend: cross-source
-  joins are plain SQL.
-- **A database per source** on the warehouse server. It works, but Postgres
-  gives you `cross-database references are not implemented`, and each database
-  needs its own slot and apply worker.
+-- on the crm server
+create schema crm;
+create table crm.accounts (id int primary key, name text not null, tier text not null);
+create table crm.contacts
+(
+  id         int primary key,
+  account_id int  not null references crm.accounts(id),
+  name       text not null,
+  email      text
+);
+create publication pub_crm for tables in schema crm;
+
+-- on the billing server
+create schema billing;
+create table billing.invoices
+(
+  id         serial primary key,
+  account_id int            not null,
+  amount     numeric(10, 2) not null,
+  status     text           not null
+);
+create table billing.payments
+(
+  id         serial primary key,
+  invoice_id int            not null references billing.invoices(id),
+  amount     numeric(10, 2) not null
+);
+create publication pub_billing for tables in schema billing;
+```
+
+The warehouse creates the same schemas and tables, by hand, because DDL
+is not replicated, and one subscription per application. Each subscription is
+owned by its own role, which will matter in a moment:
+
+```sql
+create role sub_shop login password 'x' in role pg_create_subscription;
+grant create on database warehouse to sub_shop;
+create schema shop authorization sub_shop;
+create table shop.orders
+(
+  id          serial primary key,
+  customer_id int            not null,
+  amount      numeric(10, 2) not null,
+  status      text           not null,
+  tenant      text           not null
+);
+alter table shop.orders owner to sub_shop;
+
+set role sub_shop;
+create subscription sub_shop
+       connection 'host=shop dbname=shop user=repl password=repl'
+       publication pub_shop;
+```
+
+and the same for `sub_crm` and `sub_billing`. Once the initial copy is done,
+the applications' data sits side by side, and a query across applications is
+plain SQL. Revenue per CRM account, from the CRM's accounts and the billing
+system's invoices:
+
+```results
+ account |  tier  | invoiced | status
+---------+--------+----------+--------
+ Acme    | gold   |   150.00 | paid
+ Globex  | silver |    75.00 | open
+ Initech | bronze |    20.00 | open
+```
+
+### A schema per application, and why it must start at the source
+
+The warehouse keeps a schema per application, as you would want. But the way
+it gets there is not what you might expect: **a subscription cannot rename
+anything.** It looks for the publisher's `schema.table` under the same name on
+the subscriber. The subscriber's code does a plain lookup with the names the
+publisher sent (`RangeVarGetRelid` on the remote namespace and relation name,
+in `replication/logical/relation.c`), and neither `create subscription` nor
+`create publication` has an option to map one name to another.
+
+That matters because the typical application does not have a schema of its
+own: its tables are in `public`. I tried the natural thing. The shop has
+`public.orders`, and the warehouse has `shopapp.orders`, where I want it:
+
+```sql
+create schema shopapp;
+create table shopapp.orders (id int primary key, customer_id int not null, amount numeric(10,2) not null);
+
+create subscription sub_rename
+       connection 'host=shop dbname=shop user=repl password=repl'
+       publication pub_rename;
+```
+
+```results
+ERROR:  relation "public.orders" does not exist
+```
+
+The subscription is not even created. What works is to give the application a
+schema of its own on the *publisher*, which is a lot less work than it sounds,
+because a role's `search_path` keeps the application's unqualified SQL
+resolving:
+
+```sql
+create schema shopapp;
+alter table public.orders set schema shopapp;
+
+create role app_shop login;
+alter role app_shop set search_path = shopapp;
+```
+
+The publication follows the table, since it tracks it by identity and not by
+name, and the application does not notice, connecting with its own role and its
+own unqualified SQL:
+
+```results
+ pubname    | schemaname | tablename
+------------+------------+-----------
+ pub_rename | shopapp    | orders
+
+-- as app_shop:  show search_path;  select count(*) from orders;
+ search_path
+-------------
+ shopapp
+
+ count
+-------
+     2
+```
+
+Now the same `create subscription` as before finds `shopapp.orders` on both
+sides, and the copy runs. If you have several applications in `public` on
+several servers, this is the migration to do first, and it is cheap; if you
+cannot touch the source, the alternatives are a database per source on the
+warehouse (below), or a component that renames as the changes flow, the kind
+I come back to at the end of this architecture.
+
+I also tried what happens when you do not do this. Two sources with a
+`public.customers` and overlapping keys: the initial copy stops with
+`duplicate key value violates unique constraint "customers_pkey"`, and the table
+stays in state `d` and retries every five seconds. Same name and a different
+shape: `logical replication target relation "public.contacts" is missing
+replicated column: "company"`.
+
+The layouts I compared:
+
+- **A schema per application**, as above. It works, and it is what I recommend:
+  cross-application joins are plain SQL.
+- **A database per source** on the warehouse server. It works, and needs no
+  change at the source, but Postgres gives you `cross-database references are not
+  implemented`, and each database needs its own slot and apply worker.
 - **A shared table fed by several sources**, with a `source` column. It works
-  only when the keys are disjoint across sources, and it is the one
-  with the most to say, so here are the results.
+  only when the keys are disjoint across sources, and it is the one with the
+  most to say, so here are the results.
 
 ### Stamping the source
 
@@ -751,10 +1180,15 @@ question.
 **`create subscription … server`.** It works, through `postgres_fdw`, so the
 connection details live in a foreign server rather than a string.
 
-Two lines from the run worth keeping: `WAIT FOR LSN` is standby-only, as shown
-above, and with the default `max_logical_replication_workers = 4`, a fifth
-subscription silently never starts. I saw that one on 19beta3, and
-the setting is not new.
+Two lines from the run worth keeping. `WAIT FOR LSN` is standby-only, as shown
+above. And a hub with many subscriptions runs out of two limits without a
+friendly error: `max_logical_replication_workers` (the default is 4), and,
+since 18, `max_active_replication_origins` (the default is 10), because every
+subscription and every table being copied holds a replication origin. Past
+that, the log repeats `could not find free replication state slot for
+replication origin with ID 11`, and the subscriptions sit in the `i` or `d` state
+forever. My hub-and-workers demo hit the second limit at step 21, which is
+why its compose file sets both.
 
 One more warning, about this very demo. The Lab's `19beta3` image
 preloads `pg_stat_plans`, and that preload segfaults on `UPDATE … FOR
