@@ -49,6 +49,7 @@ A full run takes about 6 minutes.
 | Step | Shows |
 |---|---|
 | 01-05 | Naming constraint: same `schema.table` on two sources into one target table. Initial copy fails with `duplicate key value violates unique constraint "customers_pkey"` (`DETAIL: Key (id)=(1) already exists.`), a different shape fails with `logical replication target relation "public.contacts" is missing replicated column: "company"`. The table stays in state `d`, retried every 5 s, the first source's data is untouched. |
+| 05a-05f | Schema rename: a subscription cannot map `public.orders` to `shopapp.orders` (`create subscription` fails with `relation "public.orders" does not exist`, nothing is created). The working recipe: move the table to a schema on the publisher (`alter table … set schema`), give the app role a `search_path`; the publication follows the table and the application's unqualified SQL is unchanged. |
 | 10-12 | The three apps, each with its own schema (`shop`, `crm`, `billing`). |
 | 20-21 | Layout (a): one schema per source, one database, one subscription per source. Cross-source joins work. |
 | 22-24 | Layout (b): one database per source. No cross-database queries (`cross-database references are not implemented`), one slot and one apply worker per source database, and slots are per database (CDC needs one slot per database). |

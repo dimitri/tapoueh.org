@@ -67,6 +67,8 @@ fails on the first `CREATE TABLE`.
 | 4 Operating | 11-17 | worker 4 added live (partition attach + subscription); duplicate-key recovery with `ALTER SUBSCRIPTION ... SKIP`; PG18 `confl_*` counters; lag from both sides |
 | 5 Direction rule | 18-19 | reference and usage tables travel in opposite directions; two-node `origin = none` test |
 | 6 Sequences | 20 | a sequence is not replicated; consequence for ids minted on workers |
+| 6b Minting ids | 21 | modulo offset (`start k increment 10` per worker, and what happens past ten workers) and `uuidv7()` (PG18): no collisions, no coordination |
+| 6c Conflict counters | 22 | all seven `pg_stat_subscription_stats` conflict kinds provoked on one table, the log lines, the fix, and a query that says which kinds stop replication |
 | 7 pglogical on PG14 | 70-74, 79 | same flow with `row_filter` + replication sets; `last_update_wins` |
 
 ### Observed facts (from `results/*.out`)
