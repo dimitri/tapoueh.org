@@ -1,5 +1,0 @@
--- @service: warehouse
--- @nosync
--- Step 2c: pick up the new table. Only NEW tables are copied by REFRESH: the row filter
--- and column list apply to the initial copy of shop.customers.
-alter subscription sub_shop refresh publication;
