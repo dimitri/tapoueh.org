@@ -771,7 +771,8 @@ is currently primary without caring which host that is. What it does not
 give you yet is the other half: a router in front that spreads application
 connections across every node to make use of Query From Any Node in the
 first place, the way a `pgbouncer` in front of the whole formation would.
-That is on the roadmap, not shipped.
+That is [on the roadmap](https://oss.theartofpostgresql.com/roadmap/), not
+shipped, under "connection pooling as a managed node type".
 
 Our hub, either way, has no such requirement to begin with: if it is down,
 every worker keeps taking its own traffic, and only the invoicing rollup
