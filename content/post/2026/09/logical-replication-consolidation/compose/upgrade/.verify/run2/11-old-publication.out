@@ -1,0 +1,68 @@
+-- @service: old
+-- Step 11: publication FOR ALL TABLES on the old server, and the table that has
+-- no primary key. Publishing does not change anything until UPDATE/DELETE hit
+-- a table with no replica identity.
+SELECT c.relname
+  FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+ WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')
+   AND NOT EXISTS (SELECT 1 FROM pg_index i WHERE i.indrelid = c.oid AND i.indisprimary)
+ ORDER BY 1;
+  relname  
+-----------
+ audit_log
+(1 row)
+
+CREATE PUBLICATION app_pub FOR ALL TABLES;
+CREATE PUBLICATION
+-- INSERT is fine, UPDATE and DELETE are refused on the publisher
+INSERT INTO audit_log (event) VALUES ('after-publication');
+INSERT 0 1
+UPDATE audit_log SET payload = 'x' WHERE event = 'after-publication';
+psql:<stdin>:15: ERROR:  cannot update table "audit_log" because it does not have a replica identity and publishes updates
+HINT:  To enable updating the table, set REPLICA IDENTITY using ALTER TABLE.
+DELETE FROM audit_log WHERE event = 'after-publication';
+psql:<stdin>:16: ERROR:  cannot delete from table "audit_log" because it does not have a replica identity and publishes deletes
+HINT:  To enable deleting from the table, set REPLICA IDENTITY using ALTER TABLE.
+-- fix: REPLICA IDENTITY FULL (whole old row is logged), or add a unique index
+-- on NOT NULL columns and use REPLICA IDENTITY USING INDEX
+ALTER TABLE audit_log REPLICA IDENTITY FULL;
+ALTER TABLE
+UPDATE audit_log SET payload = 'x' WHERE event = 'after-publication';
+UPDATE 1
+DELETE FROM audit_log WHERE event = 'after-publication';
+DELETE 1
+SELECT relname, relreplident FROM pg_class
+ WHERE relname IN ('audit_log', 'orders', 'measurements', 'measurements_2026') ORDER BY 1;
+      relname      | relreplident 
+-------------------+--------------
+ audit_log         | f
+ measurements      | d
+ measurements_2026 | d
+ orders            | d
+(4 rows)
+
+SELECT pubname, puballtables, pubinsert, pubupdate, pubdelete, pubtruncate, pubviaroot
+  FROM pg_publication;
+ pubname | puballtables | pubinsert | pubupdate | pubdelete | pubtruncate | pubviaroot 
+---------+--------------+-----------+-----------+-----------+-------------+------------
+ app_pub | t            | t         | t         | t         | t           | f
+(1 row)
+
+SELECT schemaname, tablename FROM pg_publication_tables ORDER BY 2;
+ schemaname |     tablename      
+------------+--------------------
+ public     | audit_log
+ public     | counters
+ public     | customers
+ public     | cutover_markers
+ public     | documents
+ public     | measurements_2026
+ public     | measurements_other
+ public     | orders
+(8 rows)
+
+SELECT slot_name, plugin, active FROM pg_replication_slots;
+ slot_name | plugin | active 
+-----------+--------+--------
+(0 rows)
+

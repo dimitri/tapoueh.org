@@ -1,0 +1,68 @@
+### 1. pg_basebackup (with -R: recovery settings; -C -S: physical slot on the primary)
+pg_basebackup: initiating base backup, waiting for checkpoint to complete
+pg_basebackup: checkpoint completed
+pg_basebackup: write-ahead log start point: <LSN> on timeline 1
+pg_basebackup: starting background WAL receiver
+pg_basebackup: created replication slot "standby1"
+pg_basebackup: write-ahead log end point: <LSN>
+pg_basebackup: waiting for background process to finish streaming ...
+pg_basebackup: syncing data to disk ...
+pg_basebackup: renaming backup_manifest.tmp to backup_manifest
+pg_basebackup: base backup completed
+primary_slot_name = 'standby1'
+### 2. first start attempt with default settings
+<TS> [<pid>] FATAL:  recovery aborted because of insufficient parameter settings
+<TS> [<pid>] DETAIL:  max_worker_processes = 8 is a lower setting than on the primary server, where its value was 24.
+### 3. start with the primary's sizing settings (max_worker_processes etc.), wal_level left at the default
+in recovery: true
+replica
+off
+--- create the slot on the standby with pg_recvlogical:
+pg_recvlogical: error: could not send replication command "CREATE_REPLICATION_SLOT "cdc_sb" LOGICAL "test_decoding" ( SNAPSHOT 'nothing')": ERROR:  logical decoding requires "wal_level" >= "logical"
+exit=1
+### 4. wal_level = logical is needed on the STANDBY too (it does not inherit it from the primary)
+logical
+--- creating the slot now BLOCKS on an idle primary (it waits for a running-xacts record):
+waiting for the snapshot, slots on standby: 1
+--- unblock it from the PRIMARY: select pg_log_standby_snapshot()
+exit=0
+ slot_name |    plugin     | active | conflicting 
+-----------+---------------+--------+-------------
+ cdc_sb    | test_decoding | f      | f
+(1 row)
+
+### 5. hot_standby_feedback = off: the slot is invalidated when the primary vacuums catalog rows
+ slot_name | wal_status | conflicting | invalidation_reason 
+-----------+------------+-------------+---------------------
+ cdc_sb    | lost       | t           | rows_removed
+(1 row)
+
+ERROR:  can no longer access replication slot "cdc_sb"
+DETAIL:  This replication slot has been invalidated due to "rows_removed".
+### 6. hot_standby_feedback = on, fresh slot: the primary now keeps the catalog rows the standby slot needs
+on
+ slot_name | primary_holds_catalog_xmin_for_standby 
+-----------+----------------------------------------
+ standby1  | t
+(1 row)
+
+ slot_name | wal_status | conflicting | invalidation_reason 
+-----------+------------+-------------+---------------------
+ cdc_sb    | reserved   | f           | 
+(1 row)
+
+### 7. CDC from the standby: a change on shop travels shop -> warehouse primary -> standby -> slot
+BEGIN
+table shop.orders: INSERT: id[integer]:40009 customer_id[integer]:1 amount[numeric]:77.00 status[text]:'via-standby' tenant[text]:'eu'
+COMMIT
+--- the primary has no logical slot for this consumer, the standby does:
+ logical_slots_on_primary 
+--------------------------
+                        0
+(1 row)
+
+ logical_slots_on_standby 
+--------------------------
+                        1
+(1 row)
+

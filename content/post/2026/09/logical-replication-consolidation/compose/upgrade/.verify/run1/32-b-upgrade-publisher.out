@@ -1,0 +1,102 @@
+### 1. pitfall: the publisher is shut down while its slot still has unconsumed changes
+Checking for valid logical replication slots                  fatal
+
+Your installation contains logical replication slots that cannot be upgraded.
+You can remove invalid slots and/or consume the pending WAL for other slots,
+and then restart the upgrade.
+A list of the problematic slots is in the file:
+    /pgdata/p18/pg_upgrade_output.d/20260921T173420.687/invalid_logical_slots.txt
+Failure, exiting
+[pg_upgrade --check exit status: 1]
+invalid_logical_slots.txt says:
+The slot "sub" has not consumed the WAL yet
+
+### 2. bring both back so the slot consumes everything, then shut the publisher down again
+[5442]> SELECT count(*) AS rows_on_subscriber FROM items
+ rows_on_subscriber 
+--------------------
+               1502
+(1 row)
+
+[5441]> SELECT slot_name, active FROM pg_replication_slots
+ slot_name | active 
+-----------+--------
+ sub       | t
+(1 row)
+
+new cluster still WITHOUT wal_level = logical: pg_upgrade --check
+Performing Consistency Checks
+-----------------------------
+Checking for new cluster logical replication slots            
+"wal_level" must be "logical" but is set to "replica"
+Failure, exiting
+[pg_upgrade --check exit status: 1]
+
+### 3. set wal_level = logical and max_replication_slots on the new cluster, then upgrade
+Checking for valid logical replication slots                  ok
+Checking for new cluster logical replication slots            ok
+Performing Upgrade
+Restoring logical replication slots in the new cluster        ok
+Upgrade Complete
+Some statistics are not transferred by pg_upgrade.
+[pg_upgrade exit status: 0]
+
+### 4. what survived on the new publisher
+[5441]> SELECT version()
+                                                         version                                                          
+--------------------------------------------------------------------------------------------------------------------------
+ PostgreSQL 18.6 (Debian 18.6-1.pgdg13+2) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+(1 row)
+
+[5441]> SELECT slot_name, plugin, slot_type, active, confirmed_flush_lsn IS NOT NULL AS flushed, failover FROM pg_replication_slots
+ slot_name |  plugin  | slot_type | active | flushed | failover 
+-----------+----------+-----------+--------+---------+----------
+ sub       | pgoutput | logical   | f      | t       | f
+(1 row)
+
+[5441]> SELECT pubname, puballtables FROM pg_publication
+ pubname | puballtables 
+---------+--------------
+ pub     | t
+(1 row)
+
+[5441]> SELECT last_value FROM pg_sequences WHERE sequencename = 'standalone_seq'
+ last_value 
+------------
+        506
+(1 row)
+
+the subscriber reconnects by itself (retry interval 5 s)
+[5441]> SELECT slot_name, active FROM pg_replication_slots
+ slot_name | active 
+-----------+--------
+ sub       | t
+(1 row)
+
+[5442]> SELECT count(*) AS rows_on_subscriber, max(v) FILTER (WHERE v LIKE 'after publisher%') AS last_row FROM items
+ rows_on_subscriber |        last_row         
+--------------------+-------------------------
+               1503 | after publisher upgrade
+(1 row)
+
+[5441]> SELECT count(*) AS rows_on_publisher FROM items
+ rows_on_publisher 
+-------------------
+              1503
+(1 row)
+
+[5442]> SELECT pid IS NOT NULL AS apply_running FROM pg_stat_subscription WHERE subname = 'sub'
+ apply_running 
+---------------
+ t
+(1 row)
+
+
+### 5. left to do by hand
+[5441]> SELECT relname, n_live_tup, last_analyze IS NOT NULL AS analyzed FROM pg_stat_user_tables ORDER BY 1
+ relname | n_live_tup | analyzed 
+---------+------------+----------
+ gap     |          0 | f
+ items   |          1 | f
+(2 rows)
+

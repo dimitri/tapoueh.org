@@ -1,0 +1,8 @@
+-- @service: warehouse
+-- Layout (a) result: three apps side by side, joinable in one query.
+select schemaname, tablename from pg_tables where schemaname in ('shop','crm','billing') order by 1,2;
+select 'shop.orders' t, count(*) from shop.orders union all select 'crm.accounts', count(*) from crm.accounts
+ union all select 'billing.invoices', count(*) from billing.invoices order by 1;
+select a.name as account, a.tier, i.amount as invoiced, i.status
+  from crm.accounts a join billing.invoices i on i.account_id = a.id order by a.id;
+select subname, subenabled, subrunasowner, substream, subowner::regrole from pg_subscription order by 1;

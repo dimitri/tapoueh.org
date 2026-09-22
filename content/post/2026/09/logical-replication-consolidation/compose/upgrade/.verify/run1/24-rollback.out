@@ -1,0 +1,27 @@
+[time] +34 ms new frozen, 0 app sessions terminated
+[time] +101 ms old caught up (marker row visible: 99)
+[time] at that moment: remote_lsn >= t1(after freeze): 99 | remote_lsn >= t2(after marker): 100 | latest_end_lsn >= t1: 101
+caught up: yes
+[time] +154 ms old unfrozen, sequences copied back (4 statements)
+[time] +155 ms app switched back to old
+
+### what the application saw
+last committed write on new : 1790012027086 ms
+first committed write on old: 1790012027266 ms
+WRITE STALL new -> old: 180 ms
+failed attempts inside the window: 4 (of 5 logged attempts, incl. the first success)
+for scale: median gap between two commits 19 ms, p99 26 ms, over 3574 commits
+
+### old is writable again and both directions still work
+old> SHOW default_transaction_read_only
+ default_transaction_read_only 
+-------------------------------
+ off
+(1 row)
+
+old> SELECT subname, apply_error_count FROM pg_stat_subscription_stats
+ subname | apply_error_count 
+---------+-------------------
+ app_rev |                 0
+(1 row)
+
