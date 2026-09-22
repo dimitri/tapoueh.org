@@ -805,6 +805,8 @@ network, wait for Citus's own metadata sync to catch up
 coordinator pair in turn — the full file, with every step, is on GitHub:
 [`citus_basic_operation.pgaf`](https://github.com/hapostgres/pg_auto_failover/blob/main/tests/tap/specs/citus_basic_operation.pgaf).
 
+### Conclusion
+
 The deeper difference is what a "worker" is allowed to be. A Citus worker
 is a shard-storage node that the coordinator owns; the application is not
 meant to know it exists, and Citus is not designed for you to query it on
