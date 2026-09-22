@@ -81,6 +81,8 @@ of what follows.
 
 ---
 
+## The scenario: hub and workers
+
 The application here is a small metering system. The hub holds `plans`,
 `prices` and `customers`. Each customer is assigned to a worker
 (`customers.worker_id`), and that worker records the customer's usage events.
