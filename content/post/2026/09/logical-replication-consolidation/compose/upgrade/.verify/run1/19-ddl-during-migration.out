@@ -1,0 +1,64 @@
+### (a) ALTER TABLE ... ADD COLUMN on old only
+old> ALTER TABLE customers ADD COLUMN note text
+ALTER TABLE
+[poll] apply errors so far: 1
+new> SELECT subname, apply_error_count FROM pg_stat_subscription_stats
+ subname | apply_error_count 
+---------+-------------------
+ app_sub |                 1
+(1 row)
+
+the same DDL on new repairs it; the apply worker retries by itself
+new> ALTER TABLE customers ADD COLUMN note text
+ALTER TABLE
+[poll] lag now: 7240 bytes
+caught up: yes
+
+### (b) CREATE TABLE on old only: FOR ALL TABLES publishes it immediately
+old> CREATE TABLE late_table (id int PRIMARY KEY, v text)
+CREATE TABLE
+old> INSERT INTO late_table VALUES (1, 'created during the migration')
+INSERT 0 1
+old> SELECT tablename FROM pg_publication_tables WHERE tablename = 'late_table'
+ tablename  
+------------
+ late_table
+(1 row)
+
+[poll] apply errors so far: 2
+new> SELECT subname, apply_error_count FROM pg_stat_subscription_stats
+ subname | apply_error_count 
+---------+-------------------
+ app_sub |                 2
+(1 row)
+
+create the table on new: does the row show up by itself?
+new> CREATE TABLE late_table (id int PRIMARY KEY, v text)
+CREATE TABLE
+new> SELECT count(*) AS rows_on_new FROM late_table
+ rows_on_new 
+-------------
+           0
+(1 row)
+
+new> SELECT srrelid::regclass, srsubstate FROM pg_subscription_rel WHERE srrelid = 'late_table'::regclass
+ srrelid | srsubstate 
+---------+------------
+(0 rows)
+
+no: the table is not in pg_subscription_rel yet. REFRESH PUBLICATION registers it and copies its rows.
+new> ALTER SUBSCRIPTION app_sub REFRESH PUBLICATION
+ALTER SUBSCRIPTION
+new> SELECT srrelid::regclass, srsubstate FROM pg_subscription_rel WHERE srrelid = 'late_table'::regclass
+  srrelid   | srsubstate 
+------------+------------
+ late_table | r
+(1 row)
+
+new> SELECT * FROM late_table
+ id |              v               
+----+------------------------------
+  1 | created during the migration
+(1 row)
+
+[poll] lag now: -912 bytes
