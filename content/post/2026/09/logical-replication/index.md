@@ -701,20 +701,45 @@ every worker. Our `plans` and `prices` are exactly a reference table, and
 and `create_distributed_table()`, not a publication, a row filter and a
 column list per worker.
 
-Three things Citus removes that cost real pages above:
+Six things Citus removes that cost real pages above:
 
+- **Events land on the right worker on their own.** The coordinator hashes
+  the distribution column and routes the row; nobody writes a publication
+  per worker, and there is no `usage_naive` to build by accident, because
+  there is no second server independently minting the same id.
+- **Sequences mostly take care of themselves.** For a `bigint` sequence on a
+  distributed table, Citus splits the value range across the worker node
+  groups the same way our "Minting ids on the workers" section did by hand,
+  except it does it for you at distribution time. The one gap: a plain
+  `int`/`serial` sequence isn't split, and a worker is stopped from using it
+  at all, so those still have to go through the coordinator.
+- **A large transaction has nowhere to lag behind.** A batch that keys to one
+  shard is written straight to the worker that owns it, in one transaction,
+  not copied there afterwards. There is no equivalent of our "Big batches
+  and many streams" section, because there is no second copy for a stream to
+  catch up.
 - **DDL propagates.** The documentation says it plainly: changing the schema
   of a distributed table cascades to every shard across every worker. Our
   whole "Operating it" section, and the DDL-order rule in the closing one,
   exist because logical replication does not do this.
-- **The key-collision problem does not arise.** Citus computes which shard a
-  row belongs to from the distribution column; there is no `usage_naive` to
-  build by accident, because there is no second server independently
-  minting the same id.
 - **Adding a worker is a supported operation**, not a lock-mode reading
   exercise. Since Citus 11.0, `citus_rebalance_start()` moves shards to a
   newly added node without blocking reads or writes, which is the built-in
-  version of the `attach partition` dance above.
+  version of the `attach partition` dance above — and, worth noting given
+  everything else in this article, it does the move with logical
+  replication under the hood.
+- **The invoicing query gets the whole cluster, not just the hub.** Citus
+  breaks a query like ours into sub-queries that run on every shard in
+  parallel, on every worker's own CPU, memory and I/O, and only merges the
+  partial results on the coordinator. Our invoicing query runs entirely on
+  the hub, against data every worker already sent it; Citus's runs the join
+  where the data already lives.
+
+And under all of that sits one more difference: with Citus, `usage_events`
+exists exactly once, in its shards. There is no second, hub-side copy for
+the invoicing query to read, because the query goes to the data instead of
+the data coming to the query — one table doing both jobs, not a transactional
+copy on the workers and a replicated analytical copy on the hub.
 
 And what it costs. Citus is an extension: installing it, or paying for a
 managed offering that has it, is a decision the plain hub-and-workers
@@ -817,6 +842,11 @@ sight. If your workers are really just where the rows happen to live, Citus
 is the more transparent tool. If they are autonomous by design, logical
 replication keeps that autonomy and Citus does not, because its workers are
 not meant to run without their coordinator.
+
+That autonomy is bought with a second copy of the data, and Citus's
+single copy is bought with workers that cannot stand alone. Both trade-offs
+are worth having on purpose: know which one you are choosing, and why, before
+the naming convention above turns into three years of production traffic.
 
 Part 2 of this series consolidates several application databases into one
 warehouse. Part 3 covers a zero-downtime major upgrade. A fourth post,
