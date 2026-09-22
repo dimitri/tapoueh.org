@@ -6,16 +6,14 @@ categories = ["PostgreSQL", "Architecture"]
 icon      = "🐘"
 +++
 
-This is part 3 of a series on what ten releases of Postgres logical
-replication (10 through the 19 beta) buy an application developer, one
-architecture at a time.
-[Part 1](/blog/2026/09/ten-years-of-postgres-logical-replication/) built a
-hub-and-workers system for write scalability and has the table of what each
-release added, which this post assumes.
-[Part 2](/blog/2026/09/consolidating-databases-with-postgres-logical-replication/)
-consolidated several application databases into one warehouse. This one is
-the most common reason to touch logical replication at all: a major-version
-upgrade with no downtime, and a way back if it goes wrong.
+This is part 3 of a series about Postgres logical replication use-cases,
+and about how the feature set has evolved over the past ten years and ten
+releases (10 through the 19 beta), one architecture at a time. Part 1 built
+a hub-and-workers system for write scalability and has the table of what
+each release added, which this post assumes. Part 2 consolidated several
+application databases into one warehouse. This one is the most common
+reason to touch logical replication at all: a major-version upgrade with no
+downtime, and a way back if it goes wrong.
 
 <!--more-->
 
@@ -410,8 +408,8 @@ image is in review; it is also why these demos use the official images.
 
 ## What is still on you
 
-After ten releases, [the table in part 1](/blog/2026/09/ten-years-of-postgres-logical-replication/#what-each-release-changed)
-has two rows without a release number. Both are architectural, not accidental:
+After ten releases, the what-each-release-changed table in part 1 has two
+rows without a release number. Both are architectural, not accidental:
 
 - **DDL.** Every migration across this series had a moment where the order of
   `alter table` on the two sides mattered, and where the wrong order stops
@@ -432,10 +430,7 @@ people bought us.
 
 A fourth post, covering the architectures left out of this series in less
 detail — geo-replication, BDR-style multi-active setups, plain CDC and
-triggers — is planned. Until then, part 1 has the
-[hub-and-workers demo](/blog/2026/09/ten-years-of-postgres-logical-replication/),
-part 2 the
-[consolidation demo](/blog/2026/09/consolidating-databases-with-postgres-logical-replication/),
-and this post's own demo is in its
+triggers — is also planned. Part 1 has the hub-and-workers demo, part 2
+the consolidation demo, and this post's own demo is in its
 [`compose/` directory](https://github.com/dimitri/tapoueh.org/tree/master/content/post/2026/09/logical-replication-upgrade/compose).
 Run them, break them, and tell me what I got wrong.
