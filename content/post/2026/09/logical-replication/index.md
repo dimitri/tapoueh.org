@@ -833,6 +833,37 @@ coordinator pair in turn — the full file, with every step, is on GitHub:
 
 ## Conclusion
 
+Read the table at the top of this article again with the whole
+architecture behind it, and it stops being a list of trivia. Ten and 11
+made the basic pipe. 13 let a partitioned hub receive from many workers.
+14 and 16 kept a busy hub from stalling on one worker's big transaction.
+15 turned "every worker sees everything" into a per-worker filter, in one
+statement instead of a naming convention. 16's `origin` option is the only
+reason two-way replication on a shared table does not loop forever. 18
+turned a silent conflict into a counter you can alert on. Each release
+took one more thing this architecture used to need application code, or
+Londiste, or a cron job, for, and folded it into a line of SQL. Postgres
+19's contribution, still in beta as this publishes, is sequences that
+travel with the rest of the table — one more manual step this
+architecture no longer needs, if it survives to GA the way it is today.
+The direction has held for ten releases: the application architecture
+gets easier to build, not harder, and that trend is the actual news, more
+than any one release's feature list.
+
+Two tools promise to make it easier still, and it is worth being precise
+about what each one actually removes, which is why this article spent a
+section on each. pglogical answers a real gap, conflict *resolution*,
+that core still does not have, and it is not the walled-off tool I
+expected: RDS's own extension list carries `pglogical` on every current
+PostgreSQL version, and Cloud SQL and Azure Flexible Server list it too,
+so it costs an extra `CREATE EXTENSION`, not a different database.
+Citus is the other kind of tool: not on RDS, not on Cloud SQL as an
+extension you enable, and on Azure it is not an extension at all but its
+own product line, Cosmos DB for PostgreSQL, formerly Hyperscale (Citus).
+Choosing Citus is closer to choosing a database than choosing an
+extension, and that is a fair trade for what it buys, covered above — it
+is just a different kind of decision than reaching for pglogical.
+
 The deeper difference is what a "worker" is allowed to be. A Citus worker
 is a shard-storage node that the coordinator owns; the application is not
 meant to know it exists, and Citus is not designed for you to query it on
