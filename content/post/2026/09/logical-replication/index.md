@@ -1,6 +1,6 @@
 +++
 title     = "Ten years of Postgres logical replication"
-date      = "2026-09-22T09:00:00+0200"
+date      = "2026-09-22T17:26:01+0200"
 tags      = ["PostgreSQL", "Replication", "Logical Decoding", "Architecture"]
 categories = ["PostgreSQL", "Architecture"]
 icon      = "🐘"
