@@ -687,14 +687,19 @@ is a purpose-built extension for exactly this problem, so it is worth being
 honest about what it would have bought, and what it would have cost.
 
 Citus turns a cluster of Postgres servers into one **coordinator** and
-several **workers**. The application connects to the coordinator only, never
-to a worker directly. A **distributed table** is sharded across the workers
-by a distribution column you pick; a **reference table** is instead kept
-whole and copied to every worker. Our `plans` and `prices` are exactly a
-reference table, and `usage_events` is exactly a distributed table, sharded
-on `customer_id` or `worker_id`. Declaring that is two function calls,
-`create_reference_table()` and `create_distributed_table()`, not a
-publication, a row filter and a column list per worker.
+several **workers**. In the topology Citus shipped for most of its history,
+and still the one its own documentation opens with, the application
+connects to the coordinator only, never to a worker directly:
+
+{{< image src="fig-citus-arch.svg" title="The classic Citus topology: the application talks to one coordinator, which plans a query, fans it out to the workers holding the relevant shards, and merges their partial results. A reference table is replicated whole to every worker." >}}
+
+A **distributed table** is sharded across the workers by a distribution
+column you pick; a **reference table** is instead kept whole and copied to
+every worker. Our `plans` and `prices` are exactly a reference table, and
+`usage_events` is exactly a distributed table, sharded on `customer_id` or
+`worker_id`. Declaring that is two function calls, `create_reference_table()`
+and `create_distributed_table()`, not a publication, a row filter and a
+column list per worker.
 
 Three things Citus removes that cost real pages above:
 
@@ -714,13 +719,196 @@ Three things Citus removes that cost real pages above:
 And what it costs. Citus is an extension: installing it, or paying for a
 managed offering that has it, is a decision the plain hub-and-workers
 version never asks you to make, because every piece of it is core Postgres
-from version 10 on, on whatever managed Postgres you already run. The
-coordinator is a single point of failure by construction — the FAQ's own
-first question is how Citus handles a coordinator failure — and the
-supported answers are a managed service that does it for you, or your own
-`pg_auto_failover` or Patroni setup in front of it. Our hub has no such
-requirement: if it is down, every worker keeps taking its own traffic, and
-only the invoicing rollup waits.
+from version 10 on, on whatever managed Postgres you already run.
+
+The single-coordinator picture above is also not the whole current story,
+and I want to correct myself here rather than leave a stale claim standing.
+What used to be a paid-only feature under the name Citus MX — every node's
+metadata kept in sync, so any node can plan and run a distributed query, not
+only the coordinator — was open-sourced and turned on by default in Citus
+11.0.2, released June 2022 (`citus.enable_metadata_sync`, `true` since that
+release). The project now calls it **Query From Any Node**. So "the
+coordinator is a SPOF" is the classic diagram, not the current default
+behaviour.
+
+It does not make the operational question disappear, it moves it. Citus's
+own contributor documentation is direct about the cost: connections stop
+being one path per node (application to coordinator) and become every node
+to every other node, so you size connection limits for that; and a
+production deployment still needs something in front handing the
+application one connection string that does not care which node it lands
+on, which the project's own README says the managed service did not fully
+provide as of its last update. Self-hosted, that "something in front" is
+exactly a job for `pg_auto_failover`, which has native support for a Citus
+formation: `pg_autoctl create coordinator` and `pg_autoctl create worker`
+join a coordinator and its workers to the same monitor, each with its own
+failover.
+
+Our hub, either way, has no such requirement to begin with: if it is down,
+every worker keeps taking its own traffic, and only the invoicing rollup
+waits.
+
+**Trying it.** pg_auto_failover's own test suite ships a complete,
+runnable example of exactly this: a coordinator pair and two worker
+groups, all under one monitor, with a distributed table, a network
+partition, and a failover exercised at every level. It runs on Docker
+Compose through the project's own test runner,
+[`pgaftest`](https://github.com/hapostgres/pg_auto_failover/blob/main/docs/ref/pgaftest.rst):
+
+```sh
+git clone https://github.com/hapostgres/pg_auto_failover
+cd pg_auto_failover
+pgaftest tmux tests/tap/specs/citus_basic_operation.pgaf
+```
+
+`pgaftest tmux` brings the whole stack up under Docker Compose and opens a
+three-pane session: live `pg_autoctl watch` state, container logs, and a
+shell to drive the test steps one at a time (`pgaftest step`). The spec
+file it runs, in full:
+
+```
+# Test basic Citus cluster operations: coordinator HA, worker HA with two
+# worker groups, distributed table writes/reads, and failover at each level.
+#
+# Ported from tests/test_basic_citus_operation.py
+# Predecessor: tests/test_basic_citus_operation.py
+
+cluster {
+    monitor
+    formation {
+        coordinator1a coordinator
+        coordinator1b coordinator
+        worker1a worker group 1
+        worker1b worker group 1
+        worker2a worker group 2
+        worker2b worker group 2
+    }
+}
+
+setup {
+    wait until primary, secondary in group 0  timeout 90s
+    wait until primary, secondary in group 1  timeout 90s
+    wait until primary, secondary in group 2  timeout 90s
+    promote coordinator1a
+    promote worker1a
+    promote worker2a
+}
+
+teardown {
+    compose down
+}
+
+#
+# test_001: coordinator pair comes up
+#
+
+step test_001_init_coordinator {
+    wait until coordinator1a state is primary
+        and coordinator1b state is secondary
+        timeout 90s
+}
+
+#
+# test_002: worker groups come up
+#
+
+step test_002_init_workers {
+    wait until worker1a state is primary
+        and worker1b state is secondary
+        and worker2a state is primary
+        and worker2b state is secondary
+        timeout 90s
+}
+
+step test_002b_wait_metadata_sync {
+    exec coordinator1a  sh -c 'for i in $(seq 1 30); do n=$(psql -U docker -d demo -tAc "SELECT count(*) FROM pg_dist_node WHERE metadatasynced = false AND isactive = true"); [ "$n" = "0" ] && exit 0; sleep 2; done; exit 1'
+    sql coordinator1a {
+        CREATE OR REPLACE FUNCTION public.wait_until_metadata_sync(timeout
+        INTEGER DEFAULT 15000) RETURNS void LANGUAGE C STRICT AS 'citus';
+    }
+    sql coordinator1a { SELECT public.wait_until_metadata_sync(); }
+}
+
+#
+# test_003: create distributed table
+#
+
+step test_003_create_distributed_table {
+    sql coordinator1a { CREATE TABLE t1 (a int); }
+    sql coordinator1a { SELECT create_distributed_table('t1', 'a'); }
+    sql coordinator1a { INSERT INTO t1 VALUES (1), (2); }
+}
+
+step test_004_001_fail_worker2 {
+    network disconnect worker2a
+    wait until worker2b state is wait_primary  timeout 90s
+}
+
+step test_004_003_insert_while_wait_primary {
+    wait until worker2b state is wait_primary  timeout 90s
+    sql coordinator1a { INSERT INTO t1 VALUES (3); }
+}
+
+step test_004_004_reconnect_worker2a {
+    network connect worker2a
+    wait until worker2b state is primary
+        and worker2a state is secondary
+        timeout 180s
+}
+
+step test_005_read_from_workers_via_coordinator {
+    sql coordinator1a { SELECT a FROM t1 ORDER BY a ASC; }
+    expect { { 1 } { 2 } { 3 } }
+}
+
+#
+# test_006: write more rows
+#
+
+step test_006_writes_to_coordinator_succeed {
+    sql coordinator1a { INSERT INTO t1 VALUES (4); }
+    sql coordinator1a { SELECT a FROM t1 ORDER BY a ASC; }
+    expect { { 1 } { 2 } { 3 } { 4 } }
+}
+
+step test_007_fail_worker2b {
+    network disconnect worker2b
+    wait until worker2a state is wait_primary  timeout 90s
+}
+
+step test_007b_reconnect_worker2b {
+    network connect worker2b
+    wait until worker2a state is primary
+        and worker2b state is secondary
+        timeout 180s
+}
+
+step test_008_read_from_workers_via_coordinator {
+    sql coordinator1a { SELECT a FROM t1 ORDER BY a ASC; }
+    expect { { 1 } { 2 } { 3 } { 4 } }
+}
+
+step test_009_perform_failover_worker2 {
+    perform failover group 2
+    wait until worker2b state is primary
+        and worker2a state is secondary
+        timeout 180s
+}
+
+step test_010_perform_failover_coordinator {
+    perform failover
+    wait until coordinator1a state is secondary
+        and coordinator1b state is primary
+        timeout 90s
+}
+```
+
+Step `test_002b_wait_metadata_sync` is the Query From Any Node machinery
+made visible: it polls `pg_dist_node.metadatasynced` on the coordinator
+until every node's copy of the cluster's metadata is current, the same
+synchronisation the "any node" feature depends on. `test_009` and
+`test_010` fail over a worker group and the coordinator pair in turn,
+each driven by `pg_auto_failover`, not by Citus itself.
 
 The deeper difference is what a "worker" is allowed to be. A Citus worker
 is a shard-storage node that the coordinator owns; the application is not
