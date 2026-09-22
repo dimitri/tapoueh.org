@@ -679,6 +679,60 @@ It also has three problems, on 2.4.8:
   error anywhere. That is what the policy says on the tin, and it is worth
   knowing before you pick it.
 
+### Why not just use Citus?
+
+Everything above builds write scaling out of core logical replication and a
+naming convention. [Citus](https://docs.citusdata.com/en/stable/get_started/concepts.html)
+is a purpose-built extension for exactly this problem, so it is worth being
+honest about what it would have bought, and what it would have cost.
+
+Citus turns a cluster of Postgres servers into one **coordinator** and
+several **workers**. The application connects to the coordinator only, never
+to a worker directly. A **distributed table** is sharded across the workers
+by a distribution column you pick; a **reference table** is instead kept
+whole and copied to every worker. Our `plans` and `prices` are exactly a
+reference table, and `usage_events` is exactly a distributed table, sharded
+on `customer_id` or `worker_id`. Declaring that is two function calls,
+`create_reference_table()` and `create_distributed_table()`, not a
+publication, a row filter and a column list per worker.
+
+Three things Citus removes that cost real pages above:
+
+- **DDL propagates.** The documentation says it plainly: changing the schema
+  of a distributed table cascades to every shard across every worker. Our
+  whole "Operating it" section, and the DDL-order rule in the closing one,
+  exist because logical replication does not do this.
+- **The key-collision problem does not arise.** Citus computes which shard a
+  row belongs to from the distribution column; there is no `usage_naive` to
+  build by accident, because there is no second server independently
+  minting the same id.
+- **Adding a worker is a supported operation**, not a lock-mode reading
+  exercise. Since Citus 11.0, `citus_rebalance_start()` moves shards to a
+  newly added node without blocking reads or writes, which is the built-in
+  version of the `attach partition` dance above.
+
+And what it costs. Citus is an extension: installing it, or paying for a
+managed offering that has it, is a decision the plain hub-and-workers
+version never asks you to make, because every piece of it is core Postgres
+from version 10 on, on whatever managed Postgres you already run. The
+coordinator is a single point of failure by construction — the FAQ's own
+first question is how Citus handles a coordinator failure — and the
+supported answers are a managed service that does it for you, or your own
+`pg_auto_failover` or Patroni setup in front of it. Our hub has no such
+requirement: if it is down, every worker keeps taking its own traffic, and
+only the invoicing rollup waits.
+
+The deeper difference is what a "worker" is allowed to be. A Citus worker
+is a shard-storage node that the coordinator owns; the application is not
+meant to know it exists, and Citus is not designed for you to query it on
+its own. Our workers are the opposite: full, independent Postgres servers
+that a region, a large customer, or a compliance boundary already needs to
+run on its own, and that must keep serving local writes with no hub in
+sight. If your workers are really just where the rows happen to live, Citus
+is the more transparent tool. If they are autonomous by design, logical
+replication keeps that autonomy and Citus does not, because its workers are
+not meant to run without their coordinator.
+
 Part 2 of this series consolidates several application databases into one
 warehouse. Part 3 covers a zero-downtime major upgrade. A fourth post,
 covering the remaining architectures in less detail, is also planned.
