@@ -6,12 +6,12 @@ categories = ["PostgreSQL", "Architecture"]
 icon      = "🐘"
 +++
 
-This is part 2 of a series on what ten releases of Postgres logical
-replication (10 through the 19 beta) buy an application developer, one
-architecture at a time. [Part 1](/blog/2026/09/ten-years-of-postgres-logical-replication/)
-built a hub-and-workers system for write scalability and has the table of
-what each release added, which this post assumes. Part 3, on zero-downtime
-upgrades, follows on Tuesday.
+This is part 2 of a series about Postgres logical replication use-cases,
+and about how the feature set has evolved over the past ten years and ten
+releases (10 through the 19 beta), one architecture at a time. Part 1 built
+a hub-and-workers system for write scalability and has the table of what
+each release added, which this post assumes. Part 3 covers a zero-downtime
+major upgrade.
 
 <!--more-->
 
@@ -677,10 +677,10 @@ writing tables, which is a story for another article.
 
 ---
 
-Part 3 of this series, on zero-downtime major upgrades with a way back,
-publishes Tuesday. A fourth post, covering the architectures left out of
-this series in less detail — geo-replication, BDR-style multi-active setups,
-plain CDC and triggers — is planned after that.
+Part 3 of this series covers zero-downtime major upgrades with a way back.
+A fourth post, covering the architectures left out of this series in less
+detail — geo-replication, BDR-style multi-active setups, plain CDC and
+triggers — is also planned.
 
 The demo is in the
 [`compose/` directory](https://github.com/dimitri/tapoueh.org/tree/master/content/post/2026/09/logical-replication-consolidation/compose)
