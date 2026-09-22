@@ -18,21 +18,23 @@ Postgres 10 shipped logical replication in 2017, and 19 is the tenth release
 that has it. Every release since Postgres 10 has taken a piece of that
 plumbing and made it a line of SQL.
 
-So the question for this series is the application developer's one, not the
-DBA's: *which architectures can I deploy with Postgres core alone today,
-what does each release change about that, and where do I still need
+This is the first article in a series about Postgres logical replication
+use-cases, and about how the feature set has evolved over the past ten
+years and ten releases. The question is the application developer's one,
+not the DBA's: *which architectures can I deploy with Postgres core alone
+today, what does each release change about that, and where do I still need
 something else?* I built three architectures for real, across three posts:
 
 1. **Hub and workers**, spreading the write load across servers — this post.
 2. **[Consolidation](/blog/2026/09/consolidating-databases-with-postgres-logical-replication/)**:
    many databases, different applications and schemas, into one, then
-   re-exported as a change stream for a CDC consumer. Publishes Thursday.
+   re-exported as a change stream for a CDC consumer.
 3. **[Zero-downtime major upgrade](/blog/2026/09/zero-downtime-postgres-upgrades-with-logical-replication/)**,
-   with a way back. Publishes the following Tuesday.
+   with a way back.
 
 A fourth post, covering what is left out of this series in less detail —
 geo-replication, BDR-style multi-active setups, plain CDC and triggers — is
-planned after that.
+also planned.
 
 <!--more-->
 
@@ -678,10 +680,9 @@ It also has three problems, on 2.4.8:
   error anywhere. That is what the policy says on the tin, and it is worth
   knowing before you pick it.
 
-Part 2 of this series, consolidating several application databases into one
-warehouse, publishes Thursday. Part 3, zero-downtime major upgrades,
-follows the Tuesday after. A fourth post, covering the remaining
-architectures in less detail, is planned once those two are out.
+Part 2 of this series consolidates several application databases into one
+warehouse. Part 3 covers a zero-downtime major upgrade. A fourth post,
+covering the remaining architectures in less detail, is also planned.
 
 The demo for this post is in the
 [`compose/` directory](https://github.com/dimitri/tapoueh.org/tree/master/content/post/2026/09/logical-replication/compose)
