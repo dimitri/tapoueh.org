@@ -81,8 +81,6 @@ of what follows.
 
 ---
 
-## Hub and workers: spreading the write load
-
 The application here is a small metering system. The hub holds `plans`,
 `prices` and `customers`. Each customer is assigned to a worker
 (`customers.worker_id`), and that worker records the customer's usage events.
@@ -90,7 +88,7 @@ The hub needs everything back to compute invoices.
 
 {{< image src="fig-hub-workers.svg" title="Reference data flows down, filtered per worker. Usage events flow up, into one table partitioned by worker_id. Each table travels in one direction only, so there is no loop." >}}
 
-### Reference data goes down
+## Reference data goes down
 
 The first step is the Postgres 10 one: a publication on the hub, a
 subscription on each worker.
@@ -147,7 +145,7 @@ you would hope. What you might not hope: changing a publication's filter is
 not retroactive. Rows already copied to a worker stay there, so does a
 column that used to be published, and cleanup is yours.
 
-### Events come up
+## Events come up
 
 Each worker writes its own `usage_events`. The hub subscribes to all of them
 into **one table partitioned by `worker_id`**, which has worked since Postgres 13:
@@ -192,7 +190,7 @@ that one. That message, with both rows spelled out, is the Postgres 18 way of re
 So the rule for this architecture is to make collisions impossible by
 construction: `(worker_id, event_id)` as the key, or UUIDs.
 
-### What about sequences?
+## What about sequences?
 
 Sequences are not replicated by a Postgres 18 publication (`FOR ALL
 SEQUENCES` is a syntax error there, and naming a sequence in `FOR TABLE`
@@ -209,7 +207,7 @@ DETAIL:  Key (customer_id)=(1) already exists.
 In this architecture the workers never mint ids for hub-owned tables, so
 this is a rule rather than a problem. Postgres 19 changes the situation, see below.
 
-### Minting ids on the workers
+## Minting ids on the workers
 
 The events need an id that two workers cannot mint twice. The key
 `(worker_id, event_id)` I used above is the first answer, and it needs no
@@ -318,7 +316,7 @@ What Postgres 19's replicated sequences do *not* do is help here: the values tra
 from the publisher to the subscribers, and workers minting their own ids
 need the opposite.
 
-### Big batches and many streams
+## Big batches and many streams
 
 A worker that inserts 300,000 rows in one transaction used to make the hub
 wait for the commit before it could apply anything. With Postgres 14's streaming, and
@@ -335,7 +333,7 @@ about 0.08 s. With `off`, the slot shows spilled transactions and
 I make no claim about the total time of the batch, which is not what the
 setting is for.
 
-### Operating it
+## Operating it
 
 Adding a fourth worker is the reason to build it this way, and the
 partition is where the care goes. `create table … partition of` takes an
@@ -381,7 +379,7 @@ whole transaction, not the row that conflicted. In the demo, worker 2's
 three events never reached the hub, and the two sides now disagree until
 somebody repairs them by hand.
 
-### Reading the conflict counters
+## Reading the conflict counters
 
 Postgres 18 also made conflicts countable. `pg_stat_subscription_stats` has one
 row per subscription. Beyond the two error counters
@@ -516,7 +514,7 @@ Alert on `apply_error_count` and `sync_error_count` moving, because that is
 replication stopped. Review the other counters on a schedule, because they mean
 replication is running on data that no longer matches.
 
-### The loop question
+## The loop question
 
 In the layout above the reference tables go down and the usage tables go up,
 so no change ever comes back to where it was made. What if the same table
@@ -560,7 +558,7 @@ Two things to remember: you have to set the option on both subscriptions, and
 it only breaks loops. It does not resolve conflicts, and the conflict
 counters above still apply if both sides write the same row.
 
-### The same thing with pglogical
+## The same thing with pglogical
 
 Before 15 and 16, this architecture meant pglogical. To find out what that
 cost, I built the hub-and-workers again on PostgreSQL 14, with two workers,
@@ -679,7 +677,7 @@ It also has three problems, on 2.4.8:
   error anywhere. That is what the policy says on the tin, and it is worth
   knowing before you pick it.
 
-### Why not just use Citus?
+## Why not just use Citus?
 
 Everything above builds write scaling out of core logical replication and a
 naming convention. [Citus](https://docs.citusdata.com/en/stable/get_started/concepts.html)
@@ -805,7 +803,7 @@ network, wait for Citus's own metadata sync to catch up
 coordinator pair in turn — the full file, with every step, is on GitHub:
 [`citus_basic_operation.pgaf`](https://github.com/hapostgres/pg_auto_failover/blob/main/tests/tap/specs/citus_basic_operation.pgaf).
 
-### Conclusion
+## Conclusion
 
 The deeper difference is what a "worker" is allowed to be. A Citus worker
 is a shard-storage node that the coordinator owns; the application is not
