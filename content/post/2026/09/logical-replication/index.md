@@ -834,13 +834,14 @@ coordinator pair in turn — the full file, with every step, is on GitHub:
 ## Conclusion
 
 Read the table at the top of this article again with the whole
-architecture behind it, and it stops being a list of trivia. Ten and 11
-made the basic pipe. 13 let a partitioned hub receive from many workers.
-14 and 16 kept a busy hub from stalling on one worker's big transaction.
-15 turned "every worker sees everything" into a per-worker filter, in one
-statement instead of a naming convention. 16's `origin` option is the only
-reason two-way replication on a shared table does not loop forever. 18
-turned a silent conflict into a counter you can alert on. Each release
+architecture behind it, and it stops being a list of trivia. Postgres 10
+and 11 made the basic pipe. Postgres 13 let a partitioned hub receive from
+many workers. Postgres 14 and 16 kept a busy hub from stalling on one
+worker's big transaction. Postgres 15 turned "every worker sees
+everything" into a per-worker filter, in one statement instead of a naming
+convention. Postgres 16's `origin` option is the only reason two-way
+replication on a shared table does not loop forever. Postgres 18 turned a
+silent conflict into a counter you can alert on. Each release
 took one more thing this architecture used to need application code, or
 Londiste, or a cron job, for, and folded it into a line of SQL. Postgres
 19's contribution, still in beta as this publishes, is sequences that
