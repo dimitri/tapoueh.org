@@ -26,11 +26,9 @@ today, what does each release change about that, and where do I still need
 something else?* I built three architectures for real, across three posts:
 
 1. **Hub and workers**, spreading the write load across servers — this post.
-2. **[Consolidation](/blog/2026/09/consolidating-databases-with-postgres-logical-replication/)**:
-   many databases, different applications and schemas, into one, then
-   re-exported as a change stream for a CDC consumer.
-3. **[Zero-downtime major upgrade](/blog/2026/09/zero-downtime-postgres-upgrades-with-logical-replication/)**,
-   with a way back.
+2. **Consolidation**: many databases, different applications and schemas,
+   into one, then re-exported as a change stream for a CDC consumer.
+3. **Zero-downtime major upgrade**, with a way back.
 
 A fourth post, covering what is left out of this series in less detail —
 geo-replication, BDR-style multi-active setups, plain CDC and triggers — is
@@ -48,7 +46,8 @@ This one starts with `make clean && make up && make run`. It uses the
 official `postgres` and `postgres:14` images rather than the Lab image,
 because the demo needs several servers side by side and nothing from the
 Lab dataset. Quoted output is copied from those `results/` files. The Lab
-image itself has one relevant caveat, see the Postgres 19 section of part 3.
+image itself has one relevant caveat, covered later in this series: it
+preloads `pg_stat_plans`, which crashes on a beta of Postgres 19.
 {{< /lab >}}
 
 <!--toc-->
