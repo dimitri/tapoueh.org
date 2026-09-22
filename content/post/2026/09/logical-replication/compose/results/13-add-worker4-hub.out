@@ -1,0 +1,82 @@
+-- @service: hub
+-- Step 4c. Hub side, part 2: a new partition, then the subscription.
+-- First note the running apply workers, to prove later they were not disturbed.
+SELECT string_agg(pid::text, ',' ORDER BY subname) AS pids_before
+FROM pg_stat_subscription WHERE subname LIKE 'sub_usage_w%' AND worker_type = 'apply' \gset
+-- Which lock does the parent table take? Check in a transaction we roll back.
+CREATE TABLE usage_events_w4 (LIKE usage_events INCLUDING ALL);
+CREATE TABLE
+ALTER TABLE usage_events_w4 ADD CONSTRAINT w4_only CHECK (worker_id = 4);
+ALTER TABLE
+BEGIN;
+BEGIN
+ALTER TABLE usage_events ATTACH PARTITION usage_events_w4 FOR VALUES IN (4);
+ALTER TABLE
+SELECT mode FROM pg_locks WHERE relation = 'usage_events'::regclass AND pid = pg_backend_pid() AND locktype = 'relation' ORDER BY 1;
+           mode           
+--------------------------
+ ShareUpdateExclusiveLock
+(1 row)
+
+ROLLBACK;
+ROLLBACK
+BEGIN;
+BEGIN
+CREATE TABLE usage_events_wx PARTITION OF usage_events FOR VALUES IN (99);
+CREATE TABLE
+SELECT mode FROM pg_locks WHERE relation = 'usage_events'::regclass AND pid = pg_backend_pid() AND locktype = 'relation' ORDER BY 1;
+        mode         
+---------------------
+ AccessExclusiveLock
+(1 row)
+
+ROLLBACK;
+ROLLBACK
+ALTER TABLE usage_events ATTACH PARTITION usage_events_w4 FOR VALUES IN (4);
+ALTER TABLE
+CREATE SUBSCRIPTION sub_usage_w4
+  CONNECTION 'host=worker4 dbname=app user=postgres' PUBLICATION pub_usage;
+psql:<stdin>:21: NOTICE:  created replication slot "sub_usage_w4" on publisher
+CREATE SUBSCRIPTION
+SELECT lr.wait_for($$SELECT count(*) = 4 FROM usage_events WHERE worker_id = 4$$);
+ wait_for 
+----------
+ t
+(1 row)
+
+-- The three existing subscriptions were not touched: same apply worker processes.
+SELECT string_agg(pid::text, ',' ORDER BY subname) = :'pids_before' AS same_apply_workers_as_before
+FROM pg_stat_subscription WHERE subname IN ('sub_usage_w1', 'sub_usage_w2', 'sub_usage_w3') AND worker_type = 'apply';
+ same_apply_workers_as_before 
+------------------------------
+ t
+(1 row)
+
+-- and events keep flowing from old and new workers
+SELECT lr.on('worker1', $$INSERT INTO usage_events (customer_id, meter, qty) VALUES (1, 'api_calls', 1)$$);
+     on     
+------------
+ INSERT 0 1
+(1 row)
+
+SELECT lr.on('worker4', $$INSERT INTO usage_events (customer_id, meter, qty) VALUES (9, 'api_calls', 1)$$);
+     on     
+------------
+ INSERT 0 1
+(1 row)
+
+SELECT lr.wait_for($$SELECT count(*) = 2 FROM usage_events WHERE qty = 1$$);
+ wait_for 
+----------
+ t
+(1 row)
+
+SELECT worker_id, count(*) AS events FROM usage_events GROUP BY 1 ORDER BY 1;
+ worker_id | events 
+-----------+--------
+         1 |      7
+         2 |     10
+         3 |      8
+         4 |      5
+(4 rows)
+

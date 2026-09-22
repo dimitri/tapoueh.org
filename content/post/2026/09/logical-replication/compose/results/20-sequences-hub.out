@@ -1,0 +1,73 @@
+-- @service: hub
+-- Step 6. Sequences are not replicated (PG18): only table rows travel.
+CREATE SEQUENCE invoice_no;
+CREATE SEQUENCE
+SELECT lr.on('worker1', 'CREATE SEQUENCE invoice_no');
+       on        
+-----------------
+ CREATE SEQUENCE
+(1 row)
+
+-- The publication grammar has no sequence support in PG18:
+CREATE PUBLICATION pub_seq FOR ALL SEQUENCES;
+psql:<stdin>:6: ERROR:  syntax error at or near "SEQUENCES"
+LINE 1: CREATE PUBLICATION pub_seq FOR ALL SEQUENCES;
+                                           ^
+CREATE PUBLICATION pub_seq FOR TABLE invoice_no;
+psql:<stdin>:7: ERROR:  cannot add relation "invoice_no" to publication
+DETAIL:  This operation is not supported for sequences.
+SELECT nextval('invoice_no') FROM generate_series(1, 5);
+ nextval 
+---------
+       1
+       2
+       3
+       4
+       5
+(5 rows)
+
+SELECT last_value FROM invoice_no;
+ last_value 
+------------
+          5
+(1 row)
+
+-- on worker1 the sequence with the same name is untouched, however busy the hub is
+SELECT lr.wait_caught_up();
+ wait_caught_up 
+----------------
+ t
+(1 row)
+
+SELECT v AS worker1_nextval FROM dblink(lr.conn('worker1'), $$SELECT nextval('invoice_no')$$) t(v bigint);
+ worker1_nextval 
+-----------------
+               1
+(1 row)
+
+-- The same happens to identity columns of replicated tables. worker1 holds customer rows
+-- copied from the hub with their ids, but its own identity sequence never moved:
+SELECT sequencename, last_value FROM dblink(lr.conn('worker1'),
+  $$SELECT sequencename::text, last_value FROM pg_sequences WHERE sequencename LIKE 'customers%'$$)
+  AS t(sequencename text, last_value bigint);
+       sequencename        | last_value 
+---------------------------+------------
+ customers_customer_id_seq |           
+(1 row)
+
+-- so a row minted locally on a worker (e.g. after promoting it, or a stray local INSERT)
+-- takes the first id, which the replicated data already uses:
+SELECT lr.on('worker1', $$INSERT INTO customers (name, worker_id, plan_id) VALUES ('minted-on-worker', 1, 1)$$);
+psql:<stdin>:22: ERROR:  duplicate key value violates unique constraint "customers_pkey"
+DETAIL:  Key (customer_id)=(1) already exists.
+CONTEXT:  while executing command on unnamed dblink connection
+-- Consequence for ids minted on workers: they must never share a key space with hub ids.
+-- That is why usage events use (worker_id, event_id) and the hub never mints event ids.
+-- Manual workaround when a sequence value must travel: setval() from your own tooling.
+SELECT v AS worker1_after_setval FROM dblink(lr.conn('worker1'),
+  $$SELECT setval('invoice_no', (SELECT 5))$$) t(v bigint);
+ worker1_after_setval 
+----------------------
+                    5
+(1 row)
+
