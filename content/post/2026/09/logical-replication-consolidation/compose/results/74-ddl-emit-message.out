@@ -1,0 +1,42 @@
+### a second event trigger on shop, emitting the same text as a logical message
+CREATE FUNCTION
+CREATE EVENT TRIGGER
+### a scratch test_decoding slot: it forwards messages with no messages=true needed
+ pg_create_logical_replication_slot 
+------------------------------------
+ (peek_ddl,<LSN>)
+(1 row)
+
+### run one DDL statement; both event triggers on shop fire for it
+### what the slot actually holds
+                                                          data                                                          
+------------------------------------------------------------------------------------------------------------------------
+ message: transactional: 1 prefix: ddl, sz: 64 content:alter table shop.orders add column express boolean default false
+(1 row)
+
+ pg_drop_replication_slot 
+--------------------------
+ 
+(1 row)
+
+### for comparison: pgoutput needs messages=true, or it sends nothing at all
+ pg_create_logical_replication_slot 
+------------------------------------
+ (peek_ddl_pg,<LSN>)
+(1 row)
+
+ pgoutput_messages_without_the_option 
+--------------------------------------
+                                    0
+(1 row)
+
+ pgoutput_messages_with_the_option 
+-----------------------------------
+                                 1
+(1 row)
+
+ pg_drop_replication_slot 
+--------------------------
+ 
+(1 row)
+

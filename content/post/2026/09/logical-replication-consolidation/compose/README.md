@@ -167,7 +167,7 @@ A full run takes about 6 minutes.
      and the slot survives the same catalog vacuum.
   `primary_slot_name = 'standby1'` came from `pg_basebackup -R -S standby1 -C`; running without it was not tested.
 
-### What breaks (70-72)
+### What breaks, and two DIY ways to replicate DDL anyway (70-74)
 * Publisher-first `ALTER TABLE ... ADD COLUMN` (publication without a column list):
   `ERROR: logical replication target relation "shop.orders" is missing replicated column: "note"`;
   the worker restarts every 5 s, later transactions queue behind it and the slot
@@ -179,6 +179,18 @@ A full run takes about 6 minutes.
   `duplicate key value violates unique constraint "orders_pkey"` (`72-ddl-sequences.out`).
 * `ALTER SUBSCRIPTION ... SKIP (lsn = ...)` (used in step 30) is the way out of a
   transaction that can never apply.
+* pglogical's own trick, rebuilt with core only: a queue table in the
+  publication (`shop.ddl_log`), filled by an event trigger via
+  `current_query()`, replayed by an `ENABLE ALWAYS` trigger on the subscriber
+  (owned by the subscription role, same rule as every table in this demo). One
+  `ALTER TABLE` on the shop, no manual DDL on the warehouse, and the column is
+  there (`73-ddl-trigger-queue.out`).
+* `pg_logical_emit_message`, proven on the wire, publisher side only: a
+  second event trigger emits the same text as a logical message; a scratch
+  `test_decoding` slot shows it with no option needed, a scratch `pgoutput`
+  slot shows 0 message bytes without `messages = true` and 1 with it. No
+  consumer is built; that needs a protocol client, which is its own project
+  (`74-ddl-emit-message.out`).
 
 ## Files
 

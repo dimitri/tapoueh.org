@@ -741,6 +741,156 @@ the DDL of objects that already exist, which is `pg_dump`'s job done as
 callable SQL functions, not a live capture of a command as it runs. Neither
 solves what this section is about.
 
+### Building pglogical's trick with core only
+
+pglogical's mechanism is a table and a trigger. Nothing about that needs
+the extension: it is buildable with a plain publication, a plain
+subscription, and one fact about triggers that matters a lot here. An
+apply worker runs with `session_replication_role = replica`, so an
+ordinary trigger (`ENABLE`, the default) never fires for a replicated
+change. A trigger created `ENABLE ALWAYS` does.
+
+On the shop server, a queue table and an event trigger that fills it from
+`ddl_command_end`, capturing the literal text with `current_query()`:
+
+```sql
+create table shop.ddl_log
+(
+  id        bigint generated always as identity primary key,
+  tag       text        not null,
+  command   text        not null,
+  logged_at timestamptz not null default now()
+);
+
+create function shop.log_ddl() returns event_trigger
+  language plpgsql as $f$
+begin
+  insert into shop.ddl_log (tag, command) values (tg_tag, current_query());
+end;
+$f$;
+
+create event trigger shop_log_ddl on ddl_command_end
+  when tag in ('CREATE TABLE', 'ALTER TABLE')
+  execute function shop.log_ddl();
+```
+
+On the warehouse, a matching table and the trigger that replays it,
+created `ENABLE ALWAYS` so it fires in the apply worker, and owned by the
+subscription's own role for the same reason every other table in this
+architecture has to be:
+
+```sql
+create table shop.ddl_log
+(
+  id        bigint primary key,
+  tag       text        not null,
+  command   text        not null,
+  logged_at timestamptz not null default now()
+);
+
+create function shop.apply_ddl() returns trigger
+  language plpgsql as $f$
+begin
+  execute new.command;
+  return new;
+end;
+$f$;
+
+create trigger apply_ddl before insert on shop.ddl_log
+  for each row execute function shop.apply_ddl();
+alter table shop.ddl_log enable always trigger apply_ddl;
+alter table shop.ddl_log owner to sub_shop;
+```
+
+Add the queue table to the publication, refresh the subscription, then run
+one real DDL statement on the shop, nothing special about it:
+
+```sql
+alter publication pub_shop add table shop.ddl_log;      -- on the shop
+alter subscription sub_shop refresh publication;        -- on the warehouse
+
+alter table shop.orders add column urgent boolean default false;  -- on the shop
+```
+
+No manual `alter table` on the warehouse, this time. The column is there:
+
+```results
+ column_name | column_default
+-------------+----------------
+ urgent      | false
+```
+
+and the queue table doubles as an audit log of exactly what ran:
+
+```results
+     tag     |                             command
+-------------+-----------------------------------------------------------------
+ ALTER TABLE | alter table shop.orders add column urgent boolean default false
+```
+
+It is pglogical's design, not a smaller version of it: `current_query()`
+captures the statement as submitted, not a reconstruction, so it has the
+same two edges pglogical has. A command sent as several statements in one
+round trip is captured whole, not split; and it replays with whatever
+`search_path` the apply worker's session has, which is not necessarily the
+one the original session had.
+
+### What `pg_logical_emit_message` actually sends
+
+The other primitive from the previous section, proven rather than just
+cited. A second event trigger on the shop, emitting the same text as a
+logical message instead of a table row:
+
+```sql
+create function shop.emit_ddl_message() returns event_trigger
+  language plpgsql as $f$
+begin
+  perform pg_logical_emit_message(true, 'ddl', current_query());
+end;
+$f$;
+
+create event trigger shop_emit_ddl on ddl_command_end
+  when tag in ('CREATE TABLE', 'ALTER TABLE')
+  execute function shop.emit_ddl_message();
+```
+
+A scratch `test_decoding` slot needs no option to see it, and shows the
+text verbatim:
+
+```sql
+select data from pg_logical_slot_peek_changes('peek_ddl', null, null)
+ where data like 'message:%';
+```
+
+```results
+message: transactional: 1 prefix: ddl, sz: 64 content:alter table shop.orders add column express boolean default false
+```
+
+`pgoutput`, what a real subscription uses, needs the option asked for
+explicitly, confirmed by counting the message bytes on the wire with and
+without it, on the same transaction:
+
+```sql
+select count(*) from pg_logical_slot_peek_binary_changes('peek_ddl_pg', null, null,
+         'proto_version', '1', 'publication_names', 'pub_shop')
+ where get_byte(data, 0) = ascii('M');   -- 0
+
+select count(*) from pg_logical_slot_peek_binary_changes('peek_ddl_pg', null, null,
+         'proto_version', '1', 'publication_names', 'pub_shop',
+         'messages', 'true')
+ where get_byte(data, 0) = ascii('M');   -- 1
+```
+
+That's as far as I built it. The message is really on the wire, with
+`messages = true`, in the same transaction as the change it describes.
+Turning that into something a subscriber acts on needs code that speaks
+the replication protocol directly, the way `pgcopydb` already does for
+its own reasons — and even there, the wire-level parser has no case for
+the Message frame type yet; it falls through to the default branch and is
+logged as unknown and dropped. Writing that consumer is a real project,
+not a demo, so this is where I stopped: the publisher side works, proven
+on the wire, and the rest is the open gap described above.
+
 Sequences are the other thing that does not follow. The publisher's sequence
 was at 40013, the warehouse's copy at 1, and a local insert on the warehouse
 reuses an id that a replicated row already has:
