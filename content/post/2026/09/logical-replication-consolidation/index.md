@@ -1,6 +1,6 @@
 +++
 title     = "Consolidating databases with Postgres logical replication"
-date      = "2026-09-24T09:00:00+0200"
+date      = "2026-10-06T09:00:00+0100"
 tags      = ["PostgreSQL", "Replication", "Logical Decoding", "Architecture"]
 categories = ["PostgreSQL", "Architecture"]
 icon      = "🐘"
@@ -8,8 +8,9 @@ icon      = "🐘"
 
 This is part 2 of a series about Postgres logical replication use-cases,
 and about how the feature set has evolved over the past ten years and ten
-releases (10 through the 19 beta), one architecture at a time. Part 1 built
-a hub-and-workers system for write scalability and has the table of what
+releases, one architecture at a time.
+[Part 1](/blog/2026/09/ten-years-of-postgres-logical-replication/) built a
+hub-and-workers system for write scalability and has the table of what
 each release added, which this post assumes. Part 3 covers a zero-downtime
 major upgrade.
 
@@ -30,6 +31,8 @@ copied from those `results/` files.
 
 ---
 
+## The scenario: consolidation
+
 This architecture is the one the documentation lists as "consolidating
 multiple databases into a single one, for example for analytical purposes".
 The application developer's version: three different applications (a shop, a
@@ -39,7 +42,7 @@ that is not Postgres.
 
 {{< image src="fig-consolidation.svg" title="Three application servers, one schema each, subscribe into one warehouse database that keeps a schema per application. The warehouse then publishes its own change stream, read through a logical slot by a Debezium-like consumer." >}}
 
-### The sources
+## The sources
 
 Each application owns a schema named after it, on its own server. These are
 the three, trimmed to the tables that matter here (the demo has the full
@@ -135,7 +138,7 @@ system's invoices:
  Initech | bronze |    20.00 | open
 ```
 
-### A schema per application, and why it must start at the source
+## A schema per application, and why it must start at the source
 
 The warehouse keeps a schema per application, as you would want. But the way
 it gets there is not what you might expect: **a subscription cannot rename
@@ -213,7 +216,7 @@ stays in state `d` and retries every five seconds. Same name and a different
 shape: `logical replication target relation "public.contacts" is missing
 replicated column: "company"`.
 
-### Less data: filters and column lists
+## Less data: filters and column lists
 
 This warehouse is the EU warehouse. It must never hold the customers' email
 addresses and phone numbers, and it should only receive the `eu` tenant's
@@ -324,7 +327,7 @@ changes either, since those are filtered out. After `update shop.orders set
 status = 'shipped' where id = 3` on the shop, the warehouse's row 3 still says
 `paid`.
 
-### What the publisher sends
+## What the publisher sends
 
 The column list is a promise that the personal columns never leave the
 publisher, and I wanted to check it on the wire and not only on the subscriber.
@@ -389,7 +392,7 @@ predates it:
 (Carol is `eu` now, because the demo moved her tenant. Dan, moved to `us`, was
 deleted from the warehouse.)
 
-### Filters when the publication is a whole schema
+## Filters when the publication is a whole schema
 
 The CRM's publication is `for tables in schema crm`, which is convenient: a
 new table in the schema is published without anybody touching the publication.
@@ -440,7 +443,7 @@ If the personal data must not be on the warehouse at all, the order matters:
 set the column list *before* the first copy of the table, or clean the
 subscriber up yourself.
 
-### Re-exporting as a change stream
+## Re-exporting as a change stream
 
 The warehouse gets its rows through apply workers, and apply workers write WAL
 like any other session. So the warehouse tables are ordinary tables as far as
@@ -540,7 +543,7 @@ thousands of changes, and the last line it sees is `aborting streamed
 (sub)transaction`. The consumer has to be able to throw them away. I checked
 streaming with `test_decoding` only, not with `pgoutput`.
 
-### Keeping the CDC load off the primary
+## Keeping the CDC load off the primary
 
 Since Postgres 16, a logical slot can live on a physical standby, which keeps
 the CDC consumer off the warehouse primary.
@@ -591,7 +594,7 @@ wal_level = logical
 hot_standby_feedback = on
 ```
 
-### What breaks
+## What breaks
 
 DDL, again, and this time it is not a design decision you can avoid: the
 schema of the warehouse has to follow the schema of the sources by hand.
@@ -676,6 +679,29 @@ size, you want a component that merges and splits change streams without
 writing tables, which is a story for another article.
 
 ---
+
+## Conclusion
+
+This architecture has the same shape as the first one in this series, read
+backwards: instead of one hub filtering reference data out to many workers,
+it is many sources filtering their own data in to one warehouse. The same
+releases did the work. Postgres 15's row filter and column list are what
+keep the US order and the phone number off the EU warehouse, in one
+`alter publication`, where an older stack needed a trigger or a
+`WHERE`-clause on every extract job. Postgres 16 is what lets the CDC
+re-export read from a physical standby instead of the warehouse primary,
+and what tells a downstream consumer whether it wants the warehouse's own
+writes, the replicated ones, or both, through the `origin` option this
+series keeps coming back to. None of it makes the one hard constraint go
+away — a subscription cannot rename a table, so the naming has to be
+right at the source — but each release made what is left of the problem
+smaller and more declarative than the one before it.
+
+The DDL rule from part 1 turns out to be the real constant across both
+architectures: the subscriber still has to move first for an added column
+and last for a dropped one, by hand, every time, in every one of these
+designs. Ten releases have not touched that, and nothing on the roadmap
+promises to.
 
 Part 3 of this series covers zero-downtime major upgrades with a way back.
 A fourth post, covering the architectures left out of this series in less
