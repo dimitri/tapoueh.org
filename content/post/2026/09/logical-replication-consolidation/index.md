@@ -151,9 +151,6 @@ in `replication/logical/relation.c`), and neither `create subscription` nor
 That matters because the typical application does not have a schema of its
 own: its tables are in `public`. I tried the natural thing. The shop has
 `public.orders`, and the warehouse has `shopapp.orders`, where I want it.
-The figure shows that attempt, and the one that works:
-
-{{< image src="fig-schema-rename.svg" title="A subscription looks up the publisher's own schema and table name on the subscriber. Tables in public on the publisher cannot land in shopapp on the warehouse. Tables moved to their own schema on the publisher land in the same schema on the warehouse." >}}
 
 The attempt:
 
