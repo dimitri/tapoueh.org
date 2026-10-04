@@ -539,10 +539,12 @@ rows tagged 'bulk_c' visible on the warehouse at the end: 20000
 If the source rolls back instead, the downstream consumer has already received
 thousands of changes, and the last line it sees is `aborting streamed
 (sub)transaction`. The consumer has to be able to throw them away. This demo
-reads `test_decoding`'s plain text so the output above is easy to check by
-eye; I did not run the same transaction through `pgoutput` for this article,
-though the streaming protocol itself is the same one Debezium already relies
-on in production.
+reads `test_decoding`'s output because it is plain text with a line per
+change; `pgoutput`'s is a binary wire format, the same one earlier in this
+post that only gave up its message types one byte at a time
+(`get_byte(data, 0)`), so there is no text trace to show here for it. The
+streaming protocol underneath is the same one Debezium already relies on in
+production either way.
 
 ## Keeping the CDC load off the primary
 
