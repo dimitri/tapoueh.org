@@ -565,8 +565,9 @@ collected them one error at a time:
   it does not start: `FATAL: recovery aborted because of insufficient parameter
   settings`, `DETAIL: max_worker_processes = 8 is a lower setting than on the
   primary server, where its value was 24.`
-- It needs `wal_level = logical` itself, it does not inherit it from the primary:
-  `ERROR: logical decoding requires "wal_level" >= "logical"`.
+- It needs `wal_level = logical` itself, it does not inherit it from the primary,
+  on every released version: `ERROR: logical decoding requires "wal_level" >=
+  "logical"`.
 - Creating the slot **blocks** on an idle primary, until a running-transactions
   record reaches the standby. On the primary:
 
@@ -594,6 +595,42 @@ max_worker_processes = 24          # at least the primary's
 wal_level = logical
 hot_standby_feedback = on
 ```
+
+**Beta territory: one of those three may go away.** Postgres 19 introduces
+`effective_wal_level`, which raises the server's actual WAL verbosity to
+`logical` the moment any logical slot exists, without the `wal_level` GUC
+ever changing. I set up a primary and a standby, both left at the
+`wal_level = replica` default, created a logical slot on the primary, and
+the standby created and read its own logical slot with nothing configured
+anywhere:
+
+```results
+        name         | setting
+----------------------+---------
+ effective_wal_level  | logical
+ wal_level            | replica
+(2 rows)
+
+                 data
+---------------------------------------
+ BEGIN 706
+ table public.t: INSERT: id[integer]:1
+ COMMIT 706
+(3 rows)
+```
+
+That removes the `wal_level = logical` line specifically, not the other
+two: `max_worker_processes` sizing and `hot_standby_feedback` are a
+different mechanism each, untouched by this. I also checked two other
+19 candidates for this exact architecture, on purpose, and both turned out
+not to help: `EXCEPT` on a publication refuses to combine with `for tables
+in schema` (`ERROR: syntax error at or near "except"`), so it does nothing
+for the schema-wide publication limitation earlier in this post; and 18's
+new conflict counters stay at zero for the overlapping-keys failure from
+"The sources", because that failure happens during the initial table copy,
+a different code path from the one the counters watch. Progress here is
+real and it is also uneven — the next release does not improve everything
+it touches, and that is worth knowing before you plan around a beta.
 
 ## What breaks
 
@@ -900,6 +937,11 @@ reuses an id that a replicated row already has:
 ERROR:  duplicate key value violates unique constraint "orders_pkey"
 DETAIL:  Key (id)=(1) already exists.
 ```
+
+Postgres 19, still in beta, replicates sequences too — part 1 has the
+details (`FOR ALL SEQUENCES`, on demand at `REFRESH SEQUENCES`, not
+streamed) and the same caveat applies here: it is not yet something to
+build this architecture's correctness on.
 
 That is where the tables-as-a-buffer approach shows its cost. Every change
 is written to the warehouse and then written again to be re-decoded. It
