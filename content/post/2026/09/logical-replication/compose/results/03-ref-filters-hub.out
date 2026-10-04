@@ -1,0 +1,55 @@
+-- @service: hub
+-- Step 1c. Row filters (PG15+) and a column list (PG15+): one publication per worker.
+SELECT format($f$CREATE PUBLICATION ref_w%1$s FOR TABLE plans, prices,
+  customers (customer_id, name, worker_id, plan_id) WHERE (worker_id = %1$s)$f$, n)
+FROM generate_series(1, 3) n \gexec
+CREATE PUBLICATION ref_w1 FOR TABLE plans, prices,
+  customers (customer_id, name, worker_id, plan_id) WHERE (worker_id = 1)
+CREATE PUBLICATION
+CREATE PUBLICATION ref_w2 FOR TABLE plans, prices,
+  customers (customer_id, name, worker_id, plan_id) WHERE (worker_id = 2)
+CREATE PUBLICATION
+CREATE PUBLICATION ref_w3 FOR TABLE plans, prices,
+  customers (customer_id, name, worker_id, plan_id) WHERE (worker_id = 3)
+CREATE PUBLICATION
+SELECT p.pubname, pt.tablename, pt.attnames, pt.rowfilter
+FROM pg_publication p JOIN pg_publication_tables pt USING (pubname)
+WHERE p.pubname LIKE 'ref_w%' AND pt.tablename = 'customers' ORDER BY 1;
+ pubname | tablename |               attnames               |    rowfilter    
+---------+-----------+--------------------------------------+-----------------
+ ref_w1  | customers | {customer_id,name,worker_id,plan_id} | (worker_id = 1)
+ ref_w2  | customers | {customer_id,name,worker_id,plan_id} | (worker_id = 2)
+ ref_w3  | customers | {customer_id,name,worker_id,plan_id} | (worker_id = 3)
+(3 rows)
+
+-- The trap: the filter uses worker_id, which is not part of the replica identity (the PK).
+-- The publisher refuses UPDATE on the table (at UPDATE time, not at CREATE PUBLICATION time):
+UPDATE customers SET worker_id = 2 WHERE customer_id = 3;
+psql:<stdin>:13: ERROR:  cannot update table "customers"
+DETAIL:  Column used in the publication WHERE expression is not part of the replica identity.
+-- Not even an unrelated column is safe: any UPDATE is refused
+UPDATE customers SET name = 'renamed' WHERE customer_id = 3;
+psql:<stdin>:15: ERROR:  cannot update table "customers"
+DETAIL:  Column used in the publication WHERE expression is not part of the replica identity.
+SELECT relreplident FROM pg_class WHERE oid = 'customers'::regclass;
+ relreplident 
+--------------
+ d
+(1 row)
+
+-- Fix: a unique index over NOT NULL columns that includes the filter column,
+-- used as replica identity (cheaper than REPLICA IDENTITY FULL).
+CREATE UNIQUE INDEX customers_rid ON customers (customer_id, worker_id);
+CREATE INDEX
+ALTER TABLE customers REPLICA IDENTITY USING INDEX customers_rid;
+ALTER TABLE
+SELECT relreplident FROM pg_class WHERE oid = 'customers'::regclass;
+ relreplident 
+--------------
+ i
+(1 row)
+
+UPDATE customers SET name = 'renamed' WHERE customer_id = 3;
+UPDATE 1
+UPDATE customers SET name = 'customer-3' WHERE customer_id = 3;
+UPDATE 1

@@ -1,0 +1,84 @@
+== worker1 ==
+-- @service: worker1 worker2 worker3
+-- Step 4f. Replication lag, publisher side: on a worker, pg_stat_replication has one row per
+-- hub subscription (application_name = subscription name), pg_replication_slots the retained WAL.
+SELECT lr.wait_caught_up();
+ wait_caught_up 
+----------------
+ t
+(1 row)
+
+SELECT application_name, state, sync_state,
+       pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn) < 1024 * 1024 AS replay_within_1MB
+FROM pg_stat_replication ORDER BY 1;
+ application_name |   state   | sync_state | replay_within_1mb 
+------------------+-----------+------------+-------------------
+ sub_naive_w1     | streaming | async      | t
+ sub_usage_w1     | streaming | async      | t
+(2 rows)
+
+SELECT slot_name, slot_type, active, wal_status,
+       pg_wal_lsn_diff(pg_current_wal_lsn(), confirmed_flush_lsn) < 1024 * 1024 AS confirmed_within_1MB
+FROM pg_replication_slots ORDER BY 1;
+  slot_name   | slot_type | active | wal_status | confirmed_within_1mb 
+--------------+-----------+--------+------------+----------------------
+ sub_naive_w1 | logical   | t      | reserved   | t
+ sub_usage_w1 | logical   | t      | reserved   | t
+(2 rows)
+
+== worker2 ==
+-- @service: worker1 worker2 worker3
+-- Step 4f. Replication lag, publisher side: on a worker, pg_stat_replication has one row per
+-- hub subscription (application_name = subscription name), pg_replication_slots the retained WAL.
+SELECT lr.wait_caught_up();
+ wait_caught_up 
+----------------
+ t
+(1 row)
+
+SELECT application_name, state, sync_state,
+       pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn) < 1024 * 1024 AS replay_within_1MB
+FROM pg_stat_replication ORDER BY 1;
+ application_name |   state   | sync_state | replay_within_1mb 
+------------------+-----------+------------+-------------------
+ sub_naive_w2     | streaming | async      | t
+ sub_usage_w2     | streaming | async      | t
+(2 rows)
+
+SELECT slot_name, slot_type, active, wal_status,
+       pg_wal_lsn_diff(pg_current_wal_lsn(), confirmed_flush_lsn) < 1024 * 1024 AS confirmed_within_1MB
+FROM pg_replication_slots ORDER BY 1;
+  slot_name   | slot_type | active | wal_status | confirmed_within_1mb 
+--------------+-----------+--------+------------+----------------------
+ sub_naive_w2 | logical   | t      | reserved   | t
+ sub_usage_w2 | logical   | t      | reserved   | t
+(2 rows)
+
+== worker3 ==
+-- @service: worker1 worker2 worker3
+-- Step 4f. Replication lag, publisher side: on a worker, pg_stat_replication has one row per
+-- hub subscription (application_name = subscription name), pg_replication_slots the retained WAL.
+SELECT lr.wait_caught_up();
+ wait_caught_up 
+----------------
+ t
+(1 row)
+
+SELECT application_name, state, sync_state,
+       pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn) < 1024 * 1024 AS replay_within_1MB
+FROM pg_stat_replication ORDER BY 1;
+ application_name |   state   | sync_state | replay_within_1mb 
+------------------+-----------+------------+-------------------
+ sub_naive_w3     | streaming | async      | t
+ sub_usage_w3     | streaming | async      | t
+(2 rows)
+
+SELECT slot_name, slot_type, active, wal_status,
+       pg_wal_lsn_diff(pg_current_wal_lsn(), confirmed_flush_lsn) < 1024 * 1024 AS confirmed_within_1MB
+FROM pg_replication_slots ORDER BY 1;
+  slot_name   | slot_type | active | wal_status | confirmed_within_1mb 
+--------------+-----------+--------+------------+----------------------
+ sub_naive_w3 | logical   | t      | reserved   | t
+ sub_usage_w3 | logical   | t      | reserved   | t
+(2 rows)
+

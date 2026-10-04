@@ -1,0 +1,111 @@
+== worker1 ==
+-- @service: worker1 worker2 worker3
+-- Step 2a. Usage events are written locally. The key is (worker_id, event_id):
+-- worker_id is a constant per node, event_id comes from a local identity column.
+-- Two nodes can never mint the same key.
+CREATE TABLE usage_events (
+  worker_id   int    NOT NULL DEFAULT :worker_id CHECK (worker_id = :worker_id),
+  event_id    bigint GENERATED ALWAYS AS IDENTITY,
+  customer_id int    NOT NULL,
+  meter       text   NOT NULL,
+  qty         int    NOT NULL,
+  PRIMARY KEY (worker_id, event_id)
+);
+CREATE TABLE
+-- The anti-pattern, kept for the next steps: a key that is only unique per node.
+CREATE TABLE usage_naive (
+  event_id    bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  customer_id int NOT NULL,
+  qty         int NOT NULL
+);
+CREATE TABLE
+-- Each worker records two meters for every customer of its slice.
+INSERT INTO usage_events (customer_id, meter, qty)
+SELECT customer_id, m, customer_id * 10
+FROM customers, (VALUES ('api_calls'), ('storage_gb')) v(m)
+ORDER BY customer_id, m;
+INSERT 0 6
+CREATE PUBLICATION pub_usage FOR TABLE usage_events;
+CREATE PUBLICATION
+CREATE PUBLICATION pub_naive FOR TABLE usage_naive;
+CREATE PUBLICATION
+SELECT count(*) AS local_events, min(event_id) AS first_event_id FROM usage_events;
+ local_events | first_event_id 
+--------------+----------------
+            6 |              1
+(1 row)
+
+== worker2 ==
+-- @service: worker1 worker2 worker3
+-- Step 2a. Usage events are written locally. The key is (worker_id, event_id):
+-- worker_id is a constant per node, event_id comes from a local identity column.
+-- Two nodes can never mint the same key.
+CREATE TABLE usage_events (
+  worker_id   int    NOT NULL DEFAULT :worker_id CHECK (worker_id = :worker_id),
+  event_id    bigint GENERATED ALWAYS AS IDENTITY,
+  customer_id int    NOT NULL,
+  meter       text   NOT NULL,
+  qty         int    NOT NULL,
+  PRIMARY KEY (worker_id, event_id)
+);
+CREATE TABLE
+-- The anti-pattern, kept for the next steps: a key that is only unique per node.
+CREATE TABLE usage_naive (
+  event_id    bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  customer_id int NOT NULL,
+  qty         int NOT NULL
+);
+CREATE TABLE
+-- Each worker records two meters for every customer of its slice.
+INSERT INTO usage_events (customer_id, meter, qty)
+SELECT customer_id, m, customer_id * 10
+FROM customers, (VALUES ('api_calls'), ('storage_gb')) v(m)
+ORDER BY customer_id, m;
+INSERT 0 10
+CREATE PUBLICATION pub_usage FOR TABLE usage_events;
+CREATE PUBLICATION
+CREATE PUBLICATION pub_naive FOR TABLE usage_naive;
+CREATE PUBLICATION
+SELECT count(*) AS local_events, min(event_id) AS first_event_id FROM usage_events;
+ local_events | first_event_id 
+--------------+----------------
+           10 |              1
+(1 row)
+
+== worker3 ==
+-- @service: worker1 worker2 worker3
+-- Step 2a. Usage events are written locally. The key is (worker_id, event_id):
+-- worker_id is a constant per node, event_id comes from a local identity column.
+-- Two nodes can never mint the same key.
+CREATE TABLE usage_events (
+  worker_id   int    NOT NULL DEFAULT :worker_id CHECK (worker_id = :worker_id),
+  event_id    bigint GENERATED ALWAYS AS IDENTITY,
+  customer_id int    NOT NULL,
+  meter       text   NOT NULL,
+  qty         int    NOT NULL,
+  PRIMARY KEY (worker_id, event_id)
+);
+CREATE TABLE
+-- The anti-pattern, kept for the next steps: a key that is only unique per node.
+CREATE TABLE usage_naive (
+  event_id    bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  customer_id int NOT NULL,
+  qty         int NOT NULL
+);
+CREATE TABLE
+-- Each worker records two meters for every customer of its slice.
+INSERT INTO usage_events (customer_id, meter, qty)
+SELECT customer_id, m, customer_id * 10
+FROM customers, (VALUES ('api_calls'), ('storage_gb')) v(m)
+ORDER BY customer_id, m;
+INSERT 0 8
+CREATE PUBLICATION pub_usage FOR TABLE usage_events;
+CREATE PUBLICATION
+CREATE PUBLICATION pub_naive FOR TABLE usage_naive;
+CREATE PUBLICATION
+SELECT count(*) AS local_events, min(event_id) AS first_event_id FROM usage_events;
+ local_events | first_event_id 
+--------------+----------------
+            8 |              1
+(1 row)
+
