@@ -525,9 +525,10 @@ origin filter, which is what protects you from loops, is also what hides
 replicated data from a consumer that asks for it. A consumer of a consolidated
 database must use `any`.
 
-Large transactions stream. With `logical_decoding_work_mem` at 64kB, a source
-transaction that inserts 20,000 rows reaches the downstream slot while it is
-still open, with the option that asks for it (`stream-changes` for
+Large transactions stream, since Postgres 14. With `logical_decoding_work_mem`
+at 64kB, a source transaction that inserts 20,000 rows reaches the downstream
+slot while it is still open, with the option that asks for it
+(`stream-changes` for
 `test_decoding`). The rows are not visible on the warehouse yet, because the
 source transaction has not committed:
 
@@ -913,17 +914,22 @@ writing tables, which is a story for another article.
 This architecture has the same shape as the first one in this series, read
 backwards: instead of one hub filtering reference data out to many workers,
 it is many sources filtering their own data in to one warehouse. The same
-releases did the work. Postgres 15's row filter and column list are what
-keep the US order and the phone number off the EU warehouse, in one
-`alter publication`, where an older stack needed a trigger or a
-`WHERE`-clause on every extract job. Postgres 16 is what lets the CDC
-re-export read from a physical standby instead of the warehouse primary,
-and what tells a downstream consumer whether it wants the warehouse's own
-writes, the replicated ones, or both, through the `origin` option this
-series keeps coming back to. None of it makes the one hard constraint go
-away — a subscription cannot rename a table, so the naming has to be
-right at the source — but each release made what is left of the problem
-smaller and more declarative than the one before it.
+releases did the work, walked the same way. Postgres 10 is still the base
+pipe: a publication per source, a subscription per source, nothing else
+required to get three applications' data sitting side by side. Postgres
+14's streaming is what keeps a 20,000-row source transaction from making
+the re-exported CDC stream wait for its commit. Postgres 15's row filter
+and column list are what keep the US order and the phone number off the EU
+warehouse, in one `alter publication`, where an older stack needed a
+trigger or a `WHERE`-clause on every extract job. Postgres 16 shows up
+twice, for two different jobs: the `origin` option, the same mechanism
+part 1 used to stop a two-way loop, here decides whether the re-exported
+CDC stream carries the warehouse's replicated data at all; and decoding
+from a physical standby is what keeps that stream from loading the
+warehouse's own primary. None of it makes the one hard constraint go away
+— a subscription cannot rename a table, so the naming has to be right at
+the source — but each release made what is left of the problem smaller
+and more declarative than the one before it.
 
 The DDL rule from part 1 turns out to be the real constant across both
 architectures: the subscriber still has to move first for an added column
