@@ -663,6 +663,84 @@ subscriber keeps a column that is NULL for the new rows, until you drop it:
    8.00 |
 ```
 
+## Why DDL isn't replicated yet
+
+Every tool that claims to replicate DDL does it one of two ways: fan the
+original command out directly, synchronously, to every node, the way Citus
+does from its coordinator; or capture it on the publisher and ship the text
+to be replayed on the subscriber, asynchronously, the way a logical
+replication setup like this one would need to. Core Postgres has had the
+building block for the second approach since 2013, and it is sitting there
+unused.
+
+`pg_logical_emit_message(transactional, prefix, message, flush)` writes an
+arbitrary blob straight to WAL, no table involved, and a subscriber that
+asks for it (`messages = true` on the subscription) gets it over the wire
+as an ordinary protocol message. It is exactly the shape a DDL statement's
+text needs: emit it from an event trigger on the publisher, decode it on
+the subscriber, execute it there. I checked what core's own apply worker
+does with one of these messages today, and the answer is in the source,
+verbatim:
+
+```c
+case LOGICAL_REP_MSG_MESSAGE:
+
+    /*
+     * Logical replication does not use generic logical messages yet.
+     * Although, it could be used by other applications that use this
+     * output plugin.
+     */
+    break;
+```
+
+Nothing requests the message in the first place — no code path in
+`CREATE SUBSCRIPTION` ever sets `messages = true` — and if one arrived
+anyway, this is what would happen to it: nothing.
+
+pglogical's `replicate_ddl_command()` does not use this path either. It
+queues the command text in an ordinary table and relies on that table
+itself being replicated; the apply side special-cases an insert into that
+one table and executes its text instead of inserting the row — the same
+trick Slony and Londiste used years earlier, not the WAL-message
+mechanism. EDB's Postgres Distributed, pglogical's commercial successor,
+replicates most DDL automatically, with no function call needed, but it's
+closed source and I couldn't find a public description of the mechanism
+underneath. Citus doesn't touch this problem at all in the same sense: the
+coordinator already holds a direct, synchronous connection to every
+worker, so it just sends the DDL to each one as part of the same
+transaction. There is no decode-and-replay step to design, because there
+is no asynchronous gap to cross.
+
+I have a personal stake in why the WAL-message path exists but nobody
+has finished wiring it up for DDL. I wrote the original event trigger
+patch, committed to Postgres 9.3 in 2012, and DDL replication was the
+destination I had in mind for it, not an afterthought: event triggers were
+the piece needed to *notice* a DDL command, with turning that notice into
+something replicable meant to follow. It didn't, not from me. Álvaro
+Herrera picked the thread back up in 2015 with "deparsing utility
+commands": a hookable `CommandDeparse_hook` and a `ddl_deparse` module
+that takes the parsed command and its OID and turns them into a JSON blob,
+with a matching function to render that blob back out as SQL text. That
+code lived on the `deparse` branch of 2ndQuadrant's BDR tree, and a small
+piece of it is still in current Postgres today — `test_ddl_deparse` in
+`src/test/modules`, explicitly documented as "not intended to do anything
+useful on its own," a unit-test fixture for the `pg_ddl_command` type, not
+a production deparser. A much larger attempt to finish the job, a full
+deparser plus the WAL-messaging infrastructure, went through more than 80
+revisions on the mailing list between 2022 and 2024 before it was
+withdrawn. Peter Eisentraut's read on the thread stands as the honest
+summary: "I think nobody has completely figured this out yet. Whatever is
+in pglogical and bdr and similar external projects are the best current
+compromises. But they have lots of problems."
+
+Two other projects deparse SQL for entirely different reasons, worth
+knowing about so you don't reach for the wrong tool: `pganalyze/pg_query`
+wraps Postgres's own parser to normalise and fingerprint queries, which is
+a read-side problem, not a replay-side one; and `lacanoid/pgddl` extracts
+the DDL of objects that already exist, which is `pg_dump`'s job done as
+callable SQL functions, not a live capture of a command as it runs. Neither
+solves what this section is about.
+
 Sequences are the other thing that does not follow. The publisher's sequence
 was at 40013, the warehouse's copy at 1, and a local insert on the warehouse
 reuses an id that a replicated row already has:
