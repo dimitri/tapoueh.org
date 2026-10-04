@@ -7,7 +7,9 @@ Debezium-like consumer (`pg_recvlogical`, `test_decoding`, `pgoutput`), also fro
 a physical standby.
 
 Tested with the `postgres:18` image: PostgreSQL 18.6 (Debian 18.6-1.pgdg13+2,
-aarch64), `pg_recvlogical` 18.6. Compose project `lrcons`, host ports 5720-5724.
+aarch64), `pg_recvlogical` 18.6. One check (step 68) uses a separate
+`postgres:19beta3-bookworm` pair instead, behind the `pg19` compose profile.
+Compose project `lrcons`, host ports 5720-5726.
 
 ## Reproduce (three commands)
 
@@ -136,7 +138,7 @@ A full run takes about 6 minutes.
   `Column lists cannot be specified in publications containing FOR TABLES IN SCHEMA elements.`
   The subscriber still needs the table and `REFRESH PUBLICATION`.
 
-### CDC re-export (60-67)
+### CDC re-export (60-68)
 * (i) Rows applied by subscription workers ARE decoded from the warehouse slot.
   The PII columns are absent end to end (`63-cdc-visible.out`).
 * (ii) Applied transactions carry the subscription's replication origin.
@@ -166,6 +168,16 @@ A full run takes about 6 minutes.
   5. With `hot_standby_feedback = on` the primary's physical slot `standby1` holds a `catalog_xmin`
      and the slot survives the same catalog vacuum.
   `primary_slot_name = 'standby1'` came from `pg_basebackup -R -S standby1 -C`; running without it was not tested.
+* (vi) Postgres 19 beta: `effective_wal_level` raises a server's actual WAL
+  verbosity to `logical` the moment any logical slot exists on it, `wal_level`
+  itself left at `replica` (`68-cdc-effective-wal-level.out`, a separate
+  primary/standby pair). A logical slot on the standby alone is refused:
+  `ERROR: logical decoding on standby requires "effective_wal_level" >=
+  "logical" on the primary`. One slot on the primary is enough; the standby's
+  own `effective_wal_level` then reads `logical` too, with its own slot, and
+  a row inserted on the primary decodes cleanly from it. `hot_standby_feedback`
+  and the primary's sizing are untouched by this feature: still a separate
+  mechanism each.
 
 ### What breaks, and two DIY ways to replicate DDL anyway (70-74)
 * Publisher-first `ALTER TABLE ... ADD COLUMN` (publication without a column list):

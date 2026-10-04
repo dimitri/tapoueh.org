@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 # Helpers shared by run.sh and the sql/NN-*.sh steps.
 # Project name, compose file and container user are fixed for reproducibility.
-DC=(docker compose -p lrcons --profile standby -f "${ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}/docker-compose.yml")
+DC=(docker compose -p lrcons --profile standby --profile pg19 -f "${ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}/docker-compose.yml")
 
 # sq SERVICE DB [psql args...] : run psql on a service (stdin is passed through)
 # stderr is merged inside the container (one ordered stream: notices and errors stay in place)

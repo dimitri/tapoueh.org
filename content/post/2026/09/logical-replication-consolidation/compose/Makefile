@@ -1,4 +1,4 @@
-# Consolidation demo. Compose project: lrcons, host ports 5720-5724.
+# Consolidation demo. Compose project: lrcons, host ports 5720-5726.
 COMPOSE = docker compose -p lrcons -f docker-compose.yml
 
 .PHONY: up run down clean
@@ -9,8 +9,8 @@ run:
 	./run.sh
 
 down:
-	$(COMPOSE) --profile standby down
+	$(COMPOSE) --profile standby --profile pg19 down
 
 clean:
-	$(COMPOSE) --profile standby down -v --remove-orphans
+	$(COMPOSE) --profile standby --profile pg19 down -v --remove-orphans
 	rm -f results/*.out

@@ -601,24 +601,35 @@ hot_standby_feedback = on
 **Beta territory: one of those three may go away.** Postgres 19 introduces
 `effective_wal_level`, which raises the server's actual WAL verbosity to
 `logical` the moment any logical slot exists, without the `wal_level` GUC
-ever changing. I set up a primary and a standby, both left at the
-`wal_level = replica` default, created a logical slot on the primary, and
-the standby created and read its own logical slot with nothing configured
-anywhere:
+ever changing. A separate primary and standby for this one check
+(`compose/sql/68-cdc-effective-wal-level.sh`), both left at every default,
+`wal_level = replica` included. A logical slot on the standby alone, before
+the primary has any, is refused outright:
+
+```results
+pg_recvlogical: error: could not send replication command "CREATE_REPLICATION_SLOT "probe_b" LOGICAL "test_decoding" ( SNAPSHOT 'nothing')": ERROR:  logical decoding on standby requires "effective_wal_level" >= "logical" on the primary
+HINT:  Set "wal_level" >= "logical" or create at least one logical slot when "wal_level" = "replica".
+```
+
+One logical slot on the primary, nothing else reconfigured anywhere, is
+enough to raise it:
 
 ```results
         name         | setting
-----------------------+---------
- effective_wal_level  | logical
- wal_level            | replica
+---------------------+---------
+ effective_wal_level | logical
+ wal_level           | replica
 (2 rows)
+```
 
-                 data
----------------------------------------
- BEGIN 706
- table public.t: INSERT: id[integer]:1
- COMMIT 706
-(3 rows)
+the same two settings read on the standby itself, once its own slot exists
+too. And a row inserted on the primary decodes cleanly from the standby's
+own slot, once it has replayed:
+
+```results
+BEGIN
+table public.t: INSERT: id[integer]:1
+COMMIT
 ```
 
 That removes the `wal_level = logical` line specifically, not the other

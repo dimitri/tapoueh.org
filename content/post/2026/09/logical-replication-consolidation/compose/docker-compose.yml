@@ -87,3 +87,41 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "true"]
       interval: 2s
+
+  # A separate, unrelated pair for one beta check: does Postgres 19's
+  # effective_wal_level raise the standby's own logical decoding without
+  # wal_level=logical anywhere. Left at every default (replica wal_level
+  # included) on purpose, step 68 is the only one that touches these.
+  pg19_a:
+    image: postgres:19beta3-bookworm
+    environment:
+      POSTGRES_PASSWORD: demo
+    volumes:
+      - ./init/pg19-hba.sh:/docker-entrypoint-initdb.d/10-hba.sh:ro
+    command:
+      - postgres
+      - -c
+      - max_wal_senders=10
+      - -c
+      - max_replication_slots=10
+      - -c
+      - log_min_messages=warning
+    profiles: ["pg19"]
+    ports: ["5725:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # Standby of pg19_a. Sleeps; step 68 runs pg_basebackup and pg_ctl start
+  # into it itself, same pattern as warehouse_standby above.
+  pg19_b:
+    image: postgres:19beta3-bookworm
+    user: postgres
+    entrypoint: ["sleep", "infinity"]
+    profiles: ["pg19"]
+    ports: ["5726:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "true"]
+      interval: 2s
