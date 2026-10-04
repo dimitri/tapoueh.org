@@ -764,6 +764,17 @@ worker, so it just sends the DDL to each one as part of the same
 transaction. There is no decode-and-replay step to design, because there
 is no asynchronous gap to cross.
 
+Outside the Postgres-extension world the same table-and-trigger trick
+keeps getting reinvented, not replaced. Xata's open-source `pgstream`
+captures DDL with an event trigger into its own `pgstream.schema_log`
+table, for the same reason pglogical does: a downstream stream that
+cannot afford to silently desync on a schema change. And a plain managed
+Postgres service doesn't raise the baseline either — Neon's own docs on
+logical replication are explicit that "the database schema and DDL
+commands are not replicated," and that adding or dropping a column still
+has to be applied by hand on both sides, the same rule this post has
+been living with throughout.
+
 I have a personal stake in why the WAL-message path exists but nobody
 has finished wiring it up for DDL. I wrote the original event trigger
 patch, committed to Postgres 9.3 in 2012, and DDL replication was the
@@ -781,10 +792,13 @@ useful on its own," a unit-test fixture for the `pg_ddl_command` type, not
 a production deparser. A much larger attempt to finish the job, a full
 deparser plus the WAL-messaging infrastructure, went through more than 80
 revisions on the mailing list between 2022 and 2024 before it was
-withdrawn. Peter Eisentraut's read on the thread stands as the honest
-summary: "I think nobody has completely figured this out yet. Whatever is
-in pglogical and bdr and similar external projects are the best current
-compromises. But they have lots of problems."
+withdrawn. The problem was already well understood before any of that
+code was written. Asked in 2018 whether the community had a vision for
+DDL replication, Peter Eisentraut's answer still reads as the honest
+summary of where things stand: ["I think nobody has completely figured
+this out yet. Whatever is in pglogical and bdr and similar external
+projects are the best current compromises. But they have lots of
+problems."](https://www.postgresql.org/message-id/b93c72ce-73f3-1f36-b1b7-aaef02933957%402ndquadrant.com)
 
 Two other projects deparse SQL for entirely different reasons, worth
 knowing about so you don't reach for the wrong tool: `pganalyze/pg_query`
@@ -801,7 +815,13 @@ the extension: it is buildable with a plain publication, a plain
 subscription, and one fact about triggers that matters a lot here. An
 apply worker runs with `session_replication_role = replica`, so an
 ordinary trigger (`ENABLE`, the default) never fires for a replicated
-change. A trigger created `ENABLE ALWAYS` does.
+change; only `ENABLE REPLICA` or `ENABLE ALWAYS` do. The demo below uses
+`ENABLE ALWAYS`, which fires in both roles, so the same trigger also
+replays a command written by hand, not just one that arrived through
+replication. `ENABLE REPLICA` is the narrower, arguably safer choice for
+this exact table: it fires only for the apply worker, so a plain local
+`insert` into the queue table — arbitrary SQL, if this trigger is firing
+at all — does nothing on its own.
 
 {{< image src="fig-ddl-queue-trigger.svg" title="The DDL statement fires an event trigger that inserts into a queue table on shop. The row replicates like any other row. On warehouse, the apply worker's insert fires an ENABLE ALWAYS trigger that executes the command text." >}}
 
