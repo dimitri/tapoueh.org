@@ -732,6 +732,8 @@ Nothing requests the message in the first place — no code path in
 `CREATE SUBSCRIPTION` ever sets `messages = true` — and if one arrived
 anyway, this is what would happen to it: nothing.
 
+{{< image src="fig-ddl-history.svg" title="Event triggers in 2012 made DDL visible; ddl_deparse in 2015 turned it into text, on an external tree; a full deparser and WAL-messaging patch went through 80+ revisions between 2022 and 2024 and was withdrawn. Today pglogical, PGD and Citus each replicate DDL their own way, and core's own WAL-message primitive still has no consumer." >}}
+
 pglogical's `replicate_ddl_command()` does not use this path either. It
 queues the command text in an ordinary table and relies on that table
 itself being replicated; the apply side special-cases an insert into that
@@ -784,6 +786,8 @@ subscription, and one fact about triggers that matters a lot here. An
 apply worker runs with `session_replication_role = replica`, so an
 ordinary trigger (`ENABLE`, the default) never fires for a replicated
 change. A trigger created `ENABLE ALWAYS` does.
+
+{{< image src="fig-ddl-queue-trigger.svg" title="The DDL statement fires an event trigger that inserts into a queue table on shop. The row replicates like any other row. On warehouse, the apply worker's insert fires an ENABLE ALWAYS trigger that executes the command text." >}}
 
 On the shop server, a queue table and an event trigger that fills it from
 `ddl_command_end`, capturing the literal text with `current_query()`:

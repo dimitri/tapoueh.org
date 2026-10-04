@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 340" role="img" aria-label="Six steps replaying DDL with core Postgres only: on shop, a DDL statement fires an event trigger that inserts into a queue table; the row replicates to warehouse; the apply worker's insert fires an ENABLE ALWAYS trigger that executes the command text">
+  <style>
+    text { font-family: system-ui, sans-serif; font-size: 14px; fill: #222; }
+    .box { fill: #f4f6f8; stroke: #556; stroke-width: 1.5; rx: 8; }
+    .hi { fill: #e6eefc; }
+    .good { fill: #e8f5e9; stroke: #2e7d32; }
+    .inner { fill: #fff; stroke: #889; stroke-width: 1; rx: 5; }
+    .side { fill: none; stroke: #778; stroke-width: 1.5; stroke-dasharray: 5 4; rx: 10; }
+    .small { font-size: 12px; fill: #444; }
+    .b { font-weight: 600; }
+    .step { font-size: 12px; fill: #fff; font-weight: 700; }
+    .stepc { fill: #2a6fdb; }
+    .a { stroke: #2a6fdb; stroke-width: 2; fill: none; }
+    .g { stroke: #2e7d32; stroke-width: 2; fill: none; }
+    @media (prefers-color-scheme: dark) {
+      text { fill: #e8e8e8; } .small { fill: #bbb; }
+      .box { fill: #23272e; stroke: #99a; } .hi { fill: #1d2a44; }
+      .good { fill: #1b3a22; stroke: #4caf50; } .inner { fill: #2b2f36; stroke: #778; }
+      .side { stroke: #889; } .stepc { fill: #6ea8ff; }
+      .a { stroke: #6ea8ff; } .g { stroke: #4caf50; }
+    }
+  </style>
+  <defs>
+    <marker id="ta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#2a6fdb"/></marker>
+    <marker id="tg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#2e7d32"/></marker>
+  </defs>
+
+  <rect class="side" x="15" y="45" width="390" height="260"/>
+  <text class="b" x="210" y="35" text-anchor="middle">shop</text>
+
+  <rect class="side" x="495" y="45" width="390" height="260"/>
+  <text class="b" x="690" y="35" text-anchor="middle">warehouse</text>
+
+  <!-- step 1 -->
+  <circle class="stepc" cx="45" cy="75" r="11"/>
+  <text class="step" x="45" y="79" text-anchor="middle">1</text>
+  <rect class="box" x="70" y="60" width="300" height="40"/>
+  <text x="220" y="85" text-anchor="middle">ALTER TABLE shop.orders ...</text>
+
+  <!-- step 2 -->
+  <circle class="stepc" cx="45" cy="155" r="11"/>
+  <text class="step" x="45" y="159" text-anchor="middle">2</text>
+  <rect class="box hi" x="70" y="120" width="300" height="70"/>
+  <text class="small" x="220" y="140" text-anchor="middle">event trigger on ddl_command_end</text>
+  <text x="220" y="162" text-anchor="middle">shop.log_ddl()</text>
+  <text class="small" x="220" y="180" text-anchor="middle">fires inside the same transaction</text>
+
+  <!-- step 3 -->
+  <circle class="stepc" cx="45" cy="240" r="11"/>
+  <text class="step" x="45" y="244" text-anchor="middle">3</text>
+  <rect class="box good" x="70" y="215" width="300" height="55"/>
+  <text x="220" y="238" text-anchor="middle">insert into shop.ddl_log</text>
+  <text class="small" x="220" y="256" text-anchor="middle">tag, command text</text>
+
+  <path class="a" d="M220 100 L220 120" marker-end="url(#ta)"/>
+  <path class="a" d="M220 190 L220 215" marker-end="url(#ta)"/>
+
+  <!-- replicate arrow -->
+  <path class="g" d="M370 242 C 430 242, 460 242, 495 242" marker-end="url(#tg)"/>
+  <text class="small" x="432" y="228" text-anchor="middle">replicated</text>
+  <text class="small" x="432" y="262" text-anchor="middle">like any other row</text>
+
+  <!-- step 4 -->
+  <circle class="stepc" cx="525" cy="240" r="11"/>
+  <text class="step" x="525" y="244" text-anchor="middle">4</text>
+  <rect class="box good" x="550" y="215" width="300" height="55"/>
+  <text x="700" y="238" text-anchor="middle">apply worker: insert into</text>
+  <text x="700" y="256" text-anchor="middle">shop.ddl_log</text>
+
+  <!-- step 5 -->
+  <circle class="stepc" cx="525" cy="155" r="11"/>
+  <text class="step" x="525" y="159" text-anchor="middle">5</text>
+  <rect class="box hi" x="550" y="120" width="300" height="70"/>
+  <text x="700" y="142" text-anchor="middle">apply_ddl trigger</text>
+  <text class="small" x="700" y="162" text-anchor="middle">ENABLE ALWAYS —</text>
+  <text class="small" x="700" y="180" text-anchor="middle">the only way it fires in this worker</text>
+
+  <!-- step 6 -->
+  <circle class="stepc" cx="525" cy="75" r="11"/>
+  <text class="step" x="525" y="79" text-anchor="middle">6</text>
+  <rect class="box" x="550" y="60" width="300" height="40"/>
+  <text x="700" y="85" text-anchor="middle">EXECUTE new.command</text>
+
+  <path class="a" d="M700 215 L700 190" marker-end="url(#ta)"/>
+  <path class="a" d="M700 120 L700 100" marker-end="url(#ta)"/>
+
+  <text class="small" x="450" y="320" text-anchor="middle">The transaction boundary, the queue table, and the ENABLE ALWAYS trigger are pglogical's trick. Core already has every piece.</text>
+</svg>
