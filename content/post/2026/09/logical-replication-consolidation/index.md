@@ -1022,9 +1022,13 @@ DDL-message slot would have to re-earn that guarantee some other way —
 a barrier table, an LSN watermark the apply worker waits on — which is
 coordination code on top of a smaller parser, not a net simplification.
 
-Sequences are the other thing that does not follow. The publisher's sequence
-was at 40013, the warehouse's copy at 1, and a local insert on the warehouse
-reuses an id that a replicated row already has:
+## Sequences don't replicate either
+
+DDL isn't the only gap a subscription leaves for you to close by hand.
+Sequences don't follow either, and this one isn't a workaround-with-a-
+trigger kind of problem: the publisher's sequence was at 40013, the
+warehouse's copy at 1, and a local insert on the warehouse reuses an id
+that a replicated row already has:
 
 ```results
 ERROR:  duplicate key value violates unique constraint "orders_pkey"
