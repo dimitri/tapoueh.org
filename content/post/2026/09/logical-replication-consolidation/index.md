@@ -1076,6 +1076,25 @@ and last for a dropped one, by hand, every time, in every one of these
 designs. Ten releases have not touched that, and nothing on the roadmap
 promises to.
 
+pglogical deserves a direct mention here, not a footnote: it is a
+production answer to both gaps this post worked around by hand. AWS
+documents it as supported on every current RDS for PostgreSQL and
+Aurora PostgreSQL release, replicating "sequences" by name alongside
+tables — exactly the gap "Sequences don't replicate either" hit above.
+Azure Database for PostgreSQL ships it too, though its own docs are
+upfront that DDL still isn't automatic there either: you wire
+`pglogical.replicate_ddl_command()` to an Event Trigger yourself, the
+same shape this post built from first principles with core alone. EDB,
+who maintains pglogical since acquiring 2ndQuadrant, still ships
+compatibility releases — 2.4.6 added Postgres 17 and 18 — even though
+the extension itself is in maintenance mode, its newer ideas going into
+EDB Postgres Distributed instead. What this series tracks is narrower
+on purpose: how far *core* Postgres alone gets, one release at a time,
+without reaching for an extension at all. The DDL and sequence gaps are
+exactly where that self-imposed boundary still shows, and on a cloud
+that allows installing it, pglogical is very likely the faster way to
+close both.
+
 Part 3 of this series covers zero-downtime major upgrades with a way back.
 A fourth post, covering the architectures left out of this series in less
 detail — geo-replication, BDR-style multi-active setups, plain CDC and
