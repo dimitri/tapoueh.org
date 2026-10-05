@@ -728,7 +728,7 @@ unused.
 arbitrary blob straight to WAL, no table involved, and a subscriber that
 asks for it (`messages = true` on the subscription) gets it over the wire
 as an ordinary protocol message. It is exactly the shape a DDL statement's
-text needs: emit it from an event trigger on the publisher, decode it on
+text needs: emit it from an Event Trigger on the publisher, decode it on
 the subscriber, execute it there. I checked what core's own apply worker
 does with one of these messages today, and the answer is in the source,
 verbatim:
@@ -748,7 +748,7 @@ Nothing requests the message in the first place — no code path in
 `CREATE SUBSCRIPTION` ever sets `messages = true` — and if one arrived
 anyway, this is what would happen to it: nothing.
 
-{{< image src="fig-ddl-history.svg" title="Event triggers in 2012 made DDL visible; ddl_deparse in 2015 turned it into text, on an external tree; a full deparser and WAL-messaging patch went through 80+ revisions between 2022 and 2024 and was withdrawn. Today pglogical, PGD and Citus each replicate DDL their own way, and core's own WAL-message primitive still has no consumer." >}}
+{{< image src="fig-ddl-history.svg" title="Event Triggers in 2012 made DDL visible; ddl_deparse in 2015 turned it into text, on an external tree; a full deparser and WAL-messaging patch went through 80+ revisions between 2022 and 2024 and was withdrawn. Today pglogical, PGD, Citus and Xata's pgstream each replicate DDL their own way, and core's own WAL-message primitive still has no consumer." >}}
 
 pglogical's `replicate_ddl_command()` does not use this path either. It
 queues the command text in an ordinary table and relies on that table
@@ -758,15 +758,35 @@ trick Slony and Londiste used years earlier, not the WAL-message
 mechanism. EDB's Postgres Distributed, pglogical's commercial successor,
 replicates most DDL automatically, with no function call needed, but it's
 closed source and I couldn't find a public description of the mechanism
-underneath. Citus doesn't touch this problem at all in the same sense: the
-coordinator already holds a direct, synchronous connection to every
-worker, so it just sends the DDL to each one as part of the same
-transaction. There is no decode-and-replay step to design, because there
-is no asynchronous gap to cross.
+underneath.
+
+Citus doesn't touch this problem in the same sense — there's no
+asynchronous gap to decode and replay across, since every worker is a
+direct, synchronous connection from the coordinator — but "it just sends
+the DDL" undersells what's actually in `src/backend/distributed/`. A
+`citus_ProcessUtility` hook intercepts every DDL statement before
+Postgres runs it; a `qualify` pass rewrites every name in the parse tree
+to be fully schema-qualified, so a worker's `search_path` can't change
+what the command means; and a full deparser, one file per object type
+under `distributed/deparser/` (tables, types, functions, sequences,
+roles, and more), turns the parse tree back into a command string for
+each target rather than forwarding the client's original text verbatim.
+Table DDL gets a shortcut of its own: instead of deparsing a separate
+statement per shard, Citus ships the one deparsed command to
+`worker_apply_shard_ddl_command(shardid, ddl_command)` on each worker,
+which reparses it locally and substitutes the shard-suffixed table name
+into the parse tree before executing — the sharding rewrite happens on
+the worker, not the coordinator. And "as part of the same transaction"
+is not a figure of speech: a DDL statement that touches more than one
+node goes through Postgres's own two-phase commit, `PREPARE TRANSACTION`
+on every worker from the coordinator's pre-commit callback and `COMMIT
+PREPARED` from its post-commit one, with a maintenance-daemon recovery
+path for whatever a crash leaves half-committed. It's a deparser and a
+rewriter too, just a synchronous one with no WAL in the loop.
 
 Outside the Postgres-extension world the same table-and-trigger trick
 keeps getting reinvented, not replaced. Xata's open-source `pgstream`
-captures DDL with an event trigger into its own `pgstream.schema_log`
+captures DDL with an Event Trigger into its own `pgstream.schema_log`
 table, for the same reason pglogical does: a downstream stream that
 cannot afford to silently desync on a schema change. And a plain managed
 Postgres service doesn't raise the baseline either — Neon's own docs on
@@ -776,12 +796,22 @@ has to be applied by hand on both sides, the same rule this post has
 been living with throughout.
 
 I have a personal stake in why the WAL-message path exists but nobody
-has finished wiring it up for DDL. I wrote the original event trigger
+has finished wiring it up for DDL. I wrote the original Event Trigger
 patch, committed to Postgres 9.3 in 2012, and DDL replication was the
-destination I had in mind for it, not an afterthought: event triggers were
-the piece needed to *notice* a DDL command, with turning that notice into
-something replicable meant to follow. It didn't, not from me. Álvaro
-Herrera picked the thread back up in 2015 with "deparsing utility
+destination I had in mind for it: Event Triggers were the piece needed
+to *notice* a DDL command, and I tried to ship the other half in the
+same cycle — a deparser (`ddl_rewrite.c`) that would hand the trigger's
+function a normalized, replayable command string instead of just a
+tag. Tom Lane's response is the objection this whole section keeps
+running into a decade later: ["Why don't you just pass the original
+query string, instead of writing a mass of maintenance-requiring new
+code to reproduce
+it?"](https://www.postgresql.org/message-id/8117.1349445783%40sss.pgh.pa.us)
+That framing won. Event Triggers shipped with the command tag and the
+original query string, not a deparser, and reconstructing a command
+from its parse tree has stayed a separate, repeatedly attempted, never
+finished project ever since. Álvaro Herrera picked that thread back up
+in 2015 with "deparsing utility
 commands": a hookable `CommandDeparse_hook` and a `ddl_deparse` module
 that takes the parsed command and its OID and turns them into a JSON blob,
 with a matching function to render that blob back out as SQL text. That
@@ -823,9 +853,9 @@ this exact table: it fires only for the apply worker, so a plain local
 `insert` into the queue table — arbitrary SQL, if this trigger is firing
 at all — does nothing on its own.
 
-{{< image src="fig-ddl-queue-trigger.svg" title="The DDL statement fires an event trigger that inserts into a queue table on shop. The row replicates like any other row. On warehouse, the apply worker's insert fires an ENABLE ALWAYS trigger that executes the command text." >}}
+{{< image src="fig-ddl-queue-trigger.svg" title="The DDL statement fires an Event Trigger that inserts into a queue table on shop. The row replicates like any other row. On warehouse, the apply worker's insert fires an ENABLE ALWAYS trigger that executes the command text — the same table-and-trigger shape Xata's pgstream uses too." >}}
 
-On the shop server, a queue table and an event trigger that fills it from
+On the shop server, a queue table and an Event Trigger that fills it from
 `ddl_command_end`, capturing the literal text with `current_query()`:
 
 ```sql
@@ -913,7 +943,7 @@ one the original session had.
 ### What `pg_logical_emit_message` actually sends
 
 The other primitive from the previous section, proven rather than just
-cited. A second event trigger on the shop, emitting the same text as a
+cited. A second Event Trigger on the shop, emitting the same text as a
 logical message instead of a table row:
 
 ```sql
@@ -957,14 +987,40 @@ select count(*) from pg_logical_slot_peek_binary_changes('peek_ddl_pg', null, nu
 ```
 
 That's as far as I built it. The message is really on the wire, with
-`messages = true`, in the same transaction as the change it describes.
-Turning that into something a subscriber acts on needs code that speaks
-the replication protocol directly, the way `pgcopydb` already does for
-its own reasons — and even there, the wire-level parser has no case for
-the Message frame type yet; it falls through to the default branch and is
-logged as unknown and dropped. Writing that consumer is a real project,
-not a demo, so this is where I stopped: the publisher side works, proven
-on the wire, and the rest is the open gap described above.
+`messages = true`, in the same transaction as the change it describes —
+and, same as the queue table, only if that transaction commits: a
+message emitted with `transactional = true` lives in the reorder
+buffer with the rest of its transaction's changes and is never decoded
+at all if the transaction aborts. Turning the wire bytes into something
+a subscriber acts on needs code that speaks the replication protocol
+directly, the way `pgcopydb` already does for its own reasons — and
+even there, the wire-level parser has no case for the Message frame
+type yet; it falls through to the default branch and is logged as
+unknown and dropped. Writing a *general* consumer, one that also has to
+decode every row change pgoutput can send, is a real project, not a
+demo, so this is where I stopped.
+
+A narrower consumer is a smaller project, and worth naming precisely.
+If the slot's publication carries no tables at all, a client only ever
+sees `Begin`, `Message` and `Commit` frames — none of pgoutput's binary
+tuple encoding, which is the genuinely hard part, ever shows up. That
+alone makes "a small client that only replays DDL messages" a real
+option, much smaller than a general consumer.
+
+What it does not get for free is the one guarantee the queue table has
+by construction. A subscription applies its publisher's transactions in
+the order they committed, one pipeline, one position in the WAL. Route
+the DDL message through a second, independent slot instead, and there
+are two pipelines reading the same WAL at their own pace, with no
+primitive in Postgres that makes one wait for the other — nothing stops
+the apply worker from inserting into a column the standalone DDL client
+hasn't gotten around to adding yet. The queue table never leaves the
+pipeline: it's an ordinary row, in the ordinary publication, applied by
+the ordinary apply worker, so the DDL inherits the ordering Postgres
+already promises instead of needing to rebuild it. A separate
+DDL-message slot would have to re-earn that guarantee some other way —
+a barrier table, an LSN watermark the apply worker waits on — which is
+coordination code on top of a smaller parser, not a net simplification.
 
 Sequences are the other thing that does not follow. The publisher's sequence
 was at 40013, the warehouse's copy at 1, and a local insert on the warehouse
