@@ -1,0 +1,44 @@
+### 1. crm joins the same table: primary key (id) collides
+NOTICE:  created replication slot "sub_c_crm" on publisher
+DETAIL:  Key (id)=(1) already exists.
+ERROR:  duplicate key value violates unique constraint "customers_pkey"
+### 2. widen the subscriber key to (source, id); the retry of the initial copy now succeeds and the trigger stamps crm
+ source | id |     name     
+--------+----+--------------
+ crm    |  1 | Carol (crm)
+ crm    |  2 | Dave (crm)
+ shop   |  1 | Alice (shop)
+ shop   |  2 | Bob (shop)
+(4 rows)
+
+### 3. first UPDATE from the shop
+ERROR:  publisher did not send replica identity column expected by the logical replication target relation "public.customers"
+  subname   | apply_is_failing 
+------------+------------------
+ sub_c_crm  | f
+ sub_c_shop | t
+(2 rows)
+
+### 4. workaround attempt: REPLICA IDENTITY FULL on the subscriber and on the publishers
+(still failing after subscriber FULL only, apply_error_count keeps growing:)
+still erroring: true
+### 4b. the failed UPDATE was decoded with the old identity and will never apply: skip that transaction
+ALTER SUBSCRIPTION sub_c_shop SKIP (lsn = '<LSN of the failed transaction from the CONTEXT line>')
+### 5. FULL on both publishers + subscriber without the (source,id) key: try an index whose leading column is replicated
+--- subscriber content: the updates are NOT applied, and apply reports no error:
+ source | id |     name     |  city  
+--------+----+--------------+--------
+ crm    |  1 | Carol (crm)  | Nantes
+ crm    |  2 | Dave (crm)   | Lille
+ shop   |  1 | Alice (shop) | Paris
+ shop   |  2 | Bob (shop)   | Lyon
+(4 rows)
+
+  subname   | had_apply_errors | confl_update_missing 
+------------+------------------+----------------------
+ sub_c_crm  | f                |                    1
+ sub_c_shop | t                |                    0
+(2 rows)
+
+DETAIL:  Could not find the row to be updated.
+LOG:  conflict detected on relation "public.customers": conflict=update_missing

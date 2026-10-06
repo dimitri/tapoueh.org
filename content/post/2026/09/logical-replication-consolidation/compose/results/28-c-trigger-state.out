@@ -1,0 +1,34 @@
+-- @service: warehouse
+-- What happened during the initial copy with default (ENABLE) triggers?
+select source, id, name from public.customers order by id;
+ source  | id |     name     
+---------+----+--------------
+ unknown |  1 | Alice (shop)
+ unknown |  2 | Bob (shop)
+(2 rows)
+
+select count(*) as probe_rows_after_copy from public.probe;
+ probe_rows_after_copy 
+-----------------------
+                     0
+(1 row)
+
+select tgname, tgenabled from pg_trigger where tgrelid = 'public.customers'::regclass and not tgisinternal order by 1;
+ tgname  | tgenabled 
+---------+-----------
+ a_stamp | O
+ b_probe | O
+(2 rows)
+
+-- ENABLE = 'O' fires only when session_replication_role is origin/local. Apply workers run as 'replica'.
+alter table public.customers enable always trigger a_stamp;
+ALTER TABLE
+alter table public.customers enable always trigger b_probe;
+ALTER TABLE
+select tgname, tgenabled from pg_trigger where tgrelid = 'public.customers'::regclass and not tgisinternal order by 1;
+ tgname  | tgenabled 
+---------+-----------
+ a_stamp | A
+ b_probe | A
+(2 rows)
+
