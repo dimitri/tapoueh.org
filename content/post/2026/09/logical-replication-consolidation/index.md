@@ -820,9 +820,11 @@ piece of it is still in current Postgres today — `test_ddl_deparse` in
 `src/test/modules`, explicitly documented as "not intended to do anything
 useful on its own," a unit-test fixture for the `pg_ddl_command` type, not
 a production deparser. A much larger attempt to finish the job, a full
-deparser plus the WAL-messaging infrastructure, went through more than 80
-revisions on the mailing list between 2022 and 2024 before it was
-withdrawn. The problem was already well understood before any of that
+deparser plus the WAL-messaging infrastructure, went through more than
+80 revisions on [the mailing list
+thread](https://www.postgresql.org/message-id/flat/CAAD30U%2BpVmfKwUKy8cbZOnUXyguJ-uBNejwD75Kyo%3DOjdQGJ9g%40mail.gmail.com)
+between 2022 and 2024 before it was withdrawn. The problem was already
+well understood before any of that
 code was written. Asked in 2018 whether the community had a vision for
 DDL replication, Peter Eisentraut's answer still reads as the honest
 summary of where things stand: ["I think nobody has completely figured
