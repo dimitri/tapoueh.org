@@ -1,6 +1,6 @@
 +++
 title     = "Consolidating databases with Postgres logical replication"
-date      = "2026-10-06T09:00:00+0100"
+date      = "2026-10-06T13:45:23+0200"
 tags      = ["PostgreSQL", "Replication", "Logical Decoding", "Architecture"]
 categories = ["PostgreSQL", "Architecture"]
 icon      = "🐘"
