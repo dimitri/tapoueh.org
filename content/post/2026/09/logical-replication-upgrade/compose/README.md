@@ -9,7 +9,7 @@ Everything runs in Docker Compose (project `lrupg`, host ports 5730-5739; only
 | `new` | `postgres:18` (18.6) | 5731 | upgrade target, subscriber |
 | `traffic` | `postgres:18` | - | the "application": a psql loop, and the ops scripts |
 | `upg` | `postgres:18` + PGDG `postgresql-17` (17.11) | - | part B, pg_upgrade helper |
-| `pg19a`, `pg19b`, `pg19c` | `postgres:19beta3-bookworm` | 5732-5734 | part C, **beta** |
+| `pg19a`, `pg19b`, `pg19c` | `postgres:19beta4-bookworm` | 5732-5734 | part C, **beta** |
 
 ## Reproduce in three commands
 
@@ -96,7 +96,7 @@ Steps 30-32 in the `upg` container (built from `upg/Dockerfile`): two 17 cluster
 subscriber then of the publisher. See the outputs for what is kept and what is not.
 This was done completely, not degraded.
 
-## Part C - PostgreSQL 19 beta3 (BETA: everything here may change or be reverted before GA)
+## Part C - PostgreSQL 19 beta4 (BETA: everything here may change or be reverted before GA)
 
 Steps 40-47 on `pg19a` (publisher), `pg19b` (subscriber, `track_commit_timestamp = on`),
 `pg19c` (default `wal_level = replica`): `FOR ALL SEQUENCES` and `REFRESH SEQUENCES`,
@@ -105,7 +105,7 @@ Steps 40-47 on `pg19a` (publisher), `pg19b` (subscriber, `track_commit_timestamp
 
 ## Findings worth quoting (all from the outputs in `results/`)
 
-Versions: PostgreSQL 16.15, 17.11, 18.6 (official images), 19beta3 (`postgres:19beta3-bookworm`).
+Versions: PostgreSQL 16.15, 17.11, 18.6 (official images), 19beta4 (`postgres:19beta4-bookworm`).
 
 * **Cutover write stall** (client side, last commit on the source to first commit on the target):
   about 180-200 ms in both directions (steps 22 and 24), 4 failed attempts inside the window
@@ -114,10 +114,13 @@ Versions: PostgreSQL 16.15, 17.11, 18.6 (official images), 19beta3 (`postgres:19
   (freeze 35 ms, catch-up about 65 ms, sequences 50 ms); the rest is the loop's own retry cadence.
   The initial copy of about 100 MB took about one second.
 * **`WAIT FOR LSN`** does not exist in 16 or 18 (`ERROR:  syntax error at or near "WAIT"`, step 20).
-  It exists in 19beta3 but is a physical-standby feature: on a logical subscriber the
+  It exists in 19beta4 but is a physical-standby feature: on a logical subscriber the
   `standby_*` modes fail with `recovery is not in progress`, and the `primary_flush`
   mode answers `success` as soon as the subscriber's OWN wal position passed the number, which says
   nothing about whether the publisher's changes were applied (step 46). Do not use it for this.
+  Re-verified against 19beta4 after beta3: the statement itself is unchanged, but `\h WAIT`'s
+  own command name changed from `WAIT FOR` (beta3) to `WAIT` (beta4), and its doc URL from
+  `sql-wait-for.html` to `sql-wait.html` (step 40) — beta churn, not a behaviour change.
 * **Comparing `pg_current_wal_lsn()` (old) with `remote_lsn` (new)** only works if the last WAL record
   of the old server is a replicated commit. The freeze itself (`ALTER DATABASE ... SET`) writes a
   commit that logical replication never sends, so with the LSN taken right after the freeze
@@ -164,7 +167,7 @@ Versions: PostgreSQL 16.15, 17.11, 18.6 (official images), 19beta3 (`postgres:19
   (`The slot "sub" has not consumed the WAL yet` otherwise) and the new cluster has `wal_level = logical`
   (`"wal_level" must be "logical" but is set to "replica"`). Not carried over: `postgresql.conf` /
   `pg_hba.conf` (you configure the new cluster), and statistics counters (`Some statistics are not transferred by pg_upgrade.`).
-* Part C (19beta3, beta): see the outputs. Only `FOR ALL SEQUENCES` exists (`FOR SEQUENCE s1` is a syntax
+* Part C (19beta4, beta): see the outputs. Only `FOR ALL SEQUENCES` exists (`FOR SEQUENCE s1` is a syntax
   error); sequence values reach the subscriber at the initial sync and at `ALTER SUBSCRIPTION ... REFRESH SEQUENCES`,
   not periodically (still stale after 20 s); a sequence created later needs `REFRESH PUBLICATION` first.
   `FOR ALL TABLES EXCEPT (TABLE ...)` works, also `ALTER PUBLICATION ... SET ALL TABLES EXCEPT (...)`;
