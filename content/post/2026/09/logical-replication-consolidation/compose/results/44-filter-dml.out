@@ -1,0 +1,119 @@
+-- @service: shop
+-- Step 2e: what does the publisher actually send? Read the pgoutput stream of a scratch
+-- slot after each statement. Message types: B begin, R relation, I insert, U update,
+-- D delete, C commit. "pii_bytes" is true if any message contains an email or phone value.
+create function peek(slot text default 'peek', pub text default 'pub_shop') returns table (messages text, pii_bytes boolean) language sql as $$
+  select coalesce(string_agg(chr(get_byte(data, 0)), '' order by lsn), '(nothing)'),
+         coalesce(bool_or(encode(data, 'escape') ~ '(@example\.com|\+33|\+49|\+1 555)'), false)
+  from pg_logical_slot_get_binary_changes(slot, null, null, 'proto_version', '1', 'publication_names', pub) $$;
+CREATE FUNCTION
+select count(*) as slot_created from pg_create_logical_replication_slot('peek', 'pgoutput');
+ slot_created 
+--------------
+            1
+(1 row)
+
+select * from peek();   -- drains what earlier steps produced
+ messages  | pii_bytes 
+-----------+-----------
+ (nothing) | f
+(1 row)
+
+\echo -- UPDATE of a filtered-out column only (phone)
+-- UPDATE of a filtered-out column only (phone)
+update shop.customers set phone = '+33 9 99 99 99 99' where id = 1;
+UPDATE 1
+select * from peek();
+ messages | pii_bytes 
+----------+-----------
+ BRUC     | f
+(1 row)
+
+\echo -- UPDATE of a published column (name)
+-- UPDATE of a published column (name)
+update shop.customers set name = 'Alicia' where id = 1;
+UPDATE 1
+select * from peek();
+ messages | pii_bytes 
+----------+-----------
+ BRUC     | f
+(1 row)
+
+\echo -- UPDATE of the filter column, eu -> us (row leaves the filter)
+-- UPDATE of the filter column, eu -> us (row leaves the filter)
+update shop.customers set tenant = 'us' where id = 4;
+UPDATE 1
+select * from peek();
+ messages | pii_bytes 
+----------+-----------
+ BRDC     | f
+(1 row)
+
+\echo -- UPDATE of the filter column, us -> eu (row enters the filter)
+-- UPDATE of the filter column, us -> eu (row enters the filter)
+update shop.customers set tenant = 'eu' where id = 3;
+UPDATE 1
+select * from peek();
+ messages | pii_bytes 
+----------+-----------
+ BRIC     | f
+(1 row)
+
+\echo -- INSERT of a row outside the filter (us order)
+-- INSERT of a row outside the filter (us order)
+insert into shop.orders (customer_id, amount, status, tenant) values (3, 10.00, 'new', 'us');
+INSERT 0 1
+select * from peek();
+ messages  | pii_bytes 
+-----------+-----------
+ (nothing) | f
+(1 row)
+
+\echo -- UPDATE of a published column on a row outside the filter
+-- UPDATE of a published column on a row outside the filter
+update shop.orders set status = 'shipped' where id = 3;
+UPDATE 1
+select * from peek();
+ messages  | pii_bytes 
+-----------+-----------
+ (nothing) | f
+(1 row)
+
+\echo -- INSERT inside the filter
+-- INSERT inside the filter
+insert into shop.orders (customer_id, amount, status, tenant) values (1, 12.00, 'new', 'eu');
+INSERT 0 1
+select * from peek();
+ messages | pii_bytes 
+----------+-----------
+ BRIC     | f
+(1 row)
+
+\echo -- positive control for the PII check: a publication WITHOUT a column list does leak the phone
+-- positive control for the PII check: a publication WITHOUT a column list does leak the phone
+select count(*) as control_slot from pg_create_logical_replication_slot('peek_all', 'pgoutput');
+ control_slot 
+--------------
+            1
+(1 row)
+
+create publication pub_control for table shop.customers;
+CREATE PUBLICATION
+update shop.customers set phone = '+33 9 99 99 99 88' where id = 1;
+UPDATE 1
+select * from peek('peek_all', 'pub_control');
+ messages | pii_bytes 
+----------+-----------
+ BRUC     | t
+(1 row)
+
+select pg_drop_replication_slot('peek'), pg_drop_replication_slot('peek_all');
+ pg_drop_replication_slot | pg_drop_replication_slot 
+--------------------------+--------------------------
+                          | 
+(1 row)
+
+drop publication pub_control;
+DROP PUBLICATION
+drop function peek(text, text);
+DROP FUNCTION

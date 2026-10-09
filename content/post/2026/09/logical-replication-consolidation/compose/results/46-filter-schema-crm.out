@@ -1,0 +1,29 @@
+-- @service: crm
+-- Step 2g: FOR TABLES IN SCHEMA follows new tables automatically, but takes no column list.
+create table crm.notes (id int primary key, account_id int, body text);
+CREATE TABLE
+select tablename from pg_publication_tables where pubname = 'pub_crm' order by 1;
+ tablename 
+-----------
+ accounts
+ contacts
+ notes
+(3 rows)
+
+alter publication pub_crm add table crm.contacts (id, account_id, name);
+ERROR:  cannot use column list for relation "crm.contacts" in publication "pub_crm"
+DETAIL:  Column lists cannot be specified in publications containing FOR TABLES IN SCHEMA elements.
+-- a column list needs a table-list publication: drop the schema, list the tables
+alter publication pub_crm drop tables in schema crm;
+ALTER PUBLICATION
+alter publication pub_crm add table crm.accounts, crm.contacts (id, account_id, name);
+ALTER PUBLICATION
+select tablename, attnames from pg_publication_tables where pubname = 'pub_crm' order by 1;
+ tablename |       attnames       
+-----------+----------------------
+ accounts  | {id,name,tier}
+ contacts  | {id,account_id,name}
+(2 rows)
+
+insert into crm.contacts values (3, 3, 'Jane', 'jane@initech.example');
+INSERT 0 1

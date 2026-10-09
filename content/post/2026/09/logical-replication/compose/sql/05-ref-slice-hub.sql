@@ -1,0 +1,11 @@
+-- @service: hub
+-- Step 1e. Changes on the hub reach only the interested worker.
+INSERT INTO customers (name, worker_id, plan_id, billing_notes) VALUES
+  ('new-for-w1', 1, 1, 'note'), ('new-for-w2', 2, 2, 'note'), ('new-for-w3', 3, 3, 'note');
+UPDATE customers SET billing_notes = 'changed' WHERE customer_id = 1;   -- column not published
+UPDATE prices SET unit_price = 0.0090 WHERE plan_id = 1 AND meter = 'api_calls';  -- unfiltered table
+
+-- Move customer 3 from worker 1 to worker 2: a filtered UPDATE that leaves one filter
+-- and enters another. Old row matches ref_w1, new row matches ref_w2.
+UPDATE customers SET worker_id = 2 WHERE customer_id = 3;
+SELECT lr.wait_caught_up();

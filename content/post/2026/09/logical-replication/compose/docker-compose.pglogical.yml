@@ -1,0 +1,54 @@
+# Variant: pglogical on PostgreSQL 14. Host ports 5715-5717.
+name: lrhub
+
+x-pgl: &pgl
+  build:
+    context: pglogical
+  image: lrhub-pglogical:14
+  environment:
+    POSTGRES_HOST_AUTH_METHOD: trust
+    POSTGRES_DB: app
+  command:
+    - postgres
+    - -c
+    - shared_preload_libraries=pglogical
+    - -c
+    - output_plugin_libraries=pglogical_output
+    - -c
+    - wal_level=logical
+    - -c
+    - track_commit_timestamp=on
+    - -c
+    - pglogical.conflict_resolution=last_update_wins
+    - -c
+    - max_worker_processes=24
+    - -c
+    - max_replication_slots=16
+    - -c
+    - max_wal_senders=16
+    - -c
+    - logging_collector=on
+    - -c
+    - log_filename=pg.log
+    - -c
+    - "log_line_prefix=[%a] "
+    - -c
+    - listen_addresses=*
+  tmpfs:
+    - /var/lib/postgresql/data
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d app"]
+    interval: 1s
+    timeout: 3s
+    retries: 60
+
+services:
+  pghub:
+    <<: *pgl
+    ports: ["5715:5432"]
+  pgw1:
+    <<: *pgl
+    ports: ["5716:5432"]
+  pgw2:
+    <<: *pgl
+    ports: ["5717:5432"]

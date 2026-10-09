@@ -1,0 +1,31 @@
+-- @service: shop
+-- @nosync
+-- Step 1i: the way to get a schema per application on the subscriber is a schema per application on
+-- the publisher. Move the tables, and give the application role a search_path so that the
+-- unqualified table names in its SQL keep resolving.
+create schema shopapp;
+CREATE SCHEMA
+alter table public.orders set schema shopapp;
+ALTER TABLE
+create role app_shop login;
+CREATE ROLE
+alter role app_shop set search_path = shopapp;
+ALTER ROLE
+grant usage on schema shopapp to app_shop;
+GRANT
+grant select on all tables in schema shopapp to app_shop;
+GRANT
+-- the publication followed the table: it is tracked by OID, not by name
+select pubname, schemaname, tablename from pg_publication_tables where pubname = 'pub_rename';
+  pubname   | schemaname | tablename 
+------------+------------+-----------
+ pub_rename | shopapp    | orders
+(1 row)
+
+-- the failed CREATE SUBSCRIPTION left nothing behind on the publisher
+select count(*) as leftover_slots from pg_replication_slots where slot_name = 'sub_rename';
+ leftover_slots 
+----------------
+              0
+(1 row)
+

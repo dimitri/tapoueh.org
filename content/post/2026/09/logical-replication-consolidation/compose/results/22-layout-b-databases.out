@@ -1,0 +1,41 @@
+-- @service: warehouse
+-- @nosync
+-- Layout (b): one database per source on the warehouse server. Same table
+-- names as the source, no renaming needed, but every database is an island.
+create database wh_shop;
+CREATE DATABASE
+create database wh_crm;
+CREATE DATABASE
+create database wh_billing;
+CREATE DATABASE
+\c wh_shop
+You are now connected to database "wh_shop" as user "postgres".
+create schema shop;
+CREATE SCHEMA
+create table shop.orders (id serial primary key, customer_id int not null, amount numeric(10,2) not null, status text not null, tenant text not null);
+CREATE TABLE
+create subscription sub_b_shop connection 'host=shop dbname=shop user=repl password=repl' publication pub_shop;
+NOTICE:  created replication slot "sub_b_shop" on publisher
+CREATE SUBSCRIPTION
+\c wh_crm
+You are now connected to database "wh_crm" as user "postgres".
+create schema crm;
+CREATE SCHEMA
+create table crm.accounts (id int primary key, name text not null, tier text not null);
+CREATE TABLE
+create table crm.contacts (id int primary key, account_id int not null, name text not null, email text);
+CREATE TABLE
+create subscription sub_b_crm connection 'host=crm dbname=crm user=repl password=repl' publication pub_crm;
+NOTICE:  created replication slot "sub_b_crm" on publisher
+CREATE SUBSCRIPTION
+\c wh_billing
+You are now connected to database "wh_billing" as user "postgres".
+create schema billing;
+CREATE SCHEMA
+create table billing.invoices (id serial primary key, account_id int not null, amount numeric(10,2) not null, status text not null);
+CREATE TABLE
+create table billing.payments (id serial primary key, invoice_id int not null, amount numeric(10,2) not null);
+CREATE TABLE
+create subscription sub_b_billing connection 'host=billing dbname=billing user=repl password=repl' publication pub_billing;
+NOTICE:  created replication slot "sub_b_billing" on publisher
+CREATE SUBSCRIPTION
