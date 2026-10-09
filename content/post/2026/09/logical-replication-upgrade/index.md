@@ -1,6 +1,6 @@
 +++
 title     = "Zero-downtime Postgres upgrades with logical replication"
-date      = "2026-09-29T09:00:00+0200"
+date      = "2026-10-13T09:00:00+0200"
 tags      = ["PostgreSQL", "Replication", "Logical Decoding", "Architecture"]
 categories = ["PostgreSQL", "Architecture"]
 icon      = "🐘"
@@ -8,12 +8,15 @@ icon      = "🐘"
 
 This is part 3 of a series about Postgres logical replication use-cases,
 and about how the feature set has evolved over the past ten years and ten
-releases (10 through the 19 beta), one architecture at a time. Part 1 built
+releases (Postgres 10 through the Postgres 19 beta), one architecture at
+a time.
+[Part 1](/blog/2026/09/ten-years-of-postgres-logical-replication/) built
 a hub-and-workers system for write scalability and has the table of what
-each release added, which this post assumes. Part 2 consolidated several
-application databases into one warehouse. This one is the most common
-reason to touch logical replication at all: a major-version upgrade with no
-downtime, and a way back if it goes wrong.
+each release added, which this post assumes.
+[Part 2](/blog/2026/10/consolidating-databases-with-postgres-logical-replication/)
+consolidated several application databases into one warehouse. This one is
+the most common reason to touch logical replication at all: a
+major-version upgrade with no downtime, and a way back if it goes wrong.
 
 <!--more-->
 
@@ -35,14 +38,17 @@ caveat, see the Postgres 19 section.
 
 ---
 
-This one is the most common reason to touch logical replication, and the one
-where the small details cost the most. I upgraded Postgres 16 to 18 with a
-traffic generator running the whole time (about 50 commits per second), so the
-"zero" is measured rather than claimed.
+## The scenario: a major-version upgrade
+
+I upgraded a Postgres 16 server to Postgres 18, with the application writing the
+whole time. A subscription on the new server copies the tables and
+follows the changes; a reverse subscription on the old server, prepared
+in advance, carries back whatever the new server writes after the
+switch, for the way back.
 
 {{< image src="fig-upgrade-setup.svg" title="Before the cutover. The application writes to the old server. A subscription on the new server copies the tables and then follows the changes. A reverse subscription on the old server, prepared in advance, will carry back what the new server writes, for the way back." >}}
 
-### Setting it up
+## Setting it up
 
 The schema goes first, because DDL is not replicated. The roles come from
 `pg_dumpall`, then the database and its schema from `pg_dump`, run with the
@@ -124,7 +130,7 @@ there when the copy finishes:
   even known to the subscription until `alter subscription … refresh
   publication`.
 
-### Preparing the way back
+## Preparing the way back
 
 The way back is set up before the cutover, not after. The idea is a second
 subscription in the other direction, so that writes made on the new server
@@ -160,7 +166,7 @@ once, and nothing bounces back. Three things to know:
   stuck in state `d`;
 - rolling back means copying the sequence values back, the other way.
 
-### Knowing when it has caught up
+## Knowing when it has caught up
 
 Everything hangs on one question at cutover time: has the new server
 received everything the old one committed? Postgres 19 added `WAIT FOR LSN`, which
@@ -209,7 +215,7 @@ select exists (select 1 from cutover_markers where id = 'cutover-old-to-new');
 
 With the marker in place, all three measures agreed within a millisecond or two.
 
-### The cutover
+## The cutover
 
 {{< image src="fig-upgrade-cutover.svg" title="The cutover in four steps, with the time at which each one finished, counted from the start of the freeze. The application sees a write stall of 181 ms, the time between its last commit on the old server and its first on the new one." >}}
 
@@ -265,7 +271,7 @@ acknowledged write was lost, and the content hash of every table matched on
 both servers afterwards. My traffic loop reconnects for every transaction, so
 no session had to be terminated: your connection pool will behave differently.
 
-### Rolling back
+## Rolling back
 
 {{< image src="fig-upgrade-back.svg" title="After the switch, the reverse subscription applies on the old server whatever the new server writes. To roll back, the same four steps run in the other direction." >}}
 
@@ -283,7 +289,7 @@ measurement:
 WRITE STALL new -> old: 179 ms
 ```
 
-### Privileges
+## Privileges
 
 `create subscription` for someone who is not a superuser needs
 `pg_create_subscription` and `create` on the database, or you get
@@ -293,13 +299,14 @@ WRITE STALL new -> old: 179 ms
 the tables. All three are Postgres 16 behaviour, and each is a security feature, but
 none was in the way I expected.
 
-### Or just `pg_upgrade`
+## Or just `pg_upgrade`
 
-`pg_upgrade --link` has been there since 9.0, so the in-place route is not new.
-What Postgres 17 added is that `pg_upgrade` carries the logical replication
-state across: its release notes say it migrates valid logical slots and
-subscriptions, and that this only works when the *old* cluster is version 17 or
-later. I upgraded a Postgres 17 cluster to 18 with `pg_upgrade --link`:
+`pg_upgrade --link` has been there since Postgres 9.0, so the in-place route
+is not new. What Postgres 17 added is that `pg_upgrade` carries the logical
+replication state across: its release notes say it migrates valid logical
+slots and subscriptions, and that this only works when the *old* cluster is
+Postgres 17 or later. I upgraded a Postgres 17 cluster to Postgres 18 with
+`pg_upgrade --link`:
 
 - A **subscriber** keeps its subscription, the state of each table, and its
   origin position, and stays enabled.
@@ -315,11 +322,11 @@ later. I upgraded a Postgres 17 cluster to 18 with `pg_upgrade --link`:
 If you can take a restart, this is the shorter way. If you cannot, logical
 replication with the cutover above is how you avoid one.
 
-### Where the old world shows up
+## Where the old world shows up
 
-Pre-10 servers cannot be a publisher for native logical replication.
-pglogical supports 9.4 and later as a provider, which is why it is still the
-tool for that one case.
+A server older than Postgres 10 cannot be a publisher for native logical
+replication. pglogical supports Postgres 9.4 and later as a provider, which
+is why it is still the tool for that one case.
 
 ---
 
@@ -337,7 +344,7 @@ From what I built and what its README says:
 - **Automatic DDL propagation.** Still not in core. pglogical has
   `replicate_ddl_command()`, which is a manual queue; the "automatic" version
   is in its descendants.
-- **Sources older than 10.**
+- **Sources older than Postgres 10.**
 - **Sets of tables as first-class objects**, if you like that model.
 
 And what it does not do: replica identity `full`, large objects, and
@@ -430,7 +437,10 @@ people bought us.
 
 A fourth post, covering the architectures left out of this series in less
 detail — geo-replication, BDR-style multi-active setups, plain CDC and
-triggers — is also planned. Part 1 has the hub-and-workers demo, part 2
+triggers — is also planned.
+[Part 1](https://github.com/dimitri/tapoueh.org/tree/master/content/post/2026/09/logical-replication/compose)
+has the hub-and-workers demo,
+[part 2](https://github.com/dimitri/tapoueh.org/tree/master/content/post/2026/09/logical-replication-consolidation/compose)
 the consolidation demo, and this post's own demo is in its
 [`compose/` directory](https://github.com/dimitri/tapoueh.org/tree/master/content/post/2026/09/logical-replication-upgrade/compose).
 Run them, break them, and tell me what I got wrong.
