@@ -52,15 +52,26 @@ night to milliseconds.
 
 ## RTO, RPO, and the maintenance window
 
+{{< glossary term="RTO" full="Recovery Time Objective" >}}
+How long the application is actually down during the operation.
+{{< /glossary >}}
+
+{{< glossary term="RPO" full="Recovery Point Objective" >}}
+How much committed data you can afford to lose.
+{{< /glossary >}}
+
+{{< glossary term="Maintenance window" >}}
+A scheduled stretch with traffic stopped at the door, long enough to run
+`pg_dump`/`pg_restore` or `pg_upgrade`, then start traffic again. The
+oldest way to buy both RTO and RPO down to a known, predictable number.
+{{< /glossary >}}
+
 Every extra piece of machinery in the logical-replication path below —
 reverse subscription, marker row, the LSN comparison — earns its place
-against two numbers, not against "is it possible". RTO is how long the
-application is actually down; RPO is how much committed data you can
-afford to lose. The oldest answer to both is a maintenance window: stop
-traffic, run `pg_dump`/`pg_restore` or `pg_upgrade`, start traffic again.
-RTO is the window's length, RPO is zero because nothing was accepted
-during it. That is a legitimate answer whenever the business can afford
-the window.
+against those two numbers, not against "is it possible". A maintenance
+window makes RTO the window's length and RPO zero, because nothing was
+accepted during it — a legitimate answer whenever the business can
+afford the window.
 
 What the logical-replication path buys instead is an RTO in
 milliseconds (181 ms, measured below) without spending RPO to get
