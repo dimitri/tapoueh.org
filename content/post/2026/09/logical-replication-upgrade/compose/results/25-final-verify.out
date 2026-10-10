@@ -1,0 +1,94 @@
+traffic stopped: yes
+
+### traffic summary (attempt counts depend on timing)
+new fail 4
+new ok   326
+old fail 4
+old ok   3332
+server versions that acknowledged writes:
+  new 180006 326
+  old 160015 3332
+
+### table by table: row count and content hash, old vs new
+customers     old  53658 aafa54158094bf297bb365d5dcb73677
+customers     new  53658 aafa54158094bf297bb365d5dcb73677
+    -> identical
+orders        old  603658 0b6b5552c7ce67a0dcd7b49b98eaefcf
+orders        new  603658 0b6b5552c7ce67a0dcd7b49b98eaefcf
+    -> identical
+audit_log     old  103658 3bd2c6a316005febbefa12891aa8cb78
+audit_log     new  103658 3bd2c6a316005febbefa12891aa8cb78
+    -> identical
+counters      old  1 81fdd3b9c599fb4751182376c2758d36
+counters      new  1 81fdd3b9c599fb4751182376c2758d36
+    -> identical
+cutover_markers old  2 89b37f519df18101f823641bcbb8dfec
+cutover_markers new  2 89b37f519df18101f823641bcbb8dfec
+    -> identical
+measurements  old  303658 acd7dfea9587960f26050ada6625a79b
+measurements  new  303658 acd7dfea9587960f26050ada6625a79b
+    -> identical
+documents     old  1 dc06a12bc90f2d75ba63fd43466ecec9
+documents     new  1 dc06a12bc90f2d75ba63fd43466ecec9
+    -> identical
+late_table    old  1 31becc7c7c0f3769742152155fe7f855
+late_table    new  1 31becc7c7c0f3769742152155fe7f855
+    -> identical
+
+### lost or ambiguous writes: acknowledged client_seq versus rows in orders
+CREATE TABLE
+COPY 3658
+ server | acked | acked_but_missing 
+--------+-------+-------------------
+ old    |  3658 |                 0
+(1 row)
+
+ server | committed_but_not_acked 
+--------+-------------------------
+ old    |                       0
+(1 row)
+
+CREATE TABLE
+COPY 3658
+ server | acked | acked_but_missing 
+--------+-------+-------------------
+ new    |  3658 |                 0
+(1 row)
+
+ server | committed_but_not_acked 
+--------+-------------------------
+ new    |                       0
+(1 row)
+
+
+### the two switches
+WRITE STALL old -> new: 181 ms
+failed attempts inside the window: 4 (of 5 logged attempts, incl. the first success)
+WRITE STALL new -> old: 179 ms
+failed attempts inside the window: 4 (of 5 logged attempts, incl. the first success)
+
+### final state of both replication directions
+old> SELECT subname, subenabled, suborigin FROM pg_subscription
+ subname | subenabled | suborigin 
+---------+------------+-----------
+ app_rev | t          | none
+(1 row)
+
+new> SELECT subname, subenabled, suborigin FROM pg_subscription
+ subname | subenabled | suborigin 
+---------+------------+-----------
+ app_sub | t          | none
+(1 row)
+
+old> SELECT slot_name, active FROM pg_replication_slots ORDER BY 1
+ slot_name | active 
+-----------+--------
+ app_sub   | t
+(1 row)
+
+new> SELECT slot_name, active FROM pg_replication_slots ORDER BY 1
+ slot_name | active 
+-----------+--------
+ app_rev   | t
+(1 row)
+

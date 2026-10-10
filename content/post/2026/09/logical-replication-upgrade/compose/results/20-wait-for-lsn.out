@@ -1,0 +1,40 @@
+new> SELECT version()
+                                                         version                                                          
+--------------------------------------------------------------------------------------------------------------------------
+ PostgreSQL 18.6 (Debian 18.6-1.pgdg13+2) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+(1 row)
+
+new> SELECT pg_is_in_recovery()
+ pg_is_in_recovery 
+-------------------
+ f
+(1 row)
+
+new> WAIT FOR LSN '0/1'
+ERROR:  syntax error at or near "WAIT"
+LINE 1: WAIT FOR LSN '0/1'
+        ^
+old> WAIT FOR LSN '0/1'
+ERROR:  syntax error at or near "WAIT"
+LINE 1: WAIT FOR LSN '0/1'
+        ^
+
+### the working alternative: compare positions
+old> SELECT pg_current_wal_lsn() IS NOT NULL AS old_position_available
+ old_position_available 
+------------------------
+ t
+(1 row)
+
+new> SELECT external_id, remote_lsn IS NOT NULL AS has_remote_lsn FROM pg_replication_origin_status ORDER BY 1
+ external_id | has_remote_lsn 
+-------------+----------------
+ pg_16508    | t
+(1 row)
+
+new> SELECT subname, latest_end_lsn IS NOT NULL AS has_latest_end_lsn FROM pg_stat_subscription WHERE worker_type = 'apply'
+ subname | has_latest_end_lsn 
+---------+--------------------
+ app_sub | t
+(1 row)
+

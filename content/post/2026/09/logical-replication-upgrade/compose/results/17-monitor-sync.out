@@ -1,0 +1,41 @@
+[poll] +26ms rel_states: d=2 i=1 r=5
+[poll] +546ms rel_states: d=1 r=7
+[poll] +1064ms rel_states: r=8
+initial sync of all tables finished
+new> SELECT srrelid::regclass AS tbl, srsubstate, srsublsn IS NOT NULL AS has_lsn FROM pg_subscription_rel ORDER BY srrelid::regclass::text
+        tbl         | srsubstate | has_lsn 
+--------------------+------------+---------
+ audit_log          | r          | t
+ counters           | r          | t
+ customers          | r          | t
+ cutover_markers    | r          | t
+ documents          | r          | t
+ measurements_2026  | r          | t
+ measurements_other | r          | t
+ orders             | r          | t
+(8 rows)
+
+new> SELECT subname, worker_type, pid IS NOT NULL AS running, received_lsn IS NOT NULL AS has_received_lsn, latest_end_lsn IS NOT NULL AS has_latest_end_lsn FROM pg_stat_subscription
+ subname | worker_type | running | has_received_lsn | has_latest_end_lsn 
+---------+-------------+---------+------------------+--------------------
+ app_sub | apply       | t       | t                | t
+(1 row)
+
+new> SELECT subname, apply_error_count, sync_error_count FROM pg_stat_subscription_stats
+ subname | apply_error_count | sync_error_count 
+---------+-------------------+------------------
+ app_sub |                 0 |                0
+(1 row)
+
+old> SELECT slot_name, plugin, slot_type, active, confirmed_flush_lsn IS NOT NULL AS has_confirmed_flush FROM pg_replication_slots
+ slot_name |  plugin  | slot_type | active | has_confirmed_flush 
+-----------+----------+-----------+--------+---------------------
+ app_sub   | pgoutput | logical   | t      | t
+(1 row)
+
+old> SELECT application_name, state, sync_state FROM pg_stat_replication
+ application_name |   state   | sync_state 
+------------------+-----------+------------
+ app_sub          | streaming | async
+(1 row)
+
