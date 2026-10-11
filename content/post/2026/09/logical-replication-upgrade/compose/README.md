@@ -96,6 +96,23 @@ Steps 30-32 in the `upg` container (built from `upg/Dockerfile`): two 17 cluster
 subscriber then of the publisher. See the outputs for what is kept and what is not.
 This was done completely, not degraded.
 
+Side experiment, not a numbered step (same `upg` container, ad hoc clusters,
+cleaned up after): does `pg_upgrade --link`'s running time track data volume or
+catalog size? Timed three reshapes of the schema:
+
+```
+1,000-row table, one index:              1.69s
+5,000,000-row table, 591 MB, one index:  1.64s
+5,000 near-empty tables:                 6.47s
+```
+
+500x the data, no measurable difference; 5,000x the table count, 4x the time.
+`--link` never copies table data, only hard-links files and rewrites the
+catalog, so this matches the mechanism. Informs the article's framing: for most
+schemas `pg_upgrade --link` itself is a matter of seconds, not a maintenance
+night — the real cost is the full stop (both servers down, no reads either),
+not the duration of the upgrade command.
+
 ## Part C - PostgreSQL 19 beta4 (BETA: everything here may change or be reverted before GA)
 
 Steps 40-47 on `pg19a` (publisher), `pg19b` (subscriber, `track_commit_timestamp = on`),

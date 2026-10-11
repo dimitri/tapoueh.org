@@ -41,14 +41,16 @@ caveat, see the Postgres 19 section.
 ## The scenario: a major-version upgrade
 
 A major-version upgrade — Postgres 16 to 18 here — needs new binaries, a
-new data directory, and, traditionally, a window where nothing writes.
-Two ways to get there, each addressed deliberately in this post, not as
-an afterthought you hit near the end: stay in place with `pg_upgrade`,
-whose newer versions carry more of an existing logical replication setup
-across than you might expect; or replace the in-place upgrade with
-logical replication itself, publishing from the old server and
-subscribing from the new one, to shrink that window from a maintenance
-night to milliseconds.
+new data directory, and, traditionally, a window where the database is
+stopped entirely. Two ways to get there, each addressed deliberately in
+this post, not as an afterthought you hit near the end: stay in place
+with `pg_upgrade`, whose `--link` mode is itself fast and whose newer
+versions carry more of an existing logical replication setup across
+than you might expect, but which still needs both servers down for that
+window; or replace the in-place upgrade with logical replication
+itself, publishing from the old server and subscribing from the new
+one, to turn that full stop into a sub-200ms write stall with no outage
+at all.
 
 ## RTO, RPO, and the maintenance window
 
@@ -101,9 +103,31 @@ because logical replication can do that where a batch job cannot.
 ## `pg_upgrade` in place, and what it carries of logical replication
 
 `pg_upgrade --link` has been there since Postgres 9.0, so the in-place
-route is not new. What Postgres 17 added is that `pg_upgrade` carries
-the logical replication state across: its release notes say it migrates
-valid logical slots and subscriptions, and that this only works when the
+route is not new, and it is fast: `--link` never copies a table's data
+at all, just hard-links the files and rewrites the catalog, so its
+running time tracks the number of objects, not the number of rows. I
+timed it on the same tiny demo schema, then reshaped twice to isolate
+each variable:
+
+```results
+1,000-row table, one index:              1.69s
+5,000,000-row table, 591 MB, one index:  1.64s
+5,000 near-empty tables:                 6.47s
+```
+
+Five hundred times the data made no measurable difference; five
+thousand times the table count did. So "shrink the window to
+milliseconds" undersold `pg_upgrade --link` itself — for most schemas
+it is already a matter of seconds, not a maintenance night. What it
+does not avoid is the full stop: both servers down for however long
+that takes, with no reads either, not just no writes. That is the
+actual gap logical replication closes below: a sub-200ms write stall,
+with reads and most writes available the entire time, instead of any
+stop at all.
+
+What Postgres 17 added is that `pg_upgrade` carries the logical
+replication state across: its release notes say it migrates valid
+logical slots and subscriptions, and that this only works when the
 *old* cluster is Postgres 17 or later. I upgraded a Postgres 17 cluster
 to Postgres 18 with `pg_upgrade --link`:
 
