@@ -378,6 +378,36 @@ there when the copy finishes:
 
 {{< image src="fig-upgrade-gaps.svg" title="copy_data = true copies the tables, not what they depend on: sequences, materialized view content and large objects are missing, and DDL made during the migration goes unnoticed. The one piece of good news is generated columns, recomputed correctly by the subscriber." >}}
 
+### Keeping DDL out of the window entirely
+
+The gap above is really a policy failure waiting to happen: the fix is not
+detecting a DDL statement that slipped through, it's making sure none can.
+That starts with roles. DDL has no business running under the same role
+the application uses for `insert`/`update`/`delete`, migration or not —
+give it its own role, driven only by deployment tooling, and "did anything
+run DDL during the window" stops being a question you have to ask about
+most of the schema.
+
+The one place DDL tends to run on a schedule rather than from a deploy is
+partition management, and that's exactly what shouldn't happen mid-migration:
+a cron job calling `create table ... partition of` the moment a new day or
+month starts has no idea a cutover is in progress. `pg_partman` already
+solves this the other way around — its `premake` setting (`p_premake` in
+`part_config`) keeps a configurable number of future partitions created
+ahead of time, not just-in-time. Set it to cover a couple of months and
+`run_maintenance()` has nothing left to create during any given week,
+migration window included.
+
+For everything else, a role convention is a policy, not a guarantee, which
+is why I built `preventddl`: a plain event trigger, the same kind
+documented on Postgres's own event-trigger-example page, gated by one
+setting, `preventddl.enable`. Load it through `session_preload_libraries`,
+then `alter system set preventddl.enable to true` and `select
+pg_reload_conf()` before the migration window opens, the same the other
+way after. Nothing holding DDL privileges but outside the deployment path
+can touch the schema while it's up — not a request to not run DDL right
+now, an actual barrier.
+
 ### Preparing the way back
 
 The way back is set up before the cutover, not after. The idea is a second
