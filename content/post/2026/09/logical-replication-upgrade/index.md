@@ -157,8 +157,13 @@ to Postgres 18 with `pg_upgrade --link`:
   the new one is initialised with `--no-data-checksums`.
 
 A server older than Postgres 10 cannot be a publisher for native logical
-replication. pglogical supports Postgres 9.4 and later as a provider, which
-is why it is still the tool for that one case.
+replication — `CREATE SUBSCRIPTION` needs `pgoutput`, which needs
+`CREATE PUBLICATION`, both Postgres 10 additions. Two tools reach further
+back: pglogical supports Postgres 9.4 and later as a provider, and so
+does `pgcopydb follow`, which speaks to the lower-level logical decoding
+API directly instead of going through `pgoutput` — the same floor, a
+different route to it, and no extension to install on either server.
+More on both in the next section.
 
 Postgres 17 also changed what survives a different kind of disruption:
 `failover = true` on `create subscription` synchronizes a subscriber's
@@ -169,6 +174,89 @@ instead of the subscriber — for its own demo, next in this series.
 
 That's the shorter way, when you can afford it. The rest of this post is
 what to do when you can't.
+
+## pg_dump and pg_restore: the baseline
+
+Before any of the above, there is the oldest answer, and it is worth
+naming plainly because it is still frequently the right one: `pg_dump`
+piped into `pg_restore`, or written to an archive and restored from
+that. Its coverage is the whole point — it does not have the gaps this
+post has spent several sections on. Sequences, materialized view
+content, large objects, DDL run mid-migration: none of that is a
+special case for `pg_dump`, because it dumps the database as the SQL
+and binary data needed to recreate it, not as a stream of row changes
+that leaves out everything that is not a row change. It also does not
+care what the source version is, within reason — nowhere near the
+Postgres 10 floor that `CREATE SUBSCRIPTION` has.
+
+{{< image src="fig-upgrade-tools.svg" title="Three tools, same job, cheapest to most elaborate. pg_dump and pg_restore cover everything but downtime scales with data size. pgcopydb parallelizes the same work, same coverage, a shorter stop. pgcopydb follow, or pglogical, add change data capture so the downtime shrinks to a cutover event, and both reach back to Postgres 9.4 sources." >}}
+
+What it costs is the thing `pg_upgrade --link` and logical replication
+both exist to avoid: the restore has to actually write every row again,
+so downtime scales with data size, not with the number of objects. For
+a small database that is nothing. For the kind of database that makes
+this whole post worth writing, it can be the reason the "zero" in the
+title matters.
+
+`pgcopydb` is the tool I maintain for exactly this job, and it is
+built on the same two commands, not a replacement for them: schema
+through `pg_dump`/`pg_restore`, data through its own parallel `COPY`
+implementation that bypasses their single-stream default and drives
+index builds concurrently too. Same coverage, same source-version
+reach, a shorter stop. When even that stop is too long, `pgcopydb clone
+--follow` adds change data capture on top, using the logical decoding
+API directly rather than going through `pgoutput` — which is exactly
+why it reaches back to Postgres 9.4 sources, the same floor pglogical
+has, by a different route and with nothing to install on either server.
+pglogical remains the other option at that floor, and earns its keep
+there specifically (more on it, and what it still does that core
+cannot, later in this post).
+
+None of this makes the earlier sections optional, and the disqualifying
+cases run in both directions. A straight `pg_dump`/`pg_restore`, even
+accelerated with `pgcopydb`, is ruled out the moment the downtime
+budget is shorter than the time it takes to write the whole database
+back out — at that point you need either `pgcopydb clone --follow`, or
+full logical replication's own initial copy, which can run for hours or
+days *before* the cutover instead of during it, because it is not
+holding up a maintenance window while it works. Going the other way,
+`pg_upgrade --link` beats all three the moment its own conditions hold:
+same filesystem, and a maintenance window that is acceptable at all —
+reaching for a dump, a parallel copy, or a subscription to solve a
+problem a few seconds of catalog rewriting already solves is solving it
+the hard way. If the old side also happens to be Postgres 17 or later,
+it is a better deal still: the subscriptions and slots already in place
+survive the upgrade too, as the earlier section on it showed.
+
+Which of these is even on the table also depends on a question this
+post hasn't asked yet: is the new server the same hardware, or not.
+
+{{< image src="fig-upgrade-hardware.svg" title="Same hardware or new hardware decides the tool. pg_upgrade needs the same filesystem, link and clone modes especially. pg_dump and pg_restore, pgcopydb, and logical replication all work equally to new hardware, a different region, or a different cloud. On managed clouds: RDS, Aurora, Cloud SQL and Azure Flexible Server offer true in-place upgrades; Aurora also offers Blue-Green Deployments, a managed version of the logical-replication path in this post. Neon offers no in-place upgrade at all." >}}
+
+`pg_upgrade`'s link and clone modes need the old and new data
+directories on the same filesystem — that is not a Postgres restriction
+so much as a hard-link's, and it rules out moving to new hardware at
+the same time as upgrading, on purpose or by necessity. `pg_dump`/
+`pg_restore`, `pgcopydb`, and logical replication all go over the
+network instead, so none of them care whether the target is next to
+the source or in a different region entirely — which is also, not
+coincidentally, when you most need them anyway.
+
+I checked rather than assumed what the managed clouds actually offer
+here, since it varies more than the self-hosted story does. RDS,
+Aurora, Cloud SQL, and Azure Database for PostgreSQL Flexible Server
+all document a true in-place major-version upgrade, `pg_upgrade` under
+the hood, the same choice this post has been building by hand. Aurora
+goes one step further with Blue/Green Deployments: a fully managed pair
+of environments kept in sync with, by AWS's own description, "PostgreSQL
+community provided logical replication," with a blocked-write switchover
+under a minute — which is to say, a managed version of exactly the
+architecture the rest of this post builds and times by hand. Neon sits
+at the other end: no in-place upgrade exists at all, for any version
+pair, and its own docs say so plainly — every major-version move needs
+a new project, migrated into with the Import Data Assistant, `pg_dump`/
+`pg_restore`, or logical replication. On a platform like that, this
+section is not a fallback option, it is the only kind of option there is.
 
 ## Logical replication as the upgrade path
 
