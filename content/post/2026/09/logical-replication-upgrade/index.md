@@ -695,6 +695,17 @@ already old before issuing `PAUSE` is worth doing too: the same
 way immediately, rather than waiting out a timeout that was not in
 place before the window opened.
 
+None of this is the operator's to fix on the application's behalf. A
+timeout that kills a stuck transaction, or a cutover measured in
+milliseconds, only helps a client written to expect it: catch the
+error, retry the transaction, reconnect if the socket closed, and treat
+that as ordinary control flow, not an outage. The demo's own traffic
+loop does exactly that, which is why its failed-attempt counts above
+are a true measurement, not a client giving up early. That is the
+developer's responsibility, never the DBA's — no server or pooler
+setting substitutes for an application that cannot survive its own
+connection being cut.
+
 **pgcat, PgDog, and HAProxy, for the same job.** I did not build and time
 these three the way I did pgbouncer above; this is what their own
 documentation says, read carefully rather than assumed. PgDog has the
