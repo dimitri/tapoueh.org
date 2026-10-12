@@ -966,25 +966,30 @@ optional.
 
 ## What is still on you
 
-After ten releases, the what-each-release-changed table in part 1 has two
-rows without a release number. Both are architectural, not accidental:
+None of this is self-driving, and three things specifically stay the
+operator's job no matter which path up this ladder you pick:
 
-- **DDL.** Every migration across this series had a moment where the order of
-  `alter table` on the two sides mattered, and where the wrong order stops
-  replication until you fix it. Additive changes go to the subscriber first;
-  drops go to the publisher first. Put that in your deployment tool, not in a
-  wiki.
-- **Conflicts.** The three architectures in this series work because I designed the write
-  patterns so that conflicts cannot happen: disjoint key spaces, one direction
-  per table, one writer per row. That is the application developer's job
-  and nothing in the catalogue changes it. If you need several writers on
-  the same rows, you need a policy, and core does not have one yet.
+- **DDL during the window.** Nothing in `pg_upgrade` or in logical
+  replication stops a stray `create table` or `alter table` from landing
+  mid-migration — that takes a role convention, and if you want an actual
+  barrier instead of a request, an event trigger, both covered above, but
+  neither one is a default.
+- **Testing and rehearsal.** Every timing this post quotes is a
+  measurement, from running the actual cutover more than once, not a
+  number either tool promises. The only way to know your own window is
+  the same rehearsal: tests first, then the short window run enough
+  times that its numbers stop being a guess.
+- **A whole architecture, not just a pair.** Neither path here is one
+  command for a primary, its standbys, and its archive and backup
+  together — that is hand-built today, on both sides of the ladder, as
+  the diagrams above show, and it is on `pg_auto_failover`'s roadmap, not
+  shipped by anything yet.
 
-The Londiste hub from the start of this series was a set of daemons, queues
-and triggers. The core version of the same thing, across the three
-architectures, is publications and subscriptions, a partitioned table and
-one index, which is a fair summary of what ten releases of work by a lot of
-people bought us.
+`pg_upgrade --link`, logical replication, and the hybrid that builds a
+whole new architecture ahead of the cutover are the entire ladder this
+post covers, cheapest and most restrictive at one end, most capable and
+most work at the other. None of them removes the three items above —
+they only change how much of the operation each one does for you.
 
 A fourth post, covering the architectures left out of this series in less
 detail — geo-replication, BDR-style multi-active setups, plain CDC and
