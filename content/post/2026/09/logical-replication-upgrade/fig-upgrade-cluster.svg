@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 800" role="img" aria-label="Upgrading a primary with two standbys using pg_upgrade --link. Before: a v16 primary streams to two v16 standbys while the application writes. Ordered steps: freeze writes on the primary; stop the primary and both standbys; run pg_upgrade --link on the primary only; rsync --hard-links from the primary to each standby; start the new primary; start each rsync'd standby; run read-only checks on all three nodes; only then run read-write checks and resume application traffic. After: a v18 primary streams to two v18 standbys, writing again.">
+  <style>
+    text { font-family: system-ui, sans-serif; font-size: 14px; fill: #222; }
+    .box { fill: #f4f6f8; stroke: #556; stroke-width: 1.5; rx: 8; }
+    .hi { fill: #e6eefc; }
+    .good { fill: #e4f4e6; stroke: #2e7d32; }
+    .small { font-size: 12px; fill: #444; }
+    .b { font-weight: 600; }
+    .num { font-weight: 700; font-size: 14px; fill: #fff; }
+    .circ { fill: #556; }
+    .circ.ro { fill: #c2570c; }
+    .circ.rw { fill: #2e7d32; }
+    .d { stroke: #556; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; marker-end: url(#ad); }
+    .s { stroke: #2e7d32; stroke-width: 1.5; fill: none; marker-end: url(#as); }
+    @media (prefers-color-scheme: dark) {
+      text { fill: #e8e8e8; } .small { fill: #bbb; }
+      .box { fill: #23272e; stroke: #99a; } .hi { fill: #1d2a44; }
+      .good { fill: #1d3322; stroke: #66bb6a; }
+      .d { stroke: #99a; } .s { stroke: #66bb6a; }
+      .circ { fill: #99a; } .circ.ro { fill: #ff9a57; } .circ.rw { fill: #66bb6a; }
+    }
+  </style>
+  <defs>
+    <marker id="ad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#556"/></marker>
+    <marker id="as" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#2e7d32"/></marker>
+  </defs>
+
+  <text class="b" x="20" y="22">Before: v16, three nodes, application writing</text>
+
+  <rect class="box hi" x="40" y="35" width="160" height="50"/>
+  <text x="120" y="65" text-anchor="middle">primary (v16)</text>
+
+  <rect class="box" x="340" y="30" width="160" height="40"/>
+  <text x="420" y="55" text-anchor="middle">standby A (v16)</text>
+
+  <rect class="box" x="340" y="95" width="160" height="40"/>
+  <text x="420" y="120" text-anchor="middle">standby B (v16)</text>
+
+  <path class="d" d="M200 55 L335 50"/>
+  <path class="d" d="M200 65 L335 112"/>
+  <text class="small" x="560" y="55">streaming replication,</text>
+  <text class="small" x="560" y="71">standbys read-only</text>
+
+  <!-- step ladder -->
+  <text class="b" x="20" y="160">Ordered steps</text>
+
+  <circle class="circ" cx="34" cy="195" r="14"/><text class="num" x="34" y="200" text-anchor="middle">1</text>
+  <rect class="box" x="56" y="178" width="824" height="34"/>
+  <text x="68" y="200">Freeze writes on the primary (the same read-only freeze used earlier in this post)</text>
+
+  <circle class="circ" cx="34" cy="245" r="14"/><text class="num" x="34" y="250" text-anchor="middle">2</text>
+  <rect class="box" x="56" y="228" width="824" height="34"/>
+  <text x="68" y="250">Stop the primary and both standbys — all three down, standbys fully caught up first</text>
+
+  <circle class="circ" cx="34" cy="295" r="14"/><text class="num" x="34" y="300" text-anchor="middle">3</text>
+  <rect class="box" x="56" y="278" width="824" height="34"/>
+  <text x="68" y="300"><tspan font-family="monospace">pg_upgrade --link</tspan> on the primary only — no standby runs this</text>
+
+  <circle class="circ" cx="34" cy="345" r="14"/><text class="num" x="34" y="350" text-anchor="middle">4</text>
+  <rect class="box" x="56" y="328" width="824" height="34"/>
+  <text x="68" y="350"><tspan font-family="monospace">rsync --archive --delete --hard-links --size-only</tspan> from the primary, once per standby</text>
+
+  <circle class="circ" cx="34" cy="395" r="14"/><text class="num" x="34" y="400" text-anchor="middle">5</text>
+  <rect class="box" x="56" y="378" width="824" height="34"/>
+  <text x="68" y="400">Start the new primary</text>
+
+  <circle class="circ" cx="34" cy="445" r="14"/><text class="num" x="34" y="450" text-anchor="middle">6</text>
+  <rect class="box" x="56" y="428" width="824" height="34"/>
+  <text x="68" y="450">Start each rsync'd standby and let it attach and stream</text>
+
+  <circle class="circ ro" cx="34" cy="495" r="14"/><text class="num" x="34" y="500" text-anchor="middle">7</text>
+  <rect class="box good" x="56" y="478" width="824" height="34"/>
+  <text x="68" y="500">Read-only checks on all three nodes — confirm each one answers and is caught up, before anything can write</text>
+
+  <circle class="circ rw" cx="34" cy="545" r="14"/><text class="num" x="34" y="550" text-anchor="middle">8</text>
+  <rect class="box good" x="56" y="528" width="824" height="34"/>
+  <text x="68" y="550">Read-write checks, then unfreeze and resume application traffic — never the other way around</text>
+
+  <text class="b" x="20" y="605">After: v18, three nodes, application writing again</text>
+
+  <rect class="box hi" x="40" y="618" width="160" height="50"/>
+  <text x="120" y="648" text-anchor="middle">primary (v18)</text>
+
+  <rect class="box" x="340" y="613" width="160" height="40"/>
+  <text x="420" y="638" text-anchor="middle">standby A (v18)</text>
+
+  <rect class="box" x="340" y="678" width="160" height="40"/>
+  <text x="420" y="703" text-anchor="middle">standby B (v18)</text>
+
+  <path class="s" d="M200 638 L335 633"/>
+  <path class="s" d="M200 648 L335 695"/>
+  <text class="small" x="560" y="638">streaming replication</text>
+  <text class="small" x="560" y="654">re-established</text>
+
+  <text class="small" x="20" y="760">The order matters as much as the modes: read-only checks gate read-write ones, never the reverse.</text>
+</svg>

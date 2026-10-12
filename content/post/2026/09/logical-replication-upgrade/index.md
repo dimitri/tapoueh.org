@@ -802,6 +802,27 @@ pg_auto_failover, repmgr — has to know about the new topology before
 the cutover happens, or the first failover afterward targets a node
 that was never meant to be a primary.
 
+`pg_upgrade --link` on a primary with two standbys is not "run it three
+times" — the standbys are never upgraded directly, they're rsync'd from
+the primary's already-upgraded, hard-linked files, and the order those
+steps happen in is as load-bearing as the mode itself:
+
+{{< image src="fig-upgrade-cluster.svg" title="Upgrading a primary with two standbys using pg_upgrade --link. Freeze writes, stop all three, pg_upgrade --link on the primary only, rsync --hard-links from the primary to each standby, start the new primary, start the rsync'd standbys, read-only checks on all three nodes, and only then read-write checks before resuming application traffic." >}}
+
+Two things in that order are easy to get backwards. `pg_upgrade --link`
+runs once, against the primary's own data directory — a standby that
+runs it too ends up with its own, disconnected set of hard links, not a
+cluster. Postgres's own docs solve this with `rsync --hard-links`,
+run from the primary (or from one already-rsync'd standby) toward each
+of the others, which recreates the primary's new links on the standby
+instead of copying the data again. And the two checks at the end are
+deliberately in that order, not merged into one: a read-only check
+only proves the new cluster answers queries and that both standbys are
+attached and caught up — it says nothing about whether a write
+actually replicates end to end, which is the one failure mode that
+would otherwise show up for the first time in production traffic
+instead of in a check.
+
 This is exactly the line between what a managed cloud buys you and what
 self-hosting leaves on you. RDS, Aurora, Cloud SQL, and Azure Flexible
 Server's in-place upgrades are cluster operations: the service upgrades
