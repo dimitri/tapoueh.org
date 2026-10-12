@@ -785,12 +785,24 @@ production Postgres is not that — it is a primary with one or more
 streaming-replication standbys, kept for failover, and the upgrade this
 post walks through does not, by itself, give you that back.
 
-`pg_upgrade --link`/`--clone` upgrades one data directory at a time.
-A standby is not caught up to a new major version by streaming from an
-upgraded primary — streaming replication needs the same major version
-on both ends — so each standby gets rebuilt or upgraded in its own
-right, node by node, and the maintenance-window math in this post's
-first sections multiplies by however many nodes that is. Logical
+`pg_upgrade --link`/`--clone` upgrades one data directory at a time —
+but that one data directory is the primary's, and only the primary's.
+The seconds-scale timing this post measured earlier for it does not
+multiply by node count, because it never runs a second time: a standby
+is not caught up to a new major version by streaming from an upgraded
+primary, streaming replication needs the same major version on both
+ends, so each standby gets there by copying the primary's result
+(rsync's hard links, or a rebuild from a fresh backup) instead. What
+does scale with node count is that copy, and real procedures don't
+make the write-stall wait for it — [Crunchy Bridge's managed upgrade](https://docs.crunchybridge.com/guides/major-version-upgrades)
+brings the new primary back for traffic first and rebuilds standbys
+from backup afterward; [Patroni's](https://patroni.readthedocs.io/en/latest/existing_data.html) does the same, primary back up, then
+standbys reinitialised behind it. The cost of more standbys is a
+longer stretch with no failover protection while they catch up, not a
+longer write-stall — a real cost, just not the one it looks like at
+first. This post's own diagram holds standby readiness as a gate
+before resuming traffic anyway, the more conservative of the two
+choices, not the only one. Logical
 replication has the same gap from the other side: a new server that
 only exists as a single node is not a like-for-like replacement for an
 old primary that had standbys behind it — the "zero downtime" promise
