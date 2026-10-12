@@ -417,8 +417,8 @@ nothing compiled about it. The same guarantee is available without
 `session_preload_libraries`, a GUC, or a line of C: define the trigger
 function to just always raise, and toggle it with Postgres's own
 [`alter event trigger`](https://www.postgresql.org/docs/current/sql-altereventtrigger.html) `preventddl disable` / `enable`, built into
-core for exactly this. Either way deploys as plain SQL, no shared
-library to build or load.
+core for exactly this. That version is plain SQL end to end — nothing
+to compile, nothing to add to `session_preload_libraries`.
 
 ### Preparing the way back
 
