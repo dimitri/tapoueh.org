@@ -89,6 +89,8 @@ reverse subscription, kept current continuously, so "roll back" is a
 few hundred milliseconds rather than a restore job. Each step up
 removes risk and adds a moving part that can itself go wrong.
 
+{{< image src="fig-upgrade-rollback-ladder.svg" title="The rollback ladder, cheapest to most elaborate. Plain-copy pg_upgrade leaves the old cluster restartable, but only before the new one takes a write. Link mode is faster but then needs a restore, not a restart. A live reverse subscription keeps rolling back possible at any time, in milliseconds." >}}
+
 None of this is Postgres-specific, either. It is [Continuous
 Migration](https://pgloader.io/blog/continuous-migration/), the method
 behind pgloader's cross-database moves: stand up the target first, keep
@@ -114,6 +116,8 @@ each variable:
 5,000,000-row table, 591 MB, one index:  1.64s
 5,000 near-empty tables:                 6.47s
 ```
+
+{{< image src="fig-upgrade-timing.svg" title="pg_upgrade --link timed on three reshapes of the same schema. 500x the data makes no measurable difference; 5,000x the table count takes 4x longer. Link mode hard-links files and rewrites the catalog, it never copies a row." >}}
 
 Five hundred times the data made no measurable difference; five
 thousand times the table count did. So "shrink the window to
@@ -248,6 +252,8 @@ there when the copy finishes:
   even known to the subscription until `alter subscription … refresh
   publication`.
 
+{{< image src="fig-upgrade-gaps.svg" title="copy_data = true copies the tables, not what they depend on: sequences, materialized view content and large objects are missing, and DDL made during the migration goes unnoticed. The one piece of good news is generated columns, recomputed correctly by the subscriber." >}}
+
 ### Preparing the way back
 
 The way back is set up before the cutover, not after. The idea is a second
@@ -289,6 +295,8 @@ once, and nothing bounces back. Three things to know:
 Everything hangs on one question at cutover time: has the new server
 received everything the old one committed? Postgres 19 added `WAIT FOR LSN`, which
 looks like the perfect tool for this. It is not, for a logical subscriber:
+
+{{< image src="fig-upgrade-catchup.svg" title="Three plausible-looking tools to check that the new server has caught up, each wrong for a different reason: WAIT FOR LSN is standby-only, a naive LSN comparison never converges because the freeze's own commit is never replicated, and latest_end_lsn is updated on receipt, not on apply. A marker row works." >}}
 
 ```results
 16, 18:      ERROR:  syntax error at or near "WAIT"
