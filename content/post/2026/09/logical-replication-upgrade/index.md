@@ -846,6 +846,47 @@ why its compose file sets both.
 
 ---
 
+## Picking one, and testing the pick
+
+Line the whole post up and the ladder is a complexity ladder as much as
+a downtime one. `pg_upgrade --link` is the cheapest to run and to
+reason about, but it only plays on same-hardware ground, and that's not
+a limitation anyone negotiates around. `pg_dump`/`pg_restore` and
+`pgcopydb clone` come next, and between those two there's little reason
+to pick the slower one once `pgcopydb` is installed: same coverage,
+and neither has the gaps logical replication's own initial copy does.
+No marker row, no `setval` dance, no `replica identity full`, no rule
+about DDL ordering — a full dump/restore, parallel or not, simply does
+not have the blind spots this post spent several sections closing,
+because it moves the whole database as one unit instead of a stream of
+row changes. Its downtime scales with data size, full stop, and for a
+lot of real databases that stop is still shorter, and far less work to
+get right, than everything logical replication demands in return.
+
+What logical replication — native, `pgcopydb follow`, or pglogical —
+buys past that point is real: downtime that shrinks from a stop sized
+to the data to a cutover measured in milliseconds. It is also not
+free, and this post is the itemized bill for it: a marker row because
+no built-in tool answers "has it caught up," a reverse subscription
+prepared ahead of time for the way back, sequences copied or split by
+residue to survive an imperfect freeze, DDL kept out of the window by
+policy and by an event trigger, timeouts set so one stuck transaction
+can't hold the barrier open, and an application written to retry and
+reconnect because nothing above substitutes for that. Behind pgbouncer,
+the cutover itself gets shorter still, down to low hundreds of
+milliseconds with zero failed attempts in these runs — but only once
+everything above it already holds, and only if every client actually
+goes through the pooler.
+
+None of the numbers in this post are guarantees; they're what one setup
+measured. The only way to know your own maintenance window is the
+rehearsal this post already named: run the actual cutover, on your own
+schema, your own data volume, your own traffic, enough times that the
+timing is a known number instead of a guess. The tool decides how much
+there is to rehearse — a `pgcopydb clone` has almost none of it, a live
+reverse subscription has all of it — not whether rehearsing it is
+optional.
+
 ## What is still on you
 
 After ten releases, the what-each-release-changed table in part 1 has two
