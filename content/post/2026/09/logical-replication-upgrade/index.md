@@ -823,6 +823,36 @@ actually replicates end to end, which is the one failure mode that
 would otherwise show up for the first time in production traffic
 instead of in a check.
 
+That restriction — one real run, on the primary, everything else a copy
+of its result — isn't a missing feature waiting to be added. Run
+`pg_upgrade` independently on each standby instead, even one at a time,
+even in the right order, and there's no cheap way left to guarantee the
+result still matches: it would have to checksum every file to tell a
+user table safe to leave alone apart from a system table that has to
+stay in lockstep with the primary, which is the exact cost `rsync`'s
+hard-link trick exists to avoid. [Bruce Momjian](https://www.postgresql.org/message-id/20150123205246.GB25726%40momjian.us)
+said as much discussing that alternative on the mailing list: doing it
+for real would mean preserving relfilenodes and checksumming to tell
+them apart, and "even if all the checksums work, it will be
+slow/expensive." So the rule holds without exception: `pg_upgrade` runs
+once, and every standby gets to the new version by copying what the
+primary already produced, never by running it a second time.
+
+Two things the diagram doesn't show, because `pg_upgrade`'s own docs
+don't mention them either: archiving and backups. The new cluster gets
+a new system identifier and a fresh timeline starting at 1, so the old
+WAL archive is not a continuation of anything the new primary writes —
+pointing `archive_command` at the same location risks exactly the
+failure [Stephen Frost described](https://www.postgresql.org/message-id/20180816165318.GO3326%40tamriel.snowman.net):
+"you must not allow \[a newly pg_upgrade'd PG server to try to] get WAL
+from a WAL archive that was associated with the old server which had a
+different system ID." Point the new cluster at a new archive location,
+not the old one, and treat every backup taken before the upgrade the
+same way: good for restoring the old cluster if it's ever needed again,
+useless for recovering the new one. The fix is the same discipline as
+steps 7 and 8: take a fresh backup of the new cluster right after
+cutover, before calling the upgrade done.
+
 This is exactly the line between what a managed cloud buys you and what
 self-hosting leaves on you. RDS, Aurora, Cloud SQL, and Azure Flexible
 Server's in-place upgrades are cluster operations: the service upgrades
