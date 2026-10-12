@@ -409,6 +409,17 @@ way after. Nothing holding DDL privileges but outside the deployment path
 can touch the schema while it's up — not a request to not run DDL right
 now, an actual barrier.
 
+The only thing the C module buys is the GUC: its entire job, by its own
+source, is registering `preventddl.enable` as a properly typed boolean
+so it lists cleanly in `pg_settings` — the event trigger function itself
+is plain PL/pgSQL, `raise exception` behind a `current_setting()` check,
+nothing compiled about it. The same guarantee is available without
+`session_preload_libraries`, a GUC, or a line of C: define the trigger
+function to just always raise, and toggle it with Postgres's own
+[`alter event trigger`](https://www.postgresql.org/docs/current/sql-altereventtrigger.html) `preventddl disable` / `enable`, built into
+core for exactly this. Either way deploys as plain SQL, no shared
+library to build or load.
+
 ### Preparing the way back
 
 The way back is set up before the cutover, not after. The idea is a second
