@@ -577,16 +577,18 @@ the marker-row catch-up and `setval()` from the earlier sections, run
 directly against `old2`/`new2` as the operator, bypassing pgbouncer; edit
 `databases.ini`, `old2` to `new2`; `RELOAD`; `RESUME app`.
 
-That order is not arbitrary, and I found out why the hard way. An earlier
-version ran the sequence copy *before* `PAUSE`, and got `duplicate key
-value violates unique constraint` after the switch: rows `old2` kept
-committing in the gap between the sequence snapshot and the barrier
-actually taking effect replicated in with their original, higher ids,
-colliding with the lower ones `new2`'s under-counted sequence handed out
-after resume. The fix is the same discipline as the freeze-then-sequences
-order earlier in this post, just with `PAUSE` as the barrier instead of a
-database-level read-only flag: establish the barrier first, copy
-sequences only once nothing more can land on the old side.
+That order is not arbitrary, and it's worth walking through why, because
+the mistake is easy to make and the symptom shows up well after the
+cause. Copy the sequences *before* `PAUSE` instead of after, and you get
+`duplicate key value violates unique constraint` after the switch: rows
+`old2` keeps committing in the gap between the sequence snapshot and the
+barrier actually taking effect replicate in with their original, higher
+ids, colliding with the lower ones `new2`'s under-counted sequence hands
+out after resume. The fix is the same discipline as the
+freeze-then-sequences order earlier in this post, just with `PAUSE` as
+the barrier instead of a database-level read-only flag: establish the
+barrier first, copy sequences only once nothing more can land on the old
+side.
 
 With that fix, three clean runs measured 142-151 ms of write stall, and —
 the actual finding, not the number — **zero failed attempts**, all three
