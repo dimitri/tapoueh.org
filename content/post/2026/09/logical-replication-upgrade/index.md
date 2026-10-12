@@ -785,24 +785,22 @@ production Postgres is not that — it is a primary with one or more
 streaming-replication standbys, kept for failover, and the upgrade this
 post walks through does not, by itself, give you that back.
 
-`pg_upgrade --link`/`--clone` upgrades one data directory at a time —
-but that one data directory is the primary's, and only the primary's.
-The seconds-scale timing this post measured earlier for it does not
-multiply by node count, because it never runs a second time: a standby
-is not caught up to a new major version by streaming from an upgraded
-primary, streaming replication needs the same major version on both
-ends, so each standby gets there by copying the primary's result
-(rsync's hard links, or a rebuild from a fresh backup) instead. What
-does scale with node count is that copy, and real procedures don't
-make the write-stall wait for it — [Crunchy Bridge's managed upgrade](https://docs.crunchybridge.com/guides/major-version-upgrades)
-brings the new primary back for traffic first and rebuilds standbys
-from backup afterward; [Patroni's](https://patroni.readthedocs.io/en/latest/existing_data.html) does the same, primary back up, then
-standbys reinitialised behind it. The cost of more standbys is a
-longer stretch with no failover protection while they catch up, not a
-longer write-stall — a real cost, just not the one it looks like at
-first. This post's own diagram holds standby readiness as a gate
-before resuming traffic anyway, the more conservative of the two
-choices, not the only one. Logical
+`pg_upgrade --link`/`--clone` touches one data directory: the primary's.
+That's the whole of its job, once, and the seconds-scale timing this
+post measured earlier for it is exactly that one run's cost. Streaming
+replication matches major versions on both ends, so a standby reaches
+the new version by copying the primary's already-upgraded result
+instead — rsync's hard links, or a rebuild from a fresh backup. That
+copy is the part that scales with node count, and it runs after the
+primary is already back: [Crunchy Bridge's managed upgrade](https://docs.crunchybridge.com/guides/major-version-upgrades)
+brings the new primary up for traffic first and rebuilds standbys from
+backup behind it; [Patroni's](https://patroni.readthedocs.io/en/latest/existing_data.html) follows the same order, primary up, then
+standbys reinitialised. More standbys buy a longer stretch running on
+a single point of failure while they catch up — a real cost, paid in
+redundancy, separate from the write-stall this post has been timing.
+This post's own diagram takes the stricter order instead, gating
+traffic on all three nodes: the conservative pick, one of two valid
+ones. Logical
 replication has the same gap from the other side: a new server that
 only exists as a single node is not a like-for-like replacement for an
 old primary that had standbys behind it — the "zero downtime" promise
