@@ -93,6 +93,20 @@ removes risk and adds a moving part that can itself go wrong.
 
 {{< image src="fig-upgrade-rollback-ladder.svg" title="The rollback ladder, cheapest to most elaborate. Plain-copy pg_upgrade leaves the old cluster restartable, but only before the new one takes a write. Link mode is faster but then needs a restore, not a restart. A live reverse subscription keeps rolling back possible at any time, in milliseconds." >}}
 
+None of this is a new discipline dressed up for Postgres, either. It has
+a name, [Continuous Migration](https://pgloader.io/blog/continuous-migration/),
+and it is a methodology, not a tool: stand up the target first, let it
+run and prove itself, and only schedule the cutover once it already has
+— so D-Day is a formality, not a leap of faith. pgloader's own version
+of it re-runs a full batch migration nightly for the length of a
+cross-database project, mainly to keep re-validating the code port and
+the casting rules against fresh data, a cost that doesn't exist here —
+Postgres 16 and Postgres 18 speak the same SQL, nothing to port. What
+carries over is the discipline, not the mechanism: whatever keeps the
+target current — a nightly batch job, a live subscription, anything
+else — run it long enough to trust it before traffic ever switches,
+rather than betting everything on one cutover event.
+
 ## `pg_upgrade` in place, and what it carries of logical replication
 
 `pg_upgrade --link` has been there since Postgres 9.0, so the in-place
@@ -152,17 +166,6 @@ That's the shorter way, when you can afford it. The rest of this post is
 what to do when you can't.
 
 ## Logical replication as the upgrade path
-
-None of what follows is Postgres-specific, either. It is [Continuous
-Migration](https://pgloader.io/blog/continuous-migration/), the method
-behind pgloader's cross-database moves: stand up the target first, keep
-it continuously current instead of migrating once, and only schedule
-the cutover once it has already proven itself — so D-Day is a
-formality, not a leap of faith. A major-version upgrade is the narrow
-case of that same problem (same schema, same SQL, one version apart),
-and the subscription below plays the part pgloader's nightly re-run
-plays in a cross-database move, except continuous instead of nightly,
-because logical replication can do that where a batch job cannot.
 
 A subscription on the new server copies the tables and then follows the
 changes; a reverse subscription on the old server, prepared in advance,
