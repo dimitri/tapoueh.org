@@ -778,6 +778,53 @@ instead of merely routing bytes past it.
 
 ---
 
+## One node, not the whole architecture
+
+Everything above upgrades a pair: one old server, one new one. Most
+production Postgres is not that — it is a primary with one or more
+streaming-replication standbys, kept for failover, and the upgrade this
+post walks through does not, by itself, give you that back.
+
+`pg_upgrade --link`/`--clone` upgrades one data directory at a time.
+A standby is not caught up to a new major version by streaming from an
+upgraded primary — streaming replication needs the same major version
+on both ends — so each standby gets rebuilt or upgraded in its own
+right, node by node, and the maintenance-window math in this post's
+first sections multiplies by however many nodes that is. Logical
+replication has the same gap from the other side: a new server that
+only exists as a single node is not a like-for-like replacement for an
+old primary that had standbys behind it — the "zero downtime" promise
+this post measures covers the write path, not the fact that the new
+side is a single point of failure until it has its own standby
+streaming, built and caught up, before the cutover, not after. And
+whichever path gets you there, the failover tooling — Patroni,
+pg_auto_failover, repmgr — has to know about the new topology before
+the cutover happens, or the first failover afterward targets a node
+that was never meant to be a primary.
+
+This is exactly the line between what a managed cloud buys you and what
+self-hosting leaves on you. RDS, Aurora, Cloud SQL, and Azure Flexible
+Server's in-place upgrades are cluster operations: the service upgrades
+and reattaches read replicas and standbys as part of the one upgrade,
+not as separate work handed back to you. Running the same thing
+yourself, on-prem or on a VM, every one of the paragraphs above is
+yours: rebuilding each standby, re-pointing the failover agent at the
+new topology, and deciding what "rollback" even means once more than
+two servers are involved.
+
+Nothing in this post's toolbox solves that end to end, and it is not
+solved yet anywhere else either — it is on the public
+[roadmap](https://oss.theartofpostgresql.com/roadmap/) for
+`pg_auto_failover`, under "Cluster upgrades": two planned paths to a
+new major version, "rolling upgrades orchestrated around `pg_upgrade`,
+node by node" and "online, near-zero-downtime upgrades driven by
+logical replication" — the same two halves of this post, but for a
+whole cluster instead of a pair of servers. It is listed, not shipped.
+If it is worth having sooner, the [pricing](https://oss.theartofpostgresql.com/#pricing) page is where sponsoring it
+moves the needle.
+
+---
+
 ## Where pglogical is still needed in 2026
 
 From what I built and what its README says:
