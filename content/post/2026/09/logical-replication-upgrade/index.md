@@ -826,6 +826,17 @@ building one.
 
 {{< image src="fig-upgrade-full-cluster.svg" title="A duplicate architecture, built ahead of the cutover. The old primary feeds a brand new architecture through logical replication, the only piece crossing the major-version boundary. Inside it: a new primary on the new version, physical-replicating to its own new standbys exactly as the old primary did, and feeding its own WAL archive and backup storage." >}}
 
+Nothing in this post's toolbox orchestrates either of these two diagrams
+end to end yet, and neither does anything else — it's on the public
+[roadmap](https://oss.theartofpostgresql.com/roadmap/) for
+`pg_auto_failover`, under "Cluster upgrades": the same two paths as
+above, "rolling upgrades orchestrated around `pg_upgrade`, node by
+node" and "online, near-zero-downtime upgrades driven by logical
+replication," built into the tool instead of run by hand. It's listed,
+not shipped. If it's worth having sooner, the
+[pricing](https://oss.theartofpostgresql.com/#pricing) page is where
+sponsoring it moves the needle.
+
 ---
 
 ## Where pglogical is still needed in 2026
