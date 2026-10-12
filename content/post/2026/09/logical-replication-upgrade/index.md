@@ -780,111 +780,51 @@ instead of merely routing bytes past it.
 
 ## One node, not the whole architecture
 
-Everything above upgrades a pair: one old server, one new one. Most
-production Postgres is not that — it is a primary with one or more
-streaming-replication standbys, kept for failover, and the upgrade this
-post walks through does not, by itself, give you that back.
+Everything above upgrades a pair; most production Postgres is a primary
+with one or more standbys instead. Postgres's own strategy for bringing
+them along is narrower than it looks: `pg_upgrade` runs once, against
+the primary, and every standby reaches the new version by rebuilding
+from it over physical replication, never by being upgraded itself —
+the new cluster comes out of `initdb` with its own [system
+identifier](https://www.postgresql.org/docs/current/protocol-replication.html),
+the value streaming replication uses to confirm a standby's base backup
+came from the primary it's attached to, and a timeline restarting at 1,
+so an old standby's data directory simply belongs to a different
+cluster now. [pg_upgrade's own docs](https://www.postgresql.org/docs/current/pgupgrade.html#PGUPGRADE-STEP-REPLICAS)
+call for exactly that once the new primary is running, and [Bruce
+Momjian](https://www.postgresql.org/message-id/20150123205246.GB25726%40momjian.us)
+and [Magnus Hagander](https://www.postgrespro.com/list/thread-id/1549771)
+have both confirmed the same on the mailing lists, in fewer words:
+redone from scratch, not upgraded in place.
 
-{{< image src="fig-upgrade-architecture.svg" title="A real architecture, not just the pair this post upgrades. Highlighted: the application writing to the primary, the single pair this post's pg_upgrade and logical-replication sections cover. Outside that box: a primary streaming to two standbys for failover, shipping WAL to an archive, and sending periodic base backups to separate storage — all part of any real deployment, none of it addressed by upgrading one pair of servers." >}}
+The same new identifier breaks the other two things a production
+primary depends on. WAL archived before the upgrade is not a
+continuation of anything the new primary writes, and pointing
+`archive_command` at the old location risks exactly the failure
+[Stephen Frost described](https://www.postgresql.org/message-id/20180816165318.GO3326%40tamriel.snowman.net)
+on the mailing list: a server trying to recover from an archive that
+belongs to a different system. Backups taken before the upgrade stay
+good for restoring the old cluster and nothing else. Both need a fresh
+start right after cutover — a new archive location, and a new base
+backup — before the upgrade counts as done.
 
-`pg_upgrade --link`/`--clone` touches one data directory: the primary's.
-That's the whole of its job, once, and the seconds-scale timing this
-post measured earlier for it is exactly that one run's cost. Streaming
-replication matches major versions on both ends, so a standby reaches
-the new version by copying the primary's already-upgraded result
-instead — rsync's hard links, or a rebuild from a fresh backup. That
-copy is the part that scales with node count, and it runs after the
-primary is already back: [Crunchy Bridge's managed upgrade](https://docs.crunchybridge.com/guides/major-version-upgrades)
-brings the new primary up for traffic first and rebuilds standbys from
-backup behind it; [Patroni's](https://patroni.readthedocs.io/en/latest/existing_data.html) follows the same order, primary up, then
-standbys reinitialised. More standbys buy a longer stretch running on
-a single point of failure while they catch up — a real cost, paid in
-redundancy, separate from the write-stall this post has been timing.
-This post's own diagram takes the stricter order instead, gating
-traffic on all three nodes: the conservative pick, one of two valid
-ones. Logical
-replication has the same gap from the other side: a new server that
-only exists as a single node is not a like-for-like replacement for an
-old primary that had standbys behind it — the "zero downtime" promise
-this post measures covers the write path, not the fact that the new
-side is a single point of failure until it has its own standby
-streaming, built and caught up, before the cutover, not after. And
-whichever path gets you there, the failover tooling — Patroni,
-pg_auto_failover, repmgr — has to know about the new topology before
-the cutover happens, or the first failover afterward targets a node
-that was never meant to be a primary.
+For the primary and its standbys, that's the whole procedure, in order:
 
-`pg_upgrade --link` on a primary with two standbys is not "run it three
-times" — the standbys are never upgraded directly, they're rsync'd from
-the primary's already-upgraded, hard-linked files, and the order those
-steps happen in is as load-bearing as the mode itself:
+{{< image src="fig-upgrade-cluster.svg" title="Upgrading a primary with two standbys using pg_upgrade --link. Freeze writes, stop all three, pg_upgrade --link on the primary only, rebuild each standby from a fresh backup, start the new primary, start each rebuilt standby, read-only checks on all three nodes, and only then read-write checks before resuming application traffic." >}}
 
-{{< image src="fig-upgrade-cluster.svg" title="Upgrading a primary with two standbys using pg_upgrade --link. Freeze writes, stop all three, pg_upgrade --link on the primary only, rsync --hard-links from the primary to each standby, start the new primary, start the rsync'd standbys, read-only checks on all three nodes, and only then read-write checks before resuming application traffic." >}}
+There is a second way to get a whole architecture to the new version,
+not just the primary: build it twice. Stand up a new primary on the new
+major version from a plain `initdb`, not `pg_upgrade`, and let logical
+replication — the technique the rest of this post already walks
+through — carry the data across the version boundary once. Everything
+downstream of that new primary is then an ordinary, same-version
+deployment: physical replication to its own new standbys, its own WAL
+archive, its own backups, built and caught up while the old
+architecture is still the one taking traffic. Cutover becomes a traffic
+switch onto an architecture that is already whole, not the start of
+building one.
 
-Two things in that order are easy to get backwards. `pg_upgrade --link`
-runs once, against the primary's own data directory — a standby that
-runs it too ends up with its own, disconnected set of hard links, not a
-cluster. Postgres's own docs solve this with `rsync --hard-links`,
-run from the primary (or from one already-rsync'd standby) toward each
-of the others, which recreates the primary's new links on the standby
-instead of copying the data again. And the two checks at the end are
-deliberately in that order, not merged into one: a read-only check
-only proves the new cluster answers queries and that both standbys are
-attached and caught up — it says nothing about whether a write
-actually replicates end to end, which is the one failure mode that
-would otherwise show up for the first time in production traffic
-instead of in a check.
-
-That restriction — one real run, on the primary, everything else a copy
-of its result — isn't a missing feature waiting to be added. Run
-`pg_upgrade` independently on each standby instead, even one at a time,
-even in the right order, and there's no cheap way left to guarantee the
-result still matches: it would have to checksum every file to tell a
-user table safe to leave alone apart from a system table that has to
-stay in lockstep with the primary, which is the exact cost `rsync`'s
-hard-link trick exists to avoid. [Bruce Momjian](https://www.postgresql.org/message-id/20150123205246.GB25726%40momjian.us)
-said as much discussing that alternative on the mailing list: doing it
-for real would mean preserving relfilenodes and checksumming to tell
-them apart, and "even if all the checksums work, it will be
-slow/expensive." So the rule holds without exception: `pg_upgrade` runs
-once, and every standby gets to the new version by copying what the
-primary already produced, never by running it a second time.
-
-Two things the diagram doesn't show, because `pg_upgrade`'s own docs
-don't mention them either: archiving and backups. The new cluster gets
-a new system identifier and a fresh timeline starting at 1, so the old
-WAL archive is not a continuation of anything the new primary writes —
-pointing `archive_command` at the same location risks exactly the
-failure [Stephen Frost described](https://www.postgresql.org/message-id/20180816165318.GO3326%40tamriel.snowman.net):
-"you must not allow \[a newly pg_upgrade'd PG server to try to] get WAL
-from a WAL archive that was associated with the old server which had a
-different system ID." Point the new cluster at a new archive location,
-not the old one, and treat every backup taken before the upgrade the
-same way: good for restoring the old cluster if it's ever needed again,
-useless for recovering the new one. The fix is the same discipline as
-steps 7 and 8: take a fresh backup of the new cluster right after
-cutover, before calling the upgrade done.
-
-This is exactly the line between what a managed cloud buys you and what
-self-hosting leaves on you. RDS, Aurora, Cloud SQL, and Azure Flexible
-Server's in-place upgrades are cluster operations: the service upgrades
-and reattaches read replicas and standbys as part of the one upgrade,
-not as separate work handed back to you. Running the same thing
-yourself, on-prem or on a VM, every one of the paragraphs above is
-yours: rebuilding each standby, re-pointing the failover agent at the
-new topology, and deciding what "rollback" even means once more than
-two servers are involved.
-
-Nothing in this post's toolbox solves that end to end, and it is not
-solved yet anywhere else either — it is on the public
-[roadmap](https://oss.theartofpostgresql.com/roadmap/) for
-`pg_auto_failover`, under "Cluster upgrades": two planned paths to a
-new major version, "rolling upgrades orchestrated around `pg_upgrade`,
-node by node" and "online, near-zero-downtime upgrades driven by
-logical replication" — the same two halves of this post, but for a
-whole cluster instead of a pair of servers. It is listed, not shipped.
-If it is worth having sooner, the [pricing](https://oss.theartofpostgresql.com/#pricing) page is where sponsoring it
-moves the needle.
+{{< image src="fig-upgrade-full-cluster.svg" title="A duplicate architecture, built ahead of the cutover. The old primary feeds a brand new architecture through logical replication, the only piece crossing the major-version boundary. Inside it: a new primary on the new version, physical-replicating to its own new standbys exactly as the old primary did, and feeding its own WAL archive and backup storage." >}}
 
 ---
 
