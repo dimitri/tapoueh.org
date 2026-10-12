@@ -803,12 +803,6 @@ replication origin with ID 11`, and the subscriptions sit in the `i` or `d` stat
 forever. My hub-and-workers demo hit the second limit at step 21, which is
 why its compose file sets both.
 
-One more warning, about this very demo. The Lab's `19beta3` image
-preloads `pg_stat_plans`, and that preload segfaults on `UPDATE … FOR
-PORTION OF`. Node structures change between betas, and the packaged
-extension does not match them. It is not a Postgres bug, and a fix for the
-image is in review; it is also why these demos use the official images.
-
 ---
 
 ## What is still on you
