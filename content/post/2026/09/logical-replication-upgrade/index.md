@@ -669,6 +669,32 @@ Not needed here, since `PAUSE` is the barrier, so dropped rather than
 worked around — but it's exactly the kind of thing a client that sets
 session-level options would hit.
 
+`PAUSE`'s own guarantee is also its own exposure: by its own docs, it
+"will not return before all server connections have been disconnected,"
+released according to the pool's mode — in `transaction` mode, that
+means every in-flight transaction has to actually finish first, and
+nothing in pgbouncer puts a limit on how long that takes. A single long
+transaction — a report, a batch job, or a connection the application
+left `idle in transaction` waiting on something else entirely — turns
+the 142 ms measured above into however long that transaction takes to
+finish or get killed. The fix is the same `ALTER DATABASE ... SET` idiom
+the freeze earlier in this post used, aimed at time instead of writes,
+set right before the maintenance window opens and reverted after:
+`idle_in_transaction_session_timeout` catches the most common real
+offender, a transaction opened and then left waiting on the application
+side; `statement_timeout` caps one running statement but nothing
+between statements; and Postgres 17's `transaction_timeout` caps the
+whole transaction regardless of what it is doing, explicit or not,
+which is the one that actually bounds `PAUSE`'s wait end to end —
+whichever of the three is tightest wins, and the release notes warn
+against setting `transaction_timeout` in `postgresql.conf`, since that
+reaches every session on the server, not just the ones in the
+migration's path. Checking `pg_stat_activity.xact_start` for anything
+already old before issuing `PAUSE` is worth doing too: the same
+`pg_terminate_backend` used for the freeze earlier ends one found that
+way immediately, rather than waiting out a timeout that was not in
+place before the window opened.
+
 **pgcat, PgDog, and HAProxy, for the same job.** I did not build and time
 these three the way I did pgbouncer above; this is what their own
 documentation says, read carefully rather than assumed. PgDog has the
