@@ -25,8 +25,10 @@ Everything below ran, and the setup is kept so you can run it again: a
 `docker-compose.yml`, a numbered `sql/` directory, and the raw output of
 every step in `results/`, in the
 [`compose/` directory of this post](https://github.com/dimitri/tapoueh.org/tree/master/content/post/2026/09/logical-replication-upgrade/compose).
-`make clean && make up && make run` reproduces it. It uses the official
-`postgres` images (18.6, 17.11, 16.15, 14.24 and `19beta4`) rather than the
+`make clean && make all` reproduces it (parts can also be run alone: `make
+a`, `make b`, `make c`, `make d`). It uses the official
+`postgres` images (18.6, 17.11, 16.15, 14.24 and `19beta4`), `pgbouncer`,
+rather than the
 Lab image, because the demo needs several majors side by side. A traffic
 generator keeps writing throughout, at about 50 commits per second, so the
 "zero" in the title is measured rather than claimed. Quoted output is
@@ -424,6 +426,91 @@ WRITE STALL new -> old: 179 ms
 "migrator" cannot SET ROLE to "postgres"` until the subscription owner owns
 the tables. All three are Postgres 16 behaviour, and each is a security feature, but
 none was in the way I expected.
+
+## The cutover, behind pgbouncer instead
+
+Everything above still asks the application to switch targets: a config
+change, a DNS update, a connection pool told to reconnect. If the
+application already sits behind pgbouncer, there's a shorter path — the
+application's connection string never changes, because pgbouncer's own
+*backend* target is what moves, not the application's.
+
+{{< image src="fig-upgrade-pgbouncer.svg" title="The application connects to pgbouncer only, the whole time. The cutover happens behind it in four steps: PAUSE holds new queries once in-flight ones finish, the backend target is edited and reloaded, then RESUME releases the queue onto the new server. Measured: 142 ms, zero failed attempts, the client's TCP connection to pgbouncer never closes." >}}
+
+pgbouncer's admin console has exactly the primitive this needs:
+`PAUSE [db]` waits for every in-flight transaction to finish, then holds
+new ones — client sockets to pgbouncer stay open, new queries just sit in
+the buffer. `RELOAD` picks up an edited `[databases]` entry. `RESUME [db]`
+releases the queue onto whatever `databases.ini` now says. For this to
+complete *promptly*, the pool has to be in `transaction` (or `statement`)
+mode: in the default `session` mode, `PAUSE` waits for the client to
+disconnect on its own before releasing the backend connection, which is
+not a cutover, it's a wait for nothing to happen.
+
+I ran it on a fresh pair (`old2`/`new2`, independent of the pair above, so
+part D of the demo can run standalone), with the traffic loop connecting
+to `pgbouncer` for the entire run — `/tmp/target` is set once, before the
+cutover even starts, and never touched again. The sequence: `PAUSE app`;
+the marker-row catch-up and `setval()` from the earlier sections, run
+directly against `old2`/`new2` as the operator, bypassing pgbouncer; edit
+`databases.ini`, `old2` to `new2`; `RELOAD`; `RESUME app`.
+
+That order is not arbitrary, and I found out why the hard way. An earlier
+version ran the sequence copy *before* `PAUSE`, and got `duplicate key
+value violates unique constraint` after the switch: rows `old2` kept
+committing in the gap between the sequence snapshot and the barrier
+actually taking effect replicated in with their original, higher ids,
+colliding with the lower ones `new2`'s under-counted sequence handed out
+after resume. The fix is the same discipline as the freeze-then-sequences
+order earlier in this post, just with `PAUSE` as the barrier instead of a
+database-level read-only flag: establish the barrier first, copy
+sequences only once nothing more can land on the old side.
+
+With that fix, three clean runs measured 142-151 ms of write stall, and —
+the actual finding, not the number — **zero failed attempts**, all three
+times. Compare that to the 180-200 ms with 4 failed attempts measured
+earlier with a direct connection switch. The difference isn't the pooler
+being faster; it's `PAUSE` draining gracefully where a read-only freeze
+does not. A transaction that's already running when `PAUSE` is issued
+finishes normally against the old server, because `PAUSE` waits for it;
+a transaction that's already running when `ALTER DATABASE ... SET
+default_transaction_read_only = on` takes effect gets `cannot execute
+INSERT in a read-only transaction` immediately, because the freeze
+doesn't wait for anything. Nothing here is free: all application traffic
+has to actually go through the pooler for the barrier to be airtight, and
+one connection parameter tripped this up directly — `PGOPTIONS` (used
+earlier in this post to let the admin bypass its own freeze) made
+pgbouncer reject the connection outright, `FATAL: unsupported startup
+parameter in options`, because it isn't in `ignore_startup_parameters`.
+Not needed here, since `PAUSE` is the barrier, so dropped rather than
+worked around — but it's exactly the kind of thing a client that sets
+session-level options would hit.
+
+**pgcat, PgDog, and HAProxy, for the same job.** I did not build and time
+these three the way I did pgbouncer above; this is what their own
+documentation says, read carefully rather than assumed. PgDog has the
+closest equivalent, `MAINTENANCE ON` / `MAINTENANCE OFF`, described in its
+own docs in almost the same words as pgbouncer's `PAUSE`: "clients that
+are currently executing a transaction will be allowed to finish, while
+all others will be immediately paused," with the same warning to raise
+application-level timeouts first. pgcat is a half-step behind: its
+`RELOAD` is, by its own README, "identical to PgBouncer" for picking up
+configuration changes without dropping connections — but pgcat has no
+documented `PAUSE`/`RESUME`. Without a barrier, a `RELOAD` alone redirects
+connections only as the pool recycles them, not atomically, so there's a
+real window where some queries still land on the old backend after the
+switch is logically done. HAProxy is a different kind of tool entirely,
+and the gap isn't a missing feature so much as what it is: a TCP proxy,
+not a protocol-aware pooler. It never terminates the Postgres wire
+protocol itself, so it has no way to decouple an already-open client
+connection from its backend the way pgbouncer does. `set server ... state
+drain` stops *new* connections from reaching a backend but lets existing
+ones run to completion on the old one; forcing the issue needs `shutdown
+sessions`, which kills them outright, and the client sees a hard
+connection error and has to reconnect — closer to pgbouncer's `KILL` than
+its `PAUSE`. The pause-and-hold trick is specifically a connection
+*pooler*'s trick, because only a pooler sits inside the Postgres protocol
+instead of merely routing bytes past it.
 
 ---
 

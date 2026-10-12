@@ -1,7 +1,7 @@
 # Zero-downtime major upgrade with logical replication (demo)
 
-Everything runs in Docker Compose (project `lrupg`, host ports 5730-5739; only
-5730-5734 are used). Nothing outside this directory is touched.
+Everything runs in Docker Compose (project `lrupg`, host ports 5730-5739, all
+used). Nothing outside this directory is touched.
 
 | server | image | host port | role |
 | --- | --- | --- | --- |
@@ -10,16 +10,20 @@ Everything runs in Docker Compose (project `lrupg`, host ports 5730-5739; only
 | `traffic` | `postgres:18` | - | the "application": a psql loop, and the ops scripts |
 | `upg` | `postgres:18` + PGDG `postgresql-17` (17.11) | - | part B, pg_upgrade helper |
 | `pg19a`, `pg19b`, `pg19c` | `postgres:19beta4-bookworm` | 5732-5734 | part C, **beta** |
+| `old2`, `new2` | `postgres:16` / `postgres:18` | 5735, 5736 | part D, the pooler-fronted pair |
+| `pgbouncer` | `pgbouncer/pgbouncer:latest` | 5737 | part D, fronts `old2` then `new2` |
+| `traffic2` | `postgres:18` | - | part D's app, connects to `pgbouncer` only, the whole run |
 
 ## Reproduce in three commands
 
 ```
-make all        # clean, then part A, part B, part C (about 8 minutes)
+make all        # clean, then part A, part B, part C, part D (about 9 minutes)
 less results/22-cutover.out
+less results/53-d-cutover.out
 make clean      # remove containers and volumes (make distclean also deletes results/)
 ```
 
-Parts can be run alone: `make a`, `make b`, `make c` (each `up` + `run`).
+Parts can be run alone: `make a`, `make b`, `make c`, `make d` (each `up` + `run`).
 `make verify` runs everything twice from clean and diffs the normalised
 outputs (about 20 minutes, see "Reproducibility").
 
@@ -119,6 +123,47 @@ Steps 40-47 on `pg19a` (publisher), `pg19b` (subscriber, `track_commit_timestamp
 `pg19c` (default `wal_level = replica`): `FOR ALL SEQUENCES` and `REFRESH SEQUENCES`,
 `FOR ALL TABLES EXCEPT (TABLE ...)`, `retain_dead_tuples` and `update_deleted`,
 `effective_wal_level`, `CREATE SUBSCRIPTION ... SERVER`, `WAIT FOR LSN`.
+
+## Part D - the cutover behind pgbouncer, zero client reconfiguration
+
+Steps 50-53. `old2`/`new2` are a fresh 16/18 pair, independent of part A's
+`old`/`new` (so part D can run standalone). `pgbouncer` fronts them, config
+split across two bind-mounted files: `pgbouncer/pgbouncer.ini` (static,
+`%include`s the other one) and `pgbouncer/databases.ini` (the one line that
+changes, edited directly from `traffic2` via a second bind mount at
+`/pgbouncer-cfg` - no `docker exec` into the `pgbouncer` container needed).
+`traffic2` connects to `pgbouncer` for the entire run; `/tmp/target` is set
+once, at step 52, and never touched again.
+
+Step 53's sequence: `PAUSE app` on the pgbouncer admin console first (waits
+for every in-flight transaction on `old2` to finish, then holds new ones -
+this is the write barrier, replacing part A's database-level read-only
+freeze); then the usual marker-row catch-up and `setval()`, now safe because
+`old2` can take no more writes; then edit `databases.ini` `old2` -> `new2`,
+`RELOAD`, `RESUME app`.
+
+That order matters and was found the hard way: an earlier version ran
+`copy_sequences` *before* `PAUSE`, and got `duplicate key value violates
+unique constraint` after the switch - rows `old2` kept committing in the
+gap between the sequence snapshot and the barrier actually taking effect
+replicated in with their original higher ids, colliding with the ones
+`new2`'s under-counted sequence handed out after resume. Fixed by moving
+`PAUSE` first, mirroring part A's own freeze-before-sequences discipline.
+
+With the fix: three clean runs, 142-151 ms write stall, **zero** failed
+attempts in every one (`results/53-d-cutover.out` has the committed run).
+Compare to part A's 180-200 ms with 4 failed attempts - PAUSE drains
+gracefully (an in-flight transaction finishes normally, it is never killed
+mid-flight), where the read-only freeze rejects whatever was in flight at
+the moment it's set. `/tmp/target` reads `pgbouncer` throughout the whole
+`results/53-d-cutover.out` - the one thing this architecture is for.
+
+One connection-level finding, not timing: `PGOPTIONS='-c
+default_transaction_read_only=off'` (part A's `lib.sh`, used to let the
+admin bypass its own freeze) breaks a pgbouncer-routed connection outright
+- `FATAL: unsupported startup parameter in options`- unless the parameter
+is listed in `ignore_startup_parameters`. Not needed in part D (no freeze,
+`PAUSE` is the barrier), so dropped rather than worked around.
 
 ## Findings worth quoting (all from the outputs in `results/`)
 

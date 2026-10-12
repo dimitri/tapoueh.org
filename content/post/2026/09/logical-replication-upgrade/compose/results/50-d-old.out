@@ -1,0 +1,70 @@
+-- @service: old2
+-- @db: postgres
+-- Step 50 (part D): schema trimmed to what traffic.sql needs. The gaps
+-- (sequences, matview, large objects) are already covered in part A; this
+-- demo is about the cutover mechanism, not the gaps.
+\set ON_ERROR_STOP on
+CREATE ROLE app  LOGIN PASSWORD 'app';
+CREATE ROLE
+CREATE ROLE repl LOGIN REPLICATION PASSWORD 'repl';
+CREATE ROLE
+GRANT pg_read_all_data TO repl;
+GRANT ROLE
+CREATE DATABASE app OWNER app;
+CREATE DATABASE
+\c app
+You are now connected to database "app" as user "postgres".
+SET ROLE app;
+SET
+CREATE TABLE customers (
+  id    bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  email text NOT NULL UNIQUE
+);
+CREATE TABLE
+CREATE TABLE orders (
+  id          bigserial PRIMARY KEY,
+  customer_id bigint NOT NULL REFERENCES customers (id),
+  amount      numeric(10,2) NOT NULL,
+  client_seq  bigint
+);
+CREATE TABLE
+CREATE TABLE audit_log (
+  at      timestamptz NOT NULL DEFAULT now(),
+  event   text NOT NULL,
+  payload text
+);
+CREATE TABLE
+CREATE TABLE measurements (
+  ts     timestamptz NOT NULL,
+  sensor int NOT NULL,
+  value  float8 NOT NULL
+);
+CREATE TABLE
+CREATE TABLE counters (name text PRIMARY KEY, n bigint NOT NULL);
+CREATE TABLE
+CREATE TABLE cutover_markers (id text PRIMARY KEY, at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE
+INSERT INTO customers (email) SELECT 'seed' || g || '@example.com' FROM generate_series(1, 2000) g;
+INSERT 0 2000
+INSERT INTO orders (customer_id, amount, client_seq) SELECT 1 + (g % 2000), (g % 500) + 0.99, -g FROM generate_series(1, 5000) g;
+INSERT 0 5000
+INSERT INTO counters VALUES ('orders', 0);
+INSERT 0 1
+RESET ROLE;
+RESET
+ANALYZE;
+ANALYZE
+CREATE PUBLICATION app_pub FOR ALL TABLES;
+CREATE PUBLICATION
+\dt+
+                                         List of relations
+ Schema |      Name       | Type  | Owner | Persistence | Access method |    Size    | Description 
+--------+-----------------+-------+-------+-------------+---------------+------------+-------------
+ public | audit_log       | table | app   | permanent   | heap          | 8192 bytes | 
+ public | counters        | table | app   | permanent   | heap          | 16 kB      | 
+ public | customers       | table | app   | permanent   | heap          | 152 kB     | 
+ public | cutover_markers | table | app   | permanent   | heap          | 8192 bytes | 
+ public | measurements    | table | app   | permanent   | heap          | 0 bytes    | 
+ public | orders          | table | app   | permanent   | heap          | 320 kB     | 
+(6 rows)
+

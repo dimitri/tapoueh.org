@@ -28,6 +28,28 @@ stall_report() {
     awk '{ v[NR]=$1 } END { printf "for scale: median gap between two commits %d ms, p99 %d ms, over %d commits\n", v[int(NR/2)+1], v[int(NR*0.99)+1], NR+1 }'
 }
 
+# stall_report_backend FROM_VERSION TO_VERSION: like stall_report, but for
+# part D, where $3 (host) is always "pgbouncer" for the whole run - the
+# client-visible host never changes. Keys on the last field instead, the
+# backend's server_version_num that traffic.sql selects on success.
+stall_report_backend() {
+  awk -v from="$1" -v to="$2" '
+    $4 == "ok" && pv == from && $NF == to { last = pts; first = $1; found = 1 }
+    $4 == "ok" { pv = $NF; pts = $1 }
+    { t[NR] = $1; s[NR] = $4 }
+    END {
+      if (!found) { print "no switch " from " -> " to " found in the log"; exit }
+      f = 0; a = 0
+      for (i = 1; i <= NR; i++) if (t[i] > last && t[i] <= first) { a++; if (s[i] == "fail") f++ }
+      printf "last committed write on backend %s : %d ms\n", from, last
+      printf "first committed write on backend %s: %d ms\n", to, first
+      printf "WRITE STALL (same pgbouncer connection throughout): %d ms\n", first - last
+      printf "failed attempts inside the window: %d (of %d logged attempts, incl. the first success)\n", f, a
+    }' /tmp/traffic.log
+  awk '$4=="ok"{ if (pt) print $1-pt; pt=$1 }' /tmp/traffic.log | sort -n |
+    awk '{ v[NR]=$1 } END { printf "for scale: median gap between two commits %d ms, p99 %d ms, over %d commits\n", v[int(NR/2)+1], v[int(NR*0.99)+1], NR+1 }'
+}
+
 # ---- cutover building blocks -------------------------------------------------
 ms() { echo $(( $(now_ms) - T0 )); }          # ms since T0 (set by the caller)
 freeze()   { qa "$1" app "ALTER DATABASE app SET default_transaction_read_only = on" >/dev/null

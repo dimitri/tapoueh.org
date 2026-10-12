@@ -93,6 +93,58 @@ services:
     ports: ["127.0.0.1:5734:5432"]
     volumes: ["pg19c-data:/var/lib/postgresql"]
 
+  # ---------------- part D: the cutover behind pgbouncer ----------------
+  old2:
+    <<: *pg-common
+    profiles: [d]
+    image: postgres:16
+    command: >
+      postgres -c wal_level=logical -c max_wal_senders=20
+      -c max_replication_slots=20 -c max_worker_processes=24
+      -c log_line_prefix='[%p] ' -c log_min_messages=warning
+    ports: ["127.0.0.1:5735:5432"]
+    volumes: ["old2-data:/var/lib/postgresql/data"]
+
+  new2:
+    <<: *pg-common
+    profiles: [d]
+    image: postgres:18
+    command: >
+      postgres -c wal_level=logical -c max_wal_senders=20
+      -c max_replication_slots=20 -c max_worker_processes=24
+      -c log_line_prefix='[%p] ' -c log_min_messages=warning
+    ports: ["127.0.0.1:5736:5432"]
+    volumes: ["new2-data:/var/lib/postgresql"]
+
+  # fronts old2, then new2. pgbouncer.ini %includes databases.ini, both bind
+  # mounted from ./pgbouncer; traffic2 mounts the same directory read-write,
+  # so the cutover script edits databases.ini directly (no docker exec into
+  # this container needed) and RELOADs over the admin console.
+  pgbouncer:
+    profiles: [d]
+    image: pgbouncer/pgbouncer:latest
+    user: "70:70"
+    entrypoint: ["/opt/pgbouncer/pgbouncer", "/etc/pgbouncer/pgbouncer.ini"]
+    volumes: ["./pgbouncer:/etc/pgbouncer"]
+    ports: ["127.0.0.1:5737:5432"]
+    depends_on:
+      old2: {condition: service_healthy}
+      new2: {condition: service_healthy}
+
+  # the "application" for part D: connects to pgbouncer only, for the whole
+  # run - /tmp/target is never touched, unlike part A's traffic container.
+  traffic2:
+    profiles: [d]
+    image: postgres:18
+    entrypoint: ["sleep", "infinity"]
+    environment:
+      PGPASSWORD: postgres
+      PGUSER: postgres
+    volumes: ["./traffic:/work:ro", "./pgbouncer:/pgbouncer-cfg"]
+    depends_on:
+      old2: {condition: service_healthy}
+      new2: {condition: service_healthy}
+
 volumes:
   old-data:
   new-data:
@@ -100,3 +152,5 @@ volumes:
   pg19a-data:
   pg19b-data:
   pg19c-data:
+  old2-data:
+  new2-data:
