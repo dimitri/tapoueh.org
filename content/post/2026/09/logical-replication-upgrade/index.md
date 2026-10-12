@@ -158,12 +158,14 @@ to Postgres 18 with `pg_upgrade --link`:
 
 A server older than Postgres 10 cannot be a publisher for native logical
 replication — `CREATE SUBSCRIPTION` needs `pgoutput`, which needs
-`CREATE PUBLICATION`, both Postgres 10 additions. Two tools reach further
-back: pglogical supports Postgres 9.4 and later as a provider, and so
-does `pgcopydb follow`, which speaks to the lower-level logical decoding
-API directly instead of going through `pgoutput` — the same floor, a
-different route to it, and no extension to install on either server.
-More on both in the next section.
+`CREATE PUBLICATION`, both Postgres 10 additions. `pgcopydb follow`
+defaults to that same `pgoutput` plugin, so out of the box it inherits
+the same floor. Two routes reach further back: pglogical supports
+Postgres 9.4 and later as a provider, and so does `pgcopydb follow`
+with `--plugin test_decoding`, Postgres's own core output plugin, with
+nothing extra to install on either server — or `--plugin wal2json`, an
+external extension installed on the source only. More on both in the
+next section.
 
 Postgres 17 also changed what survives a different kind of disruption:
 `failover = true` on `create subscription` synchronizes a subscriber's
@@ -189,7 +191,7 @@ that leaves out everything that is not a row change. It also does not
 care what the source version is, within reason — nowhere near the
 Postgres 10 floor that `CREATE SUBSCRIPTION` has.
 
-{{< image src="fig-upgrade-tools.svg" title="Three tools, same job, cheapest to most elaborate. pg_dump and pg_restore cover everything but downtime scales with data size. pgcopydb parallelizes the same work, same coverage, a shorter stop. pgcopydb follow, or pglogical, add change data capture so the downtime shrinks to a cutover event, and both reach back to Postgres 9.4 sources." >}}
+{{< image src="fig-upgrade-tools.svg" title="Three tools, same job, cheapest to most elaborate. pg_dump and pg_restore cover everything but downtime scales with data size. pgcopydb parallelizes the same work, same coverage, a shorter stop. pgcopydb follow, or pglogical, add change data capture so the downtime shrinks to a cutover event. pgcopydb follow defaults to the same pgoutput plugin as native logical replication; --plugin test_decoding reaches Postgres 9.4 sources with nothing extra to install, and wal2json or pglogical reach the same floor through an extension." >}}
 
 What it costs is the thing `pg_upgrade --link` and logical replication
 both exist to avoid: the restore has to actually write every row again,
@@ -204,13 +206,14 @@ through `pg_dump`/`pg_restore`, data through its own parallel `COPY`
 implementation that bypasses their single-stream default and drives
 index builds concurrently too. Same coverage, same source-version
 reach, a shorter stop. When even that stop is too long, `pgcopydb clone
---follow` adds change data capture on top, using the logical decoding
-API directly rather than going through `pgoutput` — which is exactly
-why it reaches back to Postgres 9.4 sources, the same floor pglogical
-has, by a different route and with nothing to install on either server.
-pglogical remains the other option at that floor, and earns its keep
-there specifically (more on it, and what it still does that core
-cannot, later in this post).
+--follow` adds change data capture on top. Out of the box it talks
+`pgoutput`, the same Postgres 10 floor as native logical replication —
+reaching the Postgres 9.4 sources pglogical covers takes `--plugin
+test_decoding`, Postgres's own core output plugin with nothing extra to
+install, or `--plugin wal2json`, an external extension installed on the
+source only. pglogical remains the other option at that floor, and
+earns its keep there specifically (more on it, and what it still does
+that core cannot, later in this post).
 
 None of this makes the earlier sections optional, and the disqualifying
 cases run in both directions. A straight `pg_dump`/`pg_restore`, even
@@ -257,6 +260,29 @@ pair, and its own docs say so plainly — every major-version move needs
 a new project, migrated into with the Import Data Assistant, `pg_dump`/
 `pg_restore`, or logical replication. On a platform like that, this
 section is not a fallback option, it is the only kind of option there is.
+
+None of the in-place paths above help with a different move: changing
+providers, not versions — a new cloud, a cloud back to on-prem, or
+on-prem into a cloud for the first time. RDS's and Cloud SQL's in-place
+upgrades and Aurora's Blue/Green all assume the database already lives
+in that provider; none of them says anything about getting it there.
+All three major clouds ship a service for exactly that gap instead —
+AWS Database Migration Service, Google's Database Migration Service,
+Azure Database Migration Service — and, checked rather than assumed,
+each is built from pieces this post already covers, not something new.
+AWS DMS does a `pg_dump`/`pg_restore` schema load, then switches to a
+native publisher/subscriber setup for the CDC phase: the same Postgres
+10 floor as the rest of native logical replication. Google's service
+does the same dump-and-restore followed by CDC through pglogical,
+reaching the Postgres 9.4 floor — but only once pglogical is installed
+and enabled on the source, which on a Cloud SQL source means a
+`cloudsql.enable_pglogical` flag rather than a plain extension install.
+Azure's online mode adds a requirement of its own: a primary key on
+every table. Where a source can't take an extra extension, sits below
+whichever floor the chosen service needs, or a vendor console simply
+isn't wanted in the critical path, running `pgcopydb` directly between
+the two endpoints does the same job with the toolbox this section
+already walked through.
 
 ## Logical replication as the upgrade path
 
