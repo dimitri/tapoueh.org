@@ -539,6 +539,63 @@ measurement:
 WRITE STALL new -> old: 179 ms
 ```
 
+### Splitting the sequences, instead of copying them
+
+The `setval` dance above assumes the freeze was airtight: nothing minted an
+id on the losing side after the marker. [Part 1 of this
+series](/blog/2026/09/ten-years-of-postgres-logical-replication/) solved a
+related problem — two servers independently minting ids for the same table
+— with modulo and offset: give each side a sequence that increments by `n`
+and starts on its own residue, so no two sides can ever produce the same
+number. The same split applies here, with `n = 2`: `old` keeps the even
+half of every sequence's output, `new` the odd half, set up once before the
+first cutover. It is not the same situation as Part 1's permanent
+co-primaries — only one side is meant to be writing at any time — but it
+removes the one thing the rollback mechanism depends on getting exactly
+right. A backend the freeze missed, a batch job connecting directly, a
+race between `PAUSE` and the barrier: with a residue split in place, a
+stray write on the "wrong" side still cannot collide with anything the
+other side has minted or will ever mint, because the two streams never
+share a residue, this cutover or the next. `setval` then becomes a
+nice-to-have for contiguity, not the thing standing between a clean
+cutover and `duplicate key value violates unique constraint`.
+
+Generate it once, before the first cutover, with the same `format()` trick
+used for `setval` above, and once both sides agree on `last_value` — right
+after the initial copy, before either one has taken a write:
+
+```sql
+-- run once on each side; r is this server's residue, 0 on old, 1 on new
+select format(
+         'alter sequence %I.%I increment by %s restart with %s;',
+         schemaname,
+         sequencename,
+         :n,
+         last_value + 1 + mod(mod(:r - (last_value + 1), :n) + :n, :n)
+       )
+  from pg_sequences
+ where last_value is not null;
+```
+
+Run with `\set n 2` and `\set r 0` on the old server:
+
+```results
+alter sequence public.customers_id_seq increment by 2 restart with 53086;
+alter sequence public.invoice_no increment by 2 restart with 604084;
+alter sequence public.measurements_id_seq increment by 2 restart with 303086;
+alter sequence public.orders_id_seq increment by 2 restart with 603086;
+```
+
+and with `\set r 1` on the new server, the same four statements come out
+one lower each, landing on the odd residue instead.
+
+What it costs is what Part 1 already found: ids are no longer contiguous
+on either server, every sequence skips every other value by design, and
+the split is a standing commitment, not a one-time fix — widening it later
+to more than two sides means picking a larger `n` and running this again
+for every sequence. For two sides and a rollback window measured in
+minutes, that is a trade worth making.
+
 ### Privileges
 
 `create subscription` for someone who is not a superuser needs
@@ -546,8 +603,10 @@ WRITE STALL new -> old: 179 ms
 `permission denied for database`. The connection needs a password, or
 `password is required`. And the initial copy then fails with `role
 "migrator" cannot SET ROLE to "postgres"` until the subscription owner owns
-the tables. All three are Postgres 16 behaviour, and each is a security feature, but
-none was in the way I expected.
+the tables. All three are Postgres 16 behaviour, and each is a security
+feature worth knowing before it shows up as an error: a role check on
+the subscription itself, a password requirement on the connection, and
+an ownership check on the copy — three different checkpoints, not one.
 
 ## The cutover, behind pgbouncer instead
 
