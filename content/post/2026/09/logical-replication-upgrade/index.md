@@ -785,6 +785,8 @@ production Postgres is not that — it is a primary with one or more
 streaming-replication standbys, kept for failover, and the upgrade this
 post walks through does not, by itself, give you that back.
 
+{{< image src="fig-upgrade-architecture.svg" title="A real architecture, not just the pair this post upgrades. Highlighted: the application writing to the primary, the single pair this post's pg_upgrade and logical-replication sections cover. Outside that box: a primary streaming to two standbys for failover, shipping WAL to an archive, and sending periodic base backups to separate storage — all part of any real deployment, none of it addressed by upgrading one pair of servers." >}}
+
 `pg_upgrade --link`/`--clone` touches one data directory: the primary's.
 That's the whole of its job, once, and the seconds-scale timing this
 post measured earlier for it is exactly that one run's cost. Streaming
