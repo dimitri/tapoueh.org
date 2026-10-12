@@ -818,13 +818,15 @@ major version from a plain `initdb`, not `pg_upgrade`, and let logical
 replication — the technique the rest of this post already walks
 through — carry the data across the version boundary once. Everything
 downstream of that new primary is then an ordinary, same-version
-deployment: physical replication to its own new standbys, its own WAL
-archive, its own backups, built and caught up while the old
-architecture is still the one taking traffic. Cutover becomes a traffic
+deployment: physical replication to its own new standbys, built and
+caught up while the old architecture is still the one taking traffic.
+Archive and backup storage don't need duplicating along with it — both
+primaries can feed the same WAL archive and the same backup target
+right up to cutover, not two separate ones. Cutover becomes a traffic
 switch onto an architecture that is already whole, not the start of
 building one.
 
-{{< image src="fig-upgrade-full-cluster.svg" title="A duplicate architecture, built ahead of the cutover. The old primary feeds a brand new architecture through logical replication, the only piece crossing the major-version boundary. Inside it: a new primary on the new version, physical-replicating to its own new standbys exactly as the old primary did, and feeding its own WAL archive and backup storage." >}}
+{{< image src="fig-upgrade-full-cluster.svg" title="A duplicate architecture, built ahead of the cutover. The old primary feeds a brand new architecture through logical replication, the only piece crossing the major-version boundary. Inside it: a new primary on the new version, physical-replicating to its own new standbys exactly as the old primary did. Below, shared with the old architecture rather than duplicated: a WAL archive and backup storage, fed by both primaries." >}}
 
 Nothing in this post's toolbox orchestrates either of these two diagrams
 end to end yet, and neither does anything else — it's on the public
