@@ -95,17 +95,22 @@ removes risk and adds a moving part that can itself go wrong.
 
 None of this is a new discipline dressed up for Postgres, either. It has
 a name, [Continuous Migration](https://pgloader.io/blog/continuous-migration/),
-and it is a methodology, not a tool: stand up the target first, let it
-run and prove itself, and only schedule the cutover once it already has
-— so D-Day is a formality, not a leap of faith. pgloader's own version
-of it re-runs a full batch migration nightly for the length of a
-cross-database project, mainly to keep re-validating the code port and
-the casting rules against fresh data, a cost that doesn't exist here —
-Postgres 16 and Postgres 18 speak the same SQL, nothing to port. What
-carries over is the discipline, not the mechanism: whatever keeps the
-target current — a nightly batch job, a live subscription, anything
-else — run it long enough to trust it before traffic ever switches,
-rather than betting everything on one cutover event.
+and it is a methodology, not a tool. Past the slogan, it comes down to
+keeping two different things separate: the testing, and the cutover
+window. The testing is the bulk of the work, and where most of the risk
+actually gets spent — not just the live request path, but every batch
+job and cron job that touches the database too, run against the new
+target until none of it is untested. Skip that and the surprises on
+D-Day aren't surprises, they're blind spots nobody went looking for.
+The cutover window is what's left once that testing is done: short, and
+rehearsed enough times beforehand that its timings are known numbers
+rather than a guess, and its own blind spots have already been found
+and fixed by rehearsing it — the write stalls and failure counts
+quoted throughout this post are exactly that kind of rehearsal, not a
+single lucky run. A major-version upgrade has less to test than a
+cross-database port (same SQL, nothing to port), but the same two-part
+shape holds: test everything that touches the database first, rehearse
+the short window until it's boring, then cut over.
 
 ## `pg_upgrade` in place, and what it carries of logical replication
 
