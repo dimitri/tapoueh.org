@@ -46,7 +46,7 @@ A major-version upgrade — Postgres 16 to 18 here — needs new binaries, a
 new data directory, and, traditionally, a window where the database is
 stopped entirely. Two ways to get there, each addressed deliberately in
 this post, not as an afterthought you hit near the end: stay in place
-with `pg_upgrade`, whose `--link` mode is itself fast and whose newer
+with [`pg_upgrade`](https://www.postgresql.org/docs/current/pgupgrade.html), whose `--link` mode is itself fast and whose newer
 versions carry more of an existing logical replication setup across
 than you might expect, but which still needs both servers down for that
 window; or replace the in-place upgrade with logical replication
@@ -66,7 +66,7 @@ How much committed data you can afford to lose.
 
 {{< glossary term="Maintenance window" >}}
 A scheduled stretch with traffic stopped at the door, long enough to run
-`pg_dump`/`pg_restore` or `pg_upgrade`, then start traffic again. The
+[`pg_dump`](https://www.postgresql.org/docs/current/app-pgdump.html)/[`pg_restore`](https://www.postgresql.org/docs/current/app-pgrestore.html) or `pg_upgrade`, then start traffic again. The
 oldest way to buy both RTO and RPO down to a known, predictable number.
 {{< /glossary >}}
 
@@ -140,7 +140,7 @@ with reads and most writes available the entire time, instead of any
 stop at all.
 
 What Postgres 17 added is that `pg_upgrade` carries the logical
-replication state across: its release notes say it migrates valid
+replication state across: [its release notes](https://www.postgresql.org/docs/17/release-17.html) say it migrates valid
 logical slots and subscriptions, and that this only works when the
 *old* cluster is Postgres 17 or later. I upgraded a Postgres 17 cluster
 to Postgres 18 with `pg_upgrade --link`:
@@ -149,7 +149,7 @@ to Postgres 18 with `pg_upgrade --link`:
   origin position, and stays enabled.
 - A **publisher** keeps its slot, but only if the slot has consumed all the WAL:
   `The slot "sub" has not consumed the WAL yet`. The new cluster needs
-  `wal_level = logical` from the start.
+  [`wal_level`](https://www.postgresql.org/docs/current/runtime-config-wal.html#GUC-WAL-LEVEL) `= logical` from the start.
 - `postgresql.conf` and `pg_hba.conf` are yours to write; statistics
   counters are not carried over.
 - Postgres 18 refuses to upgrade a cluster that does not use data checksums
@@ -157,14 +157,14 @@ to Postgres 18 with `pg_upgrade --link`:
   the new one is initialised with `--no-data-checksums`.
 
 A server older than Postgres 10 cannot be a publisher for native logical
-replication — `CREATE SUBSCRIPTION` needs `pgoutput`, which needs
-`CREATE PUBLICATION`, both Postgres 10 additions. `pgcopydb follow`
+replication — [`CREATE SUBSCRIPTION`](https://www.postgresql.org/docs/current/sql-createsubscription.html) needs `pgoutput`, which needs
+[`CREATE PUBLICATION`](https://www.postgresql.org/docs/current/sql-createpublication.html), both Postgres 10 additions. `pgcopydb follow`
 defaults to that same `pgoutput` plugin, so out of the box it inherits
-the same floor. Two routes reach further back: pglogical supports
+the same floor. Two routes reach further back: [pglogical](https://github.com/2ndQuadrant/pglogical) supports
 Postgres 9.4 and later as a provider, and so does `pgcopydb follow`
 with `--plugin test_decoding`, Postgres's own core output plugin, with
 nothing extra to install on either server — or `--plugin wal2json`, an
-external extension installed on the source only. More on both in the
+[external extension](https://github.com/eulerto/wal2json) installed on the source only. More on both in the
 next section.
 
 Postgres 17 also changed what survives a different kind of disruption:
@@ -200,7 +200,7 @@ a small database that is nothing. For the kind of database that makes
 this whole post worth writing, it can be the reason the "zero" in the
 title matters.
 
-`pgcopydb` is the tool I maintain for exactly this job, and it is
+[`pgcopydb`](https://github.com/dimitri/pgcopydb) is the tool I maintain for exactly this job, and it is
 built on the same two commands, not a replacement for them: schema
 through `pg_dump`/`pg_restore`, data through its own parallel `COPY`
 implementation that bypasses their single-stream default and drives
@@ -250,13 +250,13 @@ here, since it varies more than the self-hosted story does. RDS,
 Aurora, Cloud SQL, and Azure Database for PostgreSQL Flexible Server
 all document a true in-place major-version upgrade, `pg_upgrade` under
 the hood, the same choice this post has been building by hand. Aurora
-goes one step further with Blue/Green Deployments: a fully managed pair
+goes one step further with [Blue/Green Deployments](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/blue-green-deployments.html): a fully managed pair
 of environments kept in sync with, by AWS's own description, "PostgreSQL
 community provided logical replication," with a blocked-write switchover
 under a minute — which is to say, a managed version of exactly the
 architecture the rest of this post builds and times by hand. Neon sits
 at the other end: no in-place upgrade exists at all, for any version
-pair, and its own docs say so plainly — every major-version move needs
+pair, and [its own docs](https://neon.com/docs/postgresql/postgres-upgrade) say so plainly — every major-version move needs
 a new project, migrated into with the Import Data Assistant, `pg_dump`/
 `pg_restore`, or logical replication. On a platform like that, this
 section is not a fallback option, it is the only kind of option there is.
@@ -267,8 +267,8 @@ on-prem into a cloud for the first time. RDS's and Cloud SQL's in-place
 upgrades and Aurora's Blue/Green all assume the database already lives
 in that provider; none of them says anything about getting it there.
 All three major clouds ship a service for exactly that gap instead —
-AWS Database Migration Service, Google's Database Migration Service,
-Azure Database Migration Service — and, checked rather than assumed,
+[AWS Database Migration Service](https://docs.aws.amazon.com/dms/latest/userguide/dm-migrating-data-postgresql.html), [Google's Database Migration Service](https://docs.cloud.google.com/database-migration/docs/postgres/configure-source-database),
+[Azure Database Migration Service](https://learn.microsoft.com/en-us/azure/dms/tutorial-postgresql-azure-postgresql-online) — and, checked rather than assumed,
 each is built from pieces this post already covers, not something new.
 AWS DMS does a `pg_dump`/`pg_restore` schema load, then switches to a
 native publisher/subscriber setup for the CDC phase: the same Postgres
@@ -297,7 +297,7 @@ the application writing the whole time.
 ### Setting it up
 
 The schema goes first, because DDL is not replicated. The roles come from
-`pg_dumpall`, then the database and its schema from `pg_dump`, run with the
+[`pg_dumpall`](https://www.postgresql.org/docs/current/app-pg-dumpall.html), then the database and its schema from `pg_dump`, run with the
 *new* major version's tools against the old server:
 
 ```sh
@@ -343,7 +343,8 @@ create subscription app_sub
        with (copy_data = true);
 ```
 
-and a query to watch the copy. The states are `i` initialize, `d` data being
+and a query against
+[`pg_subscription_rel`](https://www.postgresql.org/docs/current/catalog-pg-subscription-rel.html) to watch the copy. The states are `i` initialize, `d` data being
 copied, `f` finished copy, `s` synchronized, `r` ready:
 
 ```sql
@@ -391,7 +392,7 @@ most of the schema.
 The one place DDL tends to run on a schedule rather than from a deploy is
 partition management, and that's exactly what shouldn't happen mid-migration:
 a cron job calling `create table ... partition of` the moment a new day or
-month starts has no idea a cutover is in progress. `pg_partman` already
+month starts has no idea a cutover is in progress. [`pg_partman`](https://github.com/pgpartman/pg_partman) already
 solves this the other way around — its `premake` setting (`p_premake` in
 `part_config`) keeps a configurable number of future partitions created
 ahead of time, not just-in-time. Set it to cover a couple of months and
@@ -399,9 +400,9 @@ ahead of time, not just-in-time. Set it to cover a couple of months and
 migration window included.
 
 For everything else, a role convention is a policy, not a guarantee, which
-is why I built `preventddl`: a plain event trigger, the same kind
-documented on Postgres's own event-trigger-example page, gated by one
-setting, `preventddl.enable`. Load it through `session_preload_libraries`,
+is why I built [`preventddl`](https://github.com/dimitri/preventddl): a plain event trigger, the same kind
+documented on [Postgres's own event-trigger-example page](https://www.postgresql.org/docs/current/event-trigger-example.html), gated by one
+setting, `preventddl.enable`. Load it through [`session_preload_libraries`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-SESSION-PRELOAD-LIBRARIES),
 then `alter system set preventddl.enable to true` and `select
 pg_reload_conf()` before the migration window opens, the same the other
 way after. Nothing holding DDL privileges but outside the deployment path
@@ -447,7 +448,7 @@ once, and nothing bounces back. Three things to know:
 ### Knowing when it has caught up
 
 Everything hangs on one question at cutover time: has the new server
-received everything the old one committed? Postgres 19 added `WAIT FOR LSN`, which
+received everything the old one committed? Postgres 19 added [`WAIT FOR LSN`](https://www.postgresql.org/docs/devel/sql-wait.html), which
 looks like the perfect tool for this. It is not, for a logical subscriber:
 
 {{< image src="fig-upgrade-catchup.svg" title="Three plausible-looking tools to check that the new server has caught up, each wrong for a different reason: WAIT FOR LSN is standby-only, a naive LSN comparison never converges because the freeze's own commit is never replicated, and latest_end_lsn is updated on receipt, not on apply. A marker row works." >}}
@@ -463,7 +464,8 @@ subscriber's *own* WAL passes the number, a false positive against a
 publisher's LSN.
 
 The working tool is what has always worked: compare the old server's
-`pg_current_wal_lsn()` with the position the subscription has applied:
+`pg_current_wal_lsn()` with the position the subscription has applied,
+from [`pg_replication_origin_status`](https://www.postgresql.org/docs/current/view-pg-replication-origin-status.html):
 
 ```sql
 -- on the old server
@@ -476,10 +478,10 @@ select remote_lsn
 ```
 
 There is a subtlety. The freeze on the old server (a
-`default_transaction_read_only` setting) is itself a commit, on the
+[`default_transaction_read_only`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-DEFAULT-TRANSACTION-READ-ONLY) setting) is itself a commit, on the
 publisher side, that is never replicated, so it sits *ahead* of anything
 the subscriber will ever report, and the comparison never converges. And
-`pg_stat_subscription.latest_end_lsn` is updated when a message is
+[`pg_stat_subscription.latest_end_lsn`](https://www.postgresql.org/docs/current/monitoring-stats.html#PG-STAT-SUBSCRIPTION) is updated when a message is
 *received*, not when it is applied, so it proves nothing on its own.
 
 What worked is a marker row: after the freeze, write one row on the old
@@ -513,7 +515,8 @@ select count(pg_terminate_backend(pid))
 ```
 
 Once the marker shows on the new server, the sequences. The `setval`
-statements are generated from the old server and run on the new one:
+statements are generated from
+[`pg_sequences`](https://www.postgresql.org/docs/current/view-pg-sequences.html) on the old server and run on the new one:
 
 ```sql
 select format('select setval(%L, %s, %L);',
@@ -642,7 +645,7 @@ an ownership check on the copy — three different checkpoints, not one.
 
 Everything above still asks the application to switch targets: a config
 change, a DNS update, a connection pool told to reconnect. If the
-application already sits behind pgbouncer, there's a shorter path — the
+application already sits behind [pgbouncer](https://www.pgbouncer.org/), there's a shorter path — the
 application's connection string never changes, because pgbouncer's own
 *backend* target is what moves, not the application's.
 
@@ -699,7 +702,7 @@ Not needed here, since `PAUSE` is the barrier, so dropped rather than
 worked around — but it's exactly the kind of thing a client that sets
 session-level options would hit.
 
-`PAUSE`'s own guarantee is also its own exposure: by its own docs, it
+`PAUSE`'s own guarantee is also its own exposure: by [its own docs](https://www.pgbouncer.org/usage.html), it
 "will not return before all server connections have been disconnected,"
 released according to the pool's mode — in `transaction` mode, that
 means every in-flight transaction has to actually finish first, and
@@ -710,10 +713,10 @@ the 142 ms measured above into however long that transaction takes to
 finish or get killed. The fix is the same `ALTER DATABASE ... SET` idiom
 the freeze earlier in this post used, aimed at time instead of writes,
 set right before the maintenance window opens and reverted after:
-`idle_in_transaction_session_timeout` catches the most common real
+[`idle_in_transaction_session_timeout`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-IDLE-IN-TRANSACTION-SESSION-TIMEOUT) catches the most common real
 offender, a transaction opened and then left waiting on the application
-side; `statement_timeout` caps one running statement but nothing
-between statements; and Postgres 17's `transaction_timeout` caps the
+side; [`statement_timeout`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-STATEMENT-TIMEOUT) caps one running statement but nothing
+between statements; and Postgres 17's [`transaction_timeout`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-TRANSACTION-TIMEOUT) caps the
 whole transaction regardless of what it is doing, explicit or not,
 which is the one that actually bounds `PAUSE`'s wait end to end —
 whichever of the three is tightest wins, and the release notes warn
@@ -738,18 +741,18 @@ connection being cut.
 
 **pgcat, PgDog, and HAProxy, for the same job.** I did not build and time
 these three the way I did pgbouncer above; this is what their own
-documentation says, read carefully rather than assumed. PgDog has the
+documentation says, read carefully rather than assumed. [PgDog](https://docs.pgdog.dev/) has the
 closest equivalent, `MAINTENANCE ON` / `MAINTENANCE OFF`, described in its
 own docs in almost the same words as pgbouncer's `PAUSE`: "clients that
 are currently executing a transaction will be allowed to finish, while
 all others will be immediately paused," with the same warning to raise
-application-level timeouts first. pgcat is a half-step behind: its
+application-level timeouts first. [pgcat](https://github.com/postgresml/pgcat) is a half-step behind: its
 `RELOAD` is, by its own README, "identical to PgBouncer" for picking up
 configuration changes without dropping connections — but pgcat has no
 documented `PAUSE`/`RESUME`. Without a barrier, a `RELOAD` alone redirects
 connections only as the pool recycles them, not atomically, so there's a
 real window where some queries still land on the old backend after the
-switch is logically done. HAProxy is a different kind of tool entirely,
+switch is logically done. [HAProxy](https://docs.haproxy.org/3.4/management.html) is a different kind of tool entirely,
 and the gap isn't a missing feature so much as what it is: a TCP proxy,
 not a protocol-aware pooler. It never terminates the Postgres wire
 protocol itself, so it has no way to decouple an already-open client
@@ -772,7 +775,7 @@ From what I built and what its README says:
   skip a transaction (Postgres 15). It does not resolve them. pglogical has five
   policies: `error`, `apply_remote`, `keep_local`, `last_update_wins`,
   `first_update_wins`, and the timestamp-based ones need
-  `track_commit_timestamp`. If your architecture is genuinely multi-active,
+  [`track_commit_timestamp`](https://www.postgresql.org/docs/current/runtime-config-replication.html#GUC-TRACK-COMMIT-TIMESTAMP). If your architecture is genuinely multi-active,
   with several nodes writing the same rows, this is the gap, and the
   descendants of pglogical are where the commercial answers live.
 - **Automatic DDL propagation.** Still not in core. pglogical has
@@ -824,20 +827,20 @@ N". The counter is `confl_update_deleted`. It keeps a slot on the subscriber
 a warning. It is the first piece of what real conflict resolution needs, and
 it is not resolution yet.
 
-**Logical decoding without a restart.** `effective_wal_level` follows the
+**Logical decoding without a restart.** [`effective_wal_level`](https://www.postgresql.org/docs/devel/runtime-config-preset.html#GUC-EFFECTIVE-WAL-LEVEL) follows the
 first logical slot: it says "logical decoding is enabled upon creating a new
 logical replication slot", and drops back to `replica` when the last one is
 gone. A server with `wal_level = replica` accepted `create publication`.
 Whether that is what you want on a production primary is a separate
 question.
 
-**`create subscription … server`.** It works, through `postgres_fdw`, so the
+**`create subscription … server`.** It works, through [`postgres_fdw`](https://www.postgresql.org/docs/current/postgres-fdw.html), so the
 connection details live in a foreign server rather than a string.
 
 Two lines from the run worth keeping. `WAIT FOR LSN` is standby-only, as shown
 above. And a hub with many subscriptions runs out of two limits without a
-friendly error: `max_logical_replication_workers` (the default is 4), and,
-since Postgres 18, `max_active_replication_origins` (the default is 10), because every
+friendly error: [`max_logical_replication_workers`](https://www.postgresql.org/docs/current/runtime-config-replication.html#GUC-MAX-LOGICAL-REPLICATION-WORKERS) (the default is 4), and,
+since Postgres 18, [`max_active_replication_origins`](https://www.postgresql.org/docs/current/runtime-config-replication.html#GUC-MAX-ACTIVE-REPLICATION-ORIGINS) (the default is 10), because every
 subscription and every table being copied holds a replication origin. Past
 that, the log repeats `could not find free replication state slot for
 replication origin with ID 11`, and the subscriptions sit in the `i` or `d` state
