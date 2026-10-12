@@ -245,8 +245,8 @@ network instead, so none of them care whether the target is next to
 the source or in a different region entirely — which is also, not
 coincidentally, when you most need them anyway.
 
-I checked rather than assumed what the managed clouds actually offer
-here, since it varies more than the self-hosted story does. RDS,
+What the managed clouds actually offer here varies more than the
+self-hosted story does. RDS,
 Aurora, Cloud SQL, and Azure Database for PostgreSQL Flexible Server
 all document a true in-place major-version upgrade, `pg_upgrade` under
 the hood, the same choice this post has been building by hand. Aurora
@@ -268,8 +268,8 @@ upgrades and Aurora's Blue/Green all assume the database already lives
 in that provider; none of them says anything about getting it there.
 All three major clouds ship a service for exactly that gap instead —
 [AWS Database Migration Service](https://docs.aws.amazon.com/dms/latest/userguide/dm-migrating-data-postgresql.html), [Google's Database Migration Service](https://docs.cloud.google.com/database-migration/docs/postgres/configure-source-database),
-[Azure Database Migration Service](https://learn.microsoft.com/en-us/azure/dms/tutorial-postgresql-azure-postgresql-online) — and, checked rather than assumed,
-each is built from pieces this post already covers, not something new.
+[Azure Database Migration Service](https://learn.microsoft.com/en-us/azure/dms/tutorial-postgresql-azure-postgresql-online) — each built from pieces this
+post already covers, not something new.
 AWS DMS does a `pg_dump`/`pg_restore` schema load, then switches to a
 native publisher/subscriber setup for the CDC phase: the same Postgres
 10 floor as the rest of native logical replication. Google's service
@@ -752,7 +752,7 @@ connection being cut.
 
 **pgcat, PgDog, and HAProxy, for the same job.** I did not build and time
 these three the way I did pgbouncer above; this is what their own
-documentation says, read carefully rather than assumed. [PgDog](https://docs.pgdog.dev/) has the
+documentation says. [PgDog](https://docs.pgdog.dev/) has the
 closest equivalent, `MAINTENANCE ON` / `MAINTENANCE OFF`, described in its
 own docs in almost the same words as pgbouncer's `PAUSE`: "clients that
 are currently executing a transaction will be allowed to finish, while
