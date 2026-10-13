@@ -47,7 +47,7 @@ too, once it has one.
 
 ## The scenario
 
-{{< image src="fig-region-map.svg" title="One writer per region: conflicts avoided by construction. Each region's primary key includes the region, so no two regions ever mint the same row. Local terminals write to New York and to Mumbai, the two regional primaries; each streams read-only, asynchronously, into a global warehouse in Amsterdam — the same consolidation pattern as part 2, not a write path. San Francisco and Sydney are not separate regions: each cascades its logical replication stream from the region's own primary, one hop downstream, same key discipline, no write of its own. Front-desk locations in Dubai, Cape Town, and São Paulo read a worldwide view of every transaction straight off the warehouse." >}}
+{{< image src="fig-region-map.svg" title="One writer per region: conflicts avoided by construction. Each region's primary key includes the region, so no two regions ever mint the same row. New York and Mumbai replicate both ways with the Amsterdam warehouse: their own writes flow up, a row-filtered, read-only mirror of the other region flows back down — never a write path back, since neither side's mirror is ever of its own data. San Francisco and Sydney are not separate regions: each cascades its logical replication stream from the region's own primary, one hop downstream, same key discipline, no write of its own. Every site has a front desk; New York and Mumbai's are read-write at home and read-only to the mirror, the other three are read-only everywhere." >}}
 
 Four things, each a post of its own in a shorter series, covered here in
 one, in the order a team actually runs into them: the primary dies and a
@@ -192,28 +192,41 @@ conflict left for anything downstream to detect, let alone resolve.
 Each region's primary is the Part 3 architecture in full — its own
 standbys, its own failover story, the mechanism two sections up — and
 replication's only job is the one Part 2 already built: an asynchronous,
-read-only roll-up into one global warehouse, never a write path back.
-Getting this right costs exactly what Part 1's worker-key discipline
-cost: a wider key, and a rule about where a row is allowed to be
-written, enforced once, at the application layer, instead of resolved
-forever at the replication layer.
+read-only roll-up into one global warehouse. Amsterdam never originates
+a write of its own — every row it holds came from New York or Mumbai
+first — but the map shows it fanning the combined view back out, to
+each site, as a row-filtered copy: New York's mirror excludes
+`region = 'americas'`, since it already has that natively, and holds
+only Mumbai's rows; Mumbai's excludes `region = 'apac'` the same way.
+Nothing either site already owns is ever re-applied to itself, so nothing
+here is a write path back in the sense that would matter — it is the
+identical one-way, read-only flow Part 2 built, just run twice, once per
+direction, between two partitions neither side was ever going to write
+to anyway. Getting the writing half right costs exactly what Part 1's
+worker-key discipline cost: a wider key, and a rule about where a row is
+allowed to be written, enforced once, at the application layer, instead
+of resolved forever at the replication layer.
 
-The map's two other symbols are the same discipline drawn at its two
-ends. Terminals are ordinary clients — a point-of-sale system, a teller
-desk, an API caller, whatever actually mints a row — talking directly
-to their own region's primary, synchronously, the same way an
-application talks to any Postgres server; nothing about that
-conversation is logical replication, it is just where the write
-discipline above gets enforced. Front desks are the opposite end of the
-same warehouse Part 2 already built: a read-only view of every row from
-every region, placed wherever someone needs to see the whole business
-at once, with the same latency and staleness trade-offs Part 2's
-consolidation already priced in. Neither one changes the conflict
-story; they are what the architecture is *for*.
+The map's other symbol is the same discipline drawn at its point of
+contact with a person. Every site has a front desk, and what it can do
+there follows directly from what the site under it is. At New York and
+Mumbai, the desk is read-write against its own region's primary and
+read-only against the mirror of the other region arriving from
+Amsterdam — two disjoint partitions, one writable, one not, on the same
+connection. At San Francisco, Sydney, and Amsterdam itself, the desk is
+read-only, full stop, for the same reason those three nodes never take
+a write of their own: a cascade one hop downstream and a pure
+consolidator are not where this series' write discipline says a row is
+allowed to be minted. None of this is a new mechanism — a desk is just
+an application connecting to Postgres, same as a terminal in Part 1 or
+Part 2 — the only thing worth drawing is which half of each connection
+is read-write and which is read-only, because that split is the whole
+architecture in miniature.
 
-`[TODO: build the two-region demo — two primaries, one warehouse, a
-traffic generator that writes to each independently — and confirm zero
-conflict counters move no matter how concurrently it runs.]`
+`[TODO: build the two-region demo — two primaries, one warehouse, each
+side's row-filtered mirror flowing back, a traffic generator that
+writes to each primary independently — and confirm zero conflict
+counters move no matter how concurrently it runs.]`
 
 ### Cascading, one hop downstream
 
