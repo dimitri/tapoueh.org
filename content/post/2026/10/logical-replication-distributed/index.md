@@ -47,7 +47,7 @@ too, once it has one.
 
 ## The scenario
 
-{{< image src="fig-region-map.svg" title="One writer per region: conflicts avoided by construction. Each region's primary key includes the region, so no two regions ever mint the same row. New York and Mumbai replicate both ways with the Amsterdam warehouse: their own writes flow up, a row-filtered, read-only mirror of the other region flows back down — never a write path back, since neither side's mirror is ever of its own data. San Francisco and Sydney are not separate regions: each cascades the same logical replication, one hop downstream, one direction only, same orange arrow with one arrowhead instead of two. Every site has its own front desk, read-write against whatever database sits there — the region's own primary at New York and Mumbai, local and non-replicated everywhere else." >}}
+{{< image src="fig-region-map.svg" title="One writer per region: conflicts avoided by construction. Four equal primaries, four disjoint region keys — us-east in New York, us-west in San Francisco, in in Mumbai, au in Sydney — so no two of them ever mint the same row. Every link is the same bidirectional logical replication: a region's own writes flow one way, a read-only mirror of everyone else's data flows back the other way. New York and Mumbai link straight to one global warehouse in Amsterdam; San Francisco and Sydney cascade through them instead of each opening its own long-haul connection. Every site has its own front desk, read-write against its own region and read-only against the mirror of the rest." >}}
 
 Four things, each a post of its own in a shorter series, covered here in
 one, in the order a team actually runs into them: the primary dies and a
@@ -183,64 +183,73 @@ conflict after the fact.
 ### The architecture that makes the question moot
 
 One Postgres primary per region — a continent is a reasonable unit,
-narrower if compliance needs it narrower — with the region itself part
-of every table's key, the same `(worker_id, event_id)` discipline Part 1
-used for workers, drawn at a scale where "worker" means "everything the
-EU's data-residency rules apply to." No row is ever a candidate for two
-regions to write, because the key says which one owns it, so there is no
-conflict left for anything downstream to detect, let alone resolve.
-Each region's primary is the Part 3 architecture in full — its own
-standbys, its own failover story, the mechanism two sections up — and
-replication's only job is the one Part 2 already built: an asynchronous,
-read-only roll-up into one global warehouse. Amsterdam never originates
-a write of its own — every row it holds came from New York or Mumbai
-first — but the map shows it fanning the combined view back out, to
-each site, as a row-filtered copy: New York's mirror excludes
-`region = 'americas'`, since it already has that natively, and holds
-only Mumbai's rows; Mumbai's excludes `region = 'apac'` the same way.
-Nothing either site already owns is ever re-applied to itself, so nothing
+narrower if compliance needs it narrower, narrower still if latency
+does — with the region itself part of every table's key, the same
+`(worker_id, event_id)` discipline Part 1 used for workers. The map
+draws four: `us-east` in New York, `us-west` in San Francisco, `in` in
+Mumbai, `au` in Sydney. No row is ever a candidate for two of them to
+write, because the key says which one owns it, so there is no conflict
+left for anything downstream to detect, let alone resolve. Each primary
+is the Part 3 architecture in full — its own standbys, its own failover
+story, the mechanism two sections up — and replication's only job is
+the one Part 2 already built: an asynchronous, read-only roll-up, run
+in both directions at once. New York and Mumbai each link directly to
+one global warehouse in Amsterdam; San Francisco and Sydney link one
+hop further out, through New York and Mumbai, instead of each opening
+its own long-haul connection across an ocean neither needs a second one
+of.
+
+What moves on every one of those links is the same shape: a region's
+own writes go one way, a read-only mirror of everyone else's data comes
+back the other way. New York's mirror from Amsterdam excludes
+`region in ('us-east', 'us-west')` — it already has both, one from its
+own writes, one cascaded up from San Francisco a moment earlier — and
+holds only `'in'` and `'au'`; Mumbai's excludes `('in', 'au')` the same
+way, holding only the two American regions. Amsterdam never originates
+a write of its own; every row it holds arrived from one of the four
+primaries first, and what it sends back out is filtered, never new.
+Nothing a region already owns is ever re-applied to itself, so nothing
 here is a write path back in the sense that would matter — it is the
-identical one-way, read-only flow Part 2 built, just run twice, once per
-direction, between two partitions neither side was ever going to write
-to anyway. Getting the writing half right costs exactly what Part 1's
-worker-key discipline cost: a wider key, and a rule about where a row is
-allowed to be written, enforced once, at the application layer, instead
-of resolved forever at the replication layer.
+identical one-way, read-only flow Part 2 built, running in both
+directions on the same connection instead of one. Getting the writing
+half right costs exactly what Part 1's worker-key discipline cost: a
+wider key, and a rule about where a row is allowed to be written,
+enforced once, at the application layer, instead of resolved forever at
+the replication layer.
 
-The map's other symbol is the same discipline drawn at its point of
-contact with a person. Every site has a front desk, and every desk is
-read-write — against whatever database actually sits at that site. At
-New York and Mumbai that is the region's own primary, so read-write
-there is exactly the write discipline above: a desk mints a row the same
-way any other client does, inside the one partition its region owns. At
-San Francisco, Sydney, and Amsterdam, read-write means something
-narrower — local, non-replicated business, the kind of row that was
-never going anywhere else to begin with — because the one thing none of
-those three sites ever holds is a write of its own against the
-replicated key space: a cascade one hop downstream and a pure
-consolidator are not where this series' write discipline says a
-cross-region row is allowed to be minted, and a desk talking to either
-one doesn't change that. None of this is a new mechanism — a desk is
-just an application connecting to Postgres, same as a terminal in Part 1
-or Part 2 — the only thing worth drawing is where each desk's writes are
-actually allowed to land.
+The map's other symbol is the same discipline at its point of contact
+with a person. Every site has a front desk, and every desk is
+read-write against its own region's primary and read-only against the
+mirror of everywhere else — four symmetric desks, not a tiered set.
+Amsterdam's own desk is read-only, full stop, for the one reason it's
+the one site with no region of its own: nothing is allowed to
+originate there, so there is nothing for a desk to write. None of this
+is a new mechanism — a desk is just an application connecting to
+Postgres, same as a terminal in Part 1 or Part 2 — the only thing worth
+drawing is which half of each connection is read-write and which is
+read-only, because that split is the whole architecture in miniature.
 
-`[TODO: build the two-region demo — two primaries, one warehouse, each
-side's row-filtered mirror flowing back, a traffic generator that
-writes to each primary independently — and confirm zero conflict
-counters move no matter how concurrently it runs.]`
+`[TODO: build the four-primary demo — four writers, two of them
+cascading through the other two, one warehouse, every mirror flowing
+back filtered — and confirm zero conflict counters move no matter how
+concurrently it runs.]`
 
 ### Cascading, one hop downstream
 
-San Francisco and Sydney in the map above are not a third and fourth
-region. Each is a logical replication subscriber of its region's own
-primary, built the same way every subscriber in this series has been —
-`CREATE SUBSCRIPTION` against one upstream. The only difference is what
-each one does next: it is also a publisher, exposing what it just
-applied, and a further consumer subscribes to that instead of going
-back to New York or Mumbai directly.
+San Francisco and Sydney are full primaries, not read-only leaves —
+`us-west` and `au` are real, independently written regions, exactly
+like `us-east` and `in`. What makes them different from New York and
+Mumbai is routing, not role: instead of opening a fifth and sixth
+long-haul connection into Amsterdam, their own writes cascade one hop
+through New York and Mumbai first, and the combined view — the hub's
+own writes, its spoke's writes alongside them, and Amsterdam's mirror
+of the other two regions — cascades back down that same link. One
+expensive intercontinental connection per hub instead of one per spoke;
+the short local hop between two cities a few hundred kilometers apart
+absorbs the extra traffic for free.
 
-That is not a new capability. **Verified**: a subscriber re-publishing
+That cascading itself — a subscriber re-publishing what it received to
+a further subscriber — is not a new capability. **Verified**: a subscriber re-publishing
 what it received to a further subscriber has worked since logical
 replication shipped in Postgres 10 — the documentation has said so,
 unchanged, across every release since
@@ -264,30 +273,40 @@ out before it reaches that subscriber. The id comes from
 anything it received, so a row is tagged the moment it has crossed one
 hop, and the next hop can choose not to forward it any further.
 
-For a one-way cascade like San Francisco or Sydney — leaf nodes,
-nothing subscribes to them — `origin` changes nothing today. It
-matters the day a subscription goes back toward New York, or a third
-hop goes out from San Francisco: that is exactly the shape `origin =
-none` exists to cut off, and setting it on a leaf costs nothing before
-there is a loop to have. What cascading does not change is what was
-already true one hop up: DDL and sequence state still do not
-replicate, at any hop, for the same reason Part 2 found at the first
-one.
+Here `origin` is not a someday precaution, it is load-bearing from the
+start, in both directions. San Francisco's publication toward New York
+carries `us-west`'s own writes, and nothing else needs to leave that
+publication unfiltered — New York only wants what San Francisco
+actually originated. New York's publication back toward San Francisco
+is the harder direction: it carries `us-east`'s own writes, plus
+Amsterdam's mirror of `in` and `au` that New York already received one
+hop earlier. Left at the default `origin = any`, San Francisco would
+apply that mirror, republish it back upstream on its own connection,
+and New York would see its own Amsterdam mirror reflected back a second
+time. `CREATE SUBSCRIPTION ... WITH (origin = none)` on San Francisco's
+side is what keeps that from happening — it tells New York's publisher
+"only send what originated at New York itself," cutting off exactly
+the loop a naive bidirectional cascade would otherwise create. What
+cascading does not change is what was already true one hop up: DDL and
+sequence state still do not replicate, at any hop, for the same reason
+Part 2 found at the first one.
 
-Real deployments covering APAC rarely stop at one extra node. Singapore,
-Tokyo, and Hong Kong each show up as their own region in every major
-cloud's catalog, for a geographic reason as much as a commercial one —
-Mumbai to Sydney is already something like 9,500 km, and Tokyo to
-Sydney is not much shorter, so one APAC primary cascading to every city
-in the region buys consistency at the cost of exactly the latency this
-architecture exists to avoid. China is its own case regardless: the
-major clouds' China regions run under separate local operators, not as
-another node on the same global account, which makes it a business and
-compliance decision before it is a replication one. A real build-out
-would reach for several of these; this post draws two cascades, New
-York to San Francisco and Mumbai to Sydney, because the mechanism — one
-hop, same `origin` discipline — does not change with a third or a
-fifth. Draw it once, repeat it per city.
+Real deployments covering APAC rarely stop at one extra region.
+Singapore, Tokyo, and Hong Kong each show up as their own region in
+every major cloud's catalog, for a geographic reason as much as a
+commercial one — Mumbai to Sydney is already something like 9,500 km,
+and Tokyo to Sydney is not much shorter, so a single APAC hub cascading
+every city in the region through itself buys consistency at the cost of
+exactly the latency this architecture exists to avoid; past a certain
+distance a spoke earns its own direct link to the warehouse instead.
+China is its own case regardless: the major clouds' China regions run
+under separate local operators, not as another node on the same global
+account, which makes it a business and compliance decision before it
+is a replication one. A real build-out would reach for several of
+these; this post draws two cascades, New York to San Francisco and
+Mumbai to Sydney, because the mechanism — one hop, same `origin`
+discipline each direction — does not change with a third or a fifth.
+Draw it once, repeat it per city.
 
 ### When two writers genuinely touch the same row
 
