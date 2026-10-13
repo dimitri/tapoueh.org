@@ -47,7 +47,7 @@ too, once it has one.
 
 ## The scenario
 
-{{< image src="fig-region-map.svg" title="One writer per region: conflicts avoided by construction. Each region's primary key includes the region, so no two regions ever mint the same row. Each primary streams read-only, asynchronously, into one global warehouse co-located with the Europe primary — the same consolidation pattern as part 2, not a write path." >}}
+{{< image src="fig-region-map.svg" title="One writer per region: conflicts avoided by construction. Each region's primary key includes the region, so no two regions ever mint the same row. Each primary streams read-only, asynchronously, into a global warehouse in Amsterdam, next to but separate from the Europe primary in Paris — the same consolidation pattern as part 2, not a write path." >}}
 
 Four things, each a post of its own in a shorter series, covered here in
 one, in the order a team actually runs into them: the primary dies and a
