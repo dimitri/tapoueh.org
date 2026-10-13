@@ -47,7 +47,7 @@ too, once it has one.
 
 ## The scenario
 
-{{< image src="fig-region-map.svg" title="One writer per region: conflicts avoided by construction. Each region's primary key includes the region, so no two regions ever mint the same row. Each primary streams read-only, asynchronously, into a global warehouse in Amsterdam, next to but separate from the Europe primary in Paris — the same consolidation pattern as part 2, not a write path." >}}
+{{< image src="fig-region-map.svg" title="One writer per region: conflicts avoided by construction. Each region's primary key includes the region, so no two regions ever mint the same row. New York and Mumbai each stream read-only, asynchronously, into a global warehouse in Amsterdam — the same consolidation pattern as part 2, not a write path. San Francisco and Sydney are not separate regions: each cascades its logical replication stream from the region's own primary, one hop downstream, same key discipline, no write of its own." >}}
 
 Four things, each a post of its own in a shorter series, covered here in
 one, in the order a team actually runs into them: the primary dies and a
@@ -198,9 +198,68 @@ cost: a wider key, and a rule about where a row is allowed to be
 written, enforced once, at the application layer, instead of resolved
 forever at the replication layer.
 
-`[TODO: build the three-region demo — three primaries, one warehouse,
-a traffic generator that writes to each independently — and confirm
-zero conflict counters move no matter how concurrently it runs.]`
+`[TODO: build the two-region demo — two primaries, one warehouse, a
+traffic generator that writes to each independently — and confirm zero
+conflict counters move no matter how concurrently it runs.]`
+
+### Cascading, one hop downstream
+
+San Francisco and Sydney in the map above are not a third and fourth
+region. Each is a logical replication subscriber of its region's own
+primary, built the same way every subscriber in this series has been —
+`CREATE SUBSCRIPTION` against one upstream. The only difference is what
+each one does next: it is also a publisher, exposing what it just
+applied, and a further consumer subscribes to that instead of going
+back to New York or Mumbai directly.
+
+That is not a new capability. **Verified**: a subscriber re-publishing
+what it received to a further subscriber has worked since logical
+replication shipped in Postgres 10 — the documentation has said so,
+unchanged, across every release since
+(`doc/src/sgml/logical-replication.sgml`: "Subscribers pull data from
+the publications they subscribe to and may subsequently re-publish
+data to allow cascading replication"). Nothing in `pgoutput`'s
+origin-filter callback ever blocked it by default; through Postgres 15
+that callback was a stub returning `false` unconditionally — forward
+everything, no exceptions.
+
+What Postgres 16 added is not cascading itself, it is a way to stop it
+on purpose. `CREATE SUBSCRIPTION ... WITH (origin = none)` tells the
+upstream node to send only rows that originated there, not ones it is
+itself forwarding from further upstream — the opposite of the default,
+`origin = any`, which forwards regardless of where a row has already
+been. **Verified**, `pgoutput_origin_filter` in
+`src/backend/replication/pgoutput/pgoutput.c`: with `origin = none`,
+any row whose WAL record carries a non-invalid origin id is filtered
+out before it reaches that subscriber. The id comes from
+`replorigin_session_origin`, which the apply worker sets before writing
+anything it received, so a row is tagged the moment it has crossed one
+hop, and the next hop can choose not to forward it any further.
+
+For a one-way cascade like San Francisco or Sydney — leaf nodes,
+nothing subscribes to them — `origin` changes nothing today. It
+matters the day a subscription goes back toward New York, or a third
+hop goes out from San Francisco: that is exactly the shape `origin =
+none` exists to cut off, and setting it on a leaf costs nothing before
+there is a loop to have. What cascading does not change is what was
+already true one hop up: DDL and sequence state still do not
+replicate, at any hop, for the same reason Part 2 found at the first
+one.
+
+Real deployments covering APAC rarely stop at one extra node. Singapore,
+Tokyo, and Hong Kong each show up as their own region in every major
+cloud's catalog, for a geographic reason as much as a commercial one —
+Mumbai to Sydney is already something like 9,500 km, and Tokyo to
+Sydney is not much shorter, so one APAC primary cascading to every city
+in the region buys consistency at the cost of exactly the latency this
+architecture exists to avoid. China is its own case regardless: the
+major clouds' China regions run under separate local operators, not as
+another node on the same global account, which makes it a business and
+compliance decision before it is a replication one. A real build-out
+would reach for several of these; this post draws two cascades, New
+York to San Francisco and Mumbai to Sydney, because the mechanism — one
+hop, same `origin` discipline — does not change with a third or a
+fifth. Draw it once, repeat it per city.
 
 ### When two writers genuinely touch the same row
 
