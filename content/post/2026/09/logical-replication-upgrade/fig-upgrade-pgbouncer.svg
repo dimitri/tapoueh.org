@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" role="img" aria-label="The application connects to pgbouncer only, the whole time. The cutover happens behind it in four steps: PAUSE holds new queries once in-flight ones finish, the backend target is edited and reloaded, then RESUME releases the queue onto the new server. Measured: 142 milliseconds, zero failed attempts, the client's TCP connection to pgbouncer never closes.">
+  <style>
+    text { font-family: system-ui, sans-serif; font-size: 14px; fill: #222; }
+    .box { fill: #f4f6f8; stroke: #556; stroke-width: 1.5; rx: 8; }
+    .hi { fill: #e6eefc; }
+    .good { fill: #e4f4e6; stroke: #2e7d32; }
+    .dim { fill: #f4f6f8; stroke: #99a; stroke-dasharray: 5 4; opacity: .6; }
+    .a { stroke: #2a6fdb; stroke-width: 2; fill: none; marker-end: url(#ab); }
+    .g { stroke: #2e7d32; stroke-width: 2; fill: none; marker-end: url(#ag); }
+    .small { font-size: 12px; fill: #444; }
+    .b { font-weight: 600; }
+    .step { font-size: 12px; font-weight: 700; fill: #fff; }
+    .stepc { fill: #2a6fdb; }
+    @media (prefers-color-scheme: dark) {
+      text { fill: #e8e8e8; } .small { fill: #bbb; }
+      .box { fill: #23272e; stroke: #99a; } .hi { fill: #1d2a44; }
+      .good { fill: #1d3322; stroke: #66bb6a; } .dim { fill: #23272e; stroke: #777; }
+      .a { stroke: #6ea8ff; } .g { stroke: #66bb6a; } .stepc { fill: #6ea8ff; }
+    }
+  </style>
+  <defs>
+    <marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#2a6fdb"/></marker>
+    <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#2e7d32"/></marker>
+  </defs>
+
+  <rect class="box" x="20" y="40" width="150" height="80"/>
+  <text class="b" x="95" y="75" text-anchor="middle">application</text>
+  <text class="small" x="95" y="95" text-anchor="middle">/tmp/target</text>
+  <text class="small" x="95" y="110" text-anchor="middle">never changes</text>
+
+  <path class="a" d="M170 80 L230 80"/>
+  <text class="small" x="200" y="68" text-anchor="middle">one TCP</text>
+  <text class="small" x="200" y="128" text-anchor="middle">connection,</text>
+  <text class="small" x="200" y="142" text-anchor="middle">never closed</text>
+
+  <rect class="box hi" x="230" y="30" width="180" height="100"/>
+  <text class="b" x="320" y="58" text-anchor="middle">pgbouncer</text>
+  <text class="small" x="320" y="80" text-anchor="middle">pool_mode = transaction</text>
+  <text class="small" x="320" y="98" text-anchor="middle">databases.ini: one line</text>
+  <text class="small" x="320" y="113" text-anchor="middle">host = old2 | new2</text>
+
+  <path class="a" d="M410 65 L470 65"/>
+  <rect class="dim" x="470" y="30" width="170" height="60"/>
+  <text class="b" x="555" y="55" text-anchor="middle">old2</text>
+  <text class="small" x="555" y="73" text-anchor="middle">before the cutover</text>
+
+  <path class="g" d="M410 100 L470 100"/>
+  <rect class="box good" x="470" y="100" width="170" height="60"/>
+  <text class="b" x="555" y="125" text-anchor="middle">new2</text>
+  <text class="small" x="555" y="143" text-anchor="middle">after the cutover</text>
+
+  <text class="b" x="20" y="180">The cutover, behind that one connection</text>
+
+  <circle class="stepc" cx="45" cy="210" r="11"/>
+  <text class="step" x="45" y="214" text-anchor="middle">1</text>
+  <rect class="box" x="70" y="195" width="190" height="80"/>
+  <text class="b" x="165" y="218" text-anchor="middle">PAUSE app</text>
+  <text class="small" x="165" y="238" text-anchor="middle">in-flight finishes,</text>
+  <text class="small" x="165" y="253" text-anchor="middle">new queries held</text>
+  <text class="b" x="165" y="270" text-anchor="middle">+44 ms</text>
+
+  <circle class="stepc" cx="285" cy="210" r="11"/>
+  <text class="step" x="285" y="214" text-anchor="middle">2</text>
+  <rect class="box" x="310" y="195" width="190" height="80"/>
+  <text class="b" x="405" y="218" text-anchor="middle">catch up, setval()</text>
+  <text class="small" x="405" y="238" text-anchor="middle">marker row, then</text>
+  <text class="small" x="405" y="253" text-anchor="middle">sequences, now safe</text>
+  <text class="b" x="405" y="270" text-anchor="middle">+140 ms</text>
+
+  <circle class="stepc" cx="525" cy="210" r="11"/>
+  <text class="step" x="525" y="214" text-anchor="middle">3</text>
+  <rect class="box" x="550" y="195" width="190" height="80"/>
+  <text class="b" x="645" y="218" text-anchor="middle">edit + RELOAD</text>
+  <text class="small" x="645" y="238" text-anchor="middle">databases.ini:</text>
+  <text class="small" x="645" y="253" text-anchor="middle">old2 -&gt; new2</text>
+  <text class="b" x="645" y="270" text-anchor="middle">+157 ms</text>
+
+  <circle class="stepc" cx="45" cy="315" r="11"/>
+  <text class="step" x="45" y="319" text-anchor="middle">4</text>
+  <rect class="box good" x="70" y="300" width="190" height="80"/>
+  <text class="b" x="165" y="323" text-anchor="middle">RESUME app</text>
+  <text class="small" x="165" y="343" text-anchor="middle">queue released,</text>
+  <text class="small" x="165" y="358" text-anchor="middle">now hits new2</text>
+  <text class="b" x="165" y="375" text-anchor="middle">+169 ms</text>
+
+  <rect class="box good" x="310" y="300" width="430" height="80"/>
+  <text class="b" x="525" y="328" text-anchor="middle">142 ms write stall, 0 failed attempts</text>
+  <text class="small" x="525" y="350" text-anchor="middle">PAUSE drains gracefully - an in-flight transaction finishes,</text>
+  <text class="small" x="525" y="366" text-anchor="middle">it is never killed mid-flight, unlike a read-only freeze</text>
+</svg>

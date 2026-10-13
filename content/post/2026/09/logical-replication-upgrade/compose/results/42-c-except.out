@@ -1,0 +1,112 @@
+pg19a> CREATE PUBLICATION p_ex FOR ALL TABLES EXCEPT (TABLE audit, scratch_a)
+CREATE PUBLICATION
+pg19a> SELECT tablename FROM pg_publication_tables WHERE pubname = 'p_ex' ORDER BY 1
+ tablename 
+-----------
+ ev_2026
+ keep
+(2 rows)
+
+pg19a> \dRp+ p_ex
+                                                       Publication p_ex
+  Owner   | All tables | All sequences | Inserts | Updates | Deletes | Truncates | Generated columns | Via root | Description 
+----------+------------+---------------+---------+---------+---------+-----------+-------------------+----------+-------------
+ postgres | t          | f             | t       | t       | t       | t         | none              | f        | 
+Except tables:
+    "public.audit"
+    "public.scratch_a"
+
+pg19a> SELECT prrelid::regclass, prexcept FROM pg_publication_rel
+  prrelid  | prexcept 
+-----------+----------
+ audit     | t
+ scratch_a | t
+(2 rows)
+
+### data flow: excluded tables stay empty on the subscriber
+pg19a> INSERT INTO keep VALUES (1); INSERT INTO audit VALUES (1, 'not replicated'); INSERT INTO scratch_a VALUES (1); INSERT INTO ev VALUES (1, '2026-06-01')
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+pg19b> CREATE SUBSCRIPTION s_ex CONNECTION 'host=pg19a dbname=exc user=postgres password=postgres' PUBLICATION p_ex
+NOTICE:  created replication slot "s_ex" on publisher
+CREATE SUBSCRIPTION
+pg19b> SELECT 'keep' AS tbl, count(*) FROM keep
+ tbl  | count 
+------+-------
+ keep |     1
+(1 row)
+
+pg19b> SELECT 'audit' AS tbl, count(*) FROM audit
+  tbl  | count 
+-------+-------
+ audit |     0
+(1 row)
+
+pg19b> SELECT 'scratch_a' AS tbl, count(*) FROM scratch_a
+    tbl    | count 
+-----------+-------
+ scratch_a |     0
+(1 row)
+
+pg19b> SELECT 'ev' AS tbl, count(*) FROM ev
+ tbl | count 
+-----+-------
+ ev  |     1
+(1 row)
+
+
+### a table created later on the publisher is published (it is not in the EXCEPT list)
+pg19a> CREATE TABLE created_later (id int PRIMARY KEY)
+CREATE TABLE
+pg19a> SELECT tablename FROM pg_publication_tables WHERE pubname = 'p_ex' ORDER BY 1
+   tablename   
+---------------
+ created_later
+ ev_2026
+ keep
+(3 rows)
+
+
+### changing the list, and the forms that are refused
+pg19a> ALTER PUBLICATION p_ex SET ALL TABLES EXCEPT (TABLE scratch_a)
+ALTER PUBLICATION
+pg19a> SELECT tablename FROM pg_publication_tables WHERE pubname = 'p_ex' ORDER BY 1
+   tablename   
+---------------
+ audit
+ created_later
+ ev_2026
+ keep
+(4 rows)
+
+pg19a> ALTER PUBLICATION p_ex ADD TABLE audit
+ERROR:  publication "p_ex" is defined as FOR ALL TABLES
+DETAIL:  Tables or sequences cannot be added to or dropped from FOR ALL TABLES publications.
+pg19a> CREATE PUBLICATION p_bad FOR TABLE keep EXCEPT (TABLE audit)
+ERROR:  syntax error at or near "EXCEPT"
+LINE 1: CREATE PUBLICATION p_bad FOR TABLE keep EXCEPT (TABLE audit)
+                                                ^
+pg19a> CREATE PUBLICATION p_part FOR ALL TABLES EXCEPT (TABLE ev)
+CREATE PUBLICATION
+pg19a> SELECT tablename FROM pg_publication_tables WHERE pubname = 'p_part' ORDER BY 1
+   tablename   
+---------------
+ audit
+ created_later
+ keep
+ scratch_a
+(4 rows)
+
+pg19a> CREATE PUBLICATION p_part_root FOR ALL TABLES EXCEPT (TABLE ev) WITH (publish_via_partition_root = true)
+CREATE PUBLICATION
+pg19a> SELECT tablename FROM pg_publication_tables WHERE pubname = 'p_part_root' ORDER BY 1
+   tablename   
+---------------
+ audit
+ created_later
+ keep
+ scratch_a
+(4 rows)
+

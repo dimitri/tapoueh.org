@@ -1,0 +1,128 @@
+### what can be published: only ALL SEQUENCES (no per-sequence form in this build)
+pg19a> CREATE PUBLICATION p_one FOR SEQUENCE s1
+ERROR:  invalid publication object list
+LINE 1: CREATE PUBLICATION p_one FOR SEQUENCE s1
+                                     ^
+DETAIL:  One of TABLE or TABLES IN SCHEMA must be specified before a standalone table or schema name.
+pg19a> CREATE PUBLICATION p_mixed FOR TABLE t, SEQUENCE s1
+ERROR:  syntax error at or near "s1"
+LINE 1: CREATE PUBLICATION p_mixed FOR TABLE t, SEQUENCE s1
+                                                         ^
+pg19a> CREATE PUBLICATION p_all FOR ALL TABLES, ALL SEQUENCES
+CREATE PUBLICATION
+pg19a> CREATE PUBLICATION p_seqonly FOR ALL SEQUENCES
+CREATE PUBLICATION
+pg19a> SELECT pubname, puballtables, puballsequences FROM pg_publication ORDER BY 1
+  pubname  | puballtables | puballsequences 
+-----------+--------------+-----------------
+ p_all     | t            | t
+ p_seqonly | f            | t
+(2 rows)
+
+pg19a> SELECT relid::regclass FROM pg_get_publication_sequences('p_all') ORDER BY 1
+  relid   
+----------
+ t_id_seq
+ s1
+(2 rows)
+
+
+### publisher side: advance the sequences, look at them
+pg19a> SELECT sequencename, last_value FROM pg_sequences ORDER BY 1
+ sequencename | last_value 
+--------------+------------
+ s1           |        104
+ t_id_seq     |         20
+(2 rows)
+
+pg19a> SELECT last_value, is_called, page_lsn IS NOT NULL AS has_page_lsn FROM pg_get_sequence_data('s1')
+ last_value | is_called | has_page_lsn 
+------------+-----------+--------------
+        104 | t         | t
+(1 row)
+
+
+### subscriber: the initial sync copies the sequences too
+pg19b> CREATE SUBSCRIPTION sub_all CONNECTION 'host=pg19a dbname=seq user=postgres password=postgres' PUBLICATION p_all
+NOTICE:  created replication slot "sub_all" on publisher
+CREATE SUBSCRIPTION
+pg19b> SELECT srrelid::regclass AS rel, c.relkind, srsubstate FROM pg_subscription_rel r JOIN pg_class c ON c.oid = r.srrelid ORDER BY 1
+   rel    | relkind | srsubstate 
+----------+---------+------------
+ t_id_seq | S       | r
+ t        | r       | r
+ s1       | S       | r
+ other    | r       | r
+(4 rows)
+
+pg19b> SELECT sequencename, last_value FROM pg_sequences ORDER BY 1
+ sequencename | last_value 
+--------------+------------
+ s1           |        104
+ t_id_seq     |         20
+(2 rows)
+
+
+### the publisher moves on by 100 values; is the subscriber updated by itself? (waiting 20 s)
+pg19b> SELECT sequencename, last_value FROM pg_sequences ORDER BY 1
+ sequencename | last_value 
+--------------+------------
+ s1           |        104
+ t_id_seq     |         20
+(2 rows)
+
+pg19a> SELECT sequencename, last_value FROM pg_sequences ORDER BY 1
+ sequencename | last_value 
+--------------+------------
+ s1           |        204
+ t_id_seq     |         20
+(2 rows)
+
+
+### only REFRESH SEQUENCES brings them up to date
+pg19b> ALTER SUBSCRIPTION sub_all REFRESH SEQUENCES
+ALTER SUBSCRIPTION
+pg19b> SELECT sequencename, last_value FROM pg_sequences ORDER BY 1
+ sequencename | last_value 
+--------------+------------
+ s1           |        204
+ t_id_seq     |         20
+(2 rows)
+
+pg19b> SELECT last_value, is_called FROM pg_get_sequence_data('s1')
+ last_value | is_called 
+------------+-----------
+        204 | t
+(1 row)
+
+pg19b> SELECT srrelid::regclass AS rel, srsubstate FROM pg_subscription_rel r JOIN pg_class c ON c.oid = r.srrelid WHERE c.relkind = 'S' ORDER BY 1
+   rel    | srsubstate 
+----------+------------
+ t_id_seq | r
+ s1       | r
+(2 rows)
+
+
+### a sequence created later is NOT picked up until REFRESH PUBLICATION
+pg19a> CREATE SEQUENCE later_seq
+CREATE SEQUENCE
+pg19b> CREATE SEQUENCE later_seq
+CREATE SEQUENCE
+pg19b> ALTER SUBSCRIPTION sub_all REFRESH SEQUENCES
+ALTER SUBSCRIPTION
+pg19b> SELECT sequencename, last_value FROM pg_sequences WHERE sequencename = 'later_seq'
+ sequencename | last_value 
+--------------+------------
+ later_seq    |           
+(1 row)
+
+pg19b> ALTER SUBSCRIPTION sub_all REFRESH PUBLICATION
+ALTER SUBSCRIPTION
+pg19b> ALTER SUBSCRIPTION sub_all REFRESH SEQUENCES
+ALTER SUBSCRIPTION
+pg19b> SELECT sequencename, last_value FROM pg_sequences WHERE sequencename = 'later_seq'
+ sequencename | last_value 
+--------------+------------
+ later_seq    |          3
+(1 row)
+

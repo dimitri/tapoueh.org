@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 320" role="img" aria-label="Four ways to ask whether the new server has caught up. WAIT FOR LSN, a naive LSN comparison, and latest_end_lsn all answer wrong, for three different reasons. A marker row works.">
+  <style>
+    text { font-family: system-ui, sans-serif; font-size: 14px; fill: #222; }
+    .box { fill: #f4f6f8; stroke: #556; stroke-width: 1.5; rx: 8; }
+    .good { fill: #e4f4e6; stroke: #2e7d32; }
+    .bad { fill: #fbe9e7; stroke: #c62828; }
+    .small { font-size: 12px; fill: #444; }
+    .b { font-weight: 600; }
+    .verdict-bad { font-weight: 700; fill: #c62828; font-size: 12px; }
+    .verdict-good { font-weight: 700; fill: #2e7d32; font-size: 12px; }
+    @media (prefers-color-scheme: dark) {
+      text { fill: #e8e8e8; } .small { fill: #bbb; }
+      .box { fill: #23272e; stroke: #99a; }
+      .good { fill: #1d3322; stroke: #66bb6a; } .bad { fill: #3a2020; stroke: #ef5350; }
+      .verdict-bad { fill: #ef5350; } .verdict-good { fill: #66bb6a; }
+    }
+  </style>
+  <text class="b" x="20" y="26">"Has the new server received everything the old one committed?"</text>
+
+  <rect class="box bad" x="20" y="48" width="200" height="190"/>
+  <text class="b" x="120" y="72" text-anchor="middle">WAIT FOR LSN</text>
+  <text class="small" x="120" y="96" text-anchor="middle">standby-only modes</text>
+  <text class="small" x="120" y="112" text-anchor="middle">fail outright on a</text>
+  <text class="small" x="120" y="128" text-anchor="middle">logical subscriber</text>
+  <text class="small" x="120" y="152" text-anchor="middle">primary_flush answers</text>
+  <text class="small" x="120" y="168" text-anchor="middle">"success" against its</text>
+  <text class="small" x="120" y="184" text-anchor="middle">OWN wal position</text>
+  <text class="verdict-bad" x="120" y="220" text-anchor="middle">false positive</text>
+
+  <rect class="box bad" x="240" y="48" width="200" height="190"/>
+  <text class="b" x="340" y="72" text-anchor="middle">pg_current_wal_lsn()</text>
+  <text class="small" x="340" y="88" text-anchor="middle">vs remote_lsn</text>
+  <text class="small" x="340" y="112" text-anchor="middle">the freeze itself is a</text>
+  <text class="small" x="340" y="128" text-anchor="middle">commit that logical</text>
+  <text class="small" x="340" y="144" text-anchor="middle">replication never sends</text>
+  <text class="small" x="340" y="168" text-anchor="middle">sits ahead of anything</text>
+  <text class="small" x="340" y="184" text-anchor="middle">the subscriber reports</text>
+  <text class="verdict-bad" x="340" y="220" text-anchor="middle">never converges</text>
+
+  <rect class="box bad" x="460" y="48" width="200" height="190"/>
+  <text class="b" x="560" y="72" text-anchor="middle">latest_end_lsn</text>
+  <text class="small" x="560" y="96" text-anchor="middle">pg_stat_subscription</text>
+  <text class="small" x="560" y="120" text-anchor="middle">updated when a message</text>
+  <text class="small" x="560" y="136" text-anchor="middle">is RECEIVED, not when</text>
+  <text class="small" x="560" y="152" text-anchor="middle">it is applied</text>
+  <text class="verdict-bad" x="560" y="220" text-anchor="middle">proves nothing</text>
+
+  <rect class="box good" x="680" y="48" width="200" height="190"/>
+  <text class="b" x="780" y="72" text-anchor="middle">marker row</text>
+  <text class="small" x="780" y="96" text-anchor="middle">insert one row on old</text>
+  <text class="small" x="780" y="112" text-anchor="middle">after the freeze, wait</text>
+  <text class="small" x="780" y="128" text-anchor="middle">until it shows on new</text>
+  <text class="small" x="780" y="152" text-anchor="middle">all three measures agree</text>
+  <text class="small" x="780" y="168" text-anchor="middle">within a millisecond or two</text>
+  <text class="verdict-good" x="780" y="220" text-anchor="middle">actually works</text>
+
+  <text class="small" x="450" y="270" text-anchor="middle">Three plausible-looking tools, three different ways to be wrong. The one that works is the oldest trick: write something and watch for it.</text>
+</svg>

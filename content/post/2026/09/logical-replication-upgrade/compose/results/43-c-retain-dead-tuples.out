@@ -1,0 +1,77 @@
+pg19b> SHOW track_commit_timestamp
+ track_commit_timestamp 
+------------------------
+ on
+(1 row)
+
+### without track_commit_timestamp the option is accepted with warnings (pg19a has it off)
+pg19a> CREATE SUBSCRIPTION s_refused CONNECTION 'host=pg19a dbname=rdt user=postgres password=postgres' PUBLICATION p_rdt WITH (retain_dead_tuples = true, connect = false)
+WARNING:  commit timestamp and origin data required for detecting conflicts won't be retained
+HINT:  Consider setting "track_commit_timestamp" to true.
+WARNING:  deleted rows to detect conflicts would not be removed until the subscription is enabled
+HINT:  Consider setting retain_dead_tuples to false.
+WARNING:  subscription was created, but is not connected
+HINT:  To initiate replication, you must manually create the replication slot, enable the subscription, and alter the subscription to refresh publications.
+CREATE SUBSCRIPTION
+pg19a> ALTER SUBSCRIPTION s_refused SET (slot_name = NONE)
+ALTER SUBSCRIPTION
+pg19a> DROP SUBSCRIPTION s_refused
+DROP SUBSCRIPTION
+
+### subscriber with retain_dead_tuples (and a 60 s cap on how long it may hold back cleanup on the publisher)
+pg19b> CREATE SUBSCRIPTION s_rdt CONNECTION 'host=pg19a dbname=rdt user=postgres password=postgres' PUBLICATION p_rdt WITH (retain_dead_tuples = true, max_retention_duration = 60000)
+NOTICE:  created replication slot "s_rdt" on publisher
+CREATE SUBSCRIPTION
+pg19b> CREATE SUBSCRIPTION s_plain CONNECTION 'host=pg19a dbname=rdt user=postgres password=postgres' PUBLICATION p_plain
+NOTICE:  created replication slot "s_plain" on publisher
+CREATE SUBSCRIPTION
+pg19b> SELECT subname, subretaindeadtuples, submaxretention, subretentionactive FROM pg_subscription ORDER BY 1
+ subname | subretaindeadtuples | submaxretention | subretentionactive 
+---------+---------------------+-----------------+--------------------
+ s_ex    | f                   |               0 | f
+ s_plain | f                   |               0 | f
+ s_rdt   | t                   |           60000 | t
+ sub_all | f                   |               0 | f
+(4 rows)
+
+pg19b> SELECT slot_name, slot_type, xmin IS NOT NULL AS holds_xmin, active FROM pg_replication_slots
+       slot_name       | slot_type | holds_xmin | active 
+-----------------------+-----------+------------+--------
+ pg_conflict_detection | physical  | t          | t
+(1 row)
+
+
+### provoke: update on the publisher, delete on the subscriber, then apply
+pg19b> ALTER SUBSCRIPTION s_rdt DISABLE
+WARNING:  deleted rows to detect conflicts would not be removed until the subscription is enabled
+HINT:  Consider setting retain_dead_tuples to false.
+ALTER SUBSCRIPTION
+pg19b> ALTER SUBSCRIPTION s_plain DISABLE
+ALTER SUBSCRIPTION
+pg19a> UPDATE acct SET bal = 11 WHERE id = 1
+UPDATE 1
+pg19a> UPDATE acct_plain SET bal = 11 WHERE id = 1
+UPDATE 1
+pg19b> DELETE FROM acct WHERE id = 1
+DELETE 1
+pg19b> DELETE FROM acct_plain WHERE id = 1
+DELETE 1
+pg19b> ALTER SUBSCRIPTION s_rdt ENABLE
+ALTER SUBSCRIPTION
+pg19b> ALTER SUBSCRIPTION s_plain ENABLE
+ALTER SUBSCRIPTION
+pg19b> SELECT subname, confl_update_deleted, confl_update_missing FROM pg_stat_subscription_stats ORDER BY 1
+ subname | confl_update_deleted | confl_update_missing 
+---------+----------------------+----------------------
+ s_ex    |                    0 |                    0
+ s_plain |                    0 |                    1
+ s_rdt   |                    1 |                    0
+ sub_all |                    0 |                    0
+(4 rows)
+
+pg19b> SELECT * FROM acct ORDER BY 1
+ id | bal 
+----+-----
+  2 |  20
+(1 row)
+
