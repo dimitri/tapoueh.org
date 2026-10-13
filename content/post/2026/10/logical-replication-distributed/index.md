@@ -47,7 +47,7 @@ too, once it has one.
 
 ## The scenario
 
-{{< image src="fig-region-map.svg" title="One writer per region: conflicts avoided by construction. Each region's primary key includes the region, so no two regions ever mint the same row. New York and Mumbai each stream read-only, asynchronously, into a global warehouse in Amsterdam — the same consolidation pattern as part 2, not a write path. San Francisco and Sydney are not separate regions: each cascades its logical replication stream from the region's own primary, one hop downstream, same key discipline, no write of its own." >}}
+{{< image src="fig-region-map.svg" title="One writer per region: conflicts avoided by construction. Each region's primary key includes the region, so no two regions ever mint the same row. Local terminals write to New York and to Mumbai, the two regional primaries; each streams read-only, asynchronously, into a global warehouse in Amsterdam — the same consolidation pattern as part 2, not a write path. San Francisco and Sydney are not separate regions: each cascades its logical replication stream from the region's own primary, one hop downstream, same key discipline, no write of its own. Front-desk locations in Dubai, Cape Town, and São Paulo read a worldwide view of every transaction straight off the warehouse." >}}
 
 Four things, each a post of its own in a shorter series, covered here in
 one, in the order a team actually runs into them: the primary dies and a
@@ -197,6 +197,19 @@ Getting this right costs exactly what Part 1's worker-key discipline
 cost: a wider key, and a rule about where a row is allowed to be
 written, enforced once, at the application layer, instead of resolved
 forever at the replication layer.
+
+The map's two other symbols are the same discipline drawn at its two
+ends. Terminals are ordinary clients — a point-of-sale system, a teller
+desk, an API caller, whatever actually mints a row — talking directly
+to their own region's primary, synchronously, the same way an
+application talks to any Postgres server; nothing about that
+conversation is logical replication, it is just where the write
+discipline above gets enforced. Front desks are the opposite end of the
+same warehouse Part 2 already built: a read-only view of every row from
+every region, placed wherever someone needs to see the whole business
+at once, with the same latency and staleness trade-offs Part 2's
+consolidation already priced in. Neither one changes the conflict
+story; they are what the architecture is *for*.
 
 `[TODO: build the two-region demo — two primaries, one warehouse, a
 traffic generator that writes to each independently — and confirm zero

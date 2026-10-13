@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" role="img" aria-label="A world map with two regional primaries, placed on their real coordinates: New York for the Americas and Mumbai for APAC, each cascading its logical replication stream to a nearby node — San Francisco off New York, Sydney off Mumbai — and each also replicating directly into one global warehouse in Amsterdam. Country borders and a light sea tint come from the Natural Earth 1:50m dataset via PostGIS. A legend in the corner explains the pin, replication, cascade, and warehouse symbols.">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" role="img" aria-label="A world map with two regional primaries on their real coordinates, New York for the Americas and Mumbai for APAC, each with local terminals writing to it, each cascading its logical replication stream to a nearby node — San Francisco off New York, Sydney off Mumbai — and each replicating directly into one global warehouse in Amsterdam, which in turn feeds a read-only, worldwide view of every transaction out to front-desk locations in Dubai, Cape Town, and São Paulo. Country borders and a light sea tint come from the Natural Earth 1:50m dataset via PostGIS. A legend in the corner explains every symbol.">
   <style>
     text { font-family: system-ui, sans-serif; fill: #222; }
     .title { font-size: 19px; font-weight: 700; }
@@ -14,6 +14,11 @@
     .icon-sub { font-size: 10.5px; fill: #3f4a63; }
     .rep { stroke: #c2570c; stroke-width: 2.5; fill: none; stroke-dasharray: 7 4; marker-end: url(#m1); }
     .cascade { stroke: #2a6fdb; stroke-width: 2; fill: none; stroke-dasharray: 4 3; marker-end: url(#m2); }
+    .terminal { fill: #eef6ef; stroke: #4f7a57; stroke-width: 1.5; }
+    .terminal-link { stroke: #4f7a57; stroke-width: 2; fill: none; marker-start: url(#m3); marker-end: url(#m3); }
+    .frontdesk { fill: #e3f3f3; stroke: #1f7a7a; stroke-width: 2; }
+    .frontdesk-label { font-size: 11px; font-weight: 700; fill: #1b2230; }
+    .frontdesk-sub { font-size: 9.5px; fill: #3f4a63; }
     .zone { fill: #E8EEF5; stroke: #b9bfae; stroke-width: 1.5; }
     .legend-text { font-size: 11.5px; fill: #37414f; }
     @media (prefers-color-scheme: dark) {
@@ -27,6 +32,9 @@
       .disk-warehouse { fill: #3a2a1d; stroke: #ff9a57; }
       .icon-label { fill: #f0f0f0; } .icon-sub { fill: #c3cadb; }
       .rep { stroke: #ff9a57; } .cascade { stroke: #6ea8ff; }
+      .terminal { fill: #1d2a20; stroke: #7fae89; } .terminal-link { stroke: #7fae89; }
+      .frontdesk { fill: #102e2e; stroke: #4fc3c3; }
+      .frontdesk-label { fill: #f0f0f0; } .frontdesk-sub { fill: #c3cadb; }
       .zone { fill: #141b29; stroke: #4a5873; }
       .legend-text { fill: #c3cadb; }
     }
@@ -34,6 +42,7 @@
   <defs>
     <marker id="m1" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#c2570c"/></marker>
     <marker id="m2" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#2a6fdb"/></marker>
+    <marker id="m3" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#4f7a57"/></marker>
   </defs>
 
   <text class="title" x="30" y="32">One writer per region: conflicts avoided by construction</text>
@@ -52,16 +61,16 @@ M 586.91 382.23 L 577.82 379.87 576.94 377.03 572.69 374.27 570.16 369.43 575.06
   <text class="pin-sub" x="294.4" y="244" text-anchor="middle">region = 'americas' — New York</text>
 
   <circle class="pin" cx="159.9" cy="215.1" r="8"/>
-  <text class="pin-label" x="148" y="203" text-anchor="end">Replica</text>
-  <text class="pin-sub" x="148" y="217" text-anchor="end">cascades from New York</text>
+  <text class="pin-label" x="159.9" y="200" text-anchor="middle">San Francisco</text>
+  <text class="pin-sub" x="159.9" y="186" text-anchor="middle">replica, cascades from New York</text>
 
   <circle class="pin" cx="702.4" cy="267.0" r="9"/>
-  <text class="pin-label" x="702.4" y="240" text-anchor="middle">Primary</text>
-  <text class="pin-sub" x="702.4" y="254" text-anchor="middle">region = 'apac' — Mumbai</text>
+  <text class="pin-label" x="714" y="252">Primary</text>
+  <text class="pin-sub" x="714" y="266">region = 'apac' — Mumbai</text>
 
   <circle class="pin" cx="919.5" cy="414.1" r="8"/>
-  <text class="pin-label" x="905" y="410" text-anchor="end">Replica</text>
-  <text class="pin-sub" x="905" y="424" text-anchor="end">cascades from Mumbai</text>
+  <text class="pin-label" x="905" y="403" text-anchor="end">Sydney</text>
+  <text class="pin-sub" x="905" y="417" text-anchor="end">replica, cascades from Mumbai</text>
 
   <!-- global warehouse, standing on its own now that Paris is gone -->
   <path class="disk-warehouse" d="M493.6 168 L493.6 182 A20 5 0 0 0 533.6 182 L533.6 168 Z"/>
@@ -69,25 +78,63 @@ M 586.91 382.23 L 577.82 379.87 576.94 377.03 572.69 374.27 570.16 369.43 575.06
   <text class="icon-label" x="513.6" y="200" text-anchor="middle">Global warehouse</text>
   <text class="icon-sub" x="513.6" y="214" text-anchor="middle">Amsterdam</text>
 
-  <!-- replication into the warehouse -->
-  <path class="rep" d="M303 198 Q 400 150 493 178"/>
-  <path class="rep" d="M690 266 Q 580 200 535 178"/>
+  <!-- replication into the warehouse, one hop out of each primary, slanted straight lines -->
+  <path class="rep" d="M303 199 L495 178"/>
+  <path class="rep" d="M693 260 L533 178"/>
 
   <!-- cascading logical replication, same region, one hop downstream -->
   <path class="cascade" d="M276 210 L178 213"/>
-  <path class="cascade" d="M712 278 Q 820 340 908 402"/>
+  <path class="cascade" d="M715 278 L910 406"/>
+
+  <!-- continent-local terminals: live client traffic, both ways, into the one regional primary -->
+  <g transform="translate(294.4,170)">
+    <rect class="terminal" x="-8" y="-6" width="16" height="12" rx="2"/>
+    <line class="terminal" x1="-5" y1="0" x2="5" y2="0" stroke-width="1"/>
+    <text class="icon-sub" x="0" y="-12" text-anchor="middle">Terminals</text>
+  </g>
+  <path class="terminal-link" d="M294.4 179 L294.4 197"/>
+
+  <g transform="translate(702.4,306)">
+    <rect class="terminal" x="-8" y="-6" width="16" height="12" rx="2"/>
+    <line class="terminal" x1="-5" y1="0" x2="5" y2="0" stroke-width="1"/>
+    <text class="icon-sub" x="0" y="20" text-anchor="middle">Terminals</text>
+  </g>
+  <path class="terminal-link" d="M702.4 276 L702.4 298"/>
+
+  <!-- front desks: read-only, worldwide view of every transaction, fed from the warehouse -->
+  <path class="rep" d="M522 181 L645 243"/>
+  <path class="rep" d="M512 182 L552 405"/>
+  <path class="rep" d="M503 182 L377 377"/>
+
+  <path class="frontdesk" d="M653.5 243 L660.5 250 L653.5 257 L646.5 250 Z"/>
+  <text class="frontdesk-label" x="653.5" y="232" text-anchor="middle">Front desk</text>
+  <text class="frontdesk-sub" x="653.5" y="270" text-anchor="middle">Dubai</text>
+
+  <path class="frontdesk" d="M551.2 407.2 L558.2 414.2 L551.2 421.2 L544.2 414.2 Z"/>
+  <text class="frontdesk-label" x="551.2" y="396.2" text-anchor="middle">Front desk</text>
+  <text class="frontdesk-sub" x="551.2" y="434.2" text-anchor="middle">Cape Town</text>
+
+  <path class="frontdesk" d="M370.5 378.4 L377.5 385.4 L370.5 392.4 L363.5 385.4 Z"/>
+  <text class="frontdesk-label" x="370.5" y="367.4" text-anchor="middle">Front desk</text>
+  <text class="frontdesk-sub" x="370.5" y="405.4" text-anchor="middle">São Paulo</text>
 
   <!-- legend: symbols only, meanings explained in the surrounding text -->
-  <g transform="translate(800,88)">
-    <rect class="zone" x="0" y="0" width="175" height="122" rx="8"/>
-    <circle class="pin" cx="18" cy="20" r="6"/>
-    <text class="legend-text" x="32" y="24">Node</text>
-    <path class="rep" d="M10 44 L50 44" marker-end="url(#m1)"/>
-    <text class="legend-text" x="58" y="48">Replication</text>
-    <path class="cascade" d="M10 68 L50 68" marker-end="url(#m2)"/>
-    <text class="legend-text" x="58" y="72">Cascade</text>
-    <path class="disk-warehouse" d="M9 92 L9 100 A9 2.3 0 0 0 27 100 L27 92 Z"/>
-    <ellipse class="disk-warehouse" cx="18" cy="92" rx="9" ry="2.3"/>
-    <text class="legend-text" x="32" y="100">Warehouse</text>
+  <g transform="translate(800,78)">
+    <rect class="zone" x="0" y="0" width="175" height="166" rx="8"/>
+    <circle class="pin" cx="18" cy="18" r="6"/>
+    <text class="legend-text" x="32" y="22">Node</text>
+    <path class="rep" d="M10 40 L50 40" marker-end="url(#m1)"/>
+    <text class="legend-text" x="58" y="44">Replication</text>
+    <path class="cascade" d="M10 62 L50 62" marker-end="url(#m2)"/>
+    <text class="legend-text" x="58" y="66">Cascade</text>
+    <path class="disk-warehouse" d="M9 84 L9 92 A9 2.3 0 0 0 27 92 L27 84 Z"/>
+    <ellipse class="disk-warehouse" cx="18" cy="84" rx="9" ry="2.3"/>
+    <text class="legend-text" x="32" y="92">Warehouse</text>
+    <rect class="terminal" x="10" y="103" width="16" height="12" rx="2"/>
+    <line class="terminal" x1="13" y1="109" x2="23" y2="109" stroke-width="1"/>
+    <text class="legend-text" x="32" y="114">Terminals</text>
+    <path class="frontdesk" d="M18 128 L24 134 L18 140 L12 134 Z"/>
+    <text class="legend-text" x="32" y="138">Front desk</text>
+    <text class="legend-text" x="10" y="158" style="font-size:9.5px">solid = live traffic, both ways</text>
   </g>
 </svg>
