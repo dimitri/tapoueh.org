@@ -112,8 +112,8 @@ cross-database port (same SQL, nothing to port), but the same two-part
 shape holds: test everything that touches the database first, rehearse
 the short window until it's boring, then cut over.
 
-That testing phase has a few items specific to a major upgrade, worth
-naming rather than assuming. [`pg_upgrade --check`](https://www.postgresql.org/docs/current/pgupgrade.html)
+That testing phase has a few items specific to a major upgrade.
+[`pg_upgrade --check`](https://www.postgresql.org/docs/current/pgupgrade.html)
 catches most structural problems ahead of time, but not a collation
 change: if the new cluster links against a different glibc or ICU
 version than the old one, text indexes carry over sorted by rules that
