@@ -1,6 +1,6 @@
 +++
 title     = "Zero-downtime Postgres upgrades with logical replication"
-date      = "2026-10-13T13:49:13+0200"
+date      = "2026-10-13T14:14:03+0200"
 tags      = ["PostgreSQL", "Replication", "Logical Decoding", "Architecture"]
 categories = ["PostgreSQL", "Architecture"]
 icon      = "🐘"
