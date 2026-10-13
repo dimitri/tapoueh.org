@@ -47,7 +47,7 @@ too, once it has one.
 
 ## The scenario
 
-{{< image src="fig-region-map.svg" title="One writer per region: conflicts avoided by construction. Four equal primaries, four disjoint region keys — us-east in New York, us-west in San Francisco, in in Mumbai, au in Sydney — so no two of them ever mint the same row. Every link is the same bidirectional logical replication: a region's own writes flow one way, a read-only mirror of everyone else's data flows back the other way. New York and Mumbai link straight to one global warehouse in Amsterdam; San Francisco and Sydney cascade through them instead of each opening its own long-haul connection. Every site has its own front desk, read-write against its own region and read-only against the mirror of the rest." >}}
+{{< image src="fig-region-map.svg" title="One writer per region: conflicts avoided by construction. Four equal primaries, four disjoint region keys — us-east in New York, us-west in San Francisco, in in Mumbai, au in Sydney — so no two of them ever mint the same row. Every site, the Amsterdam warehouse included, is a pg_auto_failover-managed primary and standby pair, not a single server. Every link is the same bidirectional logical replication: a region's own writes flow one way, a read-only mirror of everyone else's data flows back the other way. New York and Mumbai link straight to one global warehouse in Amsterdam; San Francisco and Sydney cascade through them instead of each opening its own long-haul connection. Every site has its own front desk, read-write against its own region and read-only against the mirror of the rest." >}}
 
 Four things, each a post of its own in a shorter series, covered here in
 one, in the order a team actually runs into them: the primary dies and a
@@ -97,47 +97,75 @@ silently, not loudly:
   snapshot — is dropped the moment that standby is promoted, and cannot
   be recreated in the past.
 
-None of that is pg_auto_failover's job today. **Verified** against the
-same source tree this post's own `pg_auto_failover` checkout uses: a
-`grep` for `sync_replication_slots` or `synchronized_standby_slots`
-across `src/` returns exactly one hit, a comment in `pgctl.c` noting the
-GUC exists — no code sets it, no code creates a failover slot, no code
-checks one before deciding who gets promoted. The monitor gets you the
-orchestration — who's primary, when a promotion happens, a connection
-string that survives one — for free. It gets you none of the mechanism
-above.
+None of that was pg_auto_failover's job as of this series' earlier
+parts. **Verified** against the project's `main` branch at the time:
+a `grep` for `sync_replication_slots` or `synchronized_standby_slots`
+across `src/` returned exactly one hit, a comment in `pgctl.c` noting
+the GUC exists — no code set it, no code created a failover slot, no
+code checked one before deciding who gets promoted.
+
+That gap is closing. **Verified** against PR #1197 itself
+(`hapostgres/pg_auto_failover`, open and mergeable as this posts, and
+expected to land before it does): a new monitor function,
+`pgautofailover.synchronized_standby_slots(formation, group)`, computed
+the same way `synchronous_standby_names()` already is — every current
+failover candidate's physical slot name — which `pg_autoctl` fetches
+and applies on the primary through the same `fsm_apply_settings()` path
+that already maintains `synchronous_standby_names`. `sync_replication_slots`
+turns on by default for Postgres 17+ nodes, next to the existing
+`hot_standby_feedback` default, and — the change with the widest
+reach — `wal_level` becomes `logical` on every node pg_auto_failover
+creates, not `replica`, with a `--wal-level replica` flag to opt back
+out for clusters that don't need CDC at all. The PR also fixes a real
+bug, #1188: a node rejoining as standby after an interrupted demotion
+could keep its own stale failover slots around, permanently blocking
+the slot-sync worker; those now get dropped on rejoin like any other
+leftover. What the PR deliberately does not do is create or manage the
+logical slot itself — that stays the CDC tool's job, same as it always
+was, the same way `pg_auto_failover` has never owned a table's schema
+or a `pg_dump` object list.
+
+The monitor still gets you the orchestration — who's primary, when a
+promotion happens, a connection string that survives one — for free,
+same as before. Past this PR, it also gets you the mechanism above:
+the GUCs that make a failover-safe slot actually mean what its name
+says, kept correct across every role change, automatically.
 
 {{< image src="fig-failover-slot.svg" title="A failover-safe logical slot, driven by pg_auto_failover's existing orchestration. Physical replication keeps the standby current, including the slot's own state, once synchronized_standby_slots names it. After promotion the consumer reconnects to the same slot, now on the new primary, and resumes at its last confirmed LSN: duplicates are possible, a hole is not." >}}
 
 ### Building it against pg_auto_failover as it is today
 
 Not a new `pg_autoctl` verb — that's a real feature, scoped separately
-below — but a relay script against the monitor and the primary exactly
-as they already exist:
+below — and, with PR #1197, a shorter list than it used to be:
 
-1. Create the slot with `failover = true` on the primary.
-2. Set `synchronized_standby_slots` to the standby's physical slot name
-   by hand (the same name `pg_auto_failover` already assigns,
-   `pgautofailover_standby_<id>`), and confirm `sync_replication_slots`,
-   `hot_standby_feedback`, and `dbname` are set on the standby — none of
-   this is automatic yet, all of it is one `ALTER SYSTEM` / config-file
-   edit away.
-3. Persist the consumer's own position durably, keyed by the last
+1. Create the slot with `failover = true` on the primary — still
+   user-managed, deliberately; #1197 keeps the GUCs around a slot
+   correct across every role change, not the slot's own lifecycle.
+2. Persist the consumer's own position durably, keyed by the last
    `end_lsn` it has fully applied — never resume from 0, never trust an
    in-memory position across a restart.
-4. On every reconnect, `IDENTIFY_SYSTEM` before trusting the server: if
+3. On every reconnect, `IDENTIFY_SYSTEM` before trusting the server: if
    its reported position is behind what the consumer already has, or a
    `TIMELINE_HISTORY` switchpoint sits below the consumer's stored LSN,
    stop and raise an alarm instead of streaming — a consumer that is
    ahead of the history it is about to read from is the one case the
    slot's own guarantee cannot protect.
 
+Before #1197, step 1 above had a second half: set
+`synchronized_standby_slots` to the standby's physical slot name by
+hand (the same name `pg_auto_failover` already assigns,
+`pgautofailover_standby_<id>`), and confirm `sync_replication_slots`,
+`hot_standby_feedback`, `dbname`, and `wal_level = logical` on both
+sides — one `ALTER SYSTEM` or config-file edit away, and silent if
+missed. That half is now pg_auto_failover's job, not this script's.
+
 `[TODO: build this against a real pg_auto_failover-managed primary and
-standby pair, force a promotion with pg_autoctl perform failover, and
-measure: time from promotion to the consumer's first post-failover
-message; whether any duplicate arrives, and how many; whether a
-deliberately misconfigured synchronized_standby_slots produces the
-predicted hole.]`
+standby pair on the release that ships #1197, force a promotion with
+pg_autoctl perform failover, and measure: time from promotion to the
+consumer's first post-failover message; whether any duplicate arrives,
+and how many; whether a deliberately misconfigured
+synchronized_standby_slots still produces the predicted hole now that
+pg_auto_failover sets it for you.]`
 
 ### Geo-replication is the same mechanism, read for latency instead of correctness
 
@@ -156,18 +184,24 @@ here cannot come from a laptop.]`
 
 ### What a real `pg_autoctl create proxy` would still need
 
-Everything above is a hand-run script, not an orchestrated component.
-Turning it into one is real pg_auto_failover development, not a demo
-change: a new catalog table (a logical consumer is not a node — every
+Everything above, even with #1197 landed, is still a hand-run script
+wired to existing primitives, not an orchestrated component of its
+own. #1197 closes exactly the gap this section used to point at —
+`pgctl.c`'s recovery settings already wrote `dbname` into
+`primary_conninfo` with a comment about `pg_sync_replication_slots()`,
+half-built and never finished; that comment is now a shipped function
+call, not a TODO. What it does not add is a new catalog table for a
+logical consumer (a logical consumer is still not a node — every
 existing topology routine, from `synchronous_standby_names()` to
 `formation_uri()`, iterates the node table and would miscount one as a
-standby if it were registered as such), a new state machine the monitor
-drives the same way it drives the keeper's, and keeper changes in the
-handful of places that already almost do this — `pgctl.c`'s recovery
-settings already write `dbname` into `primary_conninfo` with a comment
-about `pg_sync_replication_slots()`, half-built and never finished. That
-component is named here, scoped, and left where Part 3 left whole-cluster
-orchestration: on the roadmap, not shipped.
+standby if it were registered as such), or a state machine the monitor
+drives the same way it drives the keeper's. That is still real
+pg_auto_failover development, not a config change — the PR's own
+`docs/orchestrated-operations.rst` names roughly this shape, a
+generalized monitor/client primitive for a whole-cluster, multi-step,
+resumable operation, and calls it a design exploration, not an
+implementation. That component is named here, scoped, and left where
+Part 3 left whole-cluster orchestration: on the roadmap, not shipped.
 
 ---
 
@@ -189,15 +223,21 @@ does — with the region itself part of every table's key, the same
 draws four: `us-east` in New York, `us-west` in San Francisco, `in` in
 Mumbai, `au` in Sydney. No row is ever a candidate for two of them to
 write, because the key says which one owns it, so there is no conflict
-left for anything downstream to detect, let alone resolve. Each primary
-is the Part 3 architecture in full — its own standbys, its own failover
-story, the mechanism two sections up — and replication's only job is
-the one Part 2 already built: an asynchronous, read-only roll-up, run
-in both directions at once. New York and Mumbai each link directly to
-one global warehouse in Amsterdam; San Francisco and Sydney link one
-hop further out, through New York and Mumbai, instead of each opening
-its own long-haul connection across an ocean neither needs a second one
-of.
+left for anything downstream to detect, let alone resolve. Every site on
+the map, the warehouse included, is drawn as the pair of overlapping
+circles the legend calls "Primary + standby" — the Part 3 architecture
+in full, a pg_auto_failover-managed group with its own standby and its
+own failover story, not a single server with a single point of failure.
+The failover-slot mechanism two sections up is what keeps a CDC
+consumer attached to one of these groups correct across a promotion;
+nothing about having four of them, or a warehouse-side group with no
+region of its own, changes that story per site, it just runs it four
+times over instead of once. Replication between sites is the one job
+Part 2 already built: an asynchronous, read-only roll-up, run in both
+directions at once. New York and Mumbai each link directly to one
+global warehouse in Amsterdam; San Francisco and Sydney link one hop
+further out, through New York and Mumbai, instead of each opening its
+own long-haul connection across an ocean neither needs a second one of.
 
 What moves on every one of those links is the same shape: a region's
 own writes go one way, a read-only mirror of everyone else's data comes
