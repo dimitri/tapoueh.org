@@ -121,11 +121,14 @@ no longer match, silently, and the fix is `REINDEX` before [`ALTER
 COLLATION ... REFRESH VERSION`](https://www.postgresql.org/docs/current/sql-altercollation.html),
 as detailed in [Daniel Vérité's write-up of the ICU 73 versioning
 problem](https://postgresql.verite.pro/blog/2023/10/20/icu-73-versioning.html).
-The mode itself belongs in the same
-testing pass — Postgres 18 added `--swap`, which beats `--link` on a
-cluster with many relations but is a harder point of no return than
-`--link` ever was, so it's worth timing against `--link` and `--clone`
-on your own schema rather than picking one on reputation alone.
+`postgresql.conf` gets the same scrutiny: a parameter can keep its
+name while its default or its meaning changes between versions, so
+diff it against the new release's own sample file and read what the
+release notes say about it. The mode itself belongs in the same
+testing pass — Postgres 18 added [`--swap`](https://www.postgresql.org/docs/current/pgupgrade.html#PGUPGRADE-STEP-REVERT),
+which beats `--link` on a cluster with many relations but is a harder
+point of no return than `--link` ever was, so time it against `--link`
+and `--clone` on your own schema before the real run.
 
 ## `pg_upgrade` in place, and what it carries of logical replication
 
