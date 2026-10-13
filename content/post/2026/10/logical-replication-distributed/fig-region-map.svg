@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" role="img" aria-label="A world map with two regional primaries on their real coordinates, New York for the Americas and Mumbai for APAC, each replicating both ways with one global warehouse in Amsterdam along a curved, great-circle-style arc: this region's own writes flow up, a read-only copy of the whole world's data flows back down. Each primary also cascades its stream one hop downstream, one way only, to a nearby node — San Francisco off New York, Sydney off Mumbai. Every one of the five sites has its own front desk: New York and Mumbai's are read-write against their own region and read-only against the rest of the world; San Francisco, Sydney, and Amsterdam's are read-only everywhere, since none of the three ever takes a write of its own. Country borders and a light sea tint come from the Natural Earth 1:50m dataset via PostGIS. A legend in the corner explains every symbol.">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" role="img" aria-label="A world map with two regional primaries on their real coordinates, New York for the Americas and Mumbai for APAC, each replicating both ways with one global warehouse in Amsterdam along a curved, great-circle-style arc: this region's own writes flow up, a read-only mirror of the other region's data flows back down. Each primary also cascades its stream one hop downstream, one way only, to a nearby node — San Francisco off New York, Sydney off Mumbai — the same logical replication mechanism and the same orange arrow, just one arrowhead instead of two. Every one of the five sites has its own front desk, read-write against whatever database sits at that site. Country borders and a light sea tint come from the Natural Earth 1:50m dataset via PostGIS. A legend in the corner explains every symbol.">
   <style>
     text { font-family: system-ui, sans-serif; fill: #222; }
     .title { font-size: 19px; font-weight: 700; }
@@ -12,12 +12,10 @@
     .disk-warehouse { fill: #fbeee1; stroke: #c2570c; stroke-width: 2; }
     .icon-label { font-size: 13px; font-weight: 700; fill: #1b2230; }
     .icon-sub { font-size: 10.5px; fill: #3f4a63; }
-    .rep { stroke: #c2570c; stroke-width: 2.5; fill: none; stroke-dasharray: 7 4; marker-start: url(#m1); marker-end: url(#m1); }
-    .cascade { stroke: #2a6fdb; stroke-width: 2; fill: none; stroke-dasharray: 4 3; marker-end: url(#m2); }
-    .desk-ro-link { stroke: #1f7a7a; stroke-width: 2; fill: none; marker-end: url(#m4); }
+    .rep { stroke: #c2570c; stroke-width: 2.5; fill: none; stroke-dasharray: 7 4; marker-start: url(#m1s); marker-end: url(#m1); }
+    .cascade { stroke: #c2570c; stroke-width: 2; fill: none; stroke-dasharray: 5 3; marker-end: url(#m1); }
     .terminal { fill: #eef6ef; stroke: #4f7a57; stroke-width: 1.5; }
-    .terminal-link { stroke: #4f7a57; stroke-width: 2; fill: none; marker-start: url(#m3); marker-end: url(#m3); }
-    .frontdesk { fill: #e3f3f3; stroke: #1f7a7a; stroke-width: 2; }
+    .terminal-link { stroke: #4f7a57; stroke-width: 2; fill: none; marker-start: url(#m3s); marker-end: url(#m3); }
     .zone { fill: #E8EEF5; stroke: #b9bfae; stroke-width: 1.5; }
     .legend-text { font-size: 11.5px; fill: #37414f; }
     @media (prefers-color-scheme: dark) {
@@ -30,18 +28,20 @@
       .pin-label { fill: #f0f0f0; } .pin-sub { fill: #c3cadb; }
       .disk-warehouse { fill: #3a2a1d; stroke: #ff9a57; }
       .icon-label { fill: #f0f0f0; } .icon-sub { fill: #c3cadb; }
-      .rep { stroke: #ff9a57; } .cascade { stroke: #6ea8ff; } .desk-ro-link { stroke: #4fc3c3; }
+      .rep { stroke: #ff9a57; } .cascade { stroke: #ff9a57; }
       .terminal { fill: #1d2a20; stroke: #7fae89; } .terminal-link { stroke: #7fae89; }
-      .frontdesk { fill: #102e2e; stroke: #4fc3c3; }
       .zone { fill: #141b29; stroke: #4a5873; }
       .legend-text { fill: #c3cadb; }
     }
   </style>
   <defs>
-    <marker id="m1" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#c2570c"/></marker>
-    <marker id="m2" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#2a6fdb"/></marker>
-    <marker id="m3" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#4f7a57"/></marker>
-    <marker id="m4" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#1f7a7a"/></marker>
+    <!-- each arrow gets two markers, not one orient="auto-start-reverse" marker, so the
+         double-arrowhead renders the same in every SVG viewer, not only the ones that
+         support that newer orientation value -->
+    <marker id="m1" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#c2570c"/></marker>
+    <marker id="m1s" viewBox="0 0 10 10" refX="1.5" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto"><path d="M10 0L0 5L10 10z" fill="#c2570c"/></marker>
+    <marker id="m3" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#4f7a57"/></marker>
+    <marker id="m3s" viewBox="0 0 10 10" refX="1.5" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M10 0L0 5L10 10z" fill="#4f7a57"/></marker>
   </defs>
 
   <text class="title" x="30" y="32">One writer per region: conflicts avoided by construction</text>
@@ -77,8 +77,9 @@ M 586.91 382.23 L 577.82 379.87 576.94 377.03 572.69 374.27 570.16 369.43 575.06
   <text class="icon-label" x="513.6" y="200" text-anchor="middle">Global warehouse</text>
   <text class="icon-sub" x="513.6" y="214" text-anchor="middle">Amsterdam</text>
 
-  <!-- replication, primary <-> warehouse: each region's writes flow up, the consolidated
-       worldwide copy flows back down read-only — great-circle arcs, both ends arrowed -->
+  <!-- logical replication, primary <-> warehouse: each region's writes flow up, a
+       read-only mirror of the other region flows back down — great-circle arcs,
+       both ends arrowed, same color and mechanism as the one-way cascade below -->
   <path class="rep" d="M303 199 Q 399 150 495 178"/>
   <path class="rep" d="M693 260 Q 613 186 533 178"/>
 
@@ -87,9 +88,7 @@ M 586.91 382.23 L 577.82 379.87 576.94 377.03 572.69 374.27 570.16 369.43 575.06
   <path class="cascade" d="M715 278 Q 850 312 910 406"/>
 
   <!-- front desks: one per site, realistic to this deployment, not invented locations.
-       New York and Mumbai are read-write to their own region and read-only to the
-       worldwide copy that arrives from Amsterdam. San Francisco, Sydney, and Amsterdam
-       itself never take a write: read-only, same as the database they sit next to. -->
+       Every desk is read-write against whatever database sits at its own site. -->
   <g transform="translate(294.4,170)">
     <rect class="terminal" x="-8" y="-6" width="16" height="12" rx="2"/>
     <line class="terminal" x1="-5" y1="0" x2="5" y2="0" stroke-width="1"/>
@@ -105,31 +104,34 @@ M 586.91 382.23 L 577.82 379.87 576.94 377.03 572.69 374.27 570.16 369.43 575.06
   <path class="terminal-link" d="M702.4 276 L702.4 298"/>
 
   <g transform="translate(125,244)">
-    <path class="frontdesk" d="M0 -7 L7 0 L0 7 L-7 0 Z"/>
+    <rect class="terminal" x="-8" y="-6" width="16" height="12" rx="2"/>
+    <line class="terminal" x1="-5" y1="0" x2="5" y2="0" stroke-width="1"/>
     <text class="icon-sub" x="0" y="17" text-anchor="middle">Front desk</text>
   </g>
-  <path class="desk-ro-link" d="M149 224 L133 236"/>
+  <path class="terminal-link" d="M149 224 L133 236"/>
 
   <g transform="translate(919.5,452)">
-    <path class="frontdesk" d="M0 -7 L7 0 L0 7 L-7 0 Z"/>
+    <rect class="terminal" x="-8" y="-6" width="16" height="12" rx="2"/>
+    <line class="terminal" x1="-5" y1="0" x2="5" y2="0" stroke-width="1"/>
     <text class="icon-sub" x="0" y="17" text-anchor="middle">Front desk</text>
   </g>
-  <path class="desk-ro-link" d="M919.5 422 L919.5 444"/>
+  <path class="terminal-link" d="M919.5 422 L919.5 444"/>
 
   <g transform="translate(557,148)">
-    <path class="frontdesk" d="M0 -7 L7 0 L0 7 L-7 0 Z"/>
+    <rect class="terminal" x="-8" y="-6" width="16" height="12" rx="2"/>
+    <line class="terminal" x1="-5" y1="0" x2="5" y2="0" stroke-width="1"/>
     <text class="icon-sub" x="0" y="-11" text-anchor="middle">Front desk</text>
   </g>
-  <path class="desk-ro-link" d="M529 167 L549 154"/>
+  <path class="terminal-link" d="M529 167 L549 154"/>
 
   <!-- legend: symbols only, meanings explained in the surrounding text -->
   <g transform="translate(800,68)">
-    <rect class="zone" x="0" y="0" width="178" height="156" rx="8"/>
+    <rect class="zone" x="0" y="0" width="178" height="136" rx="8"/>
     <circle class="pin" cx="18" cy="18" r="6"/>
     <text class="legend-text" x="32" y="22">Node</text>
     <path class="rep" d="M10 40 L50 40"/>
     <text class="legend-text" x="58" y="44">Replication, both ways</text>
-    <path class="cascade" d="M10 62 L50 62" marker-end="url(#m2)"/>
+    <path class="cascade" d="M10 62 L50 62"/>
     <text class="legend-text" x="58" y="66">Cascade, one way</text>
     <path class="disk-warehouse" d="M9 84 L9 92 A9 2.3 0 0 0 27 92 L27 84 Z"/>
     <ellipse class="disk-warehouse" cx="18" cy="84" rx="9" ry="2.3"/>
@@ -137,7 +139,5 @@ M 586.91 382.23 L 577.82 379.87 576.94 377.03 572.69 374.27 570.16 369.43 575.06
     <rect class="terminal" x="10" y="103" width="16" height="12" rx="2"/>
     <line class="terminal" x1="13" y1="109" x2="23" y2="109" stroke-width="1"/>
     <text class="legend-text" x="32" y="114">Desk, read-write</text>
-    <path class="frontdesk" d="M18 133 L24 139 L18 145 L12 139 Z"/>
-    <text class="legend-text" x="32" y="143">Desk, read-only</text>
   </g>
 </svg>

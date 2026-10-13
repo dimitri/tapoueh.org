@@ -47,7 +47,7 @@ too, once it has one.
 
 ## The scenario
 
-{{< image src="fig-region-map.svg" title="One writer per region: conflicts avoided by construction. Each region's primary key includes the region, so no two regions ever mint the same row. New York and Mumbai replicate both ways with the Amsterdam warehouse: their own writes flow up, a row-filtered, read-only mirror of the other region flows back down — never a write path back, since neither side's mirror is ever of its own data. San Francisco and Sydney are not separate regions: each cascades its logical replication stream from the region's own primary, one hop downstream, same key discipline, no write of its own. Every site has a front desk; New York and Mumbai's are read-write at home and read-only to the mirror, the other three are read-only everywhere." >}}
+{{< image src="fig-region-map.svg" title="One writer per region: conflicts avoided by construction. Each region's primary key includes the region, so no two regions ever mint the same row. New York and Mumbai replicate both ways with the Amsterdam warehouse: their own writes flow up, a row-filtered, read-only mirror of the other region flows back down — never a write path back, since neither side's mirror is ever of its own data. San Francisco and Sydney are not separate regions: each cascades the same logical replication, one hop downstream, one direction only, same orange arrow with one arrowhead instead of two. Every site has its own front desk, read-write against whatever database sits there — the region's own primary at New York and Mumbai, local and non-replicated everywhere else." >}}
 
 Four things, each a post of its own in a shorter series, covered here in
 one, in the order a team actually runs into them: the primary dies and a
@@ -208,20 +208,22 @@ allowed to be written, enforced once, at the application layer, instead
 of resolved forever at the replication layer.
 
 The map's other symbol is the same discipline drawn at its point of
-contact with a person. Every site has a front desk, and what it can do
-there follows directly from what the site under it is. At New York and
-Mumbai, the desk is read-write against its own region's primary and
-read-only against the mirror of the other region arriving from
-Amsterdam — two disjoint partitions, one writable, one not, on the same
-connection. At San Francisco, Sydney, and Amsterdam itself, the desk is
-read-only, full stop, for the same reason those three nodes never take
-a write of their own: a cascade one hop downstream and a pure
-consolidator are not where this series' write discipline says a row is
-allowed to be minted. None of this is a new mechanism — a desk is just
-an application connecting to Postgres, same as a terminal in Part 1 or
-Part 2 — the only thing worth drawing is which half of each connection
-is read-write and which is read-only, because that split is the whole
-architecture in miniature.
+contact with a person. Every site has a front desk, and every desk is
+read-write — against whatever database actually sits at that site. At
+New York and Mumbai that is the region's own primary, so read-write
+there is exactly the write discipline above: a desk mints a row the same
+way any other client does, inside the one partition its region owns. At
+San Francisco, Sydney, and Amsterdam, read-write means something
+narrower — local, non-replicated business, the kind of row that was
+never going anywhere else to begin with — because the one thing none of
+those three sites ever holds is a write of its own against the
+replicated key space: a cascade one hop downstream and a pure
+consolidator are not where this series' write discipline says a
+cross-region row is allowed to be minted, and a desk talking to either
+one doesn't change that. None of this is a new mechanism — a desk is
+just an application connecting to Postgres, same as a terminal in Part 1
+or Part 2 — the only thing worth drawing is where each desk's writes are
+actually allowed to land.
 
 `[TODO: build the two-region demo — two primaries, one warehouse, each
 side's row-filtered mirror flowing back, a traffic generator that
