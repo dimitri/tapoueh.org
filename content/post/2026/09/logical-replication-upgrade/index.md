@@ -1,6 +1,6 @@
 +++
 title     = "Zero-downtime Postgres upgrades with logical replication"
-date      = "2026-10-13T09:00:00+0200"
+date      = "2026-10-13T13:49:13+0200"
 tags      = ["PostgreSQL", "Replication", "Logical Decoding", "Architecture"]
 categories = ["PostgreSQL", "Architecture"]
 icon      = "🐘"
@@ -111,6 +111,19 @@ single lucky run. A major-version upgrade has less to test than a
 cross-database port (same SQL, nothing to port), but the same two-part
 shape holds: test everything that touches the database first, rehearse
 the short window until it's boring, then cut over.
+
+That testing phase has a few items specific to a major upgrade, worth
+naming rather than assuming. [`pg_upgrade --check`](https://www.postgresql.org/docs/current/pgupgrade.html)
+catches most structural problems ahead of time, but not a collation
+change: if the new cluster links against a different glibc or ICU
+version than the old one, text indexes carry over sorted by rules that
+no longer match, silently, and the fix is `REINDEX` before [`ALTER
+COLLATION ... REFRESH VERSION`](https://www.postgresql.org/docs/current/sql-altercollation.html),
+never the other way around. The mode itself belongs in the same
+testing pass — Postgres 18 added `--swap`, which beats `--link` on a
+cluster with many relations but is a harder point of no return than
+`--link` ever was, so it's worth timing against `--link` and `--clone`
+on your own schema rather than picking one on reputation alone.
 
 ## `pg_upgrade` in place, and what it carries of logical replication
 
