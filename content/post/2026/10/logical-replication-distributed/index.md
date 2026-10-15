@@ -54,14 +54,17 @@ one, in the order a team actually runs into them: the primary dies and a
 standby takes over — does the CDC consumer notice; the servers are a
 continent apart — does that change the answer; two of them accept writes
 on purpose — what happens when they touch the same row; and the thing
-reading the change stream has to be a real program, not three sections of
-a Part 2 demo that stopped on purpose before finishing one.
+reading the change stream has to be a real program, not three sections
+of a [Part 2](/blog/2026/10/consolidating-databases-with-postgres-logical-replication/)
+demo that stopped on purpose before finishing one.
 
 ## Publisher failover, and what it costs across a region
 
 Every subscription in this series so far pointed at one primary and
-stayed there. Part 3's own reverse-subscription trick survives a planned
-cutover; it says nothing about the primary dying unplanned, mid-stream,
+stayed there.
+[Part 3](/blog/2026/10/zero-downtime-postgres-upgrades-with-logical-replication/)'s
+own reverse-subscription trick survives a planned cutover; it says
+nothing about the primary dying unplanned, mid-stream,
 with a consumer attached to it.
 
 ### What Postgres actually guarantees
@@ -201,7 +204,8 @@ pg_auto_failover development, not a config change — the PR's own
 generalized monitor/client primitive for a whole-cluster, multi-step,
 resumable operation, and calls it a design exploration, not an
 implementation. That component is named here, scoped, and left where
-Part 3 left whole-cluster orchestration: on the roadmap, not shipped.
+[Part 3](/blog/2026/10/zero-downtime-postgres-upgrades-with-logical-replication/#what-is-still-on-you)
+left whole-cluster orchestration: on the roadmap, not shipped.
 
 ---
 
@@ -313,23 +317,53 @@ out before it reaches that subscriber. The id comes from
 anything it received, so a row is tagged the moment it has crossed one
 hop, and the next hop can choose not to forward it any further.
 
-Here `origin` is not a someday precaution, it is load-bearing from the
-start, in both directions. San Francisco's publication toward New York
-carries `us-west`'s own writes, and nothing else needs to leave that
-publication unfiltered — New York only wants what San Francisco
-actually originated. New York's publication back toward San Francisco
-is the harder direction: it carries `us-east`'s own writes, plus
-Amsterdam's mirror of `in` and `au` that New York already received one
-hop earlier. Left at the default `origin = any`, San Francisco would
-apply that mirror, republish it back upstream on its own connection,
-and New York would see its own Amsterdam mirror reflected back a second
-time. `CREATE SUBSCRIPTION ... WITH (origin = none)` on San Francisco's
-side is what keeps that from happening — it tells New York's publisher
-"only send what originated at New York itself," cutting off exactly
-the loop a naive bidirectional cascade would otherwise create. What
-cascading does not change is what was already true one hop up: DDL and
-sequence state still do not replicate, at any hop, for the same reason
-Part 2 found at the first one.
+Building the demo this section draws on found something a read of the
+documentation alone did not: for a disjoint, region-keyed schema like
+this post's own, `origin` is not actually the tool that closes the
+loop — row-filtered publications are, and once they're in place
+correctly, `origin` turns out to have nothing left to do.
+
+The naive version would give San Francisco an unfiltered subscription
+to everything New York publishes. New York's publication carries
+`us-east`'s own writes plus Amsterdam's mirror of `in` and `au`, which
+San Francisco genuinely needs — the whole point of a four-way mirror is
+that a hop away from the primary still sees the rest of the world — but
+it would also carry San Francisco's own writes reflected back the
+moment San Francisco's own publication toward New York is unfiltered
+too. `origin = none` looks like the fix: it worked cleanly one hop up,
+in the two-node `pgoutput`/`pgoutput_origin_filter` case `origin`
+was designed for. It does not work here, because `origin` is a binary
+— `none` or `any`, not a per-origin allow list — and `none` on San
+Francisco's subscription would drop Amsterdam's `in`/`au` mirror along
+with the loop, since both arrive at San Francisco carrying *some*
+non-invalid origin once New York's apply worker has touched them. There
+is no built-in way to ask for "everything except what I sent you."
+
+What actually closes the loop, cleanly, is the same tool already doing
+the conflict-avoidance work: a **row-filtered publication** on the
+`region` column itself. New York publishes two different views instead
+of one — `FOR TABLE events` unfiltered toward Amsterdam, and
+`FOR TABLE events WHERE (region <> 'us-west')` toward San Francisco —
+and San Francisco's own publication back toward New York is
+`WHERE (region = 'us-west')`, nothing else, ever. Neither filter cares
+what hop a row arrived on or what it did or didn't already touch; each
+one only looks at a value every row already carries. With that in
+place, a row can never reach a link that would send it back to where it
+already lives, by construction, the identical guarantee the primary-key
+discipline already gives the write side. `origin = none` stays real and
+useful — it is still the right tool the day a `region` column is not
+the thing a loop needs to be cut on — but it is not what this
+particular architecture ends up needing, and that is worth saying
+plainly rather than leaving the first draft's answer standing.
+
+What cascading does not change is what was already true one hop up:
+DDL and sequence state still do not replicate, at any hop, for the same
+reason Part 2 found at the first one.
+
+`[TODO: this post's own four-primary demo (profile c) builds exactly
+this row-filtered topology — confirm the above against its actual
+pg_publication/pg_subscription catalogs and a captured WAL trace, not
+just the reasoning above.]`
 
 Real deployments covering APAC rarely stop at one extra region.
 Singapore, Tokyo, and Hong Kong each show up as their own region in
@@ -367,11 +401,17 @@ parent crash, the filter-move silently dropped on both sides, keep_local's
 undetectable divergence — against a current PG18 build, concurrent
 writers this time, and confirm whether any of the three has changed.]`
 
-The sequence gap from Part 1 is still open as of this post: no sequence
-access method landed in the Postgres 19 source tree, `galloc` and
-`snowflakeid` remain EDB Postgres Distributed features, not core ones.
-`[TODO: check the mailing list again before publishing — late-2025
-activity was the last data point Part 1 had.]`
+The sequence gap
+[Part 1](/blog/2026/09/ten-years-of-postgres-logical-replication/#minting-ids-on-the-workers)
+is still open as of this post, and now with a more final answer than
+"not yet committed." **Verified** against the commitfest entry itself:
+Michael Paquier's "Sequence Access Methods, round two"
+([commitfest #4677](https://commitfest.postgresql.org/52/4677/)) was
+returned with feedback in PG19-Final on 2026-02-27, after more than two
+years moving between commitfests without landing. It will not be in
+Postgres 19. `galloc` and `snowflakeid` remain EDB Postgres Distributed
+features, not core ones, and stay that way for at least one more
+release.
 
 BDR/PGD is the honest answer to "where does real multi-master
 conflict handling live today," named once, for the record: version
@@ -384,13 +424,17 @@ Part 3 — never something built against here.
 
 ## Finishing the CDC consumer: DDL as a message, not a table
 
-Part 2 built the honest baseline — a queue table, an Event Trigger, a
+[Part 2](/blog/2026/10/consolidating-databases-with-postgres-logical-replication/)
+built the honest baseline — a queue table, an Event Trigger, a
 replica-side trigger that replays what it finds — and named exactly
 where it stops being a demo: "a component that merges and splits change
-streams without writing tables... a story for another article," and a
-*general* consumer that also decodes `pgoutput`'s binary row changes,
-called "a real project, not a demo" and left unbuilt. This section is
-that project, scoped down to the part that's actually missing.
+streams without writing tables... a
+[story for another article](/blog/2026/10/consolidating-databases-with-postgres-logical-replication/#sequences-dont-replicate-either),"
+and a *general* consumer that also decodes `pgoutput`'s binary row
+changes, called
+["a real project, not a demo"](/blog/2026/10/consolidating-databases-with-postgres-logical-replication/#what-pg_logical_emit_message-actually-sends)
+and left unbuilt. This section is that project, scoped down to the part
+that's actually missing.
 
 ### `pgcopydb follow` is most of the way there already
 
@@ -413,13 +457,17 @@ default:
 
 A `pg_logical_emit_message()` call — the primitive Part 2 built its own
 DDL replay on — arrives on the wire and is logged as unknown and
-dropped. That is the entire gap. The taxonomy on the other side of it
-is already built and waiting: `STREAM_ACTION_MESSAGE` has been in
-`pgcopydb`'s own action enum since before this post, the JSON
-round-trip for it is already wired, and the SQLite-backed storage layer
-already has a generic insert path for it. Nothing downstream of the
-decoder needs to change shape — it needs one new case in one switch
-statement, and something to actually do once that case is reached.
+dropped. That is the entire gap, as of the source this post started
+against. The taxonomy on the other side of it is already built and
+waiting: `STREAM_ACTION_MESSAGE` has been in `pgcopydb`'s own action
+enum since before this post, the JSON round-trip for it is already
+wired, and the SQLite-backed storage layer already has a generic
+insert path for it. Nothing downstream of the decoder needs to change
+shape — it needs one new case in one switch statement, and something
+to actually do once that case is reached. "The design" section below
+is no longer just this post's own proposal for that case and that
+something; it is also a real, open pull request, checked against this
+post's own `compose/`, not just read.
 
 The pain this leaves on the table is not hypothetical. **Verified**
 against pgcopydb PR #1061, open as of this writing, fixing issue #1060:
@@ -475,18 +523,45 @@ create event trigger shop_emit_ddl on ddl_command_end
   execute function shop.emit_ddl_message();
 ```
 
-`[TODO: implement the case 'M': decode, the STREAM_ACTION_MESSAGE
-dispatch in ld_apply.c, and the --messages flag on pgcopydb follow;
-re-run Part 2's own shop/warehouse demo with this trigger instead of
-the queue table, and confirm the warehouse gets the column with zero
-manual alter table statements.]`
+This design did not stay a design. [PR #1064](https://github.com/dimitri/pgcopydb/pull/1064),
+"replicate DDL over logical decoding as a typed message," implements
+exactly it — the `case 'M':` decode in `ld_pgoutput.c`, storage in
+`ld_store.c`, the `STREAM_ACTION_MESSAGE` dispatch in `ld_transform.c`
+and `ld_apply.c`, and a `pgcopydb stream event-trigger` subcommand that
+installs the trigger above automatically instead of asking a reader to
+write it by hand. Open, not merged, as this posts.
 
-Two edges carry over unchanged, because the source side is unchanged:
-`current_query()` captures a multi-statement command whole, not split,
-and a replayed command runs with the apply worker's own role and
-`search_path`, not necessarily the one the original session had. Both
-are documentation, the same as they were in Part 2, not new code to
-write.
+**Verified**, against this post's own `compose/` (profile `d`), built
+from the PR's branch rather than from the design doc: `pgcopydb clone
+--follow`, `pgcopydb stream event-trigger`, a real `alter table ...
+add column`, every stage checked directly against the running
+containers' own SQLite state rather than taken on trust. Receive,
+storage, and transform all work exactly as designed — the message
+lands in `output.db` with the right prefix and envelope, `ld_transform.c`
+correctly resolves it to a hashed, storable `stmt` row in `replay.db`,
+correctly tagged with the surrounding transaction's real `xid`, not
+the `InvalidTransactionId` pgoutput would send outside streaming mode.
+Apply is where it stops: `replay_lsn` advances past the message's LSN,
+but the column never reaches the target, and nothing in the apply log
+reports an error — the one case `pgsql_execute` failing would have
+logged. That is as far as this post's own read of `ld_apply.c` got
+before running out of the time this particular post had for it; the
+mechanism up to the last hop is confirmed real, the last hop itself is
+not yet, and that is reported here rather than quietly worked around.
+
+`[TODO: find the exact line, file an issue or a fix against #1064, and
+re-run profile d clean once a fix lands — confirm the warehouse gets
+the column with zero manual alter table statements, the way this
+section originally promised.]`
+
+Two edges carry over unchanged regardless, because the source side is
+unchanged: `current_query()` captures a multi-statement command whole,
+not split — confirmed the hard way, in this same `compose/` run, when
+a multi-statement debug block landed in `replay.db` as a single DDL
+message — and a replayed command runs with the apply worker's own role
+and `search_path`, not necessarily the one the original session had.
+Both are documentation, the same as they were in Part 2, not new code
+to write.
 
 ### No pre-existing open-source tool already does this
 

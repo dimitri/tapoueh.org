@@ -1,0 +1,54 @@
+=== row counts per node (expect 8000 everywhere once fully mirrored) ===
+us-east: 8000
+us-west: 8000
+in-region: 8000
+au: 8000
+warehouse: 8000
+
+=== per-region row counts on the warehouse (expect 2000 each) ===
+ region  | count 
+---------+-------
+ au      |  2000
+ in      |  2000
+ us-east |  2000
+ us-west |  2000
+(4 rows)
+
+
+=== apply/sync error counts, every node ===
+(pg_stat_subscription_stats' per-conflict-type columns --
+ confl_insert_exists and friends -- are PG18+; this demo runs
+ PG17, so apply_error_count/sync_error_count are what's available.)
+-- us-east --
+          subname           | apply_error_count | sync_error_count 
+----------------------------+-------------------+------------------
+ sub_us_east_from_us_west   |                 0 |                0
+ sub_us_east_from_warehouse |                 0 |                0
+(2 rows)
+
+-- us-west --
+         subname          | apply_error_count | sync_error_count 
+--------------------------+-------------------+------------------
+ sub_us_west_from_us_east |                 0 |                0
+(1 row)
+
+-- in-region --
+        subname        | apply_error_count | sync_error_count 
+-----------------------+-------------------+------------------
+ sub_in_from_au        |                 0 |                0
+ sub_in_from_warehouse |                 0 |                0
+(2 rows)
+
+-- au --
+    subname     | apply_error_count | sync_error_count 
+----------------+-------------------+------------------
+ sub_au_from_in |                 0 |                0
+(1 row)
+
+-- warehouse --
+          subname           | apply_error_count | sync_error_count 
+----------------------------+-------------------+------------------
+ sub_warehouse_from_us_east |                 0 |                0
+ sub_warehouse_from_in      |                 0 |                0
+(2 rows)
+
