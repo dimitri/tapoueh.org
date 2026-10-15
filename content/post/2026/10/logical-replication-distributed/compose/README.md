@@ -18,9 +18,13 @@ but not yet run as a full failover drill; **b** isn't scaffolded yet.
   - `main` at `140977231d667035a13a59c58c17a958e0c68ff5`, used by profile
     **c** (doesn't need the DDL-message work).
   - [PR #1064](https://github.com/dimitri/pgcopydb/pull/1064)'s branch,
-    `febf16b2462c967bdd4a9252f7c249bb9abb3924`, used by profile **d** —
-    **open, not merged**, the real implementation of the `case 'M':`
-    dispatch this post's last section designs, not a stand-in for it.
+    `251a03a79db2c9b42648f6b949becff2493ab8bb` (force-pushed over the
+    original `febf16b...`), used by profile **d** — **open, not merged**,
+    the real implementation of the `case 'M':` dispatch this post's
+    last section designs, not a stand-in for it. The force-push fixed
+    a real, different bug (apply not flushing its libpq pipeline
+    before reporting `replay_lsn` at cutover); re-verified against it
+    on fresh volumes and the DDL-apply bug below is unchanged.
 
 Re-pin both before running this again — `main` moves, and #1064 may have
 landed by the time anyone reads this.
@@ -42,15 +46,20 @@ landed by the time anyone reads this.
   exactly 2000 per region, zero apply/sync errors anywhere. `[TODO 3]`
   in the post is closed.
 - **d** — pgcopydb DDL-as-a-message, against PR #1064's real branch, not
-  the design doc. **Run.** Receive, storage, and transform all verified
-  correct by querying pgcopydb's own SQLite state directly (`results/
-  d-ddl-message-trace.out`): the message lands with the right prefix and
-  envelope, resolves to a hashed, storable DDL statement, correctly
-  tagged with the surrounding transaction's real xid. Apply does not
-  execute it — `replay_lsn` advances past the message with no error
-  logged, and the target never gets the column. Real, reproducible,
-  not yet root-caused to an exact line. `[TODO]` in the post now asks
-  for that line, not for the demo.
+  the design doc. **Run twice**, against two different commits on the
+  PR. Receive, storage, and transform are verified correct both times
+  by querying pgcopydb's own SQLite state directly (`results/
+  d-ddl-message-trace.out`, `results/d-ddl-message-trace-retest.out`):
+  the message lands with the right prefix and envelope, resolves to a
+  hashed, storable DDL statement, correctly tagged with the surrounding
+  transaction's real xid. Apply does not execute it, either time —
+  `replay_lsn` advances past the message with no error logged, and the
+  target never gets the column. The retest, on fully fresh volumes,
+  also caught a cleanup bug in this post's *own* `reset-d.sh` (a
+  leftover `pgcopydb` publication on the target, from a prior run's own
+  schema dump, now fixed) that briefly looked like it might be the real
+  bug and wasn't. Real, reproducible, still not root-caused to an exact
+  line. `[TODO]` in the post now asks for that line, not for the demo.
 
 TODO 4 (re-running part 1's three pglogical findings against PG18) isn't
 a new profile — it reuses part 1's own `compose/`, pointed at a current
