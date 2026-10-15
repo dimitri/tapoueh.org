@@ -104,9 +104,9 @@ across `src/` returned exactly one hit, a comment in `pgctl.c` noting
 the GUC exists — no code set it, no code created a failover slot, no
 code checked one before deciding who gets promoted.
 
-That gap is closing. **Verified** against PR #1197 itself
-(`hapostgres/pg_auto_failover`, open and mergeable as this posts, and
-expected to land before it does): a new monitor function,
+That gap closed. **Verified** against PR #1197 itself
+(`hapostgres/pg_auto_failover`, merged 2026-10-14, the day before this
+section was last checked): a new monitor function,
 `pgautofailover.synchronized_standby_slots(formation, group)`, computed
 the same way `synchronous_standby_names()` already is — every current
 failover candidate's physical slot name — which `pg_autoctl` fetches
@@ -127,7 +127,7 @@ or a `pg_dump` object list.
 
 The monitor still gets you the orchestration — who's primary, when a
 promotion happens, a connection string that survives one — for free,
-same as before. Past this PR, it also gets you the mechanism above:
+same as before. As of this PR, it also gets you the mechanism above:
 the GUCs that make a failover-safe slot actually mean what its name
 says, kept correct across every role change, automatically.
 
@@ -420,6 +420,24 @@ round-trip for it is already wired, and the SQLite-backed storage layer
 already has a generic insert path for it. Nothing downstream of the
 decoder needs to change shape — it needs one new case in one switch
 statement, and something to actually do once that case is reached.
+
+The pain this leaves on the table is not hypothetical. **Verified**
+against pgcopydb PR #1061, open as of this writing, fixing issue #1060:
+on the `wal2json` plugin path — a different decoder,
+`ld_transform.c`'s `parseMessage()`, not the `pgoutput` one above — the
+same kind of frame does not get filtered harmlessly, it breaks `follow`
+outright. A message with no `schema` or `table` property (PeerDB's or
+ClickPipes's own `peerdb_heartbeat`, emitted on any source those tools
+share) routes into the DML branch anyway, `parseWal2jsonMessage()` fails
+parsing a row shape out of a message that was never a row, and apply
+retries the same transaction forever; the reported fix in `tests/`
+shows `follow` reaching endpos with real rows silently missing on the
+target — the exact silent-gap failure mode a CDC consumer cannot
+afford. The proposed fix is narrower than this post's: return early and
+drop the message before the DML branch, the same outcome `pgoutput`'s
+own `default:` case already gets for free, not a dispatch table. Two
+decoders, two different bugs, the same underlying cause either way — a
+Message frame reaching code that assumes every frame is a row.
 
 {{< image src="fig-pgcopydb-message.svg" title="DDL as a message, not a queue table. An Event Trigger emits a JSON message, prefix pgcopydb, type ddl, body the command text. pgcopydb follow decodes the Message frame, filters on the prefix, parses the JSON, and dispatches on type — the ddl handler executes the body on the same connection the rest of the apply worker already uses, inside the same commit-ordered stream as every other change." >}}
 
