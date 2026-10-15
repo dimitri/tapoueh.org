@@ -1,0 +1,57 @@
+# pgcopydb, built from source at a pinned commit.
+#
+# Default pin: PR #1064, "feat: replicate DDL over logical decoding as a
+# typed message" (branch feature/cdc-ddl-messages, commit
+# febf16b2462c967bdd4a9252f7c249bb9abb3924) — open, not merged, as of
+# this writing, but it is the real implementation of the `case 'M':`
+# dispatch and the message-envelope design this post's last section
+# describes, not a stand-in for it. The PR author verified it end to end
+# against a real PG18 source/target outside Docker; this Dockerfile is
+# what lets this post's own compose/ verify the same claim.
+#
+# Re-pin PGCOPYDB_COMMIT to the merge commit once #1064 lands on main;
+# nothing else in this file, or in docker-compose.yml's `d` profile,
+# needs to change.
+#
+# Usage:
+#   docker build --build-arg PGVERSION=17 -t pgcopydb:demo \
+#     -f Dockerfile.pgcopydb .
+
+ARG PGVERSION=17
+FROM postgres:${PGVERSION} AS build
+
+ARG PGVERSION
+ARG PGCOPYDB_COMMIT=febf16b2462c967bdd4a9252f7c249bb9abb3924
+ARG PGCOPYDB_REF=pull/1064/head
+
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      build-essential git ca-certificates \
+      postgresql-server-dev-${PGVERSION} \
+      libpq-dev libssl-dev libicu-dev liblz4-dev libzstd-dev \
+      libncurses-dev libedit-dev libselinux1-dev libxml2-dev libxslt1-dev \
+      libgc-dev libkrb5-dev libnuma-dev libpam0g-dev libreadline-dev \
+      zlib1g-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /usr/src/pgcopydb
+RUN git init -q \
+ && git fetch -q https://github.com/dimitri/pgcopydb.git ${PGCOPYDB_REF} \
+ && git checkout -q ${PGCOPYDB_COMMIT}
+
+RUN make -s clean && make -s install -j"$(nproc)" BINDIR=/usr/local/bin
+
+# ---------------------------------------------------------------------------
+# run — official postgres image (for psql/libpq) plus the pgcopydb binary
+# and the runtime (non -dev) shared libraries it links against
+# ---------------------------------------------------------------------------
+FROM postgres:${PGVERSION} AS run
+
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      libgc1 libkrb5-3 libnuma1 libpam0g \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY --from=build /usr/local/bin/pgcopydb /usr/local/bin/pgcopydb
+
+ENTRYPOINT ["pgcopydb"]

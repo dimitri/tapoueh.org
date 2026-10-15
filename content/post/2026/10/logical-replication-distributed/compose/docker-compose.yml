@@ -1,0 +1,158 @@
+name: lrdist
+
+x-pg-common: &pg-common
+  environment:
+    POSTGRES_PASSWORD: postgres
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d postgres"]
+    interval: 1s
+    timeout: 3s
+    retries: 60
+
+services:
+  # ---------------- profile c: four primaries, conflict-free by key ----------------
+  us-east:
+    <<: *pg-common
+    profiles: [c]
+    image: postgres:17
+    command: >
+      postgres -c wal_level=logical -c max_wal_senders=20
+      -c max_replication_slots=20 -c max_worker_processes=24
+      -c max_logical_replication_workers=16
+      -c log_line_prefix='[us-east %p] ' -c log_min_messages=warning
+    ports: ["127.0.0.1:5750:5432"]
+    volumes: ["us-east-data:/var/lib/postgresql/data"]
+
+  us-west:
+    <<: *pg-common
+    profiles: [c]
+    image: postgres:17
+    command: >
+      postgres -c wal_level=logical -c max_wal_senders=20
+      -c max_replication_slots=20 -c max_worker_processes=24
+      -c max_logical_replication_workers=16
+      -c log_line_prefix='[us-west %p] ' -c log_min_messages=warning
+    ports: ["127.0.0.1:5751:5432"]
+    volumes: ["us-west-data:/var/lib/postgresql/data"]
+
+  in-region:
+    <<: *pg-common
+    profiles: [c]
+    image: postgres:17
+    command: >
+      postgres -c wal_level=logical -c max_wal_senders=20
+      -c max_replication_slots=20 -c max_worker_processes=24
+      -c max_logical_replication_workers=16
+      -c log_line_prefix='[in %p] ' -c log_min_messages=warning
+    ports: ["127.0.0.1:5752:5432"]
+    volumes: ["in-data:/var/lib/postgresql/data"]
+
+  au:
+    <<: *pg-common
+    profiles: [c]
+    image: postgres:17
+    command: >
+      postgres -c wal_level=logical -c max_wal_senders=20
+      -c max_replication_slots=20 -c max_worker_processes=24
+      -c max_logical_replication_workers=16
+      -c log_line_prefix='[au %p] ' -c log_min_messages=warning
+    ports: ["127.0.0.1:5753:5432"]
+    volumes: ["au-data:/var/lib/postgresql/data"]
+
+  warehouse:
+    <<: *pg-common
+    profiles: [c]
+    image: postgres:17
+    command: >
+      postgres -c wal_level=logical -c max_wal_senders=20
+      -c max_replication_slots=20 -c max_worker_processes=24
+      -c max_logical_replication_workers=16
+      -c log_line_prefix='[warehouse %p] ' -c log_min_messages=warning
+    ports: ["127.0.0.1:5754:5432"]
+    volumes: ["warehouse-data:/var/lib/postgresql/data"]
+
+  # the "application": psql + a shell traffic generator against all four
+  traffic:
+    profiles: [c]
+    image: postgres:17
+    entrypoint: ["sleep", "infinity"]
+    volumes:
+      - ./sql:/sql:ro
+      - ./traffic:/traffic:ro
+      - ./results:/results
+
+  # ---------------- profile a: pg_auto_failover failover-slot continuity ----------------
+  monitor:
+    profiles: [a]
+    build:
+      context: .
+      dockerfile: Dockerfile.pgautofailover
+      args: { PGVERSION: "17" }
+    environment:
+      PGDATA: /pgdata
+    volumes: ["monitor-data:/pgdata"]
+    command: ["create", "monitor", "--pgdata", "/pgdata", "--auth", "trust", "--ssl-self-signed", "--run"]
+
+  pg-a-primary:
+    profiles: [a]
+    build:
+      context: .
+      dockerfile: Dockerfile.pgautofailover
+      args: { PGVERSION: "17" }
+    environment:
+      PGDATA: /pgdata
+    volumes: ["pg-a-primary-data:/pgdata"]
+    depends_on: [monitor]
+
+  pg-a-standby:
+    profiles: [a]
+    build:
+      context: .
+      dockerfile: Dockerfile.pgautofailover
+      args: { PGVERSION: "17" }
+    environment:
+      PGDATA: /pgdata
+    volumes: ["pg-a-standby-data:/pgdata"]
+    depends_on: [pg-a-primary]
+
+  # ---------------- profile d: pgcopydb DDL-as-a-message, against PR #1064 ----------------
+  d-source:
+    <<: *pg-common
+    profiles: [d]
+    image: postgres:18
+    command: >
+      postgres -c wal_level=logical -c max_wal_senders=10
+      -c max_replication_slots=10
+    ports: ["127.0.0.1:5760:5432"]
+    volumes: ["d-source-data:/var/lib/postgresql"]
+
+  d-target:
+    <<: *pg-common
+    profiles: [d]
+    image: postgres:18
+    ports: ["127.0.0.1:5761:5432"]
+    volumes: ["d-target-data:/var/lib/postgresql"]
+
+  pgcopydb:
+    profiles: [d]
+    build:
+      context: .
+      dockerfile: Dockerfile.pgcopydb
+      args: { PGVERSION: "18" }
+    entrypoint: ["sleep", "infinity"]
+    depends_on: [d-source, d-target]
+    volumes:
+      - ./sql:/sql:ro
+      - ./results:/results
+
+volumes:
+  us-east-data:
+  us-west-data:
+  in-data:
+  au-data:
+  warehouse-data:
+  monitor-data:
+  pg-a-primary-data:
+  pg-a-standby-data:
+  d-source-data:
+  d-target-data:
