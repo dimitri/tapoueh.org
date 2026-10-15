@@ -549,10 +549,27 @@ before running out of the time this particular post had for it; the
 mechanism up to the last hop is confirmed real, the last hop itself is
 not yet, and that is reported here rather than quietly worked around.
 
-`[TODO: find the exact line, file an issue or a fix against #1064, and
-re-run profile d clean once a fix lands — confirm the warehouse gets
-the column with zero manual alter table statements, the way this
-section originally promised.]`
+The PR was force-pushed once since, `febf16b` to `251a03a` — a real fix,
+but for a different bug: `stream_apply_flush_pipeline()` now drains the
+apply connection's libpq pipeline before reporting `replay_lsn`, closing
+a gap where a `follow` that exited right after its last COMMIT could
+report success with that COMMIT still only queued, never flushed. **Re-verified**
+against the new commit, same `compose/` profile, fresh volumes this
+time so a stale `pgcopydb` publication left on the target by an earlier
+run's own schema dump couldn't be mistaken for the bug this section is
+actually about — that happened once, mid-retest, and cost a half-hour
+chasing a problem in this post's own test harness, not pgcopydb's. On
+a verified-clean run: the message still lands in `output.db` and
+`replay.db` exactly as before, correctly hashed, correctly tagged with
+transaction 758, and the target still never gets the column. The
+cutover-tail fix and this post's bug are two different things; fixing
+the first did not touch the second.
+
+`[TODO: find the exact line in ld_apply.c or the output/replay read
+path, file it against #1064 precisely instead of describing the
+symptom, and re-run profile d clean once a real fix lands — confirm
+the warehouse gets the column with zero manual alter table statements,
+the way this section originally promised.]`
 
 Two edges carry over unchanged regardless, because the source side is
 unchanged: `current_query()` captures a multi-statement command whole,
