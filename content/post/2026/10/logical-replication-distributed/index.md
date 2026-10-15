@@ -507,7 +507,7 @@ measured, not a replacement for any of it:
   left open, and does it as a real, scoped change to a tool this site
   already maintains, not a bigger demo.
 
-The three `[TODO]` markers through this post are not a hedge — they are
+The `[TODO]` markers through this post are not a hedge — they are
 the same discipline Part 3 closed on: every number anywhere in this
 series came from an actual rehearsal, and this post does not get to
 skip that just because it is the last one.
