@@ -466,8 +466,8 @@ insert path for it. Nothing downstream of the decoder needs to change
 shape — it needs one new case in one switch statement, and something
 to actually do once that case is reached. "The design" section below
 is no longer just this post's own proposal for that case and that
-something; it is also a real, open pull request, checked against this
-post's own `compose/`, not just read.
+something; it is merged code, checked against this post's own
+`compose/`, not just read.
 
 The pain this leaves on the table is not hypothetical. **Verified**
 against pgcopydb PR #1061, open as of this writing, fixing issue #1060:
@@ -529,47 +529,48 @@ exactly it — the `case 'M':` decode in `ld_pgoutput.c`, storage in
 `ld_store.c`, the `STREAM_ACTION_MESSAGE` dispatch in `ld_transform.c`
 and `ld_apply.c`, and a `pgcopydb stream event-trigger` subcommand that
 installs the trigger above automatically instead of asking a reader to
-write it by hand. Open, not merged, as this posts.
+write it by hand. **Merged** to `main` 2026-10-16.
 
-**Verified**, against this post's own `compose/` (profile `d`), built
-from the PR's branch rather than from the design doc: `pgcopydb clone
---follow`, `pgcopydb stream event-trigger`, a real `alter table ...
-add column`, every stage checked directly against the running
-containers' own SQLite state rather than taken on trust. Receive,
-storage, and transform all work exactly as designed — the message
-lands in `output.db` with the right prefix and envelope, `ld_transform.c`
-correctly resolves it to a hashed, storable `stmt` row in `replay.db`,
-correctly tagged with the surrounding transaction's real `xid`, not
-the `InvalidTransactionId` pgoutput would send outside streaming mode.
-Apply is where it stops: `replay_lsn` advances past the message's LSN,
-but the column never reaches the target, and nothing in the apply log
-reports an error — the one case `pgsql_execute` failing would have
-logged. That is as far as this post's own read of `ld_apply.c` got
-before running out of the time this particular post had for it; the
-mechanism up to the last hop is confirmed real, the last hop itself is
-not yet, and that is reported here rather than quietly worked around.
+This post tested three separate commits on the way there — the
+original PR (`febf16b`), a force-push (`251a03a`) that fixed a real but
+different bug (`stream_apply_flush_pipeline()`, draining the apply
+connection's pipeline before reporting `replay_lsn`, closing a gap
+where `follow` could report a COMMIT done while it was still only
+queued), and now the merge itself (`ffb41bd`) — and found the same
+symptom against all three: receive, storage, and transform are
+correct (**verified** directly against the running containers' own
+SQLite state, not taken on trust — the message lands in `output.db`
+with the right envelope, resolves to a correctly hashed `stmt` row in
+`replay.db`, tagged with the real transaction xid), and the DDL never
+reaches the target.
 
-The PR was force-pushed once since, `febf16b` to `251a03a` — a real fix,
-but for a different bug: `stream_apply_flush_pipeline()` now drains the
-apply connection's libpq pipeline before reporting `replay_lsn`, closing
-a gap where a `follow` that exited right after its last COMMIT could
-report success with that COMMIT still only queued, never flushed. **Re-verified**
-against the new commit, same `compose/` profile, fresh volumes this
-time so a stale `pgcopydb` publication left on the target by an earlier
-run's own schema dump couldn't be mistaken for the bug this section is
-actually about — that happened once, mid-retest, and cost a half-hour
-chasing a problem in this post's own test harness, not pgcopydb's. On
-a verified-clean run: the message still lands in `output.db` and
-`replay.db` exactly as before, correctly hashed, correctly tagged with
-transaction 758, and the target still never gets the column. The
-cutover-tail fix and this post's bug are two different things; fixing
-the first did not touch the second.
+**Verified** down to the actual root cause this time, not just the
+symptom: a one-line diagnostic patch into `stream_apply_dml` (kept in
+this post's own `compose/patch/`, not a hypothesis) confirms
+`pgsql_execute()` for the DDL statement *returns success* — and
+nothing from that point on ever reaches the target connection again.
+`pg_stat_activity` on the target shows the apply connection sitting
+idle, `pg_replication_origin_session_setup()` as the last query it
+ever actually ran, for as long as the connection is left open —
+through fifty unrelated `INSERT`s issued on the source afterward,
+which never land either. That rules out anything specific to DDL
+content or the message envelope: once a message-carrying transaction
+is in flight, the apply connection stops making progress at all,
+message or not. The shape matches the `stream_apply_flush_pipeline()`
+fix in `251a03a` exactly, one hop earlier: the apply connection runs in
+libpq pipeline mode, where sending a command and having the server
+confirm it are two different steps, and `pgsql_execute()` returning
+`true` here means "queued," not "committed." Something about a
+message-carrying transaction's completion path is not reaching
+whatever step makes every *other* transaction's queued work actually
+flush.
 
-`[TODO: find the exact line in ld_apply.c or the output/replay read
-path, file it against #1064 precisely instead of describing the
-symptom, and re-run profile d clean once a real fix lands — confirm
-the warehouse gets the column with zero manual alter table statements,
-the way this section originally promised.]`
+`[TODO: this is now a precise enough finding to file against #1064
+directly instead of re-describing the symptom — the diagnostic patch
+in compose/patch/ld_apply.c is the attachment. Re-run profile d clean
+once a real fix lands; confirm the warehouse gets the column with zero
+manual alter table statements, the way this section originally
+promised.]`
 
 Two edges carry over unchanged regardless, because the source side is
 unchanged: `current_query()` captures a multi-statement command whole,

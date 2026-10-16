@@ -14,20 +14,14 @@ but not yet run as a full failover drill; **b** isn't scaffolded yet.
   this post's first section is about. **Merged** 2026-10-14. Last tagged
   release is `v2.2`, which predates it. Image builds clean
   (`pgaf:demo`).
-- **pgcopydb**, two separate pins:
-  - `main` at `140977231d667035a13a59c58c17a958e0c68ff5`, used by profile
-    **c** (doesn't need the DDL-message work).
-  - [PR #1064](https://github.com/dimitri/pgcopydb/pull/1064)'s branch,
-    `251a03a79db2c9b42648f6b949becff2493ab8bb` (force-pushed over the
-    original `febf16b...`), used by profile **d** — **open, not merged**,
-    the real implementation of the `case 'M':` dispatch this post's
-    last section designs, not a stand-in for it. The force-push fixed
-    a real, different bug (apply not flushing its libpq pipeline
-    before reporting `replay_lsn` at cutover); re-verified against it
-    on fresh volumes and the DDL-apply bug below is unchanged.
+- **pgcopydb**, pinned to `ffb41bdd95c1e79b9ec208d8e910ee205bb8a59d` on
+  `main` — the merge of [PR #1064](https://github.com/dimitri/pgcopydb/pull/1064),
+  "replicate DDL over logical decoding as a typed message." **Merged**
+  2026-10-16. Tested against three commits on the way to this one
+  (`febf16b`, the force-pushed `251a03a`, now the merge) and found the
+  same apply-side bug against all three.
 
-Re-pin both before running this again — `main` moves, and #1064 may have
-landed by the time anyone reads this.
+Re-pin before running this again — `main` moves.
 
 ## Profiles
 
@@ -45,21 +39,32 @@ landed by the time anyone reads this.
   `results/c-*.out`. The third run is clean: 8000 rows on every node,
   exactly 2000 per region, zero apply/sync errors anywhere. `[TODO 3]`
   in the post is closed.
-- **d** — pgcopydb DDL-as-a-message, against PR #1064's real branch, not
-  the design doc. **Run twice**, against two different commits on the
-  PR. Receive, storage, and transform are verified correct both times
+- **d** — pgcopydb DDL-as-a-message, against PR #1064's real code, not
+  the design doc. **Run three times**, against three different commits
+  (`febf16b`, `251a03a`, and now the merge, `ffb41bd`). Same symptom
+  all three times: receive, storage, and transform are verified correct
   by querying pgcopydb's own SQLite state directly (`results/
-  d-ddl-message-trace.out`, `results/d-ddl-message-trace-retest.out`):
-  the message lands with the right prefix and envelope, resolves to a
-  hashed, storable DDL statement, correctly tagged with the surrounding
-  transaction's real xid. Apply does not execute it, either time —
-  `replay_lsn` advances past the message with no error logged, and the
-  target never gets the column. The retest, on fully fresh volumes,
-  also caught a cleanup bug in this post's *own* `reset-d.sh` (a
-  leftover `pgcopydb` publication on the target, from a prior run's own
-  schema dump, now fixed) that briefly looked like it might be the real
-  bug and wasn't. Real, reproducible, still not root-caused to an exact
-  line. `[TODO]` in the post now asks for that line, not for the demo.
+  d-ddl-message-trace*.out`) — the message lands with the right prefix
+  and envelope, resolves to a hashed, storable DDL statement, correctly
+  tagged with the real transaction xid — and apply never executes it.
+  The retest against `251a03a` also caught a cleanup bug in this post's
+  *own* `reset-d.sh` (a leftover `pgcopydb` publication on the target
+  from a prior run's own schema dump, now fixed) that briefly looked
+  like the real bug and wasn't.
+
+  **Root-caused**, not just reproduced, on the merge commit:
+  `compose/patch/ld_apply.c` is a one-line diagnostic patch (kept, not
+  deleted, as the actual evidence) confirming `pgsql_execute()` for the
+  DDL statement returns success — and the apply connection then never
+  does anything else. `pg_stat_activity` on the target shows it idle,
+  `pg_replication_origin_session_setup()` as the last query it ever
+  ran, through fifty unrelated `INSERT`s issued on the source
+  afterward that never land either (`results/d-pipeline-stall-evidence.out`).
+  The apply connection runs in libpq pipeline mode, where "queued" and
+  "server-confirmed" are different things; `pgsql_execute()` returning
+  true here means the former, not the latter. `[TODO]` in the post asks
+  for a fix against this specific finding, not a re-description of the
+  symptom.
 
 TODO 4 (re-running part 1's three pglogical findings against PG18) isn't
 a new profile — it reuses part 1's own `compose/`, pointed at a current
@@ -73,4 +78,7 @@ COMPOSE_PROFILES=c docker compose up -d --wait
 ./run-c.sh                                          # four-primary demo
 ./reset-d.sh && COMPOSE_PROFILES=d docker compose up -d --wait
 ./run-d.sh                                          # DDL-message demo (currently fails at apply)
+
+# the diagnostic build that found the root cause above:
+docker build --build-arg PGVERSION=18 -t pgcopydb:debug -f Dockerfile.pgcopydb-debug .
 ```
