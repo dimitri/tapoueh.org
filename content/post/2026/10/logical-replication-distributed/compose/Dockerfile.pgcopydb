@@ -1,0 +1,52 @@
+# pgcopydb, built from source at a pinned commit.
+#
+# Default pin: ffb41bdd95c1e79b9ec208d8e910ee205bb8a59d, on main since
+# 2026-10-16T18:23:45Z — the merge of PR #1064, "feat: replicate DDL
+# over logical decoding as a typed message." This post went through two
+# commits on that PR before the merge (febf16b, then the force-pushed
+# 251a03a) and found the same DDL-apply bug against both; this is the
+# third build, against the merged code, re-testing the same bug again
+# rather than assuming a merge fixed what two prior commits didn't.
+#
+# Usage:
+#   docker build --build-arg PGVERSION=17 -t pgcopydb:demo \
+#     -f Dockerfile.pgcopydb .
+
+ARG PGVERSION=17
+FROM postgres:${PGVERSION} AS build
+
+ARG PGVERSION
+ARG PGCOPYDB_COMMIT=ffb41bdd95c1e79b9ec208d8e910ee205bb8a59d
+ARG PGCOPYDB_REF=main
+
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      build-essential git ca-certificates \
+      postgresql-server-dev-${PGVERSION} \
+      libpq-dev libssl-dev libicu-dev liblz4-dev libzstd-dev \
+      libncurses-dev libedit-dev libselinux1-dev libxml2-dev libxslt1-dev \
+      libgc-dev libkrb5-dev libnuma-dev libpam0g-dev libreadline-dev \
+      zlib1g-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /usr/src/pgcopydb
+RUN git init -q \
+ && git fetch -q https://github.com/dimitri/pgcopydb.git ${PGCOPYDB_REF} \
+ && git checkout -q ${PGCOPYDB_COMMIT}
+
+RUN make -s clean && make -s install -j"$(nproc)" BINDIR=/usr/local/bin
+
+# ---------------------------------------------------------------------------
+# run — official postgres image (for psql/libpq) plus the pgcopydb binary
+# and the runtime (non -dev) shared libraries it links against
+# ---------------------------------------------------------------------------
+FROM postgres:${PGVERSION} AS run
+
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      libgc1 libkrb5-3 libnuma1 libpam0g \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY --from=build /usr/local/bin/pgcopydb /usr/local/bin/pgcopydb
+
+ENTRYPOINT ["pgcopydb"]

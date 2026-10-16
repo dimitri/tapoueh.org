@@ -1,0 +1,70 @@
+2026-10-16 18:36:09.582 12 INFO   main.c:150                Running pgcopydb version 0.18 from "/usr/local/bin/pgcopydb"
+2026-10-16 18:36:09.582 12 INFO   cli_common.c:1394         [SOURCE] Copying database from "postgres://postgres@d-source:5432/postgres?keepalives=1&keepalives_idle=10&keepalives_interval=10&keepalives_count=60"
+2026-10-16 18:36:09.583 12 INFO   cli_common.c:1395         [TARGET] Copying database into "postgres://postgres@d-target:5432/postgres?keepalives=1&keepalives_idle=10&keepalives_interval=10&keepalives_count=60"
+2026-10-16 18:36:09.658 12 INFO   pgsql.c:6478              Creating publication "pgcopydb"
+2026-10-16 18:36:09.679 12 INFO   pgsql.c:4978              Created logical replication slot "pgcopydb" with plugin "pgoutput" at 0/17A1F68 and exported snapshot 0000007E-00000005-1
+2026-10-16 18:36:09.683 12 INFO   ld_store.c:110            Creating output CDC file "/root/.local/share/pgcopydb/00000001-00000000-017A1F68-output.db"
+2026-10-16 18:36:09.713 12 INFO   ld_stream.c:2362          Created logical replication origin "pgcopydb" at LSN 0/17A1F68
+2026-10-16 18:36:09.814 12 INFO   copydb_schema.c:776       Fetched information for 1 tables (including 0 tables split in 0 partitions total), with an estimated total of 18 quintillion tuples and 16 kB on-disk
+2026-10-16 18:36:09.818 12 INFO   copydb_schema.c:1012      Fetched information for 1 indexes (supporting 1 constraints)
+2026-10-16 18:36:09.820 12 INFO   sequences.c:78            Fetching information for 1 sequences
+2026-10-16 18:36:09.824 12 INFO   copydb_schema.c:1255      Fetched information for 1 extensions
+2026-10-16 18:36:09.941 12 INFO   copydb_schema.c:1730      Found 0 indexes (supporting 0 constraints) in the target database
+2026-10-16 18:36:09.951 14 INFO   cli_clone_follow.c:981    STEP 1: fetch source database tables, indexes, and sequences
+2026-10-16 18:36:09.957 16 INFO   ld_stream.c:862           2026-10-16 18:36:09.957 17 INFO   ld_apply.c:1590           Resuming streaming at LSN 0/17A1F68 (sentinel startpos)
+Waiting until the pgcopydb sentinel apply is enabled
+2026-10-16 18:36:09.964 16 INFO   ld_stream.c:885           Replication slot "pgcopydb" current lsn is 0/17A1F30
+2026-10-16 18:36:09.975 16 INFO   ld_store.c:110            Opening output CDC file "/root/.local/share/pgcopydb/00000001-00000000-017A1F68-output.db"
+2026-10-16 18:36:09.977 16 INFO   pgsql.c:5697              Reported write_lsn 0/17A1F68, flush_lsn 0/17A1F68, replay_lsn 0/0
+2026-10-16 18:36:10.018 14 INFO   copydb_schema.c:1730      Found 0 indexes (supporting 0 constraints) in the target database
+2026-10-16 18:36:10.022 14 INFO   cli_clone_follow.c:1022   STEP 2: dump the source database schema (pre/post data)
+2026-10-16 18:36:10.023 14 INFO   pgcmd.c:478                /usr/bin/pg_dump -Fc --snapshot 0000007E-00000005-1 --section=pre-data --section=post-data --no-blobs --file /tmp/pgcopydb/schema/schema.dump 'postgres://postgres@d-source:5432/postgres?keepalives=1&keepalives_idle=10&keepalives_interval=10&keepalives_count=60'
+2026-10-16 18:36:10.069 14 INFO   cli_clone_follow.c:1030   STEP 3: restore the pre-data section to the target database
+2026-10-16 18:36:10.092 14 INFO   pgcmd.c:1038               /usr/bin/pg_restore --dbname 'postgres://postgres@d-target:5432/postgres?keepalives=1&keepalives_idle=10&keepalives_interval=10&keepalives_count=60' --section pre-data --jobs 4 --use-list /tmp/pgcopydb/schema/pre-filtered.list /tmp/pgcopydb/schema/schema.dump
+2026-10-16 18:36:10.154 28 INFO   vacuum.c:166              2026-10-16 18:36:10.154 26 INFO   table-data.c:708          STEP 8: starting 4 VACUUM processes
+STEP 4: starting 4 table-data COPY processes
+2026-10-16 18:36:10.160 14 INFO   blobs.c:77                Skipping large objects: none found.
+2026-10-16 18:36:10.161 27 INFO   indexes.c:218             STEP 6: starting 4 CREATE INDEX processes
+2026-10-16 18:36:10.164 27 INFO   indexes.c:219             STEP 7: constraints are built by the CREATE INDEX processes
+2026-10-16 18:36:10.169 14 INFO   sequences.c:194           STEP 9: reset sequences values
+2026-10-16 18:36:10.171 42 INFO   sequences.c:290           Set sequences values on the target database
+2026-10-16 18:36:10.475 14 INFO   cli_clone_follow.c:1046   STEP 10: restore the post-data section to the target database
+2026-10-16 18:36:10.497 14 INFO   pgcmd.c:1038               /usr/bin/pg_restore --dbname 'postgres://postgres@d-target:5432/postgres?keepalives=1&keepalives_idle=10&keepalives_interval=10&keepalives_count=60' --section post-data --jobs 4 --use-list /tmp/pgcopydb/schema/post-filtered.list /tmp/pgcopydb/schema/schema.dump
+2026-10-16 18:36:10.527 14 INFO   cli_clone_follow.c:1061   Updating the pgcopydb.sentinel to enable applying changes
+2026-10-16 18:36:10.529 14 INFO   cli_clone_follow.c:1077   All step are now done, 508ms elapsed
+2026-10-16 18:36:10.529 14 INFO   summary.c:3631            Printing summary for 1 tables and 1 indexes
+
+  OID | Schema | Name | Parts | copy duration | transmitted bytes | indexes | create index 
+------+--------+------+-------+---------------+-------------------+---------+-------------
+16385 | public | shop |     1 |           8ms |             801 B |       1 |          2ms
+
+
+                                               Step   Connection    Duration    Transfer   Concurrency
+ --------------------------------------------------   ----------  ----------  ----------  ------------
+   Catalog Queries (table ordering, filtering, etc)       source        60ms                         1
+                                        Dump Schema       source        45ms                         1
+                                     Prepare Schema       target        68ms                         1
+      COPY, INDEX, CONSTRAINTS, VACUUM (wall clock)         both       333ms                        12
+                                  COPY (cumulative)         both         8ms       801 B             4
+                          CREATE INDEX (cumulative)       target         1ms                         4
+                           CONSTRAINTS (cumulative)       target         1ms                         4
+                                VACUUM (cumulative)       target         6ms                         4
+                                    Reset Sequences         both        19ms                         1
+                         Large Objects (cumulative)         both         0ms                         4
+                                    Finalize Schema         both        50ms                         4
+ --------------------------------------------------   ----------  ----------  ----------  ------------
+                          Total Wall Clock Duration         both       508ms                        20
+
+2026-10-16 18:36:10.958 17 INFO   ld_apply.c:1600           The pgcopydb sentinel has enabled applying changes
+2026-10-16 18:36:10.992 17 INFO   ld_apply.c:2717           Setting up previous LSN from replication origin "pgcopydb" progress at 0/17A1F68
+2026-10-16 18:36:10.996 17 INFO   ld_store.c:110            Opening output CDC file "/root/.local/share/pgcopydb/00000001-00000000-017A1F68-output.db"
+2026-10-16 18:36:10.997 17 INFO   ld_store.c:165            Creating replay CDC file "/root/.local/share/pgcopydb/00000001-00000000-017A1F68-replay.db"
+2026-10-16 18:36:11.009 17 INFO   ld_apply.c:1470           Catchup-up with changes from LSN 0/17A1F68
+2026-10-16 18:36:11.013 17 INFO   ld_apply.c:232            Applying CDC changes from replayDB "/root/.local/share/pgcopydb/00000001-00000000-017A1F68-replay.db" after LSN 0/17A1F68
+2026-10-16 18:36:11.236 17 ERROR  ld_apply.c:1127           DIAGNOSTIC stream_apply_dml: action=M xid=759 lsn=0/17ABFB8 stmt=alter table shop add column price numeric(10,2) default 0;
+2026-10-16 18:36:11.237 17 ERROR  ld_apply.c:1235           DIAGNOSTIC before pgsql_execute for message
+2026-10-16 18:36:11.238 17 ERROR  ld_apply.c:1237           DIAGNOSTIC after pgsql_execute for message, ok=1
+2026-10-16 18:36:19.991 16 INFO   pgsql.c:5697              Reported write_lsn 0/17AC100, flush_lsn 0/17AC0C8, replay_lsn 0/17AC0C8
+2026-10-16 18:36:30.011 16 INFO   ld_stream.c:1226          Now streaming changes for WAL segment "000000010000000000000001"
+2026-10-16 18:36:30.025 16 INFO   pgsql.c:5697              Reported write_lsn 0/17AC100, flush_lsn 0/17AC0C8, replay_lsn 0/17AC0C8
+2026-10-16 18:36:40.040 16 INFO   pgsql.c:5697              Reported write_lsn 0/1801D08, flush_lsn 0/17AC0C8, replay_lsn 0/17AC0C8

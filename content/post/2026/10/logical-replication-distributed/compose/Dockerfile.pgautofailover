@@ -1,0 +1,50 @@
+# pg_auto_failover, built from source at a pinned commit — no tagged
+# release includes PR #1197 (synchronized_standby_slots, CDC continuity)
+# yet, so this demo cannot start from a published image.
+#
+# Pinned commit: 8ed16056dfe13be3d912cc582c055cf8ecf9e803
+#   "Postgres 17+ CDC continuity: synchronized_standby_slots, demotion
+#   slot cleanup (fixes #1188) (#1197)" — merged to hapostgres/pg_auto_failover
+#   main on 2026-10-14. Re-pin before running this for real; main moves.
+#
+# Usage:
+#   docker build --build-arg PGVERSION=17 -t pgaf:demo \
+#     -f Dockerfile.pgautofailover .
+
+ARG PGVERSION=17
+FROM postgres:${PGVERSION} AS build
+
+ARG PGVERSION
+ARG PGAF_COMMIT=8ed16056dfe13be3d912cc582c055cf8ecf9e803
+
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      build-essential git ca-certificates \
+      postgresql-server-dev-${PGVERSION} \
+      libssl-dev libcurl4-gnutls-dev liblz4-dev libzstd-dev \
+      libselinux1-dev libicu-dev libedit-dev libreadline-dev \
+      libxslt1-dev libpam0g-dev libkrb5-dev libnuma-dev \
+      flex bison \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /usr/src/pg_auto_failover
+RUN git clone --no-checkout https://github.com/hapostgres/pg_auto_failover.git . \
+ && git checkout ${PGAF_COMMIT}
+
+ENV PG_CONFIG=/usr/lib/postgresql/${PGVERSION}/bin/pg_config
+RUN make -s clean && make -s install -j"$(nproc)" BINDIR=/usr/local/bin
+
+# ---------------------------------------------------------------------------
+# run — just the official postgres image plus the pg_autoctl binary and the
+# pgautofailover monitor extension this build just produced
+# ---------------------------------------------------------------------------
+FROM postgres:${PGVERSION} AS run
+
+ARG PGVERSION
+COPY --from=build /usr/local/bin/pg_autoctl /usr/local/bin/pg_autoctl
+COPY --from=build /usr/lib/postgresql/${PGVERSION}/lib/pgautofailover.so \
+     /usr/lib/postgresql/${PGVERSION}/lib/pgautofailover.so
+COPY --from=build /usr/share/postgresql/${PGVERSION}/extension/pgautofailover* \
+     /usr/share/postgresql/${PGVERSION}/extension/
+
+ENTRYPOINT ["pg_autoctl"]
