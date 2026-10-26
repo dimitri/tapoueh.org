@@ -7,17 +7,19 @@ LOG=${1:?log file}
 n=1
 : > "$LOG"
 while [ ! -e /tmp/a-stop ]; do
+  ok=0
   until [ -e /tmp/a-stop ]; do
     if psql "$URI" -X -q -v ON_ERROR_STOP=1 \
          -c "insert into events (id, node) values ($n, inet_server_addr())" 2>/dev/null; then
-      break
+      ok=1; break
     fi
     # the failed attempt may still have committed
     if [ "$(psql "$URI" -X -At -c "select 1 from events where id = $n" 2>/dev/null)" = 1 ]; then
-      break
+      ok=1; break
     fi
     sleep 0.1
   done
+  [ "$ok" = 1 ] || break
   echo "$n $(date +%s.%N)" >> "$LOG"
   n=$((n + 1))
   sleep 0.02

@@ -1,0 +1,60 @@
+== scenario: kill-lag-gated ==
+-- waiting for primary + secondary
+formation ready after 3s
+   node_1|primary|primary
+   node_2|secondary|secondary
+-- settings on the primary
+   wal_level = logical
+   synchronized_standby_slots = pgautofailover_standby_2
+   synchronous_standby_names = ANY 1 (pgautofailover_standby_2)
+   synchronous_commit = on
+-- settings on the standby
+   sync_replication_slots = on
+   hot_standby_feedback = on
+   primary_conninfo has dbname: t
+-- waiting for the standby to hold a synced copy of the slot
+   slot synced on the standby: 1 (after 14s)
+-- steady state:      626 rows written, 626 delivered
+-- standby cut off from the primary's WAL; writes continue with synchronous_commit=local
+   rows written so far:      757, delivered to the consumer: 633
+   standby has: 633
+-- t0=1793032913.056599970: docker kill pg-a-primary
+-- waiting for the monitor to report pg-a-standby as the writable primary
+   promoted: 1 (state: wait_primary)
+   monitor: pg-a-standby reached wait_primary at t0 +49.6 s
+
+== result: kill-lag-gated ==
+rows committed (in the database now)          : 998
+rows acknowledged to the writer               : 1128
+distinct rows the consumer received           : 998
+duplicate deliveries (extra receipts)         : 0  (ids -)
+holes: in the database, never received        : 0  (ids -)
+ahead: received, absent from the database     : 0  (ids -)
+acknowledged to the writer but lost           : 130  (ids 634..763)
+consumer: longest silence 55.4 s, from t0-5.2 s to t0+50.2 s
+writer:   longest silence 49.6 s, from t0+0.1 s to t0+49.7 s
+
+== monitor events ==
+   16:41:17.149|node_1|init|single|alone in group, candidate-eligible -> single
+   16:41:18.169|node_1|single|single|New state is reported by node 1 "node_1" (pg-a-primary:5432): "single"
+   16:41:19.964|node_2|wait_standby|wait_standby|New state is reported by node 2 "node_2" (pg-a-standby:5432): "wait_standby"
+   16:41:19.979|node_1|single|wait_primary|primary alone, another node reached wait_standby -> wait_primary
+   16:41:20.014|node_1|wait_primary|wait_primary|New state is reported by node 1 "node_1" (pg-a-primary:5432): "wait_primary"
+   16:41:20.020|node_2|wait_standby|catchingup|wait_standby, primary converged wait/join_primary -> catchingup
+   16:41:20.797|node_2|catchingup|catchingup|New state is reported by node 2 "node_2" (pg-a-standby:5432): "catchingup"
+   16:41:20.797|node_2|catchingup|secondary|caught up, same TLI as primary, within sync threshold -> secondary
+   16:41:21.171|node_2|secondary|secondary|New state is reported by node 2 "node_2" (pg-a-standby:5432): "secondary"
+   16:41:21.175|node_1|wait_primary|wait_primary|Node node 1 "node_1" (pg-a-primary:5432) is marked as healthy by the monitor
+   16:41:21.177|node_2|secondary|secondary|Node node 2 "node_2" (pg-a-standby:5432) is marked as healthy by the monitor
+   16:41:21.186|node_1|wait_primary|primary|wait_primary, >=1 quorum secondary -> primary (+ unhealthy-secondary fan-out to catchingup
+   16:41:21.253|node_1|primary|primary|New state is reported by node 1 "node_1" (pg-a-primary:5432): "primary"
+   16:42:02.202|node_1|primary|primary|Node node 1 "node_1" (pg-a-primary:5432) is marked as unhealthy by the monitor
+   16:42:12.537|node_2|secondary|prepare_promotion|primary fails, not already wait_primary -> secondary -> prepare_promotion, primary -> drai
+   16:42:12.537|node_1|primary|draining|primary fails, not already wait_primary -> secondary -> prepare_promotion, primary -> drai
+   16:42:12.555|node_2|prepare_promotion|prepare_promotion|New state is reported by node 2 "node_2" (pg-a-standby:5432): "prepare_promotion"
+   16:42:12.555|node_2|prepare_promotion|stop_replication|prepare_promotion, primary present, not in maintenance -> stop_replication + demote_timeou
+   16:42:12.555|node_1|primary|demote_timeout|prepare_promotion, primary present, not in maintenance -> stop_replication + demote_timeou
+   16:42:19.007|node_2|stop_replication|stop_replication|New state is reported by node 2 "node_2" (pg-a-standby:5432): "stop_replication"
+   16:42:42.640|node_2|stop_replication|wait_primary|stop_replication, primary's drain time expired -> wait_primary + demoted (2 of 3)
+   16:42:42.640|node_1|primary|demoted|stop_replication, primary's drain time expired -> wait_primary + demoted (2 of 3)
+   16:42:42.669|node_2|wait_primary|wait_primary|New state is reported by node 2 "node_2" (pg-a-standby:5432): "wait_primary"

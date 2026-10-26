@@ -2,8 +2,8 @@
 
 Pinned to real commits, matching the pattern parts 1 through 3 already use
 (`docker-compose.yml` + profile-gated containers + `run-*.sh` + `results/`).
-Profiles **c** and **d** have been built and run; **a** is built
-but not yet run as a full failover drill; **b** isn't scaffolded yet.
+Profiles **a**, **c**, **d** and **e** have been built and run; **b** isn't
+scaffolded yet.
 
 ## Images build from source, not from a release
 
@@ -22,11 +22,14 @@ Re-pin before running this again — `main` moves.
 
 ## Profiles
 
-- **a** — pg_auto_failover failover-slot continuity. **Built** (`pgaf:demo`),
-  **not yet run** as a full monitor+primary+standby+failover drill — the
-  service definitions are in `docker-compose.yml`, the actual
-  `pg_autoctl perform failover` timing/duplicate/hole measurement is still
-  `[TODO 1]` in the post.
+- **a** — pg_auto_failover failover-slot continuity. Monitor, primary and
+  standby on Postgres 17, a `pg_recvlogical` consumer on a `failover = true`
+  slot, a writer inserting numbered rows. `./run-a.sh <scenario>` with
+  `planned`, `kill`, `kill-lag-gated` or `kill-lag-ungated`; it prints
+  duplicates, holes, rows the consumer received that the new primary lacks,
+  and how long writer and consumer were silent. `reset-a.sh` tears
+  everything down. Summaries of three runs of each scenario are in
+  `results/a-*-run*.out`.
 - **b** — `synchronous_commit` modes under a simulated cross-region RTT.
   **Not scaffolded.** `[TODO 2]` in the post.
 - **c** — four primaries (`us-east`, `us-west`, `in`, `au`), row-filtered
@@ -43,16 +46,20 @@ Re-pin before running this again — `main` moves.
   `reset-d.sh` must run between runs: it also drops the `pgcopydb`
   publication on the target, which clone's schema copy leaves behind.
 
-TODO 4 (re-running part 1's three pglogical findings against PG18) isn't
-a new profile — it reuses part 1's own `compose/`, pointed at a current
-PG18 build, which is why it isn't scaffolded again here.
+- **e** — pglogical 2.4.8 on Postgres 18.6, three nodes. `./run-e.sh findings`
+  re-runs Part 1's partitioned-parent crash and filter-move findings;
+  `./run-e.sh concurrent` has two nodes update the same 1,000 keys under
+  each conflict-resolution policy (`SECS` sets the duration). `reset-e.sh`
+  recreates the containers. Results in `results/e-*.out`.
 
 ## Running it
 
 ```
-docker compose build pgaf pgcopydb                 # profiles a, d
+docker compose --profile a --profile d --profile e build   # monitor, pgcopydb, e-hub
 COMPOSE_PROFILES=c docker compose up -d --wait
 ./run-c.sh                                          # four-primary demo
 ./reset-d.sh && COMPOSE_PROFILES=d docker compose up -d --wait
-./run-d.sh                                          # DDL-message demo (got_column=1 on 84bce26)
+./run-d.sh                                          # DDL-message demo
+./run-a.sh planned                                  # failover drill (also: kill, kill-lag-gated, kill-lag-ungated)
+./reset-e.sh && ./run-e.sh findings && ./run-e.sh concurrent
 ```

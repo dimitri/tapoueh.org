@@ -37,10 +37,9 @@ states: **verified** means checked against the actual Postgres,
 pg_auto_failover, or pgcopydb source, or against a run of the demos, and
 stated as fact. **To measure** means the mechanism is real and sourced,
 but the number that goes with it needs a run that has not happened yet,
-and is left as a named placeholder rather than invented. The four-primary
-topology and the DDL-message demo have been run; the failover drill and
-the cross-region latency measurement have not. Parts 1 through 3 only
-ever quoted numbers from a real `make run`, and so does this one.
+and is left as a named placeholder rather than invented. Every demo has
+been run except the cross-region latency measurement. Parts 1 through 3
+only ever quoted numbers from a real `make run`, and so does this one.
 {{< /lab >}}
 
 <!--toc-->
@@ -163,13 +162,53 @@ hand (the same name `pg_auto_failover` already assigns,
 sides — one `ALTER SYSTEM` or config-file edit away, and silent if
 missed. That half is now pg_auto_failover's job, not this script's.
 
-`[TODO: run this against a real pg_auto_failover-managed primary and
-standby pair built from #1197 (the `a` profile in `compose/` defines the
-services), force a promotion with pg_autoctl perform failover, and measure: time from promotion to the
-consumer's first post-failover message; whether any duplicate arrives,
-and how many; whether a deliberately misconfigured
-synchronized_standby_slots still produces the predicted hole now that
-pg_auto_failover sets it for you.]`
+**Verified**, by running it: profile `a` in `compose/` is a pg_auto_failover
+monitor with a primary and a standby on Postgres 17, built from the
+commit that merges #1197 and left at its default timings. A
+`pg_recvlogical` consumer (`test_decoding`, one-second feedback interval)
+follows a `failover = true` slot while a writer inserts about 25 rows a
+second, one row per transaction, with ids it chooses itself so a retry
+is recognisable. Each scenario ran three times; "holes" are rows the
+final primary has that the consumer never received, "ahead" are rows
+the consumer received that the final primary does not have.
+
+| Scenario | Duplicates | Holes | Ahead | Writer blocked |
+|---|---|---|---|---|
+| `pg_autoctl perform failover` | 0, 0, 0 | 0, 0, 0 | 0, 0, 0 | 6.5 s |
+| primary killed | 1, 1, 6 | 0, 0, 0 | 0, 0, 0 | 50 s |
+| standby cut off, then primary killed, gate on | 0, 0, 0 | 0, 0, 0 | 0, 0, 0 | 50 s |
+| same, `synchronized_standby_slots` emptied | 0, 0, 0 | 34, 9, 43 | 134, 135, 136 | 50 s |
+
+- **The guarantee holds as described.** With the gate on, a planned
+  failover and a killed primary produce duplicates, bounded by the
+  consumer's feedback interval, and no holes. The consumer resumes by
+  itself through a multi-host connection string, up to five seconds
+  after the new primary accepts writes, which is `pg_recvlogical`'s own
+  reconnect delay.
+- **The gate does its job when the standby is behind.** In the third
+  scenario the standby stops receiving WAL five seconds before the kill
+  and the writer commits with `synchronous_commit = local`. The consumer
+  receives nothing from that moment on, because the walsender will not
+  send past what the standby has flushed. About 130 rows the writer had
+  been told were committed are lost with the old primary — that is the
+  cost of `synchronous_commit = local`, and not the consumer's to carry —
+  but none of them had been delivered downstream.
+- **Misconfigured, the prediction comes true, and then some.** With
+  `synchronized_standby_slots` empty, the same sequence delivers about
+  135 rows to the consumer that the new primary never had. The new
+  primary then writes new rows at WAL positions the consumer's
+  confirmed position is already past, so the slot skips them: 9 to 43
+  rows written after the failover never reach the consumer at all. The
+  consumer is ahead of the history it reads from, which is the case the
+  `IDENTIFY_SYSTEM` check in step 3 exists to catch, and nothing in
+  Postgres raises it for you.
+- **What dominates the downtime is not the slot.** A planned failover
+  blocks the writer for 6.5 seconds. A killed primary blocks it for
+  about 50: roughly ten seconds for the monitor to mark the node
+  unhealthy, and the rest in pg_auto_failover's drain timeout before the
+  standby is allowed to take writes. Those are defaults, they can be
+  tuned, and they are measured here on a local Docker network, not a
+  WAN.
 
 ### Geo-replication is the same mechanism, read for latency instead of correctness
 
@@ -398,10 +437,38 @@ re-tested here against genuinely concurrent writers on both sides
 instead of the one-writer-per-table discipline the rest of the series
 designed around on purpose:
 
-`[TODO: re-run Part 1's three pglogical findings — the partitioned-
-parent crash, the filter-move silently dropped on both sides, keep_local's
-undetectable divergence — against a current PG18 build, concurrent
-writers this time, and confirm whether any of the three has changed.]`
+**Verified**, by running it: profile `e` in `compose/` is pglogical 2.4.8
+(the PGDG package) on Postgres 18.6, the same pglogical release Part 1
+used on Postgres 14.
+
+- **The partitioned-parent crash is unchanged.** Replicating into a
+  partitioned parent copies the initial rows, then the first replicated
+  `INSERT` kills the apply worker with `signal 11`; the postmaster
+  restarts every backend, and the subscription crash-loops — about 900
+  crashes in the 30 seconds before the demo drops it.
+- **The filter move is unchanged.** Moving a customer from worker 1's
+  row filter to worker 2's reaches neither: worker 1 keeps the stale
+  row, worker 2 never gets it, and the hub has the new value.
+- **`keep_local` diverges for real under concurrent writers.** Two
+  nodes subscribed to each other, four clients each updating the same
+  1,000 keys at 2,000 transactions per second per node for 15 seconds
+  (about 60,000 updates), one run per policy, three runs:
+
+| Policy | Rows that differ afterwards, of 1,000 (3 runs) | Replication |
+|---|---|---|
+| `last_update_wins` | 0, 0, 0 | healthy |
+| `apply_remote` | 1, 0, 1 | healthy |
+| `keep_local` | 1000, 1000, 1000 | healthy, no error |
+| `first_update_wins` | 1000, 1000, 997 | healthy, no error |
+| `error` | 1000, 1000, 1000 | both subscriptions `down` |
+
+`last_update_wins` converged every time, though it keeps one row, not
+both: of the roughly 60,000 increments, 8, 12 and 22 were overwritten by
+a concurrent update to the same row. `apply_remote` usually converges
+and sometimes leaves one row different on the two nodes. `keep_local`
+and `first_update_wins` do what they say on the tin — each node keeps
+its own value — and nothing in the logs says the nodes now disagree.
+`error` stops replicating until someone intervenes.
 
 The sequence gap
 [Part 1](/blog/2026/09/ten-years-of-postgres-logical-replication/#minting-ids-on-the-workers)
@@ -564,10 +631,10 @@ measured, not a replacement for any of it:
   left open, and does it as a real change merged into a tool the series
   already relies on, not a bigger demo.
 
-The `[TODO]` markers through this post are not a hedge — they are
-the same discipline Part 3 closed on: every number anywhere in this
-series came from an actual rehearsal, and a placeholder stays a
-placeholder until it has one.
+The one `[TODO]` left in this post is not a hedge — it is the same
+discipline Part 3 closed on: every number anywhere in this series came
+from an actual rehearsal, and a placeholder stays a placeholder until it
+has one.
 
 Every part has a `compose/` directory of its own, this one included.
 Run them, break them, and tell me what I got wrong.

@@ -1,0 +1,59 @@
+== scenario: planned ==
+-- waiting for primary + secondary
+formation ready after 3s
+   node_1|primary|primary
+   node_2|secondary|secondary
+-- settings on the primary
+   wal_level = logical
+   synchronized_standby_slots = pgautofailover_standby_2
+   synchronous_standby_names = ANY 1 (pgautofailover_standby_2)
+   synchronous_commit = on
+-- settings on the standby
+   sync_replication_slots = on
+   hot_standby_feedback = on
+   primary_conninfo has dbname: t
+-- waiting for the standby to hold a synced copy of the slot
+   slot synced on the standby: 1 (after 13s)
+-- steady state:      595 rows written, 595 delivered
+-- t0=1793031294.399795096: pg_autoctl perform failover
+-- waiting for the monitor to report pg-a-standby as the writable primary
+   promoted: 1 (state: primary)
+   monitor: pg-a-standby reached primary at t0 +6.6 s
+
+== result: planned ==
+rows committed (in the database now)          : 998
+rows acknowledged to the writer               : 998
+distinct rows the consumer received           : 998
+duplicate deliveries (extra receipts)         : 0  (ids -)
+holes: in the database, never received        : 0  (ids -)
+ahead: received, absent from the database     : 0  (ids -)
+acknowledged to the writer but lost           : 0  (ids -)
+consumer: longest silence 10.0 s, from t0+0.2 s to t0+10.2 s
+writer:   longest silence 6.5 s, from t0+0.2 s to t0+6.6 s
+
+== monitor events ==
+   16:14:28.743|node_2|catchingup|catchingup|New state is reported by node 2 "node_2" (pg-a-standby:5432): "catchingup"
+   16:14:28.743|node_2|catchingup|secondary|caught up, same TLI as primary, within sync threshold -> secondary
+   16:14:28.881|node_1|wait_primary|wait_primary|Node node 1 "node_1" (pg-a-primary:5432) is marked as healthy by the monitor
+   16:14:28.883|node_2|catchingup|secondary|Node node 2 "node_2" (pg-a-standby:5432) is marked as healthy by the monitor
+   16:14:29.670|node_2|secondary|secondary|New state is reported by node 2 "node_2" (pg-a-standby:5432): "secondary"
+   16:14:29.682|node_1|wait_primary|primary|wait_primary, >=1 quorum secondary -> primary (+ unhealthy-secondary fan-out to catchingup
+   16:14:29.734|node_1|primary|primary|New state is reported by node 1 "node_1" (pg-a-primary:5432): "primary"
+   16:14:54.473|node_2|secondary|prepare_promotion|manual failover, 2-node group, primary+standby both converged -> standby prepare_promotion
+   16:14:54.473|node_1|primary|draining|manual failover, 2-node group, primary+standby both converged -> standby prepare_promotion
+   16:14:54.505|node_2|prepare_promotion|prepare_promotion|New state is reported by node 2 "node_2" (pg-a-standby:5432): "prepare_promotion"
+   16:14:54.505|node_2|prepare_promotion|stop_replication|prepare_promotion, primary present, not in maintenance -> stop_replication + demote_timeou
+   16:14:54.505|node_1|primary|demote_timeout|prepare_promotion, primary present, not in maintenance -> stop_replication + demote_timeou
+   16:14:54.710|node_1|draining|demote_timeout|New state is reported by node 1 "node_1" (pg-a-primary:5432): "draining"
+   16:14:54.748|node_1|demote_timeout|demote_timeout|New state is reported by node 1 "node_1" (pg-a-primary:5432): "demote_timeout"
+   16:15:00.965|node_2|stop_replication|stop_replication|New state is reported by node 2 "node_2" (pg-a-standby:5432): "stop_replication"
+   16:15:00.965|node_2|stop_replication|wait_primary|stop_replication, primary converged demote_timeout -> wait_primary + demoted (1 of 3)
+   16:15:00.965|node_1|demote_timeout|demoted|stop_replication, primary converged demote_timeout -> wait_primary + demoted (1 of 3)
+   16:15:01.022|node_1|demoted|demoted|New state is reported by node 1 "node_1" (pg-a-primary:5432): "demoted"
+   16:15:01.030|node_2|wait_primary|wait_primary|New state is reported by node 2 "node_2" (pg-a-standby:5432): "wait_primary"
+   16:15:02.050|node_1|demoted|catchingup|demoted, primary converged wait/join_primary/primary, healthy -> catchingup
+   16:15:02.230|node_1|catchingup|catchingup|New state is reported by node 1 "node_1" (pg-a-primary:5432): "catchingup"
+   16:15:02.230|node_1|catchingup|secondary|caught up, same TLI as primary, within sync threshold -> secondary
+   16:15:02.490|node_1|secondary|secondary|New state is reported by node 1 "node_1" (pg-a-primary:5432): "secondary"
+   16:15:02.502|node_2|wait_primary|primary|wait_primary, >=1 quorum secondary -> primary (+ unhealthy-secondary fan-out to catchingup
+   16:15:02.568|node_2|primary|primary|New state is reported by node 2 "node_2" (pg-a-standby:5432): "primary"

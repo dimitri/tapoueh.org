@@ -41,6 +41,10 @@ RUN make -s clean && make -s install -j"$(nproc)" BINDIR=/usr/local/bin
 FROM postgres:${PGVERSION} AS run
 
 ARG PGVERSION
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libncurses6 \
+ && rm -rf /var/lib/apt/lists/*
+
 COPY --from=build /usr/local/bin/pg_autoctl /usr/local/bin/pg_autoctl
 COPY --from=build /usr/lib/postgresql/${PGVERSION}/lib/pgautofailover.so \
      /usr/lib/postgresql/${PGVERSION}/lib/pgautofailover.so
@@ -48,7 +52,7 @@ COPY --from=build /usr/share/postgresql/${PGVERSION}/extension/pgautofailover* \
      /usr/share/postgresql/${PGVERSION}/extension/
 
 # pg_autoctl refuses to run Postgres as root
-RUN mkdir -p /pgdata && chown postgres:postgres /pgdata
+RUN mkdir -p /data && chown postgres:postgres /data
 ENV HOME=/var/lib/postgresql
 USER postgres
 

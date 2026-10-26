@@ -91,9 +91,9 @@ services:
     image: lrdist-pgaf:17
     hostname: monitor
     environment:
-      PGDATA: /pgdata
-    volumes: ["monitor-data:/pgdata"]
-    command: ["create", "monitor", "--pgdata", "/pgdata", "--auth", "trust",
+      PGDATA: /data/pgdata
+    volumes: ["monitor-data:/data"]
+    command: ["create", "monitor", "--pgdata", "/data/pgdata", "--auth", "trust",
               "--ssl-self-signed", "--hostname", "monitor", "--run"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres"]
@@ -106,12 +106,12 @@ services:
     image: lrdist-pgaf:17
     hostname: pg-a-primary
     environment:
-      PGDATA: /pgdata
-    volumes: ["pg-a-primary-data:/pgdata"]
+      PGDATA: /data/pgdata
+    volumes: ["pg-a-primary-data:/data"]
     depends_on:
       monitor: { condition: service_healthy }
-    command: ["create", "postgres", "--pgdata", "/pgdata", "--auth", "trust",
-              "--ssl-self-signed", "--hostname", "pg-a-primary", "--dbname", "app",
+    command: ["create", "postgres", "--pgdata", "/data/pgdata", "--auth", "trust",
+              "--ssl-self-signed", "--pg-hba-lan", "--hostname", "pg-a-primary", "--dbname", "app",
               "--monitor", "postgres://autoctl_node@monitor/pg_auto_failover?sslmode=require",
               "--run"]
     healthcheck:
@@ -125,12 +125,12 @@ services:
     image: lrdist-pgaf:17
     hostname: pg-a-standby
     environment:
-      PGDATA: /pgdata
-    volumes: ["pg-a-standby-data:/pgdata"]
+      PGDATA: /data/pgdata
+    volumes: ["pg-a-standby-data:/data"]
     depends_on:
       pg-a-primary: { condition: service_healthy }
-    command: ["create", "postgres", "--pgdata", "/pgdata", "--auth", "trust",
-              "--ssl-self-signed", "--hostname", "pg-a-standby", "--dbname", "app",
+    command: ["create", "postgres", "--pgdata", "/data/pgdata", "--auth", "trust",
+              "--ssl-self-signed", "--pg-hba-lan", "--hostname", "pg-a-standby", "--dbname", "app",
               "--monitor", "postgres://autoctl_node@monitor/pg_auto_failover?sslmode=require",
               "--run"]
 
