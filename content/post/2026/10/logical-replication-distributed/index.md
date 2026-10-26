@@ -467,22 +467,12 @@ the decoder needed to change shape — it needed one new case in one
 switch statement, and something to actually do once that case is
 reached.
 
-The pain this leaves on the table is not hypothetical. **Verified**
-against pgcopydb issue #1060: on the `wal2json` plugin path — a
-different decoder, `ld_transform.c`'s `parseMessage()`, not the
-`pgoutput` one above — the same kind of frame was not filtered
-harmlessly, it broke `follow` outright. A message with no `schema` or
-`table` property (PeerDB's or ClickPipes's own `peerdb_heartbeat`,
-emitted on any source those tools share) routed into the DML branch
-anyway, `parseWal2jsonMessage()` failed parsing a row shape out of a
-message that was never a row, and apply retried the same transaction
-forever; the reproducer in `tests/` shows `follow` reaching endpos with
-real rows silently missing on the target — the exact silent-gap failure
-mode a CDC consumer cannot afford. It is fixed on `main` by an explicit
-`STREAM_ACTION_MESSAGE` case that discards the message before the DML
-dispatch (#1065). Two decoders, two different bugs, the same underlying
-cause either way — a Message frame reaching code that assumes every
-frame is a row.
+The gap is not a hypothetical one. On the `wal2json` plugin path, a
+Message frame with no `schema` or `table` property (PeerDB's
+`peerdb_heartbeat`, for one) used to be routed into the DML branch,
+fail to parse as a row, and make apply retry the same transaction
+forever. A CDC consumer cannot afford a frame that it neither handles
+nor ignores.
 
 {{< image src="fig-pgcopydb-message.svg" title="DDL as a message, not a queue table. An Event Trigger emits a JSON message, prefix pgcopydb, type ddl, body the command text. pgcopydb follow decodes the Message frame, filters on the prefix, parses the JSON, and dispatches on type — the ddl handler executes the body on the same connection the rest of the apply worker already uses, inside the same commit-ordered stream as every other change." >}}
 
@@ -522,55 +512,17 @@ create event trigger pgcopydb_emit_ddl_message on ddl_command_end
   execute function pgcopydb.emit_ddl_message();
 ```
 
-This design is now code. [PR #1064](https://github.com/dimitri/pgcopydb/pull/1064),
-"replicate DDL over logical decoding as a typed message," implements
-it — the `case 'M':` decode in `ld_pgoutput.c`, storage in
-`ld_store.c`, the `STREAM_ACTION_MESSAGE` dispatch in `ld_transform.c`
-and `ld_apply.c`, and a `pgcopydb stream event-trigger` subcommand that
-installs the trigger above automatically instead of asking a reader to
-write it by hand. **Merged** to `main` 2026-10-16.
+This design is implemented in pgcopydb: the Message frame is decoded
+and stored, dispatched by `type`, and a `pgcopydb stream event-trigger`
+subcommand installs the trigger above instead of asking a reader to
+write it by hand. It is on `main`, pending the next release, which is
+why the demo builds from a pinned commit. **Verified** by running it:
+with the trigger installed mid-stream, an `ALTER TABLE ... ADD COLUMN`
+on the source reaches the target two seconds later with zero manual
+statements there, the rows updated afterward follow, and so does
+ordinary traffic issued after it (`compose/results/d-fix-verified-84bce26.out`).
 
-Running the demo against the PR as it evolved turned up a bug. Three
-commits on the way there — the original PR (`febf16b`), a force-push
-(`251a03a`) that fixed a real but different bug
-(`stream_apply_flush_pipeline()`, draining the apply connection's
-pipeline before reporting `replay_lsn`), and the merge itself
-(`ffb41bd`) — showed the same symptom: receive, storage, and transform
-were correct (**verified** directly against the running containers' own
-SQLite state — the message lands in `output.db` with the right envelope,
-resolves to a correctly hashed `stmt` row in `replay.db`, tagged with
-the real transaction xid), and the DDL never reached the target.
-
-**Verified** down to the root cause, not just the symptom. A small
-diagnostic patch to `stream_apply_dml` (in `compose/patch/ld_apply.c`)
-showed `pgsql_execute()` for the DDL statement *returning success*, and
-`pg_stat_activity` on the target showed the apply connection sitting
-idle with `pg_replication_origin_session_setup()` as the last query it
-had run — through fifty unrelated `INSERT`s issued on the source
-afterward, which never landed either. So nothing was specific to DDL
-content or the message envelope. The apply connection runs in libpq
-pipeline mode, where `pgsql_execute()` only *queues* a statement, and
-libpq writes nothing to the socket until the output buffer reaches 64kB
-or a sync is requested. A single small transaction never gets there, so
-the whole `BEGIN` to `COMMIT` stayed in the client's memory while the
-apply loop advanced its position as if the server had confirmed it. It
-was not a message problem at all: any small transaction applied
-mid-stream was exposed, and a message-only transaction was simply the
-easiest one to observe.
-
-The fix is [PR #1069](https://github.com/dimitri/pgcopydb/pull/1069),
-merged 2026-10-26: `stream_apply_transaction()` now flushes the
-pipeline right after queuing `COMMIT`, before it trusts the
-transaction — one round trip per transaction, not per statement. **Verified**
-by re-running the demo against the merge commit (`84bce26`): the `price`
-column reaches the target two seconds after the `ALTER TABLE`, with zero
-manual statements on the target, the five `UPDATE`d rows follow, and
-fifty further `INSERT`s issued afterward land too — 70 rows on both
-sides, the apply connection's last query a `COMMIT`
-(`compose/results/d-fix-verified-84bce26.out`).
-
-Two edges are independent of that fix, because they sit on the source
-side: `current_query()` captures a multi-statement command whole, not
+Two edges follow from the source side being unchanged: `current_query()` captures a multi-statement command whole, not
 split — the demo showed a multi-statement command landing in `replay.db`
 as a single DDL message — and a replayed command runs with the apply worker's own role
 and `search_path`, not necessarily the one the original session had.
