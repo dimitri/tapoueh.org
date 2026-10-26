@@ -530,46 +530,46 @@ and `ld_apply.c`, and a `pgcopydb stream event-trigger` subcommand that
 installs the trigger above automatically instead of asking a reader to
 write it by hand. **Merged** to `main` 2026-10-16.
 
-The demo tested three separate commits on the way there — the
-original PR (`febf16b`), a force-push (`251a03a`) that fixed a real but
-different bug (`stream_apply_flush_pipeline()`, draining the apply
-connection's pipeline before reporting `replay_lsn`, closing a gap
-where `follow` could report a COMMIT done while it was still only
-queued), and the merge itself (`ffb41bd`) — and found the same
-symptom against all three: receive, storage, and transform are
-correct (**verified** directly against the running containers' own
-SQLite state, not taken on trust — the message lands in `output.db`
-with the right envelope, resolves to a correctly hashed `stmt` row in
-`replay.db`, tagged with the real transaction xid), and the DDL never
-reaches the target.
+Running the demo against the PR as it evolved turned up a bug. Three
+commits on the way there — the original PR (`febf16b`), a force-push
+(`251a03a`) that fixed a real but different bug
+(`stream_apply_flush_pipeline()`, draining the apply connection's
+pipeline before reporting `replay_lsn`), and the merge itself
+(`ffb41bd`) — showed the same symptom: receive, storage, and transform
+were correct (**verified** directly against the running containers' own
+SQLite state — the message lands in `output.db` with the right envelope,
+resolves to a correctly hashed `stmt` row in `replay.db`, tagged with
+the real transaction xid), and the DDL never reached the target.
 
-**Verified** down to the root cause, not just the symptom: a small
+**Verified** down to the root cause, not just the symptom. A small
 diagnostic patch to `stream_apply_dml` (in `compose/patch/ld_apply.c`)
-confirms
-`pgsql_execute()` for the DDL statement *returns success* — and
-nothing from that point on ever reaches the target connection again.
-`pg_stat_activity` on the target shows the apply connection sitting
-idle, `pg_replication_origin_session_setup()` as the last query it
-ever actually ran, for as long as the connection is left open —
-through fifty unrelated `INSERT`s issued on the source afterward,
-which never land either. That rules out anything specific to DDL
-content or the message envelope: once a message-carrying transaction
-is in flight, the apply connection stops making progress at all,
-message or not. The shape matches the `stream_apply_flush_pipeline()`
-fix in `251a03a` exactly, one hop earlier: the apply connection runs in
-libpq pipeline mode, where sending a command and having the server
-confirm it are two different steps, and `pgsql_execute()` returning
-`true` here means "queued," not "committed." Something about a
-message-carrying transaction's completion path is not reaching
-whatever step makes every *other* transaction's queued work actually
-flush.
+showed `pgsql_execute()` for the DDL statement *returning success*, and
+`pg_stat_activity` on the target showed the apply connection sitting
+idle with `pg_replication_origin_session_setup()` as the last query it
+had run — through fifty unrelated `INSERT`s issued on the source
+afterward, which never landed either. So nothing was specific to DDL
+content or the message envelope. The apply connection runs in libpq
+pipeline mode, where `pgsql_execute()` only *queues* a statement, and
+libpq writes nothing to the socket until the output buffer reaches 64kB
+or a sync is requested. A single small transaction never gets there, so
+the whole `BEGIN` to `COMMIT` stayed in the client's memory while the
+apply loop advanced its position as if the server had confirmed it. It
+was not a message problem at all: any small transaction applied
+mid-stream was exposed, and a message-only transaction was simply the
+easiest one to observe.
 
-`[TODO: report this finding upstream against #1064, with
-compose/patch/ld_apply.c attached. Re-run profile d once a fix lands and
-confirm the target gets the new column with zero manual alter table
-statements.]`
+The fix is [PR #1069](https://github.com/dimitri/pgcopydb/pull/1069),
+merged 2026-10-26: `stream_apply_transaction()` now flushes the
+pipeline right after queuing `COMMIT`, before it trusts the
+transaction — one round trip per transaction, not per statement. **Verified**
+by re-running the demo against the merge commit (`84bce26`): the `price`
+column reaches the target two seconds after the `ALTER TABLE`, with zero
+manual statements on the target, the five `UPDATE`d rows follow, and
+fifty further `INSERT`s issued afterward land too — 70 rows on both
+sides, the apply connection's last query a `COMMIT`
+(`compose/results/d-fix-verified-84bce26.out`).
 
-Two edges are independent of that bug, because they sit on the source
+Two edges are independent of that fix, because they sit on the source
 side: `current_query()` captures a multi-statement command whole, not
 split — the demo showed a multi-statement command landing in `replay.db`
 as a single DDL message — and a replayed command runs with the apply worker's own role

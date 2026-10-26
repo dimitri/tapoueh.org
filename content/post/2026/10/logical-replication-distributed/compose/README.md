@@ -2,7 +2,7 @@
 
 Pinned to real commits, matching the pattern parts 1 through 3 already use
 (`docker-compose.yml` + profile-gated containers + `run-*.sh` + `results/`).
-Profiles **c** and **d** have actually been built and run; **a** is built
+Profiles **c** and **d** have been built and run; **a** is built
 but not yet run as a full failover drill; **b** isn't scaffolded yet.
 
 ## Images build from source, not from a release
@@ -14,12 +14,12 @@ but not yet run as a full failover drill; **b** isn't scaffolded yet.
   this post's first section is about. **Merged** 2026-10-14. Last tagged
   release is `v2.2`, which predates it. Image builds clean
   (`pgaf:demo`).
-- **pgcopydb**, pinned to `ffb41bdd95c1e79b9ec208d8e910ee205bb8a59d` on
-  `main` — the merge of [PR #1064](https://github.com/dimitri/pgcopydb/pull/1064),
-  "replicate DDL over logical decoding as a typed message." **Merged**
-  2026-10-16. Tested against three commits on the way to this one
-  (`febf16b`, the force-pushed `251a03a`, now the merge) and found the
-  same apply-side bug against all three.
+- **pgcopydb**, pinned to `84bce26e38d09801fb845ba22830e830e55490b1` on
+  `main` — the merge of [PR #1069](https://github.com/dimitri/pgcopydb/pull/1069),
+  which fixes the apply stall found in
+  [PR #1064](https://github.com/dimitri/pgcopydb/pull/1064) ("replicate
+  DDL over logical decoding as a typed message", merged 2026-10-16,
+  `ffb41bd`). The stall reproduced on `febf16b`, `251a03a` and `ffb41bd`.
 
 Re-pin before running this again — `main` moves.
 
@@ -39,32 +39,24 @@ Re-pin before running this again — `main` moves.
   `results/c-*.out`. The third run is clean: 8000 rows on every node,
   exactly 2000 per region, zero apply/sync errors anywhere. `[TODO 3]`
   in the post is closed.
-- **d** — pgcopydb DDL-as-a-message, against PR #1064's real code, not
-  the design doc. **Run three times**, against three different commits
-  (`febf16b`, `251a03a`, and now the merge, `ffb41bd`). Same symptom
-  all three times: receive, storage, and transform are verified correct
-  by querying pgcopydb's own SQLite state directly (`results/
-  d-ddl-message-trace*.out`) — the message lands with the right prefix
-  and envelope, resolves to a hashed, storable DDL statement, correctly
-  tagged with the real transaction xid — and apply never executes it.
-  The retest against `251a03a` also caught a cleanup bug in this post's
-  *own* `reset-d.sh` (a leftover `pgcopydb` publication on the target
-  from a prior run's own schema dump, now fixed) that briefly looked
-  like the real bug and wasn't.
-
-  **Root-caused**, not just reproduced, on the merge commit:
-  `compose/patch/ld_apply.c` is a one-line diagnostic patch (kept, not
-  deleted, as the actual evidence) confirming `pgsql_execute()` for the
-  DDL statement returns success — and the apply connection then never
-  does anything else. `pg_stat_activity` on the target shows it idle,
-  `pg_replication_origin_session_setup()` as the last query it ever
-  ran, through fifty unrelated `INSERT`s issued on the source
-  afterward that never land either (`results/d-pipeline-stall-evidence.out`).
-  The apply connection runs in libpq pipeline mode, where "queued" and
-  "server-confirmed" are different things; `pgsql_execute()` returning
-  true here means the former, not the latter. `[TODO]` in the post asks
-  for a fix against this specific finding, not a re-description of the
-  symptom.
+- **d** — pgcopydb DDL-as-a-message, against the real code of PR #1064.
+  **Run on five commits.** On `febf16b`, `251a03a` and `ffb41bd` the DDL
+  never reached the target: receive, storage and transform were correct
+  (`results/d-ddl-message-trace*.out`), but the apply connection went idle
+  with `pg_replication_origin_session_setup()` as its last query, and
+  fifty later `INSERT`s never landed either
+  (`results/d-pipeline-stall-evidence.out`). `patch/ld_apply.c` is the
+  diagnostic patch that showed `pgsql_execute()` returning success first.
+  Root cause: the apply connection is in libpq pipeline mode, where
+  `pgsql_execute()` only queues, and libpq does not write to the socket
+  below 64kB without a sync, so a small transaction committed mid-stream
+  never left the client.
+  [PR #1069](https://github.com/dimitri/pgcopydb/pull/1069) flushes the
+  pipeline after every `COMMIT`. On `84bce26`, `run-d.sh` ends with
+  `got_column=1` after 2s, and 50 further `INSERT`s land (70 rows on both
+  sides, `results/d-fix-verified-84bce26.out`).
+  Cleanup note: `reset-d.sh` must also drop the `pgcopydb` publication on
+  the target, which clone's schema copy leaves behind.
 
 TODO 4 (re-running part 1's three pglogical findings against PG18) isn't
 a new profile — it reuses part 1's own `compose/`, pointed at a current
@@ -77,7 +69,7 @@ docker compose build pgaf pgcopydb                 # profiles a, d
 COMPOSE_PROFILES=c docker compose up -d --wait
 ./run-c.sh                                          # four-primary demo
 ./reset-d.sh && COMPOSE_PROFILES=d docker compose up -d --wait
-./run-d.sh                                          # DDL-message demo (currently fails at apply)
+./run-d.sh                                          # DDL-message demo (got_column=1 on 84bce26)
 
 # the diagnostic build that found the root cause above:
 docker build --build-arg PGVERSION=18 -t pgcopydb:debug -f Dockerfile.pgcopydb-debug .
