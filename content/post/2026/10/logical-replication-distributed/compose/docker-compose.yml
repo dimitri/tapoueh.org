@@ -88,32 +88,62 @@ services:
       context: .
       dockerfile: Dockerfile.pgautofailover
       args: { PGVERSION: "17" }
+    image: lrdist-pgaf:17
+    hostname: monitor
     environment:
       PGDATA: /pgdata
     volumes: ["monitor-data:/pgdata"]
-    command: ["create", "monitor", "--pgdata", "/pgdata", "--auth", "trust", "--ssl-self-signed", "--run"]
+    command: ["create", "monitor", "--pgdata", "/pgdata", "--auth", "trust",
+              "--ssl-self-signed", "--hostname", "monitor", "--run"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres"]
+      interval: 1s
+      timeout: 3s
+      retries: 60
 
   pg-a-primary:
     profiles: [a]
-    build:
-      context: .
-      dockerfile: Dockerfile.pgautofailover
-      args: { PGVERSION: "17" }
+    image: lrdist-pgaf:17
+    hostname: pg-a-primary
     environment:
       PGDATA: /pgdata
     volumes: ["pg-a-primary-data:/pgdata"]
-    depends_on: [monitor]
+    depends_on:
+      monitor: { condition: service_healthy }
+    command: ["create", "postgres", "--pgdata", "/pgdata", "--auth", "trust",
+              "--ssl-self-signed", "--hostname", "pg-a-primary", "--dbname", "app",
+              "--monitor", "postgres://autoctl_node@monitor/pg_auto_failover?sslmode=require",
+              "--run"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d app"]
+      interval: 1s
+      timeout: 3s
+      retries: 90
 
   pg-a-standby:
     profiles: [a]
-    build:
-      context: .
-      dockerfile: Dockerfile.pgautofailover
-      args: { PGVERSION: "17" }
+    image: lrdist-pgaf:17
+    hostname: pg-a-standby
     environment:
       PGDATA: /pgdata
     volumes: ["pg-a-standby-data:/pgdata"]
-    depends_on: [pg-a-primary]
+    depends_on:
+      pg-a-primary: { condition: service_healthy }
+    command: ["create", "postgres", "--pgdata", "/pgdata", "--auth", "trust",
+              "--ssl-self-signed", "--hostname", "pg-a-standby", "--dbname", "app",
+              "--monitor", "postgres://autoctl_node@monitor/pg_auto_failover?sslmode=require",
+              "--run"]
+
+  # the application and the CDC consumer: psql, pg_recvlogical, perl
+  a-client:
+    profiles: [a]
+    image: lrdist-pgaf:17
+    entrypoint: ["sleep", "infinity"]
+    depends_on: [monitor]
+    volumes:
+      - ./traffic:/traffic:ro
+      - ./results:/results
+    user: root
 
   # ---------------- profile d: pgcopydb DDL-as-a-message, against PR #1064 ----------------
   d-source:
@@ -144,6 +174,55 @@ services:
     volumes:
       - ./sql:/sql:ro
       - ./results:/results
+
+  # ---------------- profile e: pglogical on PostgreSQL 18 ----------------
+  e-hub:
+    <<: *pg-common
+    profiles: [e]
+    build:
+      context: .
+      dockerfile: Dockerfile.pglogical
+      args: { PGVERSION: "18" }
+    image: lrdist-pglogical:18
+    command: &pgl-cmd >
+      postgres -c shared_preload_libraries=pglogical
+      -c output_plugin_libraries=pglogical_output
+      -c wal_level=logical -c track_commit_timestamp=on
+      -c max_worker_processes=24 -c max_replication_slots=16
+      -c max_wal_senders=16 -c max_logical_replication_workers=12
+      -c wal_retrieve_retry_interval=1s
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports: ["127.0.0.1:5770:5432"]
+    tmpfs: ["/var/lib/postgresql"]
+
+  e-w1:
+    <<: *pg-common
+    profiles: [e]
+    image: lrdist-pglogical:18
+    command: *pgl-cmd
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports: ["127.0.0.1:5771:5432"]
+    tmpfs: ["/var/lib/postgresql"]
+    depends_on: [e-hub]
+
+  e-w2:
+    <<: *pg-common
+    profiles: [e]
+    image: lrdist-pglogical:18
+    command: *pgl-cmd
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports: ["127.0.0.1:5772:5432"]
+    tmpfs: ["/var/lib/postgresql"]
+    depends_on: [e-hub]
 
 volumes:
   us-east-data:
