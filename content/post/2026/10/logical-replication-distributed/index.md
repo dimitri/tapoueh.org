@@ -21,24 +21,26 @@ order they tend to break in practice: the primary itself fails over, the
 servers are no longer close together, more than one of them writes, and
 the CDC consumer has to be a real one instead of a demo.
 
-Scope stays where the rest of the series drew it: open source only.
-pglogical and Citus are both OSS and stay in scope, the same as Part 1
-left them. BDR is named once, correctly dated — version 1.x was open
-source and reached end of life in December 2019; everything since,
-including EDB Postgres Distributed, is commercial — and RDS/Aurora are
-named once as the managed reference point. Neither is built against here.
+Like the rest of the series, everything built here is open source:
+Postgres itself, pg_auto_failover, pgcopydb, and pglogical where Part 1
+used it. Commercial multi-master systems come up once, in the conflict
+section, as a reference point rather than something to build against.
 
 <!--more-->
 
 {{< lab >}}
-This post's own `compose/` directory is not built yet. Sections below are
-in one of two states, marked as they come up: **verified** means checked
-against the actual Postgres, pg_auto_failover, or pgcopydb source — file
-and line, not recollection — and stated as fact. **To measure** means the
-mechanism is real and sourced, but the number that goes with it needs an
-actual run, and is left as a named placeholder rather than invented. Parts
-1 through 3 only ever quoted numbers from a real `make run`; this one will
-too, once it has one.
+The demos for this post are in the `compose/` directory next to it. They
+build pg_auto_failover and pgcopydb from pinned commits on `main`, because
+the changes this post relies on were merged days before publication and
+are not in a tagged release yet. Statements below are in one of two
+states: **verified** means checked against the actual Postgres,
+pg_auto_failover, or pgcopydb source, or against a run of the demos, and
+stated as fact. **To measure** means the mechanism is real and sourced,
+but the number that goes with it needs a run that has not happened yet,
+and is left as a named placeholder rather than invented. The four-primary
+topology and the DDL-message demo have been run; the failover drill and
+the cross-region latency measurement have not. Parts 1 through 3 only
+ever quoted numbers from a real `make run`, and so does this one.
 {{< /lab >}}
 
 <!--toc-->
@@ -100,16 +102,15 @@ silently, not loudly:
   snapshot — is dropped the moment that standby is promoted, and cannot
   be recreated in the past.
 
-None of that was pg_auto_failover's job as of this series' earlier
-parts. **Verified** against the project's `main` branch at the time:
-a `grep` for `sync_replication_slots` or `synchronized_standby_slots`
-across `src/` returned exactly one hit, a comment in `pgctl.c` noting
-the GUC exists — no code set it, no code created a failover slot, no
-code checked one before deciding who gets promoted.
+None of that used to be pg_auto_failover's job. **Verified** against
+the project's `main` branch before PR #1197: a `grep` for
+`sync_replication_slots` or `synchronized_standby_slots` across `src/`
+returned exactly one hit, a comment in `pgctl.c` noting the GUC exists —
+no code set it, no code created a failover slot, no code checked one
+before deciding who gets promoted.
 
-That gap closed. **Verified** against PR #1197 itself
-(`hapostgres/pg_auto_failover`, merged 2026-10-14, the day before this
-section was last checked): a new monitor function,
+That gap is closed. **Verified** against PR #1197 itself
+(`hapostgres/pg_auto_failover`, merged 2026-10-14): a new monitor function,
 `pgautofailover.synchronized_standby_slots(formation, group)`, computed
 the same way `synchronous_standby_names()` already is — every current
 failover candidate's physical slot name — which `pg_autoctl` fetches
@@ -162,9 +163,9 @@ hand (the same name `pg_auto_failover` already assigns,
 sides — one `ALTER SYSTEM` or config-file edit away, and silent if
 missed. That half is now pg_auto_failover's job, not this script's.
 
-`[TODO: build this against a real pg_auto_failover-managed primary and
-standby pair on the release that ships #1197, force a promotion with
-pg_autoctl perform failover, and measure: time from promotion to the
+`[TODO: run this against a real pg_auto_failover-managed primary and
+standby pair built from #1197 (the `a` profile in `compose/` defines the
+services), force a promotion with pg_autoctl perform failover, and measure: time from promotion to the
 consumer's first post-failover message; whether any duplicate arrives,
 and how many; whether a deliberately misconfigured
 synchronized_standby_slots still produces the predicted hole now that
@@ -273,11 +274,6 @@ Postgres, same as a terminal in Part 1 or Part 2 — the only thing worth
 drawing is which half of each connection is read-write and which is
 read-only, because that split is the whole architecture in miniature.
 
-`[TODO: build the four-primary demo — four writers, two of them
-cascading through the other two, one warehouse, every mirror flowing
-back filtered — and confirm zero conflict counters move no matter how
-concurrently it runs.]`
-
 ### Cascading, one hop downstream
 
 San Francisco and Sydney are full primaries, not read-only leaves —
@@ -317,11 +313,11 @@ out before it reaches that subscriber. The id comes from
 anything it received, so a row is tagged the moment it has crossed one
 hop, and the next hop can choose not to forward it any further.
 
-Building the demo this section draws on found something a read of the
-documentation alone did not: for a disjoint, region-keyed schema like
-this post's own, `origin` is not actually the tool that closes the
-loop — row-filtered publications are, and once they're in place
-correctly, `origin` turns out to have nothing left to do.
+Building the demo for this section turned up something the
+documentation alone does not show: for a disjoint, region-keyed schema
+like this one, `origin` is not the tool that closes the loop —
+row-filtered publications are, and once they are in place, `origin`
+has nothing left to do.
 
 The naive version would give San Francisco an unfiltered subscription
 to everything New York publishes. New York's publication carries
@@ -342,10 +338,12 @@ is no built-in way to ask for "everything except what I sent you."
 What actually closes the loop, cleanly, is the same tool already doing
 the conflict-avoidance work: a **row-filtered publication** on the
 `region` column itself. New York publishes two different views instead
-of one — `FOR TABLE events` unfiltered toward Amsterdam, and
-`FOR TABLE events WHERE (region <> 'us-west')` toward San Francisco —
+of one — `WHERE (region = 'us-east' OR region = 'us-west')` toward
+Amsterdam, and `WHERE (region <> 'us-west')` toward San Francisco —
 and San Francisco's own publication back toward New York is
-`WHERE (region = 'us-west')`, nothing else, ever. Neither filter cares
+`WHERE (region = 'us-west')`, nothing else, ever. An unfiltered
+publication toward Amsterdam would send Amsterdam's own mirror straight
+back to it through New York, which is the loop the demo hit first. Neither filter cares
 what hop a row arrived on or what it did or didn't already touch; each
 one only looks at a value every row already carries. With that in
 place, a row can never reach a link that would send it back to where it
@@ -353,17 +351,21 @@ already lives, by construction, the identical guarantee the primary-key
 discipline already gives the write side. `origin = none` stays real and
 useful — it is still the right tool the day a `region` column is not
 the thing a loop needs to be cut on — but it is not what this
-particular architecture ends up needing, and that is worth saying
-plainly rather than leaving the first draft's answer standing.
+particular architecture needs.
 
 What cascading does not change is what was already true one hop up:
 DDL and sequence state still do not replicate, at any hop, for the same
 reason Part 2 found at the first one.
 
-`[TODO: this post's own four-primary demo (profile c) builds exactly
-this row-filtered topology — confirm the above against its actual
-pg_publication/pg_subscription catalogs and a captured WAL trace, not
-just the reasoning above.]`
+**Verified**, by running it: profile `c` in `compose/` builds exactly
+this topology on Postgres 17 — four primaries, two of them cascading
+through the other two, one warehouse, every mirror filtered — and drives
+2,000 concurrent writes into each region. The first two runs found the
+echo loop above; with the filters in place, the third run ends with
+8,000 rows on every node, exactly 2,000 per region, and zero
+`apply_error_count` or `sync_error_count` on any subscription. (The
+per-conflict-type counters, `confl_*`, only exist from Postgres 18, so
+this run reads the two error counters Postgres 17 has.)
 
 Real deployments covering APAC rarely stop at one extra region.
 Singapore, Tokyo, and Hong Kong each show up as their own region in
@@ -378,7 +380,7 @@ under separate local operators, not as another node on the same global
 account, which makes it a business and compliance decision before it
 is a replication one. A real build-out would reach for several of
 these; this post draws two cascades, New York to San Francisco and
-Mumbai to Sydney, because the mechanism — one hop, same `origin`
+Mumbai to Sydney, because the mechanism — one hop, same row-filter
 discipline each direction — does not change with a third or a fifth.
 Draw it once, repeat it per city.
 
@@ -403,8 +405,8 @@ writers this time, and confirm whether any of the three has changed.]`
 
 The sequence gap
 [Part 1](/blog/2026/09/ten-years-of-postgres-logical-replication/#minting-ids-on-the-workers)
-is still open as of this post, and now with a more final answer than
-"not yet committed." **Verified** against the commitfest entry itself:
+was left open as "not yet committed"; it now has a firmer answer.
+**Verified** against the commitfest entry itself:
 Michael Paquier's "Sequence Access Methods, round two"
 ([commitfest #4677](https://commitfest.postgresql.org/52/4677/)) was
 returned with feedback in PG19-Final on 2026-02-27, after more than two
@@ -413,12 +415,11 @@ Postgres 19. `galloc` and `snowflakeid` remain EDB Postgres Distributed
 features, not core ones, and stay that way for at least one more
 release.
 
-BDR/PGD is the honest answer to "where does real multi-master
-conflict handling live today," named once, for the record: version
-1.x was open source and reached its end of life in December 2019;
-every version since is commercial, under EDB. It is a reference point
-for this section, the same way RDS and Aurora are a reference point in
-Part 3 — never something built against here.
+Where does real multi-master conflict handling live today? In BDR and
+its successor, EDB Postgres Distributed: BDR 1.x was open source and
+reached its end of life in December 2019; every version since is
+commercial. It is a reference point for this section, the same way RDS
+and Aurora are in Part 3, and nothing in this series builds against it.
 
 ---
 
@@ -456,47 +457,42 @@ default:
 ```
 
 A `pg_logical_emit_message()` call — the primitive Part 2 built its own
-DDL replay on — arrives on the wire and is logged as unknown and
-dropped. That is the entire gap, as of the source this post started
-against. The taxonomy on the other side of it is already built and
-waiting: `STREAM_ACTION_MESSAGE` has been in `pgcopydb`'s own action
-enum since before this post, the JSON round-trip for it is already
-wired, and the SQLite-backed storage layer already has a generic
-insert path for it. Nothing downstream of the decoder needs to change
-shape — it needs one new case in one switch statement, and something
-to actually do once that case is reached. "The design" section below
-is no longer just this post's own proposal for that case and that
-something; it is merged code, checked against this post's own
-`compose/`, not just read.
+DDL replay on — arrived on the wire and was logged as unknown and
+dropped. That was the entire gap before the change described below. The
+machinery on the other side of it was already built and waiting:
+`STREAM_ACTION_MESSAGE` was already in `pgcopydb`'s action enum, the
+JSON round-trip for it was already wired, and the SQLite-backed storage
+layer already had a generic insert path for it. Nothing downstream of
+the decoder needed to change shape — it needed one new case in one
+switch statement, and something to actually do once that case is
+reached.
 
 The pain this leaves on the table is not hypothetical. **Verified**
-against pgcopydb PR #1061, open as of this writing, fixing issue #1060:
-on the `wal2json` plugin path — a different decoder,
-`ld_transform.c`'s `parseMessage()`, not the `pgoutput` one above — the
-same kind of frame does not get filtered harmlessly, it breaks `follow`
-outright. A message with no `schema` or `table` property (PeerDB's or
-ClickPipes's own `peerdb_heartbeat`, emitted on any source those tools
-share) routes into the DML branch anyway, `parseWal2jsonMessage()` fails
-parsing a row shape out of a message that was never a row, and apply
-retries the same transaction forever; the reported fix in `tests/`
-shows `follow` reaching endpos with real rows silently missing on the
-target — the exact silent-gap failure mode a CDC consumer cannot
-afford. The proposed fix is narrower than this post's: return early and
-drop the message before the DML branch, the same outcome `pgoutput`'s
-own `default:` case already gets for free, not a dispatch table. Two
-decoders, two different bugs, the same underlying cause either way — a
-Message frame reaching code that assumes every frame is a row.
+against pgcopydb issue #1060: on the `wal2json` plugin path — a
+different decoder, `ld_transform.c`'s `parseMessage()`, not the
+`pgoutput` one above — the same kind of frame was not filtered
+harmlessly, it broke `follow` outright. A message with no `schema` or
+`table` property (PeerDB's or ClickPipes's own `peerdb_heartbeat`,
+emitted on any source those tools share) routed into the DML branch
+anyway, `parseWal2jsonMessage()` failed parsing a row shape out of a
+message that was never a row, and apply retried the same transaction
+forever; the reproducer in `tests/` shows `follow` reaching endpos with
+real rows silently missing on the target — the exact silent-gap failure
+mode a CDC consumer cannot afford. It is fixed on `main` by an explicit
+`STREAM_ACTION_MESSAGE` case that discards the message before the DML
+dispatch (#1065). Two decoders, two different bugs, the same underlying
+cause either way — a Message frame reaching code that assumes every
+frame is a row.
 
 {{< image src="fig-pgcopydb-message.svg" title="DDL as a message, not a queue table. An Event Trigger emits a JSON message, prefix pgcopydb, type ddl, body the command text. pgcopydb follow decodes the Message frame, filters on the prefix, parses the JSON, and dispatches on type — the ddl handler executes the body on the same connection the rest of the apply worker already uses, inside the same commit-ordered stream as every other change." >}}
 
 ### The design
 
-Full design in a separate note, `pgcopydb-cdc-messages.md`, built on a
-line-by-line read of both the pgcopydb source and Postgres core's own
-wire format for the Message frame (`proto.c:
+The design follows from a line-by-line read of both the pgcopydb source
+and Postgres core's own wire format for the Message frame (`proto.c:
 logicalrep_write_message`). A JSON envelope, `{"type": "ddl", "body":
 "..."}`, with `type` as an open
-registry — `ddl` is the only one this post ships, and the envelope
+registry — `ddl` is the only one defined so far, and the envelope
 exists specifically so a second kind, a sequence-sync message being the
 obvious next candidate, is a new `type` value and a new dispatch-table
 entry, not a second wire convention. The source side reuses Part 2's own
@@ -508,7 +504,7 @@ complexity Part 2 weighed and rejected when it considered a second,
 independent DDL-message slot.
 
 ```sql
-create function shop.emit_ddl_message() returns event_trigger
+create function pgcopydb.emit_ddl_message() returns event_trigger
   language plpgsql as $f$
 declare
   payload json;
@@ -518,25 +514,28 @@ begin
 end;
 $f$;
 
-create event trigger shop_emit_ddl on ddl_command_end
-  when tag in ('CREATE TABLE', 'ALTER TABLE')
-  execute function shop.emit_ddl_message();
+create event trigger pgcopydb_emit_ddl_message on ddl_command_end
+  when tag in ('CREATE TABLE', 'ALTER TABLE', 'DROP TABLE',
+               'CREATE INDEX', 'DROP INDEX', 'CREATE SEQUENCE',
+               'ALTER SEQUENCE', 'DROP SEQUENCE', 'CREATE VIEW',
+               'ALTER VIEW', 'DROP VIEW')
+  execute function pgcopydb.emit_ddl_message();
 ```
 
-This design did not stay a design. [PR #1064](https://github.com/dimitri/pgcopydb/pull/1064),
+This design is now code. [PR #1064](https://github.com/dimitri/pgcopydb/pull/1064),
 "replicate DDL over logical decoding as a typed message," implements
-exactly it — the `case 'M':` decode in `ld_pgoutput.c`, storage in
+it — the `case 'M':` decode in `ld_pgoutput.c`, storage in
 `ld_store.c`, the `STREAM_ACTION_MESSAGE` dispatch in `ld_transform.c`
 and `ld_apply.c`, and a `pgcopydb stream event-trigger` subcommand that
 installs the trigger above automatically instead of asking a reader to
 write it by hand. **Merged** to `main` 2026-10-16.
 
-This post tested three separate commits on the way there — the
+The demo tested three separate commits on the way there — the
 original PR (`febf16b`), a force-push (`251a03a`) that fixed a real but
 different bug (`stream_apply_flush_pipeline()`, draining the apply
 connection's pipeline before reporting `replay_lsn`, closing a gap
 where `follow` could report a COMMIT done while it was still only
-queued), and now the merge itself (`ffb41bd`) — and found the same
+queued), and the merge itself (`ffb41bd`) — and found the same
 symptom against all three: receive, storage, and transform are
 correct (**verified** directly against the running containers' own
 SQLite state, not taken on trust — the message lands in `output.db`
@@ -544,9 +543,9 @@ with the right envelope, resolves to a correctly hashed `stmt` row in
 `replay.db`, tagged with the real transaction xid), and the DDL never
 reaches the target.
 
-**Verified** down to the actual root cause this time, not just the
-symptom: a one-line diagnostic patch into `stream_apply_dml` (kept in
-this post's own `compose/patch/`, not a hypothesis) confirms
+**Verified** down to the root cause, not just the symptom: a small
+diagnostic patch to `stream_apply_dml` (in `compose/patch/ld_apply.c`)
+confirms
 `pgsql_execute()` for the DDL statement *returns success* — and
 nothing from that point on ever reaches the target connection again.
 `pg_stat_activity` on the target shows the apply connection sitting
@@ -565,26 +564,22 @@ message-carrying transaction's completion path is not reaching
 whatever step makes every *other* transaction's queued work actually
 flush.
 
-`[TODO: this is now a precise enough finding to file against #1064
-directly instead of re-describing the symptom — the diagnostic patch
-in compose/patch/ld_apply.c is the attachment. Re-run profile d clean
-once a real fix lands; confirm the warehouse gets the column with zero
-manual alter table statements, the way this section originally
-promised.]`
+`[TODO: report this finding upstream against #1064, with
+compose/patch/ld_apply.c attached. Re-run profile d once a fix lands and
+confirm the target gets the new column with zero manual alter table
+statements.]`
 
-Two edges carry over unchanged regardless, because the source side is
-unchanged: `current_query()` captures a multi-statement command whole,
-not split — confirmed the hard way, in this same `compose/` run, when
-a multi-statement debug block landed in `replay.db` as a single DDL
-message — and a replayed command runs with the apply worker's own role
+Two edges are independent of that bug, because they sit on the source
+side: `current_query()` captures a multi-statement command whole, not
+split — the demo showed a multi-statement command landing in `replay.db`
+as a single DDL message — and a replayed command runs with the apply worker's own role
 and `search_path`, not necessarily the one the original session had.
 Both are documentation, the same as they were in Part 2, not new code
 to write.
 
 ### No pre-existing open-source tool already does this
 
-PeerDB (AGPLv3, confirmed still open after its ClickHouse integration) and
-Sequin both stream one Postgres source out to many sinks, with routing
+PeerDB (AGPLv3) and Sequin both stream one Postgres source out to many sinks, with routing
 and filtering on the way out — neither merges more than one Postgres
 source into a single stream, and neither claims anything about
 surviving a promotion. The actual prior art for the *merge* direction,
@@ -595,8 +590,7 @@ it never guaranteed — a total order across merged sources, or atomicity
 across one distributed transaction's pieces. A fuller proxy built on
 that lineage — merge N sources, split by predicate, stay continuous
 across the failover this post opened with — is real, scoped,
-pg_auto_failover-shaped future work, the same honest "not built here"
-this post has already used twice.
+pg_auto_failover-shaped future work, and not built here.
 
 ---
 
@@ -615,14 +609,13 @@ measured, not a replacement for any of it:
   continent instead of a worker, with real multi-master conflict
   handling named honestly as commercial, not core.
 - **A finished CDC consumer** closes the one gap Part 2 explicitly
-  left open, and does it as a real, scoped change to a tool this site
-  already maintains, not a bigger demo.
+  left open, and does it as a real change merged into a tool the series
+  already relies on, not a bigger demo.
 
 The `[TODO]` markers through this post are not a hedge — they are
 the same discipline Part 3 closed on: every number anywhere in this
-series came from an actual rehearsal, and this post does not get to
-skip that just because it is the last one.
+series came from an actual rehearsal, and a placeholder stays a
+placeholder until it has one.
 
-The demo for this post, once it exists, will be in a `compose/`
-directory of its own, the same as every other part. Until then: run the
-other three, break them, and tell me what I got wrong — this one included.
+Every part has a `compose/` directory of its own, this one included.
+Run them, break them, and tell me what I got wrong.
