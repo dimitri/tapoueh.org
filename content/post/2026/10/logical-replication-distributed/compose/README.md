@@ -2,7 +2,7 @@
 
 Pinned to real commits, matching the pattern parts 1 through 3 already use
 (`docker-compose.yml` + profile-gated containers + `run-*.sh` + `results/`).
-Profiles **a**, **c**, **d** and **e** have been built and run; **b** isn't
+Profiles **a**, **c**, **d**, **e** and **f** have been built and run; **b** isn't
 scaffolded yet.
 
 ## Images build from source, not from a release
@@ -46,6 +46,16 @@ Re-pin before running this again — `main` moves.
   `reset-d.sh` must run between runs: it also drops the `pgcopydb`
   publication on the target, which clone's schema copy leaves behind.
 
+- **f** — the pg_auto_failover group of profile `a` plus a plain Postgres `y`
+  standing for a second region, linked in both directions by native logical
+  replication (`sub_y_from_x` with `failover = true` and a multi-host
+  connection string, `sub_x_from_y` on the group's primary). `./run-f.sh`
+  kills the primary under load on both sides and compares what both regions
+  hold afterwards. Three runs in `results/f-failover-run*.out`.
+  `run-a.sh` also captures `pg_autoctl show state`, `show settings`,
+  `show synchronized-standby-slots` and a `pg_autoctl watch` frame
+  (`results/a-*-captures.out`); on the pinned pg_auto_failover build `watch`
+  needs `--group 0`, without it it loops on "no nodes found in group -1".
 - **e** — pglogical 2.4.8 on Postgres 18.6, three nodes. `./run-e.sh findings`
   re-runs Part 1's partitioned-parent crash and filter-move findings;
   `./run-e.sh concurrent` has two nodes update the same 1,000 keys under
@@ -61,5 +71,6 @@ COMPOSE_PROFILES=c docker compose up -d --wait
 ./reset-d.sh && COMPOSE_PROFILES=d docker compose up -d --wait
 ./run-d.sh                                          # DDL-message demo
 ./run-a.sh planned                                  # failover drill (also: kill, kill-lag-gated, kill-lag-ungated)
+./run-f.sh                                          # two regions, failover in one
 ./reset-e.sh && ./run-e.sh findings && ./run-e.sh concurrent
 ```

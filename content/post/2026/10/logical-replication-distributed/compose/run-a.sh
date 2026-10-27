@@ -40,6 +40,26 @@ done
 say "formation ready after ${i}s"
 mon "select nodename, reportedstate, goalstate from pgautofailover.node order by nodeid" | sed 's/^/   /' | tee -a "$OUT"
 
+# region is a free-form label (informational, shown by pg_autoctl watch)
+dc exec -T monitor pg_autoctl set node region --pgdata /data/pgdata --name node_1 us-east-a >/dev/null 2>&1
+dc exec -T monitor pg_autoctl set node region --pgdata /data/pgdata --name node_2 us-east-b >/dev/null 2>&1
+
+watch_frame() {
+  dc exec -T monitor sh -c 'tmux kill-server 2>/dev/null; tmux new-session -d -x 160 -y 14 "pg_autoctl watch --pgdata /data/pgdata --group 0"; sleep 2; tmux capture-pane -p; tmux kill-server' 2>&1 | sed 's/[[:space:]]*$//' | sed 's/^/   /'
+}
+snap() { # label: what the operator would see right now
+  say; say "== $1 =="
+  say "-- pg_autoctl show state"
+  dc exec -T monitor pg_autoctl show state --pgdata /data/pgdata 2>&1 | sed 's/^/   /' | tee -a "$OUT"
+  say "-- pg_autoctl show synchronized-standby-slots"
+  dc exec -T monitor pg_autoctl show synchronized-standby-slots --pgdata /data/pgdata 2>&1 | sed 's/^/   /' | tee -a "$OUT"
+  say "-- pg_autoctl watch (one frame)"
+  dc exec -T monitor sh -c 'tmux kill-server 2>/dev/null; tmux new-session -d -x 160 -y 14 "pg_autoctl watch --pgdata /data/pgdata --group 0"; sleep 4; tmux capture-pane -p; tmux kill-server' 2>&1 | sed 's/[[:space:]]*$//' | sed 's/^/   /' | tee -a "$OUT"
+}
+snap "before the failover"
+say; say "-- pg_autoctl show settings"
+dc exec -T monitor pg_autoctl show settings --pgdata /data/pgdata 2>&1 | sed 's/^/   /' | tee -a "$OUT"
+
 pgq pg-a-primary "create table events (id bigint primary key, ts timestamptz not null default clock_timestamp(), node inet)" >/dev/null
 pgq pg-a-primary "select pg_create_logical_replication_slot('cdc', 'test_decoding', false, false, true)" >/dev/null
 say "-- settings on the primary"
@@ -98,6 +118,10 @@ case "$SCN" in
     dc kill pg-a-primary >/dev/null 2>&1 ;;
 esac
 
+case "$SCN" in planned) DURING=3 ;; *) DURING=25 ;; esac
+say; say "== during the failover ($DURING s after t0) =="
+sleep $DURING
+watch_frame | tee -a "$OUT"
 say "-- waiting for the monitor to report pg-a-standby as the writable primary"
 promoted=0
 for i in $(seq 1 300); do
@@ -123,6 +147,7 @@ dc exec -T a-client pkill pg_recvlogical >/dev/null 2>&1
 sleep 1
 
 cl psql "$URI" -X -At -c "select id from events order by id" > $HP-db.ids 2>/dev/null
+snap "after the failover"
 say
 say "== result: $SCN =="
 perl analyze-a.pl "$T0" $HP-db.ids $HP-writer.log $HP-consumer.log | tee -a "$OUT"

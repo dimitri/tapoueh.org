@@ -70,7 +70,7 @@ with a consumer attached to it.
 
 ### What Postgres actually guarantees
 
-**Verified**, against `REL_19_STABLE`, not inferred from the feature's
+**Verified**, against the `REL_19_RC1` tag, not inferred from the feature's
 name. Postgres 17 added `failover = true` on a replication slot and the
 `synchronized_standby_slots` GUC. Together they change one thing, exactly:
 a logical walsender gating on a failover slot will not send a client any
@@ -209,6 +209,84 @@ the consumer received that the final primary does not have.
   standby is allowed to take writes. Those are defaults, they can be
   tuned, and they are measured here on a local Docker network, not a
   WAN.
+
+What the operator sees is the monitor's own view. The nodes carry a
+free-form `region` label, set with `pg_autoctl set node region`; it is
+purely informational and no failover or quorum decision reads it, but
+`pg_autoctl watch` shows it as a column. Here is a frame taken 25
+seconds after the primary was killed, with the monitor part-way through
+the promotion (the node with the dead primary shows `demote_timeout`
+as its assigned state, and the standby is already `stop_replication`):
+
+```
+Formation: default - Sync Standbys: 0                                          10:05:17
+
+  Name  Node       Region Quorum Priority         Host:Port       TLI: LSN Last Check   Connection Last Report      Reported State      Assigned State
+node_1     1    us-east-a    yes       50 pg-a-primary:5432   1: 0/3042540         1s read-write !         27s             primary      demote_timeout
+node_2     2    us-east-b    yes       50 pg-a-standby:5432   2: 0/3042D50         1s    read-only          1s    stop_replication    stop_replication
+```
+
+Two details from the same captures, both worth knowing. `pg_autoctl
+show synchronized-standby-slots` prints `'pgautofailover_standby_2'` on
+a healthy pair, and an empty `''` once the primary has been killed and
+the standby promoted: with no standby left, the gate has nothing to wait
+for, so the consumer is unprotected until the old primary rejoins as a
+standby. And on the pinned build, `pg_autoctl watch` without
+`--group 0` loops on `no nodes found in group -1`; the frame above uses
+`--group 0`.
+
+### What a region's failover looks like from the other regions
+
+The scenario of this post is not one group: it is several, replicating to
+each other. So the question the drill above leaves open is what a
+failover in one region does to the logical replication it takes part in
+with another, in both directions at once.
+
+{{< image src="fig-region-node.svg" title="What runs at each site. The us-east site is a pg_auto_failover group: a monitor, a primary and a standby. The primary publishes pub_x, runs the subscription sub_x_from_y, and holds the failover-enabled slot sub_y_from_x that the other region's subscription reads. The standby keeps a synced copy of that slot, and has the subscription in its catalogs without a worker. The other region is plain Postgres, whose subscription lists both us-east nodes." >}}
+
+Two things have to be set up once, and neither is automatic. The
+subscription that reads from the group is created with
+`failover = true`, so that the slot it creates on the primary is the
+kind the standby synchronizes, and its connection string lists every
+node of the group with `target_session_attrs=read-write`, so it finds
+whichever one is the primary. The subscription the group runs from the
+other region needs nothing: it lives in the catalogs, which physical
+replication carries to the standby, and a subscription's apply worker
+starts on a node only while that node is a primary.
+
+{{< image src="fig-region-failover.svg" title="One region fails over, with logical replication to a second region in both directions. The primary is killed; the monitor promotes the standby; the standby's own subscription resumes from its replication origin at once, and the other region's subscription reconnects to the new primary as soon as it accepts writes, and resumes from the synced slot." >}}
+
+**Verified**, by running it: profile `f` in `compose/` is a group of
+two nodes in one region and a plain Postgres in another, each owning the
+rows of its own region key, linked in both directions by native logical
+replication, with a writer on each side. The group's primary is killed
+under load, and the test waits until both sides hold the same rows.
+Three runs, all with the same result:
+
+- **Nothing lost, nothing duplicated, in either direction.** In the
+  first run, 2,526 region-`x` rows and 4,443 region-`y` rows were
+  acknowledged; after the failover both sides hold exactly those rows.
+  The other two runs end the same way (2,439 and 4,358, then 2,538 and
+  4,396). No duplicate reached the subscribers: the only apply error is
+  the one counted for the dropped connection.
+- **The two directions come back at different times.** The group's own
+  subscription resumes at promotion, about 20 seconds after the kill,
+  at the position its replication origin recorded. The other region's
+  subscription cannot connect until the new primary accepts writes,
+  about 50 seconds in, which its worker finds by retrying every five
+  seconds: 55, 55 and 50 seconds without new rows from the group, against
+  20 seconds the other way.
+- **The slot did its job.** The standby held a synced copy of the
+  failover slot before the kill, and the other region's subscription
+  resumed on the new primary from it, without a resync.
+
+This was run with pg_auto_failover's default synchronous replication, where
+a commit on the primary waits for the standby. The direction the test
+does not cover is a group whose standby is behind when the primary
+dies, for the subscription the group runs from the other region: that is
+the case where the other side's slot can be ahead of what the standby
+has, and it is the reason to keep the synchronous setting for such a
+group.
 
 ### Geo-replication is the same mechanism, read for latency instead of correctness
 

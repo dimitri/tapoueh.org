@@ -83,7 +83,7 @@ services:
 
   # ---------------- profile a: pg_auto_failover failover-slot continuity ----------------
   monitor:
-    profiles: [a]
+    profiles: [a, f]
     build:
       context: .
       dockerfile: Dockerfile.pgautofailover
@@ -102,7 +102,7 @@ services:
       retries: 60
 
   pg-a-primary:
-    profiles: [a]
+    profiles: [a, f]
     image: lrdist-pgaf:17
     hostname: pg-a-primary
     environment:
@@ -121,7 +121,7 @@ services:
       retries: 90
 
   pg-a-standby:
-    profiles: [a]
+    profiles: [a, f]
     image: lrdist-pgaf:17
     hostname: pg-a-standby
     environment:
@@ -136,7 +136,7 @@ services:
 
   # the application and the CDC consumer: psql, pg_recvlogical, perl
   a-client:
-    profiles: [a]
+    profiles: [a, f]
     image: lrdist-pgaf:17
     entrypoint: ["sleep", "infinity"]
     depends_on: [monitor]
@@ -144,6 +144,22 @@ services:
       - ./traffic:/traffic:ro
       - ./results:/results
     user: root
+
+  # profile f: a second region, a plain Postgres, linked to the pg_auto_failover
+  # group above by logical replication in both directions
+  y:
+    <<: *pg-common
+    profiles: [f]
+    image: postgres:17
+    hostname: y
+    command: >
+      postgres -c wal_level=logical -c max_wal_senders=20
+      -c max_replication_slots=20 -c max_logical_replication_workers=8
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app
+      POSTGRES_HOST_AUTH_METHOD: trust
+    tmpfs: ["/var/lib/postgresql/data"]
 
   # ---------------- profile d: pgcopydb DDL-as-a-message, against PR #1064 ----------------
   d-source:
