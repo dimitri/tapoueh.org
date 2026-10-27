@@ -346,7 +346,7 @@ the `region` label is for, and disaster recovery with archiving built
 in. The project is maintained by one person, and its maintenance is
 funded by the teams that run it: the
 [pg_auto_failover funding campaign](https://oss.theartofpostgresql.com/pg_auto_failover/)
-is how that work, this post's included, gets paid for.
+is how that work gets paid for.
 
 ---
 
