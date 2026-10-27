@@ -2,7 +2,7 @@
 # A CDC consumer: pg_recvlogical on the failover slot, reconnecting through the
 # multi-host URI until it finds a read-write node. Every line is stamped with
 # the time it was received. Stops when /tmp/a-stop-consumer exists.
-URI="postgres://postgres@pg-a-primary:5432,pg-a-standby:5432/app?target_session_attrs=read-write&connect_timeout=2"
+URI="postgres://postgres@us-east-a:5432,us-east-b:5432,us-east-c:5432/app?target_session_attrs=read-write&connect_timeout=2"
 LOG=${1:?log file}
 : > "$LOG"
 while [ ! -e /tmp/a-stop-consumer ]; do

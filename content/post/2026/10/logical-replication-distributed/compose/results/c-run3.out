@@ -1,0 +1,48 @@
+== five groups:        5 monitors, 15 nodes ==
+   us-east: primary us-east-a
+   us-west: primary us-west-a
+   ap-south: primary ap-south-a
+   ap-southeast: primary ap-southeast-a
+   eu-west: primary eu-west-a
+== schema ==
+== publications, row-filtered on region ==
+== subscriptions: through every node of the publishing group, failover-enabled ==
+== waiting for the initial table sync of every subscription ==
+== concurrent writers: 2000 rows each, four regions in parallel ==
+== settling ==
+=== row counts on every primary (expect 8000 everywhere once fully mirrored) ===
+us-east: 8000
+us-west: 8000
+ap-south: 8000
+ap-southeast: 8000
+eu-west: 8000
+
+=== per-region row counts on the warehouse (expect 2000 each) ===
+ap-south: 2000
+ap-southeast: 2000
+us-east: 2000
+us-west: 2000
+
+=== the standbys hold the same rows (physical replication), eu-west and us-east shown ===
+eu-west-b: 8000
+eu-west-c: 8000
+us-east-b: 8000
+us-east-c: 8000
+
+=== apply/sync error counts, every primary ===
+(pg_stat_subscription_stats' per-conflict-type columns, confl_insert_exists
+ and friends, are PG18+; this demo runs PG17, so apply_error_count and
+ sync_error_count are what is available.)
+-- us-east --
+sub_us_east_from_eu_west: apply_errors=0 sync_errors=0
+sub_us_east_from_us_west: apply_errors=0 sync_errors=0
+-- us-west --
+sub_us_west_from_us_east: apply_errors=0 sync_errors=0
+-- ap-south --
+sub_ap_south_from_ap_southeast: apply_errors=0 sync_errors=0
+sub_ap_south_from_eu_west: apply_errors=0 sync_errors=0
+-- ap-southeast --
+sub_ap_southeast_from_ap_south: apply_errors=0 sync_errors=0
+-- eu-west --
+sub_eu_west_from_ap_south: apply_errors=0 sync_errors=0
+sub_eu_west_from_us_east: apply_errors=0 sync_errors=0

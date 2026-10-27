@@ -32,7 +32,7 @@ printf "duplicate deliveries (extra receipts)         : %d  (ids %s)\n", $extra,
 printf "holes: in the database, never received        : %d  (ids %s)\n", scalar @missing, rng(@missing);
 printf "ahead: received, absent from the database     : %d  (ids %s)\n", scalar @ahead, rng(@ahead);
 printf "acknowledged to the writer but lost           : %d  (ids %s)\n", scalar @lost_acked, rng(@lost_acked);
-my ($g, $f, $t) = longest_gap(values %first);
-printf "consumer: longest silence %.1f s, from t0%+.1f s to t0%+.1f s\n", $g, $f - $t0, $t - $t0;
-($g, $f, $t) = longest_gap(values %ack);
-printf "writer:   longest silence %.1f s, from t0%+.1f s to t0%+.1f s\n", $g, $f - $t0, $t - $t0;
+my ($g, $gf, $gt) = longest_gap(values %first);
+printf "consumer: longest silence %.1f s, from t0%+.1f s to t0%+.1f s\n", $g, $gf - $t0, $gt - $t0;
+($g, $gf, $gt) = longest_gap(values %ack);
+printf "writer:   longest silence %.1f s, from t0%+.1f s to t0%+.1f s\n", $g, $gf - $t0, $gt - $t0;

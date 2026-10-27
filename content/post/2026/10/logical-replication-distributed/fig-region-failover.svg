@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 720" role="img" aria-label="Sequence of a failover in one region with logical replication to another region in both directions. Before the failure, the primary streams WAL to the standby and exchanges rows with the other region. The primary is killed. The monitor marks it unhealthy after about ten seconds and promotes the standby at about twenty seconds, when the standby's apply worker resumes pulling the other region's rows from its replication origin. About fifty seconds in the standby accepts writes, and the other region's subscription connects to it and resumes from the synced slot. No rows are lost or duplicated in either direction.">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 720" role="img" aria-label="Sequence of a failover in one region (a group of three nodes, us-east-c omitted: it follows the new primary) with logical replication to another region in both directions. Before the failure, the primary streams WAL to the standby and exchanges rows with the other region. The primary is killed. The monitor marks it unhealthy after about ten seconds and promotes the standby at about twenty seconds, when the standby's apply worker resumes pulling the other region's rows from its replication origin. About fifty seconds in the standby accepts writes, and the other region's subscription connects to it and resumes from the synced slot. No rows are lost or duplicated in either direction.">
   <style>
     text { font-family: system-ui, sans-serif; fill: #222; }
     .title { font-size: 19px; font-weight: 700; }
@@ -48,7 +48,7 @@
     <marker id="m3" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#7a5cc2"/></marker>
   </defs>
   <text class="title" x="30" y="32">One region fails over, with logical replication to a second region in both directions</text>
-  <rect class="head node-remote" x="50" y="50" width="160" height="34" rx="6"/><text class="node-title" x="130" y="72" text-anchor="middle" style="font-size:13px">y (other region)</text>
+  <rect class="head node-remote" x="50" y="50" width="160" height="34" rx="6"/><text class="node-title" x="130" y="72" text-anchor="middle" style="font-size:13px">us-west</text>
   <line class="life" x1="130" y1="84" x2="130" y2="700"/>
   <rect class="head node-primary" x="300" y="50" width="160" height="34" rx="6"/><text class="node-title" x="380" y="72" text-anchor="middle" style="font-size:13px">us-east-a (primary)</text>
   <line class="life" x1="380" y1="84" x2="380" y2="700"/>
@@ -60,32 +60,32 @@
   <path class="pr" d="M380 132 L630 132"/>
   <text class="lbl" x="505.0" y="126" text-anchor="middle">WAL, physical replication</text>
   <path class="ls" d="M380 160 L130 160"/>
-  <text class="lbl" x="255.0" y="154" text-anchor="middle">x rows (slot sub_y_from_x)</text>
+  <text class="lbl" x="255.0" y="154" text-anchor="middle">east rows (slot sub_us_west_from_us_east)</text>
   <path class="ls" d="M130 188 L380 188"/>
-  <text class="lbl" x="255.0" y="182" text-anchor="middle">y rows (pulled by sub_x_from_y)</text>
-  <text class="lbl" x="388" y="222">the walsender for sub_y_from_x only sends what B has flushed</text>
+  <text class="lbl" x="255.0" y="182" text-anchor="middle">west rows (sub_us_east_from_us_west)</text>
+  <text class="lbl" x="388" y="222">the walsender for sub_us_west_from_us_east only sends what both standbys have flushed</text>
   <rect class="band" x="30" y="246" width="940" height="64" rx="4"/><text class="zone-label" x="40" y="260">t0</text>
-  <path class="bad" d="M368 270 L392 294 M392 270 L368 294"/><text class="badt" x="402" y="286">primary killed</text>
-  <rect class="band" x="30" y="318" width="940" height="150" rx="4"/><text class="zone-label" x="40" y="332">t0 + 10 to 50 s</text>
+  <path class="bad" d="M368 270 L392 294 M392 270 L368 294"/><text class="badt" x="402" y="286">us-east-a killed</text>
+  <rect class="band" x="30" y="318" width="940" height="150" rx="4"/><text class="zone-label" x="40" y="332">t0 + 10 to 52 s</text>
   <circle cx="880" cy="350" r="4" fill="#7a5cc2"/>
   <text class="lbl" x="880.0" y="344" text-anchor="middle"></text>
-  <text class="lbl" x="872" y="346" text-anchor="end">marks A unhealthy (about 10 s)</text>
+  <text class="lbl" x="872" y="346" text-anchor="end">marks us-east-a unhealthy (about 10 s)</text>
   <path class="pr" d="M880 376 L630 376"/>
   <text class="lbl" x="755.0" y="370" text-anchor="middle">prepare_promotion (about 20 s)</text>
-  <text class="okt" x="640" y="398">B promoted; its apply worker for sub_x_from_y starts</text>
+  <text class="okt" x="640" y="398">us-east-b promoted: its worker starts</text>
   <path class="ls" d="M630 420 L130 420"/>
-  <text class="lbl" x="380.0" y="414" text-anchor="middle">START_REPLICATION sub_x_from_y at the origin's LSN</text>
+  <text class="lbl" x="380.0" y="414" text-anchor="middle">START_REPLICATION sub_us_east_from_us_west at the origin's LSN</text>
   <path class="ls" d="M130 446 L630 446"/>
-  <text class="lbl" x="380.0" y="440" text-anchor="middle">y rows resume (about 20 s)</text>
-  <text class="lbl" x="140" y="470">y: connection to B refused: session is read-only</text>
-  <text class="lbl" x="140" y="486">retries every 5 s, A unreachable, B read-only</text>
-  <rect class="band" x="30" y="500" width="940" height="150" rx="4"/><text class="zone-label" x="40" y="514">t0 + 50 s</text>
+  <text class="lbl" x="380.0" y="440" text-anchor="middle">west rows resume (about 20 s)</text>
+  <text class="lbl" x="140" y="470">us-west: us-east-b refuses: session is read-only</text>
+  <text class="lbl" x="140" y="486">retries every 5 s; us-east-a is unreachable</text>
+  <rect class="band" x="30" y="500" width="940" height="150" rx="4"/><text class="zone-label" x="40" y="514">t0 + 52 s</text>
   <path class="pr" d="M880 532 L630 532"/>
-  <text class="lbl" x="755.0" y="526" text-anchor="middle">wait_primary: B accepts writes (about 50 s)</text>
+  <text class="lbl" x="755.0" y="526" text-anchor="middle">wait_primary: us-east-b accepts writes (about 50 s)</text>
   <path class="ls" d="M130 562 L630 562"/>
-  <text class="lbl" x="380.0" y="556" text-anchor="middle">connect, START_REPLICATION sub_y_from_x</text>
+  <text class="lbl" x="380.0" y="556" text-anchor="middle">connect, START_REPLICATION sub_us_west_from_us_east</text>
   <path class="ls" d="M630 590 L130 590"/>
-  <text class="lbl" x="380.0" y="584" text-anchor="middle">x rows resume (50 to 55 s)</text>
-  <text class="okt" x="640" y="618">the synced slot is on B: no hole</text>
+  <text class="lbl" x="380.0" y="584" text-anchor="middle">east rows resume (about 55 s)</text>
+  <text class="okt" x="640" y="618">the synced slot is on us-east-b: no hole</text>
   <text class="okt" x="140" y="618">no duplicate:</text><text class="lbl" x="140" y="634">each side resumes from</text><text class="lbl" x="140" y="650">its replication origin</text>
 </svg>

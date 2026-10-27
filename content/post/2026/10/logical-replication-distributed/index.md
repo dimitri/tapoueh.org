@@ -50,7 +50,7 @@ only ever quoted numbers from a real `make run`, and so does this one.
 
 {{< image src="fig-region-map.svg" title="One writer per region: conflicts avoided by construction." >}}
 
-Four equal primaries, four disjoint region keys — us-east in New York, us-west in San Francisco, in in Mumbai, au in Sydney — so no two of them ever mint the same row. Every site, the Amsterdam warehouse included, is a pg_auto_failover-managed primary and standby pair, not a single server. Every link is the same bidirectional logical replication: a region's own writes flow one way, a read-only mirror of everyone else's data flows back the other way. New York and Mumbai link straight to one global warehouse in Amsterdam; San Francisco and Sydney cascade through them instead of each opening its own long-haul connection. Every site has its own front desk, read-write against its own region and read-only against the mirror of the rest.
+Four equal primaries, four disjoint region keys — us-east in New York, us-west in San Francisco, ap-south in Mumbai, ap-southeast in Sydney — so no two of them ever mint the same row. Every site, the eu-west warehouse in Amsterdam included, is a pg_auto_failover group of its own: a monitor and three nodes, one primary and two standbys, not a single server. The groups share no failover: they are linked by logical replication only. Every link is the same bidirectional logical replication: a region's own writes flow one way, a read-only mirror of everyone else's data flows back the other way. New York and Mumbai link straight to one global warehouse in Amsterdam; San Francisco and Sydney cascade through them instead of each opening its own long-haul connection. Every site has its own front desk, read-write against its own region and read-only against the mirror of the rest.
 
 Four things, each a post of its own in a shorter series, covered here in
 one, in the order a team actually runs into them: the primary dies and a
@@ -166,8 +166,9 @@ hand (the same name `pg_auto_failover` already assigns,
 sides — one `ALTER SYSTEM` or config-file edit away, and silent if
 missed. That half is now pg_auto_failover's job, not this script's.
 
-**Verified**, by running it: profile `a` in `compose/` is a pg_auto_failover
-monitor with a primary and a standby on Postgres 17, built from the
+**Verified**, by running it: profile `a` in `compose/` is the `us-east`
+region, a pg_auto_failover group of its own, a monitor and three nodes
+(`us-east-a`, `us-east-b`, `us-east-c`) on Postgres 17, built from the
 commit that merges #1197 and left at its default timings. A
 `pg_recvlogical` consumer (`test_decoding`, one-second feedback interval)
 follows a `failover = true` slot while a writer inserts about 25 rows a
@@ -178,40 +179,40 @@ the consumer received that the final primary does not have.
 
 | Scenario | Duplicates | Holes | Ahead | Writer blocked |
 |---|---|---|---|---|
-| `pg_autoctl perform failover` | 0, 0, 0 | 0, 0, 0 | 0, 0, 0 | 6.5 s |
-| primary killed | 1, 1, 6 | 0, 0, 0 | 0, 0, 0 | 50 s |
-| standby cut off, then primary killed, gate on | 0, 0, 0 | 0, 0, 0 | 0, 0, 0 | 50 s |
-| same, `synchronized_standby_slots` emptied | 0, 0, 0 | 34, 9, 43 | 134, 135, 136 | 50 s |
+| `pg_autoctl perform failover` | 0, 0, 0 | 0, 0, 0 | 0, 0, 0 | 1 s |
+| primary killed | 12, 7, 11 | 0, 0, 0 | 0, 0, 0 | 51 to 53 s |
+| both standbys cut off, then primary killed, gate on | 0, 0, 0 | 0, 0, 0 | 0, 0, 0 | 52 s |
+| same, `synchronized_standby_slots` emptied | 0, 0, 0 | 16, 45, 2 | 143, 143, 140 | 51 to 53 s |
 
 - **The guarantee holds as described.** With the gate on, a planned
-  failover and a killed primary produce duplicates, bounded by the
-  consumer's feedback interval, and no holes. The consumer resumes by
-  itself through a multi-host connection string, up to five seconds
-  after the new primary accepts writes, which is `pg_recvlogical`'s own
-  reconnect delay.
-- **The gate does its job when the standby is behind.** In the third
-  scenario the standby stops receiving WAL five seconds before the kill
+  failover produces no duplicate at all and a killed primary produces
+  a handful, bounded by the consumer's feedback interval, and neither
+  produces a hole. The consumer resumes by itself through a multi-host
+  connection string, up to five seconds after the new primary accepts
+  writes, which is `pg_recvlogical`'s own reconnect delay.
+- **The gate does its job when the standbys are behind.** In the third
+  scenario both standbys stop receiving WAL five seconds before the kill
   and the writer commits with `synchronous_commit = local`. The consumer
   receives nothing from that moment on, because the walsender will not
-  send past what the standby has flushed. About 130 rows the writer had
+  send past what the standbys have flushed. About 130 rows the writer had
   been told were committed are lost with the old primary — that is the
   cost of `synchronous_commit = local`, and not the consumer's to carry —
   but none of them had been delivered downstream.
 - **Misconfigured, the prediction comes true, and then some.** With
   `synchronized_standby_slots` empty, the same sequence delivers about
-  135 rows to the consumer that the new primary never had. The new
+  140 rows to the consumer that the new primary never had. The new
   primary then writes new rows at WAL positions the consumer's
-  confirmed position is already past, so the slot skips them: 9 to 43
+  confirmed position is already past, so the slot skips them: 2 to 45
   rows written after the failover never reach the consumer at all. The
   consumer is ahead of the history it reads from, which is the case the
   `IDENTIFY_SYSTEM` check in step 3 exists to catch, and nothing in
   Postgres raises it for you.
-- **What dominates the downtime is not the slot.** A planned failover
-  blocks the writer for 6.5 seconds. A killed primary blocks it for
-  about 50: roughly ten seconds for the monitor to mark the node
-  unhealthy, and the rest in pg_auto_failover's drain timeout before the
-  standby is allowed to take writes. Those are defaults, they can be
-  tuned, and they are measured here on a local Docker network, not a
+- **What dominates the downtime is not the slot.** With three nodes a
+  planned failover blocks the writer for about a second. A killed primary
+  blocks it for about 52: roughly ten seconds for the monitor to mark the
+  node unhealthy, and the rest in pg_auto_failover's drain timeout before
+  the new primary is allowed to take writes. Those are defaults, they can
+  be tuned, and they are measured here on a local Docker network, not a
   WAN.
 
 What the operator sees is the monitor's own view. The nodes carry a
@@ -222,27 +223,50 @@ pg_auto_failover does not do yet: handling cascading physical
 replication across data centres, and several archiving nodes. Neither
 exists today, and neither would change anything in this post, where the
 links between regions are logical replication, not a standby of a
-standby. Here is a frame taken 25
-seconds after the primary was killed, with the monitor part-way through
-the promotion (the node with the dead primary shows `demote_timeout`
-as its assigned state, and the standby is already `stop_replication`):
+standby. The labels used in this post are the site names of the map.
+Every region is a pg_auto_failover group of its own, with its own
+monitor and three nodes named `<region>-a`, `<region>-b` and
+`<region>-c`, and the three nodes carry the same label: `us-east` for
+New York, `us-west` for San Francisco, `ap-south` for Mumbai,
+`ap-southeast` for Sydney, and `eu-west` for the Amsterdam warehouse.
+The monitors carry none. For the four sites that own rows, the label is
+also the value of the `region` column, so a row's key and its node's
+label name the same place. Here is a frame taken 25 seconds after the
+primary was killed, with the monitor part-way through the election:
+`us-east-a` is still `primary` but assigned `demote_timeout`, `us-east-c`
+has been picked and is in `stop_replication`, and `us-east-b` is
+following it (`join_secondary`):
 
 ```
-Formation: default - Sync Standbys: 0                                          10:05:17
+Formation: default - Sync Standbys: 1                                       11:13:07
 
-  Name  Node       Region Quorum Priority         Host:Port       TLI: LSN Last Check   Connection Last Report      Reported State      Assigned State
-node_1     1    us-east-a    yes       50 pg-a-primary:5432   1: 0/3042540         1s read-write !         27s             primary      demote_timeout
-node_2     2    us-east-b    yes       50 pg-a-standby:5432   2: 0/3042D50         1s    read-only          1s    stop_replication    stop_replication
+     Name  Node       Region Quorum Priority      Host:Port       TLI: LSN Last Check   Connection Last Report      Reported State      Assigned State
+us-east-a     1      us-east    yes       50 us-east-a:5432   1: 0/5047430         1s read-write !         28s             primary      demote_timeout
+us-east-c     2      us-east    yes       50 us-east-c:5432   2: 0/5047C08         1s    read-only          1s    stop_replication    stop_replication
+us-east-b     3      us-east    yes       50 us-east-b:5432   1: 0/5047A30         6s    read-only          1s      join_secondary      join_secondary
 ```
 
-Two details from the same captures, both worth knowing. `pg_autoctl
-show synchronized-standby-slots` prints `'pgautofailover_standby_2'` on
-a healthy pair, and an empty `''` once the primary has been killed and
-the standby promoted: with no standby left, the gate has nothing to wait
-for, so the consumer is unprotected until the old primary rejoins as a
-standby. And on the pinned build, `pg_autoctl watch` without
-`--group 0` loops on `no nodes found in group -1`; the frame above uses
-`--group 0`.
+Two details from the same captures. `pg_autoctl show
+synchronized-standby-slots` prints both standbys' slots,
+`'pgautofailover_standby_2,pgautofailover_standby_3'`, on a healthy
+group, and one, `'pgautofailover_standby_3'`, once the primary has been
+killed and a standby promoted: the gate shrinks to the standby that is
+left, and keeps protecting the consumer, which a two-node group could not
+do. And on the pinned build, `pg_autoctl watch` without `--group 0` loops
+on `no nodes found in group -1`; the frame above uses `--group 0`.
+
+One more thing the demos found, which matters for the guarantee itself.
+When the two standbys of a group are created at the same moment, the
+primary can keep a `synchronized_standby_slots` that lists only one of
+them, while the monitor's own value lists both, and nothing corrects it:
+the one standby outside the list is outside the gate, and if it is the
+one promoted, the consumer can be ahead of it. It showed up in one
+group out of five started together. Setting any node's replication quorum
+to the value it already has makes the keeper re-read the monitor's value,
+which is what the demos do when they see a short list. It is a bug to be
+fixed in pg_auto_failover, and `pg_autoctl show settings` against the
+primary's actual `show synchronized_standby_slots` is the check to run
+until then.
 
 ### What a region's failover looks like from the other regions
 
@@ -253,53 +277,56 @@ with another, in both directions at once.
 
 {{< image src="fig-region-node.svg" title="What runs at each site." >}}
 
-The us-east site is a pg_auto_failover group: a monitor, a primary and a standby. The primary publishes pub_x, runs the subscription sub_x_from_y, and holds the failover-enabled slot sub_y_from_x that the other region's subscription reads. The standby keeps a synced copy of that slot, and has the subscription in its catalogs without a worker. The other region is plain Postgres, whose subscription lists both us-east nodes.
+Each region is a pg_auto_failover group of its own, a monitor and three nodes, and the two regions of the figure are the same group mirrored. The primary of `us-east` publishes `pub_us_east`, runs the subscription `sub_us_east_from_us_west` that reads `us-west`, and holds the failover-enabled slot `sub_us_west_from_us_east` that `us-west` reads. Both standbys keep a synced copy of that slot, and have the subscription in their catalogs without a worker. `us-west` is the same, with the roles reversed.
 
 Two things have to be set up once, and neither is automatic. The
-subscription that reads from the group is created with
-`failover = true`, so that the slot it creates on the primary is the
-kind the standby synchronizes, and its connection string lists every
-node of the group with `target_session_attrs=read-write`, so it finds
-whichever one is the primary. The subscription the group runs from the
-other region needs nothing: it lives in the catalogs, which physical
-replication carries to the standby, and a subscription's apply worker
-starts on a node only while that node is a primary.
+subscription that reads from a group is created with `failover = true`,
+so that the slot it creates on the primary is the kind the standbys
+synchronize, and its connection string lists every node of the group
+with `target_session_attrs=read-write`, so it finds whichever one is the
+primary. The subscription the group itself runs from the other region
+needs nothing: it lives in the catalogs, which physical replication
+carries to the standbys, and a subscription's apply worker starts on a
+node only while that node is a primary.
 
 {{< image src="fig-region-failover.svg" title="One region fails over, with logical replication to a second region in both directions." >}}
 
-The primary is killed; the monitor promotes the standby; the standby's own subscription resumes from its replication origin at once, and the other region's subscription reconnects to the new primary as soon as it accepts writes, and resumes from the synced slot.
+The primary is killed; the monitor elects and promotes a standby; that node's own subscription resumes from its replication origin at once, and the other region's subscription reconnects to the new primary as soon as it accepts writes, and resumes from the synced slot.
 
-**Verified**, by running it: profile `f` in `compose/` is a group of
-two nodes in one region and a plain Postgres in another, each owning the
-rows of its own region key, linked in both directions by native logical
-replication, with a writer on each side. The group's primary is killed
-under load, and the test waits until both sides hold the same rows.
-Three runs, all with the same result:
+**Verified**, by running it: profile `f` in `compose/` is two regions,
+`us-east` and `us-west`, each a group of its own with its own monitor
+and three nodes, each owning the rows of its own region key, linked in
+both directions by native logical replication, with a writer on each
+side. The primary of one region is killed under load, and the test
+waits until both sides hold the same rows. Three runs killing
+`us-east-a` and three killing `us-west-a`, with the same result every
+time:
 
-- **Nothing lost, nothing duplicated, in either direction.** In the
-  first run, 2,526 region-`x` rows and 4,443 region-`y` rows were
-  acknowledged; after the failover both sides hold exactly those rows.
-  The other two runs end the same way (2,439 and 4,358, then 2,538 and
-  4,396). No duplicate reached the subscribers: the only apply error is
-  the one counted for the dropped connection.
-- **The two directions come back at different times.** The group's own
-  subscription resumes at promotion, about 20 seconds after the kill,
-  at the position its replication origin recorded. The other region's
-  subscription cannot connect until the new primary accepts writes,
-  about 50 seconds in, which its worker finds by retrying every five
-  seconds: 55, 55 and 50 seconds without new rows from the group, against
-  20 seconds the other way.
-- **The slot did its job.** The standby held a synced copy of the
+- **Nothing lost, nothing duplicated, in either direction.** With
+  `us-east-a` killed, the first run acknowledged 2,288 `us-east` rows and
+  3,631 `us-west` rows, and afterwards both regions hold exactly those
+  rows. The other five runs end the same way: every acknowledged row is
+  on both sides, none is missing, none is twice. The only apply error is
+  one counted on the subscription that lost its connection.
+- **The two directions come back at different times, and which one is
+  which follows the dead region.** The failed region's own subscription
+  resumes about 21 seconds after the kill, at the position its
+  replication origin recorded, as soon as a standby is promoted. The
+  other region's subscription cannot connect until the new primary
+  accepts writes, about 52 seconds in, and its worker finds that by
+  retrying every five seconds: 55 seconds without new rows from the
+  failed region in all six runs, against 21 the other way.
+- **The slot did its job.** The standbys held a synced copy of the
   failover slot before the kill, and the other region's subscription
-  resumed on the new primary from it, without a resync.
+  resumed on the new primary (`us-east-b` or `us-west-b` or `-c`,
+  whichever the election picked) from it, without a resync.
 
 This was run with pg_auto_failover's default synchronous replication, where
-a commit on the primary waits for the standby. The direction the test
-does not cover is a group whose standby is behind when the primary
-dies, for the subscription the group runs from the other region: that is
-the case where the other side's slot can be ahead of what the standby
-has, and it is the reason to keep the synchronous setting for such a
-group.
+a commit on the primary waits for a standby. The case the test does not
+cover is a group whose standbys are behind when the primary dies, for the
+subscription the group runs from the other region: that is the case where
+the other side's slot can be ahead of what the promoted node has, and it
+is the reason to keep the synchronous setting for such a group.
 
 ### Geo-replication is the same mechanism, read for latency instead of correctness
 
@@ -365,14 +392,18 @@ One Postgres primary per region — a continent is a reasonable unit,
 narrower if compliance needs it narrower, narrower still if latency
 does — with the region itself part of every table's key, the same
 `(worker_id, event_id)` discipline Part 1 used for workers. The map
-draws four: `us-east` in New York, `us-west` in San Francisco, `in` in
-Mumbai, `au` in Sydney. No row is ever a candidate for two of them to
+draws four: `us-east` in New York, `us-west` in San Francisco,
+`ap-south` in Mumbai, `ap-southeast` in Sydney. No row is ever a candidate for two of them to
 write, because the key says which one owns it, so there is no conflict
 left for anything downstream to detect, let alone resolve. Every site on
-the map, the warehouse included, is drawn as the pair of overlapping
-circles the legend calls "Primary + standby" — the Part 3 architecture
-in full, a pg_auto_failover-managed group with its own standby and its
-own failover story, not a single server with a single point of failure.
+the map, the warehouse included, is drawn as the three overlapping
+circles the legend calls "Primary + 2 standbys", next to a small marker
+for its monitor: the Part 3 architecture in full, a pg_auto_failover
+group of its own with two standbys and its own failover story, not a
+single server with a single point of failure. The groups are
+independent on purpose. They are connected by logical replication, not
+meant as one failover unit, so each region has its own monitor, and a
+failover in one never involves another.
 The failover-slot mechanism two sections up is what keeps a CDC
 consumer attached to one of these groups correct across a promotion;
 nothing about having four of them, or a warehouse-side group with no
@@ -389,7 +420,8 @@ own writes go one way, a read-only mirror of everyone else's data comes
 back the other way. New York's mirror from Amsterdam excludes
 `region in ('us-east', 'us-west')` — it already has both, one from its
 own writes, one cascaded up from San Francisco a moment earlier — and
-holds only `'in'` and `'au'`; Mumbai's excludes `('in', 'au')` the same
+holds only `'ap-south'` and `'ap-southeast'`; Mumbai's excludes
+`('ap-south', 'ap-southeast')` the same
 way, holding only the two American regions. Amsterdam never originates
 a write of its own; every row it holds arrived from one of the four
 primaries first, and what it sends back out is filtered, never new.
@@ -417,8 +449,8 @@ read-only, because that split is the whole architecture in miniature.
 ### Cascading, one hop downstream
 
 San Francisco and Sydney are full primaries, not read-only leaves —
-`us-west` and `au` are real, independently written regions, exactly
-like `us-east` and `in`. What makes them different from New York and
+`us-west` and `ap-southeast` are real, independently written regions,
+exactly like `us-east` and `ap-south`. What makes them different from New York and
 Mumbai is routing, not role: instead of opening a fifth and sixth
 long-haul connection into Amsterdam, their own writes cascade one hop
 through New York and Mumbai first, and the combined view — the hub's
@@ -461,7 +493,7 @@ has nothing left to do.
 
 The naive version would give San Francisco an unfiltered subscription
 to everything New York publishes. New York's publication carries
-`us-east`'s own writes plus Amsterdam's mirror of `in` and `au`, which
+`us-east`'s own writes plus Amsterdam's mirror of `ap-south` and `ap-southeast`, which
 San Francisco genuinely needs — the whole point of a four-way mirror is
 that a hop away from the primary still sees the rest of the world — but
 it would also carry San Francisco's own writes reflected back the
@@ -470,7 +502,7 @@ too. `origin = none` looks like the fix: it worked cleanly one hop up,
 in the two-node `pgoutput`/`pgoutput_origin_filter` case `origin`
 was designed for. It does not work here, because `origin` is a binary
 — `none` or `any`, not a per-origin allow list — and `none` on San
-Francisco's subscription would drop Amsterdam's `in`/`au` mirror along
+Francisco's subscription would drop Amsterdam's `ap-south`/`ap-southeast` mirror along
 with the loop, since both arrive at San Francisco carrying *some*
 non-invalid origin once New York's apply worker has touched them. There
 is no built-in way to ask for "everything except what I sent you."

@@ -1,59 +1,142 @@
 == scenario: planned ==
--- waiting for primary + secondary
-formation ready after 3s
-   node_1|primary|primary
-   node_2|secondary|secondary
+-- waiting for one primary and two secondaries
+group ready
+   primary: us-east-a
+
+== before the failover ==
+-- pg_autoctl show state
+        Name |  Node |      Host:Port |       TLI: LSN |   Connection |      Reported State |      Assigned State
+   ----------+-------+----------------+----------------+--------------+---------------------+--------------------
+   us-east-a |     1 | us-east-a:5432 |   1: 0/5002B10 |   read-write |             primary |             primary
+   us-east-b |     2 | us-east-b:5432 |   1: 0/5002B10 |    read-only |           secondary |           secondary
+   us-east-c |     3 | us-east-c:5432 |   1: 0/5002B10 |    read-only |           secondary |           secondary
+   
+-- pg_autoctl show synchronized-standby-slots
+   'pgautofailover_standby_2,pgautofailover_standby_3'
+-- pg_autoctl watch (one frame)
+   Formation: default - Sync Standbys: 1 - CDC Slots: 2                                                                                                             11:18:57
+   
+        Name  Node       Region Quorum Priority      Host:Port       TLI: LSN Last Check   Connection Last Report      Reported State      Assigned State
+   us-east-a     1      us-east    yes       50 us-east-a:5432   1: 0/502D6B8         1s   read-write          1s             primary             primary
+   us-east-b     2      us-east    yes       50 us-east-b:5432   1: 0/502D6B8         1s    read-only          1s           secondary           secondary
+   us-east-c     3      us-east    yes       50 us-east-c:5432   1: 0/502D6B8         1s    read-only          1s           secondary           secondary
+   
+   Id           Event Time       Name  Rule   Description                                                                        m
+   26  2026-10-27 11:18:53  us-east-c         Updating region to "us-east" for node 3 "us-east-c" (us-east-c:5432)
+   25  2026-10-27 11:18:53  us-east-b         Updating region to "us-east" for node 2 "us-east-b" (us-east-b:5432)
+   24  2026-10-27 11:18:53  us-east-a         Updating region to "us-east" for node 1 "us-east-a" (us-east-a:5432)
+   23  2026-10-27 11:18:52  us-east-a         New state is reported by node 1 "us-east-a" (us-east-a:5432): "primary"
+   22  2026-10-27 11:18:52  us-east-a   415   apply_settings, number_sync_standbys != 0 -> primary (1 of 2 disjuncts) (+ unhealthy-secondary fan-out to catchingup)
+   21  2026-10-27 11:18:52  us-east-a         New state is reported by node 1 "us-east-a" (us-east-a:5432): "apply_settings"
+   20  2026-10-27 11:18:52  us-east-a   127   set_node_replication_quorum, primary not already apply_settings -> apply_settings                              Press F1 to exit
+
+-- pg_autoctl show settings
+     Context |      Name |                    Setting | Value                                                       
+   ----------+-----------+----------------------------+-------------------------------------------------------------
+   formation |   default |       number_sync_standbys | 1                                                           
+     primary | us-east-a | synchronized_standby_slots | 'pgautofailover_standby_2,pgautofailover_standby_3'         
+     primary | us-east-a |  synchronous_standby_names | 'ANY 1 (pgautofailover_standby_2, pgautofailover_standby_3)'
+        node | us-east-a |         candidate priority | 50                                                          
+        node | us-east-b |         candidate priority | 50                                                          
+        node | us-east-c |         candidate priority | 50                                                          
+        node | us-east-a |         replication quorum | true                                                        
+        node | us-east-b |         replication quorum | true                                                        
+        node | us-east-c |         replication quorum | true                                                        
+   
 -- settings on the primary
    wal_level = logical
-   synchronized_standby_slots = pgautofailover_standby_2
-   synchronous_standby_names = ANY 1 (pgautofailover_standby_2)
+   synchronized_standby_slots = pgautofailover_standby_2,pgautofailover_standby_3
+   synchronous_standby_names = ANY 1 (pgautofailover_standby_2, pgautofailover_standby_3)
    synchronous_commit = on
--- settings on the standby
-   sync_replication_slots = on
-   hot_standby_feedback = on
-   primary_conninfo has dbname: t
--- waiting for the standby to hold a synced copy of the slot
-   slot synced on the standby: 1 (after 14s)
--- steady state:      619 rows written, 619 delivered
--- t0=1793031688.631605375: pg_autoctl perform failover
--- waiting for the monitor to report pg-a-standby as the writable primary
-   promoted: 1 (state: primary)
-   monitor: pg-a-standby reached primary at t0 +6.6 s
+-- settings on the standbys
+   us-east-b: sync_replication_slots = on, hot_standby_feedback = on, dbname in primary_conninfo: t
+   us-east-c: sync_replication_slots = on, hot_standby_feedback = on, dbname in primary_conninfo: t
+-- waiting for both standbys to hold a synced copy of the slot
+   slot synced on both standbys: 1 (after 15s)
+-- steady state:      679 rows written, 680 delivered
+-- t0=1793099965.600306629: pg_autoctl perform failover
+
+== during the failover (3 s after t0) ==
+   Formation: default - Sync Standbys: 1 - CDC Slots: 2                                                                                                             11:19:34
+   
+        Name  Node       Region Quorum Priority      Host:Port       TLI: LSN Last Check   Connection Last Report      Reported State      Assigned State
+   us-east-a     1      us-east    yes       50 us-east-a:5432   2: 0/505F090         4s    read-only          1s           secondary           secondary
+   us-east-b     2      us-east    yes       50 us-east-b:5432   2: 0/505F090         4s   read-write          1s             primary             primary
+   us-east-c     3      us-east    yes       50 us-east-c:5432   2: 0/505F090         4s    read-only          1s           secondary           secondary
+   
+   Id           Event Time       Name  Rule   Description                                                                        m
+   50  2026-10-27 11:19:28  us-east-b         New state is reported by node 2 "us-east-b" (us-east-b:5432): "primary"
+   49  2026-10-27 11:19:28  us-east-b   411   wait_primary, >=1 quorum secondary -> primary (+ unhealthy-secondary fan-out to catchingup)
+   48  2026-10-27 11:19:28  us-east-a         New state is reported by node 1 "us-east-a" (us-east-a:5432): "secondary"
+   47  2026-10-27 11:19:28  us-east-c         New state is reported by node 3 "us-east-c" (us-east-c:5432): "secondary"
+   46  2026-10-27 11:19:27  us-east-a   359   join_secondary, primary reported wait_primary with goal wait/primary -> secondary
+   45  2026-10-27 11:19:27  us-east-c   359   join_secondary, primary reported wait_primary with goal wait/primary -> secondary
+   44  2026-10-27 11:19:27  us-east-b         New state is reported by node 2 "us-east-b" (us-east-b:5432): "wait_primary"                                   Press F1 to exit
+-- waiting for the monitor to report a new writable primary
+   promoted: 1 (new primary: us-east-b)
+   monitor: us-east-b reached wait_primary/primary at t0 +2.2 s
+
+== after the failover ==
+-- pg_autoctl show state
+        Name |  Node |      Host:Port |       TLI: LSN |   Connection |      Reported State |      Assigned State
+   ----------+-------+----------------+----------------+--------------+---------------------+--------------------
+   us-east-a |     1 | us-east-a:5432 |   2: 0/506F440 |    read-only |           secondary |           secondary
+   us-east-b |     2 | us-east-b:5432 |   2: 0/506F440 |   read-write |             primary |             primary
+   us-east-c |     3 | us-east-c:5432 |   2: 0/506F440 |    read-only |           secondary |           secondary
+   
+-- pg_autoctl show synchronized-standby-slots
+   'pgautofailover_standby_1,pgautofailover_standby_3'
+-- pg_autoctl watch (one frame)
+   Formation: default - Sync Standbys: 1 - CDC Slots: 2                                                                                                             11:19:57
+   
+        Name  Node       Region Quorum Priority      Host:Port       TLI: LSN Last Check   Connection Last Report      Reported State      Assigned State
+   us-east-a     1      us-east    yes       50 us-east-a:5432   2: 0/5077598         1s    read-only          1s           secondary           secondary
+   us-east-b     2      us-east    yes       50 us-east-b:5432   2: 0/5077598         1s   read-write          1s             primary             primary
+   us-east-c     3      us-east    yes       50 us-east-c:5432   2: 0/5077598         1s    read-only          1s           secondary           secondary
+   
+   Id           Event Time       Name  Rule   Description                                                                        m
+   50  2026-10-27 11:19:28  us-east-b         New state is reported by node 2 "us-east-b" (us-east-b:5432): "primary"
+   49  2026-10-27 11:19:28  us-east-b   411   wait_primary, >=1 quorum secondary -> primary (+ unhealthy-secondary fan-out to catchingup)
+   48  2026-10-27 11:19:28  us-east-a         New state is reported by node 1 "us-east-a" (us-east-a:5432): "secondary"
+   47  2026-10-27 11:19:28  us-east-c         New state is reported by node 3 "us-east-c" (us-east-c:5432): "secondary"
+   46  2026-10-27 11:19:27  us-east-a   359   join_secondary, primary reported wait_primary with goal wait/primary -> secondary
+   45  2026-10-27 11:19:27  us-east-c   359   join_secondary, primary reported wait_primary with goal wait/primary -> secondary
+   44  2026-10-27 11:19:27  us-east-b         New state is reported by node 2 "us-east-b" (us-east-b:5432): "wait_primary"                                   Press F1 to exit
 
 == result: planned ==
-rows committed (in the database now)          : 1016
-rows acknowledged to the writer               : 1016
-distinct rows the consumer received           : 1016
+rows committed (in the database now)          : 1182
+rows acknowledged to the writer               : 1182
+distinct rows the consumer received           : 1182
 duplicate deliveries (extra receipts)         : 0  (ids -)
 holes: in the database, never received        : 0  (ids -)
 ahead: received, absent from the database     : 0  (ids -)
 acknowledged to the writer but lost           : 0  (ids -)
-consumer: longest silence 10.1 s, from t0+0.1 s to t0+10.1 s
-writer:   longest silence 6.6 s, from t0+0.1 s to t0+6.7 s
+consumer: longest silence 5.0 s, from t0+0.2 s to t0+5.2 s
+writer:   longest silence 0.9 s, from t0+0.2 s to t0+1.0 s
 
 == monitor events ==
-   16:21:02.141|node_2|secondary|secondary|New state is reported by node 2 "node_2" (pg-a-standby:5432): "secondary"
-   16:21:02.154|node_1|wait_primary|primary|wait_primary, >=1 quorum secondary -> primary (+ unhealthy-secondary fan-out to catchingup
-   16:21:02.186|node_1|wait_primary|primary|Node node 1 "node_1" (pg-a-primary:5432) is marked as healthy by the monitor
-   16:21:02.187|node_2|secondary|secondary|Node node 2 "node_2" (pg-a-standby:5432) is marked as healthy by the monitor
-   16:21:02.217|node_1|primary|primary|New state is reported by node 1 "node_1" (pg-a-primary:5432): "primary"
-   16:21:28.696|node_2|secondary|prepare_promotion|manual failover, 2-node group, primary+standby both converged -> standby prepare_promotion
-   16:21:28.696|node_1|primary|draining|manual failover, 2-node group, primary+standby both converged -> standby prepare_promotion
-   16:21:28.727|node_2|prepare_promotion|prepare_promotion|New state is reported by node 2 "node_2" (pg-a-standby:5432): "prepare_promotion"
-   16:21:28.727|node_2|prepare_promotion|stop_replication|prepare_promotion, primary present, not in maintenance -> stop_replication + demote_timeou
-   16:21:28.727|node_1|primary|demote_timeout|prepare_promotion, primary present, not in maintenance -> stop_replication + demote_timeou
-   16:21:28.828|node_1|draining|demote_timeout|New state is reported by node 1 "node_1" (pg-a-primary:5432): "draining"
-   16:21:28.843|node_1|demote_timeout|demote_timeout|New state is reported by node 1 "node_1" (pg-a-primary:5432): "demote_timeout"
-   16:21:35.196|node_2|stop_replication|stop_replication|New state is reported by node 2 "node_2" (pg-a-standby:5432): "stop_replication"
-   16:21:35.196|node_2|stop_replication|wait_primary|stop_replication, primary converged demote_timeout -> wait_primary + demoted (1 of 3)
-   16:21:35.196|node_1|demote_timeout|demoted|stop_replication, primary converged demote_timeout -> wait_primary + demoted (1 of 3)
-   16:21:35.238|node_1|demoted|demoted|New state is reported by node 1 "node_1" (pg-a-primary:5432): "demoted"
-   16:21:35.242|node_2|wait_primary|wait_primary|New state is reported by node 2 "node_2" (pg-a-standby:5432): "wait_primary"
-   16:21:36.254|node_1|demoted|catchingup|demoted, primary converged wait/join_primary/primary, healthy -> catchingup
-   16:21:36.413|node_1|catchingup|catchingup|New state is reported by node 1 "node_1" (pg-a-primary:5432): "catchingup"
-   16:21:36.413|node_1|catchingup|secondary|caught up, same TLI as primary, within sync threshold -> secondary
-   16:21:36.676|node_1|secondary|secondary|New state is reported by node 1 "node_1" (pg-a-primary:5432): "secondary"
-   16:21:36.689|node_2|wait_primary|primary|wait_primary, >=1 quorum secondary -> primary (+ unhealthy-secondary fan-out to catchingup
-   16:21:36.746|node_2|primary|primary|New state is reported by node 2 "node_2" (pg-a-standby:5432): "primary"
-   16:21:38.208|node_1|secondary|secondary|Node node 1 "node_1" (pg-a-primary:5432) is marked as unhealthy by the monitor
-   16:21:38.215|node_1|secondary|secondary|Node node 1 "node_1" (pg-a-primary:5432) is marked as healthy by the monitor
+   11:18:53.918|us-east-c|secondary|secondary|Updating region to "us-east" for node 3 "us-east-c" (us-east-c:5432)
+   11:19:25.681|us-east-a|primary|draining|manual failover, >2-node group -> primary drains, election proceeds via the heartbeat-driv
+   11:19:25.681|us-east-a|primary|draining|Updating candidate priority to -51 for node 1 "us-east-a" (us-east-a:5432)
+   11:19:25.817|us-east-a|draining|draining|New state is reported by node 1 "us-east-a" (us-east-a:5432): "draining"
+   11:19:25.817|us-east-a|draining|report_lsn|MS-failover fan-out: old primary converged draining or demoted -> report_lsn (3 of 4)
+   11:19:25.817|us-east-b|secondary|report_lsn|MS-failover fan-out: secondary/catchingup, not yet converged -> report_lsn (1 of 4)
+   11:19:25.817|us-east-c|secondary|report_lsn|MS-failover fan-out: secondary/catchingup, not yet converged -> report_lsn (1 of 4)
+   11:19:26.174|us-east-b|report_lsn|report_lsn|New state is reported by node 2 "us-east-b" (us-east-b:5432) with LSN 0/504E210: report_ls
+   11:19:26.175|us-east-c|report_lsn|report_lsn|New state is reported by node 3 "us-east-c" (us-east-c:5432) with LSN 0/504E210: report_ls
+   11:19:26.319|us-east-a|report_lsn|report_lsn|New state is reported by node 1 "us-east-a" (us-east-a:5432) with LSN 0/504E000: report_ls
+   11:19:26.319|us-east-a|report_lsn|report_lsn|Updating candidate priority back to 50 for node 1 "us-east-a" (us-east-a:5432)
+   11:19:26.319|us-east-b|report_lsn|prepare_promotion|MS-failover: no promotion in flight, most-advanced candidate within threshold, selected ca
+   11:19:26.385|us-east-b|prepare_promotion|prepare_promotion|New state is reported by node 2 "us-east-b" (us-east-b:5432): "prepare_promotion"
+   11:19:26.385|us-east-b|prepare_promotion|wait_primary|prepare_promotion, primary removed -> wait_primary
+   11:19:26.385|us-east-c|report_lsn|join_secondary|MS-failover: activeNode in report_lsn, failover candidate ready to stream WAL -> join_seco
+   11:19:26.517|us-east-c|join_secondary|join_secondary|New state is reported by node 3 "us-east-c" (us-east-c:5432): "join_secondary"
+   11:19:26.528|us-east-a|report_lsn|join_secondary|MS-failover: activeNode in report_lsn, failover candidate ready to stream WAL -> join_seco
+   11:19:26.653|us-east-a|join_secondary|join_secondary|New state is reported by node 1 "us-east-a" (us-east-a:5432): "join_secondary"
+   11:19:27.847|us-east-b|wait_primary|wait_primary|New state is reported by node 2 "us-east-b" (us-east-b:5432): "wait_primary"
+   11:19:27.858|us-east-c|join_secondary|secondary|join_secondary, primary reported wait_primary with goal wait/primary -> secondary
+   11:19:27.859|us-east-a|join_secondary|secondary|join_secondary, primary reported wait_primary with goal wait/primary -> secondary
+   11:19:28.010|us-east-c|secondary|secondary|New state is reported by node 3 "us-east-c" (us-east-c:5432): "secondary"
+   11:19:28.011|us-east-a|secondary|secondary|New state is reported by node 1 "us-east-a" (us-east-a:5432): "secondary"
+   11:19:28.023|us-east-b|wait_primary|primary|wait_primary, >=1 quorum secondary -> primary (+ unhealthy-secondary fan-out to catchingup
+   11:19:28.086|us-east-b|primary|primary|New state is reported by node 2 "us-east-b" (us-east-b:5432): "primary"

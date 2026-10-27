@@ -1,102 +1,92 @@
 #!/usr/bin/env bash
-# Profile c: four equal primaries, row-filtered cascades, one warehouse.
-# Builds the exact topology "Cascading, one hop downstream" and "The
-# architecture that makes the question moot" describe, end to end, and
-# confirms zero conflicts with concurrent writers on all four.
-set -euo pipefail
+# Profile c: four regions with equal primaries, row-filtered cascades, one warehouse.
+# Every region is a pg_auto_failover group of its own (a monitor and three nodes).
+# Builds the topology "Cascading, one hop downstream" and "The architecture that
+# makes the question moot" describe, end to end, and checks the result with
+# concurrent writers in all four regions.
+set -uo pipefail
 cd "$(dirname "$0")"
+. ./lib-regions.sh
+export COMPOSE_PROFILES=c
 
-PROJECT=lrdist
-PGPASSWORD=postgres
-export PGPASSWORD
+REGIONS="us-east us-west ap-south ap-southeast eu-west"
+mkdir -p results
+OUT=results/c-$(date +%Y%m%d-%H%M%S).out
+say() { echo "$@" | tee -a "$OUT"; }
+: > "$OUT"
+P() { echo "$1" | tr - _; }          # us-east -> us_east
+pq() { rpq "$(region_primary "$1")" "$2"; }   # run sql on a region's primary
 
-psql_on () { # psql_on <host> <sql...>
-  local host=$1; shift
-  docker compose -p "$PROJECT" exec -T "$host" psql -U postgres -v ON_ERROR_STOP=1 -q "$@"
+region_reset $REGIONS
+say "== five groups: $(echo $REGIONS | wc -w) monitors, $(( $(echo $REGIONS | wc -w) * 3 )) nodes =="
+region_up $REGIONS || { say "did not come up"; exit 1; }
+for r in $REGIONS; do region_wait $r || { say "$r never converged"; exit 1; }; region_label $r; done
+for r in $REGIONS; do say "   $r: primary $(region_primary $r)"; done
+
+say "== schema =="
+for r in $REGIONS; do pq $r "$(cat sql/c-01-schema.sql)" >/dev/null; done
+
+say "== publications, row-filtered on region =="
+# pub_to_eu_west must stay row-filtered to this region's own regions: left unfiltered,
+# the warehouse's own mirror, relayed back down to this region, would ride straight back
+# out to the warehouse the moment it lands, an echo loop.
+pq us-east      "create publication pub_to_eu_west for table events where (region = 'us-east' or region = 'us-west')"
+pq us-east      "create publication pub_to_us_west for table events where (region <> 'us-west')"
+pq us-west      "create publication pub_to_us_east for table events where (region = 'us-west')"
+pq ap-south     "create publication pub_to_eu_west for table events where (region = 'ap-south' or region = 'ap-southeast')"
+pq ap-south     "create publication pub_to_ap_southeast for table events where (region <> 'ap-southeast')"
+pq ap-southeast "create publication pub_to_ap_south for table events where (region = 'ap-southeast')"
+pq eu-west      "create publication pub_to_us_east for table events where (region <> 'us-east' and region <> 'us-west')"
+pq eu-west      "create publication pub_to_ap_south for table events where (region <> 'ap-south' and region <> 'ap-southeast')"
+
+say "== subscriptions: through every node of the publishing group, failover-enabled =="
+# a subscription is named by both endpoints: the replication slot it creates on the
+# publisher carries its name, and must be unique there
+sub() { # subscriber publisher publication
+  pq "$1" "create subscription sub_$(P $1)_from_$(P $2) connection '$(rconninfo $2)' publication $3 with (failover = true)" >/dev/null
 }
+sub us-west      us-east      pub_to_us_west
+sub us-east      us-west      pub_to_us_east
+sub ap-southeast ap-south     pub_to_ap_southeast
+sub ap-south     ap-southeast pub_to_ap_south
+sub eu-west      us-east      pub_to_eu_west
+sub us-east      eu-west      pub_to_us_east
+sub eu-west      ap-south     pub_to_eu_west
+sub ap-south     eu-west      pub_to_ap_south
 
-echo "== schema =="
-for host in us-east us-west in-region au warehouse; do
-  docker compose -p "$PROJECT" exec -T "$host" psql -U postgres -v ON_ERROR_STOP=1 -q < sql/c-01-schema.sql
-done
-
-echo "== publications, row-filtered on region =="
-# pub_to_amsterdam must stay row-filtered to this node's own two regions —
-# left unfiltered, the warehouse's own mirror (the other two regions,
-# relayed back down to this node) would ride straight back out to the
-# warehouse the moment it lands, a real echo loop this run's first draft
-# had and found the hard way (the warehouse's two inbound subscriptions
-# logged transient duplicate-key apply errors; final data was still
-# correct — logical replication's own retry caught up — but the loop
-# itself was real, not imagined).
-psql_on us-east    -c "create publication pub_to_amsterdam for table events where (region = 'us-east' or region = 'us-west');"
-psql_on us-east    -c "create publication pub_to_us_west for table events where (region <> 'us-west');"
-psql_on us-west    -c "create publication pub_to_us_east for table events where (region = 'us-west');"
-psql_on in-region   -c "create publication pub_to_amsterdam for table events where (region = 'in' or region = 'au');"
-psql_on in-region   -c "create publication pub_to_au for table events where (region <> 'au');"
-psql_on au         -c "create publication pub_to_in for table events where (region = 'au');"
-psql_on warehouse  -c "create publication pub_to_us_east for table events where (region <> 'us-east' and region <> 'us-west');"
-psql_on warehouse  -c "create publication pub_to_in for table events where (region <> 'in' and region <> 'au');"
-
-echo "== subscriptions =="
-conninfo() { echo "host=$1 port=5432 user=postgres password=postgres dbname=postgres"; }
-
-# subscription names must be unique on the *publisher* too (the default
-# replication slot name is the subscription name) — name every one by both
-# endpoints, not just the upstream side.
-psql_on us-west   -c "create subscription sub_us_west_from_us_east connection '$(conninfo us-east)' publication pub_to_us_west;"
-psql_on us-east   -c "create subscription sub_us_east_from_us_west connection '$(conninfo us-west)' publication pub_to_us_east;"
-psql_on au        -c "create subscription sub_au_from_in connection '$(conninfo in-region)' publication pub_to_au;"
-psql_on in-region  -c "create subscription sub_in_from_au connection '$(conninfo au)' publication pub_to_in;"
-psql_on warehouse -c "create subscription sub_warehouse_from_us_east connection '$(conninfo us-east)' publication pub_to_amsterdam;"
-psql_on us-east   -c "create subscription sub_us_east_from_warehouse connection '$(conninfo warehouse)' publication pub_to_us_east;"
-psql_on warehouse -c "create subscription sub_warehouse_from_in connection '$(conninfo in-region)' publication pub_to_amsterdam;"
-psql_on in-region  -c "create subscription sub_in_from_warehouse connection '$(conninfo warehouse)' publication pub_to_in;"
-
-echo "== waiting for subscriptions to reach streaming state =="
-for i in $(seq 1 30); do
-  pending=$(psql_on us-east -t -A -c "select count(*) from pg_stat_subscription where not srsubstate = 'r' and srsubstate is not null" 2>/dev/null || echo 1)
-  sleep 1
+say "== waiting for the initial table sync of every subscription =="
+for i in $(seq 1 60); do
+  pending=0
+  for r in $REGIONS; do
+    n=$(pq $r "select count(*) from pg_subscription_rel where srsubstate <> 'r'")
+    pending=$((pending + ${n:-1}))
+  done
+  [ "$pending" = 0 ] && break; sleep 1
 done
 sleep 5
 
-echo "== concurrent writers: 2000 rows each, four regions in parallel =="
-write() {
-  local host=$1 region=$2 n=$3
-  docker compose -p "$PROJECT" exec -T "$host" psql -U postgres -q -c "
-    insert into events (region, event_id, payload)
-    select '$region', g, md5(g::text)
-    from generate_series(1, $n) g;
-  "
-}
-write us-east  us-east  2000 &
-write us-west  us-west  2000 &
-write in-region in      2000 &
-write au       au       2000 &
-wait
-
-echo "== settling =="
+say "== concurrent writers: 2000 rows each, four regions in parallel =="
+write() { rpq "$(region_primary "$1")" "insert into events (region, event_id, payload) select '$1', g, md5(g::text) from generate_series(1, 2000) g" >/dev/null; }
+write us-east & write us-west & write ap-south & write ap-southeast & wait
+say "== settling =="
 sleep 10
 
-mkdir -p results
 {
-  echo "=== row counts per node (expect 8000 everywhere once fully mirrored) ==="
-  for host in us-east us-west in-region au warehouse; do
-    echo -n "$host: "
-    psql_on "$host" -t -A -c "select count(*) from events;"
-  done
-
+  echo "=== row counts on every primary (expect 8000 everywhere once fully mirrored) ==="
+  for r in $REGIONS; do echo "$r: $(pq $r "select count(*) from events")"; done
   echo
   echo "=== per-region row counts on the warehouse (expect 2000 each) ==="
-  psql_on warehouse -c "select region, count(*) from events group by region order by region;"
-
+  pq eu-west "select region || ': ' || count(*) from events group by region order by region"
   echo
-  echo "=== apply/sync error counts, every node ==="
-  echo "(pg_stat_subscription_stats' per-conflict-type columns --"
-  echo " confl_insert_exists and friends -- are PG18+; this demo runs"
-  echo " PG17, so apply_error_count/sync_error_count are what's available.)"
-  for host in us-east us-west in-region au warehouse; do
-    echo "-- $host --"
-    psql_on "$host" -c "select subname, apply_error_count, sync_error_count from pg_stat_subscription_stats;"
+  echo "=== the standbys hold the same rows (physical replication), eu-west and us-east shown ==="
+  for n in eu-west-b eu-west-c us-east-b us-east-c; do echo "$n: $(rpq $n 'select count(*) from events')"; done
+  echo
+  echo "=== apply/sync error counts, every primary ==="
+  echo "(pg_stat_subscription_stats' per-conflict-type columns, confl_insert_exists"
+  echo " and friends, are PG18+; this demo runs PG17, so apply_error_count and"
+  echo " sync_error_count are what is available.)"
+  for r in $REGIONS; do
+    echo "-- $r --"
+    pq $r "select subname || ': apply_errors=' || apply_error_count || ' sync_errors=' || sync_error_count from pg_stat_subscription_stats order by 1"
   done
-} | tee results/c-$(date +%Y%m%d-%H%M%S).out
+} | tee -a "$OUT"

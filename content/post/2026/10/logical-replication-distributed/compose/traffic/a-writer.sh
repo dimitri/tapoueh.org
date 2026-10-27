@@ -2,7 +2,7 @@
 # One INSERT per transaction, ids chosen client-side so that a retried id is
 # recognisable. Writes "<id> <ack time>" for every id the database confirmed.
 # Stops when /tmp/a-stop exists.
-URI="postgres://postgres@pg-a-primary:5432,pg-a-standby:5432/app?target_session_attrs=read-write&connect_timeout=2"
+URI="postgres://postgres@us-east-a:5432,us-east-b:5432,us-east-c:5432/app?target_session_attrs=read-write&connect_timeout=2"
 LOG=${1:?log file}
 n=1
 : > "$LOG"

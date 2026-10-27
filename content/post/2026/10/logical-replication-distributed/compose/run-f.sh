@@ -1,67 +1,79 @@
 #!/usr/bin/env bash
-# Profile f: region X is a pg_auto_failover group (monitor, primary, standby),
-# region Y is a plain Postgres. They replicate to each other with native logical
-# replication, each owning its own rows (region column). The primary of X is killed
-# under load; what happens to the slot X publishes to Y, and to the subscription X
-# runs from Y?
+# Profile f: two regions, us-east and us-west, each a pg_auto_failover group of its
+# own (a monitor and three nodes). They replicate to each other with native logical
+# replication, each owning the rows of its own region key. The primary of one region
+# is killed under load: what happens to the slot that region publishes, and to the
+# subscription it runs from the other region?
+#
+#   ./run-f.sh east     kill us-east-a (us-west reads from us-east)
+#   ./run-f.sh west     kill us-west-a
 set -uo pipefail
 cd "$(dirname "$0")"
-dc() { docker compose -p lrdist "$@"; }
-cl() { dc exec -T a-client "$@"; }
-OUT=results/f-failover.out
-say() { echo "$@" | tee -a "$OUT"; }
-mon() { dc exec -T monitor psql -X -At -h 127.0.0.1 -U postgres -d pg_auto_failover -c "$1"; }
-px() { dc exec -T "$1" psql -X -At -h 127.0.0.1 -U postgres -d app -c "$2"; }
-XURI="postgres://postgres@pg-a-primary:5432,pg-a-standby:5432/app?target_session_attrs=read-write&connect_timeout=2"
-YURI="postgres://postgres@y:5432/app?connect_timeout=2"
-: > "$OUT"
+. ./lib-regions.sh
+export COMPOSE_PROFILES=f
 
-./reset-a.sh >/dev/null
-dc rm -sfv y >/dev/null 2>&1
-say "== two regions: X = pg_auto_failover group, Y = plain Postgres =="
-COMPOSE_PROFILES=f dc up -d --wait monitor pg-a-primary y >/dev/null 2>&1 || { say "did not come up"; exit 1; }
-COMPOSE_PROFILES=f dc up -d pg-a-standby a-client >/dev/null 2>&1
-for i in $(seq 1 120); do
-  n=$(mon "select count(*) from pgautofailover.node where reportedstate = goalstate and reportedstate in ('primary','secondary')" 2>/dev/null)
-  [ "$n" = 2 ] && break; sleep 1
+SCN=${1:?east | west}
+case "$SCN" in
+  east) V=us-east; O=us-west ;;
+  west) V=us-west; O=us-east ;;
+  *) echo "east | west"; exit 2 ;;
+esac
+OUT=results/f-failover-$SCN.out
+say() { echo "$@" | tee -a "$OUT"; }
+: > "$OUT"
+cl() { dc exec -T client "$@"; }
+q() { cl psql "$(ruri "$1")" -X -At -c "$2"; }     # against whichever node is the region's primary
+
+./reset-f.sh >/dev/null
+say "== two regions, each a pg_auto_failover group: the primary of $V is killed =="
+region_up us-east us-west || { say "did not come up"; exit 1; }
+dc up -d client >/dev/null 2>&1
+for r in us-east us-west; do
+  region_wait $r || { say "$r never converged"; exit 1; }
+  region_label $r
 done
-[ "$n" = 2 ] || { say "formation never converged"; exit 1; }
-dc exec -T monitor pg_autoctl set node region --pgdata /data/pgdata --name node_1 us-east-a >/dev/null 2>&1
-dc exec -T monitor pg_autoctl set node region --pgdata /data/pgdata --name node_2 us-east-b >/dev/null 2>&1
+say "   us-east primary: $(region_primary us-east), us-west primary: $(region_primary us-west)"
 
 SCHEMA="create table events (region text not null, id bigint not null, applied_at timestamptz not null default clock_timestamp(), primary key (region, id))"
-px pg-a-primary "$SCHEMA" >/dev/null
-dc exec -T y psql -X -q -h 127.0.0.1 -U postgres -d app -c "$SCHEMA" >/dev/null
-px pg-a-primary "create publication pub_x for table events (region, id) where (region = 'x')" >/dev/null
-dc exec -T y psql -X -q -h 127.0.0.1 -U postgres -d app -c "create publication pub_y for table events (region, id) where (region = 'y')" >/dev/null
-# Y subscribes to X through every node of the group; the slot on X is failover-enabled
-dc exec -T y psql -X -q -h 127.0.0.1 -U postgres -d app -c "create subscription sub_y_from_x connection 'host=pg-a-primary,pg-a-standby port=5432 dbname=app user=postgres target_session_attrs=read-write connect_timeout=2' publication pub_x with (copy_data = false, failover = true)" >/dev/null
-# X subscribes to Y; created on the primary, it lives in the catalogs the standby replicates
-px pg-a-primary "create subscription sub_x_from_y connection 'host=y port=5432 dbname=app user=postgres connect_timeout=2' publication pub_y with (copy_data = false)" >/dev/null
-
-say "-- slots on X's primary, and what the standby holds"
-px pg-a-primary "select slot_name, slot_type, failover from pg_replication_slots order by 1" | sed 's/^/   primary: /' | tee -a "$OUT"
-for i in $(seq 1 60); do
-  r=$(px pg-a-standby "select synced and not temporary from pg_replication_slots where slot_name = 'sub_y_from_x'" 2>/dev/null); [ "$r" = t ] && break; sleep 1
+for r in us-east us-west; do
+  q $r "$SCHEMA" >/dev/null
+  q $r "create publication pub_${r//-/_} for table events (region, id) where (region = '$r')" >/dev/null
 done
-px pg-a-standby "select slot_name, failover, synced, temporary from pg_replication_slots order by 1" | sed 's/^/   standby: /' | tee -a "$OUT"
-say "   synchronized_standby_slots on the primary: $(px pg-a-primary 'show synchronized_standby_slots')"
-say "   subscription on X: $(px pg-a-primary "select subname, subenabled from pg_subscription")"
+# each region subscribes to the other through every node of the group; the slot a
+# subscription creates on the publisher is failover-enabled, so the standbys keep a copy
+q us-west "create subscription sub_us_west_from_us_east connection '$(rconninfo us-east)' publication pub_us_east with (copy_data = false, failover = true)" >/dev/null 2>&1
+q us-east "create subscription sub_us_east_from_us_west connection '$(rconninfo us-west)' publication pub_us_west with (copy_data = false, failover = true)" >/dev/null 2>&1
+
+say "-- slots on each primary, and what its standbys hold"
+for r in us-east us-west; do
+  P=$(region_primary $r)
+  rpq $P "select slot_name, slot_type, failover from pg_replication_slots where slot_type = 'logical' order by 1" | sed "s/^/   $P: /" | tee -a "$OUT"
+  say "   $P: synchronized_standby_slots = $(rpq $P 'show synchronized_standby_slots')"
+done
+for r in us-east us-west; do
+  for n in $r-b $r-c; do
+    for i in $(seq 1 90); do
+      s=$(rpq $n "select synced and not temporary from pg_replication_slots where slot_type = 'logical' limit 1" 2>/dev/null); [ "$s" = t ] && break; sleep 1
+    done
+    say "   $n: synced copy of the failover slot: $s (after ${i}s)"
+  done
+done
 
 cl rm -f /tmp/f-stop
-dc exec -d a-client sh -c "/traffic/f-writer.sh '$XURI' x /results/f-writer-x.log"
-dc exec -d a-client sh -c "/traffic/f-writer.sh '$YURI' y /results/f-writer-y.log"
+dc exec -d client sh -c "/traffic/f-writer.sh '$(ruri us-east)' us-east /results/f-writer-east.log"
+dc exec -d client sh -c "/traffic/f-writer.sh '$(ruri us-west)' us-west /results/f-writer-west.log"
 sleep 15
-say "-- steady state: X has $(px pg-a-primary "select count(*) from events where region='x'") x-rows and $(px pg-a-primary "select count(*) from events where region='y'") y-rows; Y has $(dc exec -T y psql -X -At -h 127.0.0.1 -U postgres -d app -c "select count(*) from events where region='x'") x-rows"
-T0=$(dc exec -T monitor date +%s.%N | tr -d '\r')
-say "-- t0=$T0: docker kill pg-a-primary"
-dc kill pg-a-primary >/dev/null 2>&1
+say "-- steady state: us-east holds $(q us-east "select count(*) from events where region = 'us-east'") own rows and $(q us-east "select count(*) from events where region = 'us-west'") from us-west"
+OLD=$(region_primary $V)
+T0=$(dc exec -T $V-monitor date +%s.%N | tr -d '\r')
+say "-- t0=$T0: docker kill $OLD"
+dc kill $OLD >/dev/null 2>&1
 
 for i in $(seq 1 300); do
-  r=$(mon "select reportedstate from pgautofailover.node where nodehost = 'pg-a-standby'" 2>/dev/null)
-  case "$r" in primary|wait_primary|single) break ;; esac; sleep 1
+  NEW=$(rmon $V "select nodename from pgautofailover.node where nodename <> '$OLD' and reportedstate in ('primary','wait_primary','single') order by nodeid limit 1" 2>/dev/null)
+  [ -n "$NEW" ] && break; sleep 1
 done
-say "   pg-a-standby is $r (monitor), $(mon "select round((extract(epoch from min(eventtime)) - $T0)::numeric, 1) from pgautofailover.event where nodeid = (select nodeid from pgautofailover.node where nodehost = 'pg-a-standby') and reportedstate in ('wait_primary','primary') and extract(epoch from eventtime) > $T0") s after t0"
+say "   new primary of $V: $NEW, $(rmon $V "select round((extract(epoch from min(eventtime)) - $T0)::numeric, 1) from pgautofailover.event where nodeid = (select nodeid from pgautofailover.node where nodename = '$NEW') and reportedstate in ('wait_primary','primary') and extract(epoch from eventtime) > $T0") s after t0"
 sleep 90
 cl touch /tmp/f-stop
 sleep 3
@@ -69,34 +81,32 @@ sleep 3
 say "-- waiting for both regions to converge"
 conv=0
 for i in $(seq 1 180); do
-  a=$(px pg-a-standby "select count(*) from events where region='x'" 2>/dev/null)
-  b=$(dc exec -T y psql -X -At -h 127.0.0.1 -U postgres -d app -c "select count(*) from events where region='x'" 2>/dev/null)
-  c=$(px pg-a-standby "select count(*) from events where region='y'" 2>/dev/null)
-  d=$(dc exec -T y psql -X -At -h 127.0.0.1 -U postgres -d app -c "select count(*) from events where region='y'" 2>/dev/null)
+  a=$(q us-east "select count(*) from events where region = 'us-east'" 2>/dev/null); b=$(q us-west "select count(*) from events where region = 'us-east'" 2>/dev/null)
+  c=$(q us-east "select count(*) from events where region = 'us-west'" 2>/dev/null); d=$(q us-west "select count(*) from events where region = 'us-west'" 2>/dev/null)
   [ -n "$a" ] && [ "$a" = "$b" ] && [ "$c" = "$d" ] && { conv=1; break; }
   sleep 1
 done
-say "   converged: $conv after ${i}s  (x-rows X/Y: $a/$b, y-rows X/Y: $c/$d)"
+say "   converged: $conv after ${i}s  (us-east rows on us-east/us-west: $a/$b, us-west rows: $c/$d)"
 
-ids() { # node region
-  if [ "$1" = y ]; then dc exec -T y psql -X -At -h 127.0.0.1 -U postgres -d app -c "select id from events where region = '$2' order by id"
-  else px pg-a-standby "select id from events where region = '$2' order by id"; fi
-}
-ids x x > results/f-x-on-x.ids; ids y x > results/f-x-on-y.ids
-ids x y > results/f-y-on-x.ids; ids y y > results/f-y-on-y.ids
+ids() { q "$1" "select id from events where region = '$2' order by id"; }   # node-region, row-region
+ids us-east us-east > results/f-east-on-east.ids; ids us-west us-east > results/f-east-on-west.ids
+ids us-east us-west > results/f-west-on-east.ids; ids us-west us-west > results/f-west-on-west.ids
 say; say "== result =="
-for r in x y; do
+for r in east west; do
   acked=$(wc -l < results/f-writer-$r.log)
-  say "region $r: acknowledged $acked, on X $(wc -l < results/f-$r-on-x.ids), on Y $(wc -l < results/f-$r-on-y.ids)"
-  say "   missing from X: $(comm -13 results/f-$r-on-x.ids results/f-$r-on-y.ids | wc -l | tr -d ' ')   missing from Y: $(comm -23 results/f-$r-on-x.ids results/f-$r-on-y.ids | wc -l | tr -d ' ')"
-  say "   acknowledged but nowhere: $(awk '{print $1}' results/f-writer-$r.log | sort | comm -23 - <(sort results/f-$r-on-x.ids results/f-$r-on-y.ids | uniq) | wc -l | tr -d ' ')"
+  say "rows owned by us-$r: acknowledged $acked, on us-east $(wc -l < results/f-$r-on-east.ids), on us-west $(wc -l < results/f-$r-on-west.ids)"
+  say "   missing from us-east: $(comm -13 results/f-$r-on-east.ids results/f-$r-on-west.ids | wc -l | tr -d ' ')   missing from us-west: $(comm -23 results/f-$r-on-east.ids results/f-$r-on-west.ids | wc -l | tr -d ' ')"
+  say "   acknowledged but nowhere: $(awk '{print $1}' results/f-writer-$r.log | sort | comm -23 - <(sort results/f-$r-on-east.ids results/f-$r-on-west.ids | uniq) | wc -l | tr -d ' ')"
 done
-say; say "-- apply errors and subscription state"
-say "   on X (new primary): $(px pg-a-standby "select subname || ' apply_errors=' || apply_error_count || ' sync_errors=' || sync_error_count from pg_stat_subscription_stats")"
-say "   on Y: $(dc exec -T y psql -X -At -h 127.0.0.1 -U postgres -d app -c "select subname || ' apply_errors=' || apply_error_count || ' sync_errors=' || sync_error_count from pg_stat_subscription_stats")"
-say "-- longest silence between consecutive rows, per database (applied_at, each database's own clock)"
-GAP="select region, round(extract(epoch from max(gap))::numeric, 1) as longest_gap_s from (select region, applied_at - lag(applied_at) over (partition by region order by id) as gap from events) g group by region order by 1"
-px pg-a-standby "$GAP" | sed 's/^/   on X: /' | tee -a "$OUT"
-dc exec -T y psql -X -At -h 127.0.0.1 -U postgres -d app -c "$GAP" | sed 's/^/   on Y: /' | tee -a "$OUT"
+say; say "-- apply errors, per subscription"
+for r in us-east us-west; do
+  say "   on $r: $(q $r "select subname || ' apply_errors=' || apply_error_count || ' sync_errors=' || sync_error_count from pg_stat_subscription_stats")"
+done
+say "-- longest silence between consecutive rows, per region key and database (applied_at, each database's own clock)"
+GAP="select region, round(extract(epoch from max(gap))::numeric, 1) from (select region, applied_at - lag(applied_at) over (partition by region order by id) as gap from events) g group by region order by 1"
+for r in us-east us-west; do q $r "$GAP" | sed "s/^/   on $r: /" | tee -a "$OUT"; done
 say "-- slots now"
-px pg-a-standby "select slot_name, slot_type, failover, active from pg_replication_slots order by 1" | sed 's/^/   X: /' | tee -a "$OUT"
+for r in us-east us-west; do
+  P=$(region_primary $r)
+  rpq $P "select slot_name, slot_type, failover, active from pg_replication_slots where slot_type = 'logical' order by 1" | sed "s/^/   $P: /" | tee -a "$OUT"
+done
