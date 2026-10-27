@@ -48,7 +48,9 @@ only ever quoted numbers from a real `make run`, and so does this one.
 
 ## The scenario
 
-{{< image src="fig-region-map.svg" title="One writer per region: conflicts avoided by construction. Four equal primaries, four disjoint region keys — us-east in New York, us-west in San Francisco, in in Mumbai, au in Sydney — so no two of them ever mint the same row. Every site, the Amsterdam warehouse included, is a pg_auto_failover-managed primary and standby pair, not a single server. Every link is the same bidirectional logical replication: a region's own writes flow one way, a read-only mirror of everyone else's data flows back the other way. New York and Mumbai link straight to one global warehouse in Amsterdam; San Francisco and Sydney cascade through them instead of each opening its own long-haul connection. Every site has its own front desk, read-write against its own region and read-only against the mirror of the rest." >}}
+{{< image src="fig-region-map.svg" title="One writer per region: conflicts avoided by construction." >}}
+
+Four equal primaries, four disjoint region keys — us-east in New York, us-west in San Francisco, in in Mumbai, au in Sydney — so no two of them ever mint the same row. Every site, the Amsterdam warehouse included, is a pg_auto_failover-managed primary and standby pair, not a single server. Every link is the same bidirectional logical replication: a region's own writes flow one way, a read-only mirror of everyone else's data flows back the other way. New York and Mumbai link straight to one global warehouse in Amsterdam; San Francisco and Sydney cascade through them instead of each opening its own long-haul connection. Every site has its own front desk, read-write against its own region and read-only against the mirror of the rest.
 
 Four things, each a post of its own in a shorter series, covered here in
 one, in the order a team actually runs into them: the primary dies and a
@@ -134,7 +136,9 @@ same as before. As of this PR, it also gets you the mechanism above:
 the GUCs that make a failover-safe slot actually mean what its name
 says, kept correct across every role change, automatically.
 
-{{< image src="fig-failover-slot.svg" title="A failover-safe logical slot, driven by pg_auto_failover's existing orchestration. Physical replication keeps the standby current, including the slot's own state, once synchronized_standby_slots names it. After promotion the consumer reconnects to the same slot, now on the new primary, and resumes at its last confirmed LSN: duplicates are possible, a hole is not." >}}
+{{< image src="fig-failover-slot.svg" title="A failover-safe logical slot, driven by pg_auto_failover's existing orchestration." >}}
+
+Physical replication keeps the standby current, including the slot's own state, once synchronized_standby_slots names it. After promotion the consumer reconnects to the same slot, now on the new primary, and resumes at its last confirmed LSN: duplicates are possible, a hole is not.
 
 ### Building it against pg_auto_failover as it is today
 
@@ -213,7 +217,12 @@ the consumer received that the final primary does not have.
 What the operator sees is the monitor's own view. The nodes carry a
 free-form `region` label, set with `pg_autoctl set node region`; it is
 purely informational and no failover or quorum decision reads it, but
-`pg_autoctl watch` shows it as a column. Here is a frame taken 25
+`pg_autoctl watch` shows it as a column. It is there for what
+pg_auto_failover does not do yet: handling cascading physical
+replication across data centres, and several archiving nodes. Neither
+exists today, and neither would change anything in this post, where the
+links between regions are logical replication, not a standby of a
+standby. Here is a frame taken 25
 seconds after the primary was killed, with the monitor part-way through
 the promotion (the node with the dead primary shows `demote_timeout`
 as its assigned state, and the standby is already `stop_replication`):
@@ -242,7 +251,9 @@ each other. So the question the drill above leaves open is what a
 failover in one region does to the logical replication it takes part in
 with another, in both directions at once.
 
-{{< image src="fig-region-node.svg" title="What runs at each site. The us-east site is a pg_auto_failover group: a monitor, a primary and a standby. The primary publishes pub_x, runs the subscription sub_x_from_y, and holds the failover-enabled slot sub_y_from_x that the other region's subscription reads. The standby keeps a synced copy of that slot, and has the subscription in its catalogs without a worker. The other region is plain Postgres, whose subscription lists both us-east nodes." >}}
+{{< image src="fig-region-node.svg" title="What runs at each site." >}}
+
+The us-east site is a pg_auto_failover group: a monitor, a primary and a standby. The primary publishes pub_x, runs the subscription sub_x_from_y, and holds the failover-enabled slot sub_y_from_x that the other region's subscription reads. The standby keeps a synced copy of that slot, and has the subscription in its catalogs without a worker. The other region is plain Postgres, whose subscription lists both us-east nodes.
 
 Two things have to be set up once, and neither is automatic. The
 subscription that reads from the group is created with
@@ -254,7 +265,9 @@ other region needs nothing: it lives in the catalogs, which physical
 replication carries to the standby, and a subscription's apply worker
 starts on a node only while that node is a primary.
 
-{{< image src="fig-region-failover.svg" title="One region fails over, with logical replication to a second region in both directions. The primary is killed; the monitor promotes the standby; the standby's own subscription resumes from its replication origin at once, and the other region's subscription reconnects to the new primary as soon as it accepts writes, and resumes from the synced slot." >}}
+{{< image src="fig-region-failover.svg" title="One region fails over, with logical replication to a second region in both directions." >}}
+
+The primary is killed; the monitor promotes the standby; the standby's own subscription resumes from its replication origin at once, and the other region's subscription reconnects to the new primary as soon as it accepts writes, and resumes from the synced slot.
 
 **Verified**, by running it: profile `f` in `compose/` is a group of
 two nodes in one region and a plain Postgres in another, each owning the
@@ -324,6 +337,16 @@ resumable operation, and calls it a design exploration, not an
 implementation. That component is named here, scoped, and left where
 [Part 3](/blog/2026/10/zero-downtime-postgres-upgrades-with-logical-replication/#what-is-still-on-you)
 left whole-cluster orchestration: on the roadmap, not shipped.
+
+That roadmap is public, and it is where this component belongs.
+pg_auto_failover's [roadmap](https://oss.theartofpostgresql.com/roadmap/)
+lists first-class logical replication nodes in the state machine,
+cascading replication for multi-data-centre topologies, which is what
+the `region` label is for, and disaster recovery with archiving built
+in. The project is maintained by one person, and its maintenance is
+funded by the teams that run it: the
+[pg_auto_failover funding campaign](https://oss.theartofpostgresql.com/pg_auto_failover/)
+is how that work, this post's included, gets paid for.
 
 ---
 
@@ -619,7 +642,9 @@ fail to parse as a row, and make apply retry the same transaction
 forever. A CDC consumer cannot afford a frame that it neither handles
 nor ignores.
 
-{{< image src="fig-pgcopydb-message.svg" title="DDL as a message, not a queue table. An Event Trigger emits a JSON message, prefix pgcopydb, type ddl, body the command text. pgcopydb follow decodes the Message frame, filters on the prefix, parses the JSON, and dispatches on type — the ddl handler executes the body on the same connection the rest of the apply worker already uses, inside the same commit-ordered stream as every other change." >}}
+{{< image src="fig-pgcopydb-message.svg" title="DDL as a message, not a queue table." >}}
+
+An Event Trigger emits a JSON message, prefix pgcopydb, type ddl, body the command text. pgcopydb follow decodes the Message frame, filters on the prefix, parses the JSON, and dispatches on type — the ddl handler executes the body on the same connection the rest of the apply worker already uses, inside the same commit-ordered stream as every other change.
 
 ### The design
 
