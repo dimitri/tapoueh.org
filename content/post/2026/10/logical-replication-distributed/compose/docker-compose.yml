@@ -349,7 +349,7 @@ services:
     image: lrdist-pglogical:18
     command: &pgl-cmd >
       postgres -c shared_preload_libraries=pglogical
-      -c output_plugin_libraries=pglogical_output
+      -c output_plugin_libraries=pglogical_output,pgoutput
       -c wal_level=logical -c track_commit_timestamp=on
       -c max_worker_processes=24 -c max_replication_slots=16
       -c max_wal_senders=16 -c max_logical_replication_workers=12
@@ -397,6 +397,18 @@ services:
     healthcheck: { disable: true }
     tmpfs: ["/var/lib/postgresql"]
     depends_on: [e-hub]
+
+  # pgcopydb on Postgres 18 clients (pg_dump must not be older than the server), for `run-e.sh bench pgcopydb`
+  pgcopydb-e:
+    profiles: [e]
+    build:
+      context: .
+      dockerfile: Dockerfile.pgcopydb
+      args: { PGVERSION: "18", PGCOPYDB_PATCH: pgcopydb-failover-slot.patch }
+    image: lrdist-pgcopydb:18
+    entrypoint: ["sleep", "infinity"]
+    volumes:
+      - ./results:/results
 
   # ---------------- profile b: synchronous_commit under a round-trip time ----------------
   b-primary:

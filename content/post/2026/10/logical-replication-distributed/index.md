@@ -267,9 +267,9 @@ waits until both sides hold the same rows. Three runs killing
 `us-east-a` and three killing `us-west-a`, with the same result every
 time:
 
-- **Nothing lost, nothing duplicated, in either direction.** With
-  `us-east-a` killed, the first run acknowledged 1,532 `us-east` rows and
-  2,552 `us-west` rows, and afterwards both regions hold exactly those
+- **Nothing lost, nothing duplicated, in either direction.** In
+  one of the runs with `us-east-a` killed, `us-east` acknowledged 1,532
+  rows and `us-west` 2,552, and afterwards both regions hold exactly those
   rows. The other five runs end the same way: every acknowledged row is
   on both sides, none is missing, none is twice. The only apply error is
   one counted on the subscription that lost its connection.
@@ -303,10 +303,30 @@ much RPO an async standby gives back in exchange for not waiting at all.
 That trade is the maintenance-window trade from Part 3's RTO/RPO section,
 with a continent's worth of latency standing in for the window.
 
-`[TODO: measure synchronous_commit = on, remote_write, remote_apply, and
-off, same demo schema, same traffic generator, across a real cross-
-region link rather than localhost — the number that actually matters
-here cannot come from a laptop.]`
+Profile `b` measures it: a primary and a physical standby
+(`synchronous_standby_names = 'ANY 1 (standby)'`), a round-trip time added
+between them with `tc netem`, and `pgbench` running single-row insert
+transactions under each setting, with one client and with 32. The delay is
+emulated on one machine, so there is no jitter and no loss; what it shows
+is the arithmetic of a commit that waits for a round trip.
+
+| RTT | `off` | `local` | `remote_write` | `on` | `remote_apply` |
+|---|---|---|---|---|---|
+| 0 ms | 29,475 tps | 17,075 | 610 | 3,795 | 5,811 |
+| 20 ms | 29,661 | 17,266 | 45 | 44 | 45 |
+| 70 ms | 28,630 | 17,856 | 13 | 13 | 12 |
+| 150 ms | 27,282 | 18,467 | 6 | 6 | 6 |
+
+One client, transactions a second. At 20 ms and beyond, the three
+synchronous settings are the same number, one commit per round trip, and
+the average commit takes the round trip (22 ms, 73 ms, 152 ms). With 32
+clients the commits overlap, and the throughput rises to about 1,450 tps
+at 20 ms and 205 at 150 ms: more clients buy back throughput, never
+latency. `off` and `local` do not move with the distance; they are also
+the two that can lose the last commits when the primary dies, which is
+the RPO side of the trade. The 0 ms row is not a latency result: with no
+delay the numbers measure the standby's apply speed, and `remote_write`
+is slower than `on` there for no reason the setting explains.
 
 ### What a real `pg_autoctl create proxy` would still need
 
@@ -491,8 +511,8 @@ reason Part 2 found at the first one.
 **Verified**, by running it: profile `c` in `compose/` builds exactly
 this topology on Postgres 17 — four primaries, two of them cascading
 through the other two, one warehouse, every mirror filtered — and drives
-2,000 concurrent writes into each region. The first two runs found the
-echo loop above; with the filters in place, the third run ends with
+2,000 concurrent writes into each region. Without the filters the writes echo
+around the loop; with them in place, the run ends with
 8,000 rows on every node, exactly 2,000 per region, and zero
 `apply_error_count` or `sync_error_count` on any subscription. (The
 per-conflict-type counters, `confl_*`, only exist from Postgres 18, so
@@ -544,7 +564,7 @@ used on Postgres 14.
 - **`keep_local` diverges for real under concurrent writers.** Two
   nodes subscribed to each other, four clients each updating the same
   1,000 keys at 2,000 transactions per second per node for 15 seconds
-  (about 60,000 updates), one run per policy, three runs:
+  (about 60,000 updates), three runs of each policy:
 
 | Policy | Rows that differ afterwards, of 1,000 (3 runs) | Replication |
 |---|---|---|
@@ -675,8 +695,11 @@ the source. With both, `./run-g.sh pgcopydb-failover` shows the slot as
 `failover=true` on the primary and `synced=true` on both standbys before the
 kill; after the kill the new primary has it, and `us-west` ends with every
 row `us-east` acknowledged, with nothing left to catch up one second after
-the writer stops. Killing the primary of the target region instead costs
-one restart. The standbys still need `sync_replication_slots` and the
+the writer stops (three runs). Without the flag, the same kill leaves
+`us-west` 781 rows behind: the restarts find no slot, and after five
+attempts in 300 seconds `follow` logs `giving up` and exits. Killing the
+primary of the target region instead costs one restart, with the apply
+process back within a few seconds and no row missing (two runs). The standbys still need `sync_replication_slots` and the
 primary `synchronized_standby_slots`, the Postgres-side settings the first
 section covers.
 
@@ -699,8 +722,8 @@ each other, both inserting, twice:
   running. The same with `rename column`: renamed on `w2`, lag zero.
 - pglogical's own README says this will not be enough once the
   subscriber also writes with the old structure, and that is the situation
-  of two writers on one table. Two runs did not hit it, which says nothing
-  about the window.
+  of two writers on one table. The test did not hit it, which says
+  nothing about the window.
 - The slot pglogical creates has `failover = false`. It issues
   `CREATE_REPLICATION_SLOT ... LOGICAL pglogical_output FAILOVER`, the
   2ndQuadrant syntax, and only on 2ndQuadrant's PostgreSQL 9.6 and 11
@@ -742,10 +765,35 @@ in the post's setup, pg_auto_failover computes that list. One run of each.
 | | Native | pgcopydb | pglogical |
 |---|---|---|---|
 | Schema change in the stream, in order with the rows | no | yes, with the event trigger | yes, through `replicate_ddl_command` |
-| Survives a rename with writers on both sides | no | one-way link only | worked in two runs, README warns |
+| Survives a rename with writers on both sides | no | one-way link only | works, the README warns of the window |
 | Row filters | yes | no (tables only) | yes (`row_filter`) |
 | Failover-enabled slot | yes | not as shipped; a nine-line patch does it | not as shipped; `ALTER_REPLICATION_SLOT` after creation does it |
 | Link in both directions | yes | no | yes |
+
+Speed is the other axis. `./run-e.sh bench <method>` puts the same table
+on two Postgres 18 servers, with a trigger on the target that stamps the
+time a row is applied, and runs three workloads over the same one-way link:
+1,000 single-row transactions 50 ms apart (the stamp minus the source's
+`clock_timestamp()` is the latency), eight concurrent writers for 30
+seconds, and one transaction of a million rows.
+
+| | Native | pglogical | pgcopydb |
+|---|---|---|---|
+| Latency p50 / p95 / p99 | 0.2 / 0.8 / 1.6 ms | 0.2 / 0.6 / 1.4 ms | 62 / 106 / 113 ms |
+| Rows a second applied under 8 writers | 91,000 | 96,000 | 5,700 |
+| Lag after the 30 s load stops | 1.7 s | 0.3 s | 452 s |
+| 1M rows in one transaction, applied after the commit | 3.2 s | 3.3 s | 456 s |
+
+The source took about 92,000 to 97,000 transactions a second in each case.
+Native and pglogical keep up with it. pgcopydb is a different design: it
+receives the stream, writes it to files, transforms it into SQL and replays
+that through a single apply process. It is built to
+carry a migration off a production server that has its own load, not to
+match a bulk loader, and 5,700 rows a second is more than most of those
+need. It is not what to put behind a source taking tens of thousands of
+writes a second, and the 60 to 110 ms comes from that pipeline's stages, not
+from the network. All three ran on one machine, once each: the ratios are the
+point, not the digits.
 
 None of the three has every column. The combination the scenario needs
 (native filters and failover slots, with the schema change in the stream)

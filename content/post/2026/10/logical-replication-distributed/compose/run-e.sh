@@ -363,9 +363,9 @@ alter table events enable always trigger stamp"
       wait_for e-w2 "(select count(*) from pglogical.show_subscription_status() where status = 'replicating') = 1" 60 ;;
     pgcopydb)
       q e-w1 -c "$TBL" >/dev/null
-      COMPOSE_PROFILES=g dc up -d pgcopydb-g >/dev/null 2>&1
-      dc exec -T pgcopydb-g sh -c "rm -rf /root/.local/share/pgcopydb /tmp/pgcopydb"
-      dc exec -d pgcopydb-g sh -c "pgcopydb clone --follow --source 'postgres://postgres@e-w1/app' --target 'postgres://postgres@e-w2/app' > /results/e-bench-pgcopydb.log 2>&1"
+      COMPOSE_PROFILES=e dc up -d pgcopydb-e >/dev/null 2>&1
+      dc exec -T pgcopydb-e sh -c "rm -rf /root/.local/share/pgcopydb /tmp/pgcopydb"
+      dc exec -d pgcopydb-e sh -c "pgcopydb clone --follow --source 'postgres://postgres@e-w1/app' --target 'postgres://postgres@e-w2/app' > /results/e-bench-pgcopydb.log 2>&1"
       for i in $(seq 1 60); do [ "$(qa e-w2 -c "select to_regclass('public.events') is not null")" = t ] && break; sleep 1; done
       q e-w2 -c "$TRG" >/dev/null
       sleep 5 ;;
@@ -374,10 +374,13 @@ alter table events enable always trigger stamp"
   now() { date +%s.%N; }
   drain() { # <payload> <expected>: seconds until the target has them all
     local t0=$(now) i
-    for i in $(seq 1 3000); do [ "$(cnt e-w2 "$1")" -ge "$2" ] && break; sleep 0.2; done
+    for i in $(seq 1 ${DRAIN_TRIES:-1500}); do [ "$(cnt e-w2 "$1" 2>/dev/null)" -ge "$2" ] 2>/dev/null && break; sleep 0.2; done
     echo "$(now) $t0" | awk '{printf "%.1f", $1 - $2}'
   }
 
+  # the link must carry a row before anything is measured
+  q e-w1 -c "insert into events (payload) values ('canary')" >/dev/null
+  if [ "$(drain canary 1 | cut -d. -f1)" -ge 60 ]; then echo "the link did not come up: no row on e-w2 after 60 s"; return 1; fi
   echo; echo "-- latency: 1000 single-row transactions, one session, 50 ms apart"
   dc exec -T e-w1 sh -c "for i in \$(seq 1 1000); do psql -X -q -U postgres -d app -c \"insert into events (payload) values ('lat')\"; sleep 0.05; done"
   drain lat 1000 >/dev/null

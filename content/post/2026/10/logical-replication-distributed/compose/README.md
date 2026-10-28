@@ -1,8 +1,8 @@
 # Part 4 demo — compose/
 
 Same pattern as parts 1 through 3: `docker-compose.yml` with profile-gated
-containers, `run-*.sh` scripts, `results/`. Profiles **a**, **c**, **d**,
-**e**, **f** and **g** have been built and run.
+containers, `run-*.sh` scripts, `results/`. Profiles **a** through **g**
+have been built and run.
 
 ## One group per region
 
@@ -77,7 +77,13 @@ Re-pin before running this again — `main` moves.
   to a provider, turns the pglogical slot into a failover slot with
   `ALTER_REPLICATION_SLOT`, kills the provider and promotes the standby;
   `FAILOVER_SLOT=0` skips the `ALTER_REPLICATION_SLOT` step as a control.
-  `reset-e.sh` recreates the containers. Results in `results/e-*.out`.
+  `./run-e.sh bench <native|pglogical|pgcopydb>` compares the three over a
+  one-way link on Postgres 18: latency of single-row transactions, rows a
+  second under eight writers, and one transaction of a million rows
+  (`pgcopydb-e` is the pgcopydb container built on Postgres 18 clients).
+  The servers allow `pgoutput` and `pglogical_output` as output plugins
+  (`output_plugin_libraries`). `reset-e.sh` recreates the containers.
+  Results in `results/e-*.out`.
 - **g** — schema changes across regions, on `us-east` and `us-west`.
   `./run-g.sh core` runs `ADD COLUMN` three ways over native logical
   replication in both directions (one region then the other, both at once,

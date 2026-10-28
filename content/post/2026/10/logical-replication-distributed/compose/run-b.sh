@@ -14,6 +14,10 @@ OUT=results/b-sync-commit.out
 RTTS=${RTTS:-"0 20 70 150"}
 DURATION=${DURATION:-10}
 mkdir -p results
+# the standby must have replayed everything before a run starts: the asynchronous runs leave a backlog
+# of WAL, and over a delayed link it would sit in front of the first synchronous commits
+catchup() { local i; for i in $(seq 1 600); do
+  [ "$(qa b-primary -c "select coalesce(bool_and(replay_lsn = pg_current_wal_lsn()), false) from pg_stat_replication")" = t ] && return 0; sleep 1; done; }
 dc rm -sf b-primary b-standby >/dev/null 2>&1
 dc up -d --wait b-primary >/dev/null 2>&1
 dc up -d b-standby >/dev/null 2>&1
@@ -35,8 +39,16 @@ for rtt in $RTTS; do
   for c in b-primary b-standby; do
     dc exec -T $c tc qdisc replace dev eth0 root netem delay ${half}ms >/dev/null 2>&1
   done
+  # the first synchronous commit after the delay changes stalls while the replication connection
+  # catches up with it; keep that out of the measure
+  sleep 3
+  dc exec -T -e PGOPTIONS="-c synchronous_commit=on" b-primary pgbench -n -c 1 -t 5 -f /tmp/ins.sql -U postgres app >/dev/null 2>&1
   for mode in off local remote_write on remote_apply; do
+    qa b-primary -c "truncate t" >/dev/null   # the data lives on tmpfs: keep the run from filling it
+    catchup
     one=$(dc exec -T -e PGOPTIONS="-c synchronous_commit=$mode" b-primary pgbench -n -c 1 -T $DURATION -f /tmp/ins.sql -U postgres app 2>&1)
+    qa b-primary -c "truncate t" >/dev/null
+    catchup
     many=$(dc exec -T -e PGOPTIONS="-c synchronous_commit=$mode" b-primary pgbench -n -c 32 -j 4 -T $DURATION -f /tmp/ins.sql -U postgres app 2>&1)
     printf '%-8s %-14s %12s %14s %14s\n' "$rtt" "$mode" \
       "$(echo "$one" | awk '/^tps/ { printf "%d", $3 }')" \
