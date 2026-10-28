@@ -3,5 +3,5 @@
 cd "$(dirname "$0")"
 . ./lib-regions.sh
 region_reset us-east us-west
-dc rm -sf client pgcopydb-g >/dev/null 2>&1
+dc rm -sf client pgcopydb-g pgcopydb-gf >/dev/null 2>&1
 echo "reset g done"

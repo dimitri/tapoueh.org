@@ -6,6 +6,9 @@
 #   ./run-e.sh concurrent
 #   ./run-e.sh ddl        schema changes between two writers: plain ALTER TABLE, then
 #                         pglogical.replicate_ddl_command, then a RENAME under load
+#   ./run-e.sh failover   a provider with a physical standby (e-w1, e-s1) feeding a subscriber
+#                         (e-w2); the provider is killed and the standby promoted.
+#                         FAILOVER_SLOT=0 leaves the slot as pglogical created it
 set -uo pipefail
 cd "$(dirname "$0")"
 mkdir -p results
@@ -255,10 +258,88 @@ SQL
   } 2>&1 | tee "$out"
 }
 
+# pglogical creates its slot with the 2ndQuadrant syntax (CREATE_REPLICATION_SLOT ... FAILOVER),
+# which community Postgres does not parse, so the slot is a plain one. Postgres 17's replication
+# command ALTER_REPLICATION_SLOT turns the flag on afterwards, while the slot is inactive.
+failover() {
+  local out=results/e-failover-${FAILOVER_SLOT:-1}.out
+  local PGDATA=/var/lib/postgresql/18/docker SLOT i
+  local PGL="-c shared_preload_libraries=pglogical -c output_plugin_libraries=pglogical_output -c wal_level=logical -c track_commit_timestamp=on -c max_worker_processes=24 -c max_replication_slots=16 -c max_wal_senders=16 -c max_logical_replication_workers=12 -c wal_retrieve_retry_interval=1s"
+  dc up -d --wait e-w1 e-w2 >/dev/null 2>&1
+  dc up -d e-s1 >/dev/null 2>&1
+  {
+  echo "== provider e-w1, physical standby e-s1, subscriber e-w2 (FAILOVER_SLOT=${FAILOVER_SLOT:-1}) =="
+  q e-w1 <<'SQL' >/dev/null
+create extension pglogical;
+select pglogical.create_node(node_name := 'provider', dsn := 'host=e-w1 dbname=app user=postgres');
+create table events (id bigint primary key, note text);
+select pglogical.replication_set_add_table('default', 'events');
+select pg_create_physical_replication_slot('e_s1_slot');
+alter system set synchronized_standby_slots = 'e_s1_slot';
+SQL
+  dc exec -T e-w1 sh -c "echo 'host replication all all trust' >> $PGDATA/pg_hba.conf"
+  q e-w1 -c "select pg_reload_conf()" >/dev/null
+  dc exec -T -u postgres e-s1 sh -c "pg_basebackup -h e-w1 -U postgres -D $PGDATA -X stream -S e_s1_slot --write-recovery-conf >/dev/null 2>&1 \
+    && printf \"primary_conninfo = 'host=e-w1 user=postgres dbname=app'\nsync_replication_slots = on\nhot_standby_feedback = on\n\" >> $PGDATA/postgresql.auto.conf \
+    && pg_ctl -D $PGDATA -o '$PGL' -l /tmp/standby.log -w start >/dev/null"
+  wait_for e-s1 "pg_is_in_recovery()" 30
+  echo "standby: in recovery $(qa e-s1 -c 'select pg_is_in_recovery()'), sync_replication_slots=$(qa e-s1 -c 'show sync_replication_slots')"
+
+  q e-w2 <<'SQL' >/dev/null
+create extension pglogical;
+select pglogical.create_node(node_name := 'subscriber', dsn := 'host=e-w2 dbname=app user=postgres');
+create table events (id bigint primary key, note text);
+SQL
+  q e-w2 -c "select pglogical.create_subscription(subscription_name := 'sub', provider_dsn := 'host=e-w1,e-s1 dbname=app user=postgres target_session_attrs=read-write', synchronize_data := false)" >/dev/null
+  wait_for e-w2 "(select count(*) from pglogical.show_subscription_status() where status = 'replicating') = 1" 60
+  SLOT=$(qa e-w1 -c "select slot_name from pg_replication_slots where plugin = 'pglogical_output'")
+  echo "slot pglogical created on the provider: $(qa e-w1 -c "select slot_name || ' failover=' || failover from pg_replication_slots where plugin = 'pglogical_output'")"
+
+  if [ "${FAILOVER_SLOT:-1}" = 1 ]; then
+    echo; echo "== ALTER_REPLICATION_SLOT \"$SLOT\" ( FAILOVER true ), subscription disabled meanwhile =="
+    q e-w2 -c "select pglogical.alter_subscription_disable('sub', true)" >/dev/null
+    wait_for e-w1 "not (select active from pg_replication_slots where slot_name = '$SLOT')" 30
+    dc exec -T e-w1 psql -X -U postgres "dbname=app replication=database" -c "ALTER_REPLICATION_SLOT \"$SLOT\" ( FAILOVER true )" 2>&1
+    q e-w2 -c "select pglogical.alter_subscription_enable('sub', true)" >/dev/null
+    wait_for e-w2 "(select count(*) from pglogical.show_subscription_status() where status = 'replicating') = 1" 60
+  fi
+  echo "slot on the provider now: $(qa e-w1 -c "select slot_name || ' failover=' || failover from pg_replication_slots where plugin = 'pglogical_output'")"
+  for i in $(seq 1 60); do
+    [ "$(qa e-s1 -c "select count(*) from pg_replication_slots where slot_name = '$SLOT' and synced and not temporary")" = 1 ] && break; sleep 1
+  done
+  echo "on the standby: $(qa e-s1 -c "select coalesce(string_agg(slot_name || ' failover=' || failover || ' synced=' || synced, ', '), 'no logical slot') from pg_replication_slots where slot_type = 'logical'")"
+
+  # a writer on the provider, one numbered row at a time; the ids it was acknowledged for are kept outside the database
+  dc exec -T e-w1 rm -f /tmp/fo-stop /tmp/fo-acked
+  dc exec -d e-w1 sh -c "i=1; while [ ! -e /tmp/fo-stop ]; do psql -X -q -U postgres -d app -c \"insert into events values (\$i, 'p')\" 2>/dev/null && echo \$i >> /tmp/fo-acked; i=\$((i + 1)); sleep 0.02; done"
+  sleep 10
+  echo; echo "steady state: provider $(qa e-w1 -c 'select count(*) from events') rows, subscriber $(qa e-w2 -c 'select count(*) from events')"
+  echo "== docker kill e-w1; pg_ctl promote on e-s1 =="
+  T0=$(date +%s)
+  dc kill e-w1 >/dev/null 2>&1
+  dc exec -T -u postgres e-s1 pg_ctl -D $PGDATA promote -w >/dev/null 2>&1
+  echo "standby writable after $(( $(date +%s) - T0 )) s; logical slots on it: $(qa e-s1 -c "select coalesce(string_agg(slot_name || ' failover=' || failover || ' active=' || active, ', '), 'none') from pg_replication_slots where slot_type = 'logical'")"
+  # the promoted standby inherited synchronized_standby_slots = 'e_s1_slot', a slot it does not have
+  # (nothing here plays pg_auto_failover's part): logical decoding would wait for it forever
+  q e-s1 -c "alter system reset synchronized_standby_slots" -c "select pg_reload_conf()" >/dev/null
+  dc exec -T e-s1 sh -c "for i in \$(seq 1000000 1000199); do psql -X -q -U postgres -d app -c \"insert into events values (\$i, 'new')\" 2>/dev/null; sleep 0.02; done"
+  for i in $(seq 1 90); do
+    [ "$(qa e-w2 -c "select count(*) from events where note = 'new'")" = 200 ] && break; sleep 1
+  done
+  echo "200 rows written on the new provider; on the subscriber: $(qa e-w2 -c "select count(*) from events where note = 'new'") (waited ${i}s after the last insert)"
+  echo "subscription: $(qa e-w2 -c "select status from pglogical.show_subscription_status()")"
+  qa e-s1 -c "select id from events order by 1" > results/e-failover-new.ids; qa e-w2 -c "select id from events order by 1" > results/e-failover-sub.ids
+  echo "rows on the new provider $(wc -l < results/e-failover-new.ids | tr -d ' '), on the subscriber $(wc -l < results/e-failover-sub.ids | tr -d ' '); missing on the subscriber $(comm -23 results/e-failover-new.ids results/e-failover-sub.ids | wc -l | tr -d ' ')"
+  echo "subscriber log: $(dc logs --tail 600 e-w2 2>&1 | grep -m2 'does not exist\|could not connect' | sed 's/^[^|]*| //' | cut -c1-220)"
+  rm -f results/e-failover-new.ids results/e-failover-sub.ids
+  } 2>&1 | tee "$out"
+}
+
 case "${1:-}" in
   findings)   findings ;;
   concurrent) concurrent ;;
   ddl)        ddl ;;
+  failover)   failover ;;
   policy)     ensure_nodes; run_policy "$2" "${3:-15}" ;;
-  *) echo "usage: $0 findings | concurrent | ddl | policy <name> [secs]" >&2; exit 2 ;;
+  *) echo "usage: $0 findings | concurrent | ddl | failover | policy <name> [secs]" >&2; exit 2 ;;
 esac

@@ -26,10 +26,16 @@ The nodes keep their data on tmpfs, so removing the containers is the reset.
   post's first section is about. The last tagged release is `v2.2`, which
   predates both. The image is built by the `us-east-monitor` service and
   tagged `lrdist-pgaf:17`.
-- **pgcopydb**, pinned to `84bce26e38d09801fb845ba22830e830e55490b1` on
+- **pgcopydb**, pinned to `4c5a3b8a7472c645e9d6247d315c7d6677c938cc` on
   `main`, which includes
-  [DDL replication over logical decoding](https://github.com/dimitri/pgcopydb/pull/1064)
-  and its apply fix. Not in a tagged release yet.
+  [DDL replication over logical decoding](https://github.com/dimitri/pgcopydb/pull/1064),
+  its apply fix and the
+  [batched pipeline syncs of #1070](https://github.com/dimitri/pgcopydb/pull/1070).
+  Not in a tagged release yet. The first runs used `84bce26` (#1069 without
+  #1070), which paid a round trip to the target per transaction;
+  `results/g-pgcopydb-84bce26-fullrate.out` is what that looked like.
+  `pgcopydb-failover-slot.patch`, applied on top for the `pgcopydb-gf`
+  service, creates the slot with `FAILOVER true` on Postgres 17+.
 
 Re-pin before running this again — `main` moves.
 
@@ -67,8 +73,11 @@ Re-pin before running this again — `main` moves.
   conflict-resolution policy (`SECS` sets the duration). `./run-e.sh ddl`
   runs a plain `ALTER TABLE`, then `pglogical.replicate_ddl_command` (add and
   rename a column) between two nodes that both write, and prints the slot's
-  `failover` flag. `reset-e.sh` recreates the containers. Results in
-  `results/e-*.out`.
+  `failover` flag. `./run-e.sh failover` adds a physical standby (`e-s1`)
+  to a provider, turns the pglogical slot into a failover slot with
+  `ALTER_REPLICATION_SLOT`, kills the provider and promotes the standby;
+  `FAILOVER_SLOT=0` skips the `ALTER_REPLICATION_SLOT` step as a control.
+  `reset-e.sh` recreates the containers. Results in `results/e-*.out`.
 - **g** — schema changes across regions, on `us-east` and `us-west`.
   `./run-g.sh core` runs `ADD COLUMN` three ways over native logical
   replication in both directions (one region then the other, both at once,
@@ -76,9 +85,14 @@ Re-pin before running this again — `main` moves.
   subscription with `pgcopydb clone --follow` and the DDL event trigger, runs
   `ADD`, `RENAME` and `DROP COLUMN`, then kills the `us-east` primary. The
   pgcopydb container takes the keyword connection form
-  (`host=a,b,c port=5432 ...`), not a multi-host URI. Three runs each in
-  `results/g-*-run*.out`; `g-pgcopydb-fullrate.*` is a run with a faster
-  writer, `g-pgcopydb-multihost.log` the URI failure.
+  (`host=a,b,c port=5432 ...`), not a multi-host URI. `./run-g.sh
+  pgcopydb-failover` is the same with the patched pgcopydb (`pgcopydb-gf`),
+  whose slot is a failover slot, restarted in a loop after the kill.
+  `WRITER_PAUSE` sets the writer's pause (default 0.02 s, about 26 rows a
+  second). Three runs each in `results/g-core-run*.out`,
+  `g-pgcopydb-4c5a3b8-run*.out` and `g-pgcopydb-failover-run*.out`;
+  `g-pgcopydb-84bce26-fullrate.*` is the run on the older pin,
+  `g-pgcopydb-multihost.log` the URI failure.
 - **f** — two regions, `us-east` and `us-west`, each a group of its own,
   replicating to each other with native logical replication
   (`sub_us_west_from_us_east` and `sub_us_east_from_us_west`, both

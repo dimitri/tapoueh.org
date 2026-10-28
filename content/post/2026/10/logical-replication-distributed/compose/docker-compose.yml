@@ -308,6 +308,18 @@ services:
     volumes:
       - ./results:/results
 
+  # the same, with the slot created FAILOVER true (pgcopydb-failover-slot.patch)
+  pgcopydb-gf:
+    profiles: [g]
+    build:
+      context: .
+      dockerfile: Dockerfile.pgcopydb
+      args: { PGVERSION: "17", PGCOPYDB_PATCH: pgcopydb-failover-slot.patch }
+    image: lrdist-pgcopydb:17-failover
+    entrypoint: ["sleep", "infinity"]
+    volumes:
+      - ./results:/results
+
   # ---------------- profile d: pgcopydb DDL-as-a-message, against PR #1064 ----------------
   d-source:
     <<: *pg-common
@@ -387,6 +399,16 @@ services:
     tmpfs: ["/var/lib/postgresql"]
     depends_on: [e-hub]
 
+
+  # a physical standby of e-w1, for `run-e.sh failover`: the script runs pg_basebackup and starts Postgres in it
+  e-s1:
+    <<: *pg-common
+    profiles: [e]
+    image: lrdist-pglogical:18
+    entrypoint: ["sleep", "infinity"]
+    healthcheck: { disable: true }
+    tmpfs: ["/var/lib/postgresql"]
+    depends_on: [e-hub]
 volumes:
   d-source-data:
   d-target-data:

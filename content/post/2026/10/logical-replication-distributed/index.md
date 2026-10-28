@@ -687,43 +687,65 @@ installed, a schema change is a message in the same commit-ordered stream
 as the rows, so it cannot arrive before or after them. `./run-g.sh
 pgcopydb` replaces the native subscription from `us-east` to `us-west`
 with `pgcopydb clone --follow` (a one-way link; `clone` also created the
-table on `us-west` itself) and runs three changes on `us-east`, with
-nothing run on `us-west`, three runs:
+table on `us-west` itself), with a writer inserting about 26 rows a second
+in single-row transactions, and runs three changes on `us-east` with
+nothing run on `us-west`. Three runs, on pgcopydb `main` at `4c5a3b8`:
 
+- It keeps up: 26 to 27 rows a second written, the same arriving, a
+  largest lag of 0 to 1 rows.
 - `ADD COLUMN`, `RENAME COLUMN` and `DROP COLUMN` each reached `us-west`
-  within one or two seconds, with at most one row of lag, at about two
-  rows a second. The rename is the change that no order makes safe on the
-  native link.
-- The rows follow the same order: the row inserted with the new column
-  lands with it, in two runs out of three at the moment the check ran.
+  within one or two seconds, with at most one row of lag, writer running.
+  The rename is the change that no order makes safe on the native link.
+  The row inserted with the new column lands with it.
 
-Four things stop it from replacing the native link in this scenario, all
+An earlier version of this section said pgcopydb fell behind a writer of
+that speed, and measured its apply position crawling. That was the pin I
+started from (`84bce26`, PR #1069), which forced one round trip to the
+target per transaction so that nothing could be lost at cutover; PR #1070
+batches those syncs again. At 26 rows a second the older commit lagged by
+two thousand rows in three minutes (`results/g-pgcopydb-84bce26-fullrate.out`),
+and I had slowed the writer to two rows a second to get through the DDL
+runs. It was the regression, not pgcopydb's rate, and the numbers above
+are from after the fix.
+
+Three things stop it from replacing the native link in this scenario, all
 found by running it:
 
 - **Its slot is not a failover slot.** pgcopydb issues
   `CREATE_REPLICATION_SLOT ... LOGICAL` without the `FAILOVER` option.
-  After `us-east-a` was killed, the new primary had no such slot, and the
-  pipeline exited with `replication slot "pgcopydb" does not exist`:
-  118 rows had arrived, about 135 more were written by the new primary and
-  never reached `us-west`, in all three runs. Re-creating the link needs a
-  new slot and a new clone.
+  After `us-east-a` was killed, the new primary had no such slot and the
+  pipeline kept failing with `replication slot "pgcopydb" does not exist`:
+  1,139 rows written afterwards never reached `us-west` after two more
+  minutes, in all three runs (`results/g-pgcopydb-4c5a3b8-run*.out`).
+  Re-creating the link needs a new slot and a new clone.
 - **It does not take a multi-host URI.** A `postgres://a:5432,b:5432,...`
   string makes its replication connection fail with `could not match 3 port
-  numbers to 5 hosts`; the keyword form `host=a,b,c port=5432 ...
-  target_session_attrs=read-write` works and is what the demo uses.
+  numbers to 5 hosts` (seen on `84bce26`); the keyword form
+  `host=a,b,c port=5432 ... target_session_attrs=read-write` works and is
+  what the demo uses.
 - **It filters by table, not by row.** The `where (region = ...)`
   publications that keep the bidirectional links from echoing have no
   equivalent, so it can carry one-way links only, such as the warehouse
   mirror, not the pairs.
-- **It fell behind a faster writer.** In a first run at about 25 rows a
-  second the apply position advanced a few kilobytes every ten seconds
-  while the receive position kept up, and the lag passed two thousand rows
-  in three minutes (`results/g-pgcopydb-fullrate.out`). I did not look for
-  the cause; the runs above use two rows a second.
 
-The first two are small changes (the second is a parsing bug), and the
-first is the one that matters: a `FAILOVER` slot is what the rest of this
-post is about, and Postgres 17 accepts it on that same command.
+The first is the one that matters, and the change is small. Postgres 17
+accepts `FAILOVER` on that same command, but only in the parenthesized
+option syntax (`CREATE_REPLICATION_SLOT "pgcopydb" LOGICAL "pgoutput"
+(FAILOVER true)`), which is why the old bare form cannot carry it. A
+nine-line patch to `pgsql_create_logical_replication_slot()` that uses
+that form when the server is 17 or later
+(`compose/pgcopydb-failover-slot.patch`) is all the demo needed. With it,
+`./run-g.sh pgcopydb-failover` shows the slot as `failover=true` on the
+primary and `synced=true` on both standbys before the kill; after the
+kill the new primary has it, pgcopydb exits on the lost connection and
+its restart (`pgcopydb follow --resume`, here in a loop) picks up from
+the sentinel, and `us-west` ends with every row `us-east` acknowledged, 0
+rows behind a second after the writer stops, in 3 runs out of 3
+(`results/g-pgcopydb-failover-run*.out`). What pgcopydb should do, then:
+create its slot with `FAILOVER true` on Postgres 17+ (a flag, or the
+default), and a supervised restart does the rest. The standbys still need
+`sync_replication_slots` and the primary `synchronized_standby_slots`,
+which are the Postgres-side settings this post's first section covers.
 
 ### pglogical: `replicate_ddl_command`
 
@@ -746,9 +768,41 @@ each other, both inserting, twice:
   subscriber also writes with the old structure, and that is the situation
   of two writers on one table. Two runs did not hit it, which says nothing
   about the window.
-- The slot pglogical creates has `failover = false`. Its source only asks
-  for a failover slot on 2ndQuadrant's PostgreSQL 9.6 and 11 builds, so on
-  community Postgres, a promotion loses it the way pgcopydb's is lost.
+- The slot pglogical creates has `failover = false`. It issues
+  `CREATE_REPLICATION_SLOT ... LOGICAL pglogical_output FAILOVER`, the
+  2ndQuadrant syntax, and only on 2ndQuadrant's PostgreSQL 9.6 and 11
+  builds; community Postgres 17 and later spell the option `(FAILOVER
+  true)`, so a promotion loses the slot the way pgcopydb's is lost.
+
+It can still be made a failover slot, without changing pglogical. The
+slot is created once, when the subscription is, and nothing touches its
+flag afterwards, so Postgres 17's `ALTER_REPLICATION_SLOT` does it from a
+replication connection (`psql "dbname=app replication=database" -c
+'ALTER_REPLICATION_SLOT "pgl_app_provider_sub" ( FAILOVER true )'`) while
+the slot is inactive: disable the subscription with
+`pglogical.alter_subscription_disable`, run the command, enable it again.
+Creating the slot by hand first does not work: pglogical drops an inactive
+slot of that name and creates its own. `./run-e.sh failover` runs it on a
+provider with a physical standby (`sync_replication_slots = on`, the
+provider's `synchronized_standby_slots` naming the standby's slot) and a
+subscriber whose provider DSN lists both hosts with
+`target_session_attrs=read-write`:
+
+- the slot flips to `failover=true`, and the standby has a `synced=true`
+  copy within seconds;
+- the provider is killed under a writer and the standby promoted; the
+  apply worker reconnects to it by itself and the 200 rows written on the
+  new provider reach the subscriber one second after the last insert, with
+  no row missing (`results/e-failover-1.out`);
+- the same run without the `ALTER_REPLICATION_SLOT` step has no slot on the
+  standby, the worker dies on `START_REPLICATION SLOT ... does not exist`,
+  the subscription stays `down`, and the 200 rows never arrive
+  (`results/e-failover-0.out`).
+
+One trap that is the demo's, not pglogical's: the promoted standby inherits
+`synchronized_standby_slots = 'e_s1_slot'`, a slot it does not have, and
+logical decoding then waits for it forever. The script resets it by hand;
+in the post's setup, pg_auto_failover computes that list. One run of each.
 
 ### What the three add up to
 
@@ -757,7 +811,7 @@ each other, both inserting, twice:
 | Schema change in the stream, in order with the rows | no | yes, with the event trigger | yes, through `replicate_ddl_command` |
 | Survives a rename with writers on both sides | no | one-way link only | worked in two runs, README warns |
 | Row filters | yes | no (tables only) | yes (`row_filter`) |
-| Failover-enabled slot | yes | no | no |
+| Failover-enabled slot | yes | not as shipped; a nine-line patch does it | not as shipped; `ALTER_REPLICATION_SLOT` after creation does it |
 | Link in both directions | yes | no | yes |
 
 None of the three has every column. The combination the scenario needs

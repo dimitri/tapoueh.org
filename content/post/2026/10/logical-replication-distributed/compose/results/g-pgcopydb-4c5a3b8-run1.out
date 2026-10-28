@@ -1,0 +1,35 @@
+== profile g, pgcopydb: us-east primary us-east-a, us-west primary us-west-a ==
+-- pgcopydb-g: pgcopydb pgcopydb version 0.18; clone --follow us-east -> us-west, writer pause 0.02s
+   table on us-west after 2s; logical slots on the us-east primary: pgcopydb (failover=false, active=true)
+   event trigger installed; steady state: lag -2 rows
+   over 20 s: 26 rows/s written on us-east, 26 rows/s arrived on us-west; largest lag 0 rows
+
+== ADD COLUMN on us-east, nothing run on us-west ==
+   column on us-west after 1s; row with the new column: carries the new column
+   largest lag over the next 10 s: 0 rows
+
+== RENAME COLUMN ==
+   renamed on us-west after 1s; largest lag over the next 10 s: 0 rows
+
+== DROP COLUMN ==
+   dropped on us-west after 1s; largest lag over the next 10 s: 0 rows
+
+== the us-east primary is killed under load ==
+   us-east-b: logical slots: none
+   us-east-c: logical slots: none
+   at the kill: us-east holds 1468 rows, us-west 1470
+   t0=1793185946.124943550: docker kill us-east-a
+   new primary of us-east: us-east-b
+   slots on the new primary: none
+   after the writer stopped: us-west is 1139 rows behind
+   rows owned by us-east: acknowledged 2613, on the new us-east primary 2614, on us-west 1475 (caught up after a further 120s)
+-- the errors in the pgcopydb log
+   2026-10-28 11:12:27.232 23 ERROR  pgsql.c:5634              could not receive data from WAL stream: SSL error: unexpected eof while reading
+   2026-10-28 11:13:20.419 23 ERROR  pgsql.c:5154              Failed to send replication command:
+   2026-10-28 11:13:20.419 23 ERROR  pgsql.c:3375              [SOURCE 1165] [42704] ERROR:  replication slot "pgcopydb" does not exist
+   2026-10-28 11:13:20.419 23 ERROR  pgsql.c:3390              [SOURCE 1165] Context: START_REPLICATION SLOT "pgcopydb" LOGICAL 0/502FB08 ("proto_version" '1', "publication_names" 'pgcopydb', "messages" 'true')
+-- the last lines of the pgcopydb log
+   2026-10-28 11:16:53.317 651 ERROR  pgsql.c:2448              [SOURCE 3039] ERROR:  snapshot "00000072-00000008-1" does not exist
+   2026-10-28 11:16:53.318 651 ERROR  pgsql.c:2448              [SOURCE 3039] ERROR:  snapshot "00000072-00000008-1" does not exist
+   2026-10-28 11:16:53.319 651 ERROR  pgsql.c:2459              [SOURCE 3039] SQL query: SET TRANSACTION SNAPSHOT '00000072-00000008-1'
+   2026-10-28 11:16:53.319 651 ERROR  pgsql.c:2467              [SOURCE 3039] SQL params: 

@@ -1,0 +1,25 @@
+diff --git a/src/bin/pgcopydb/pgsql.c b/src/bin/pgcopydb/pgsql.c
+index 73bf222..32250e2 100644
+--- a/src/bin/pgcopydb/pgsql.c
++++ b/src/bin/pgcopydb/pgsql.c
+@@ -4905,6 +4905,20 @@ pgsql_create_logical_replication_slot(LogicalStreamClient *client,
+ 		}
+ 	}
+ 
++	/*
++	 * Postgres 17 added the FAILOVER option, which lets the slot be copied to
++	 * the physical standbys (sync_replication_slots) so that it survives a
++	 * promotion. It is only available in the parenthesized option syntax,
++	 * which Postgres 15 introduced; the snapshot is exported by default.
++	 */
++	if (PQserverVersion(pgsql->connection) >= 170000)
++	{
++		sformat(query, sizeof(query),
++				"CREATE_REPLICATION_SLOT \"%s\" LOGICAL \"%s\" (FAILOVER true)",
++				client->slotName,
++				OutputPluginToString(client->plugin));
++	}
++
+ 	PGresult *result = PQexec(pgsql->connection, query);
+ 
+ 	if (PQresultStatus(result) != PGRES_TUPLES_OK)

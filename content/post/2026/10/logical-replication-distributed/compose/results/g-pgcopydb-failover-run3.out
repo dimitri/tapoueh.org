@@ -1,0 +1,32 @@
+== profile g, pgcopydb-failover: us-east primary us-east-a, us-west primary us-west-a ==
+-- pgcopydb-gf: pgcopydb pgcopydb version 0.18; clone --follow us-east -> us-west, writer pause 0.02s
+   table on us-west after 2s; logical slots on the us-east primary: pgcopydb (failover=true, active=true)
+   event trigger installed; steady state: lag -1 rows
+   over 20 s: 27 rows/s written on us-east, 27 rows/s arrived on us-west; largest lag 1 rows
+
+== ADD COLUMN on us-east, nothing run on us-west ==
+   column on us-west after 1s; row with the new column: carries the new column
+   largest lag over the next 10 s: 0 rows
+
+== RENAME COLUMN ==
+   renamed on us-west after 1s; largest lag over the next 10 s: 1 rows
+
+== DROP COLUMN ==
+   dropped on us-west after 1s; largest lag over the next 10 s: 1 rows
+
+== the us-east primary is killed under load ==
+   us-east-b: logical slots: pgcopydb (failover=true, synced=true)
+   us-east-c: logical slots: pgcopydb (failover=true, synced=true)
+   at the kill: us-east holds 1489 rows, us-west 1489
+   t0=1793188197.952071009: docker kill us-east-a
+   new primary of us-east: us-east-c
+   slots on the new primary: pgcopydb (failover=true, active=true)
+   after the writer stopped: us-west is 0 rows behind
+   rows owned by us-east: acknowledged 2532, on the new us-east primary 2533, on us-west 2533 (caught up after a further 1s)
+-- the errors in the pgcopydb log
+   2026-10-28 11:49:58.324 23 ERROR  pgsql.c:5648              could not receive data from WAL stream: SSL error: unexpected eof while reading
+-- the last lines of the pgcopydb log
+   2026-10-28 11:51:21.620 23 INFO   pgsql.c:5747              Reported write_lsn 0/51649C8, flush_lsn 0/5164900, replay_lsn 0/5164900
+   2026-10-28 11:51:31.638 23 INFO   pgsql.c:5747              Reported write_lsn 0/516C5C0, flush_lsn 0/516C4F8, replay_lsn 0/516C4F8
+   2026-10-28 11:51:41.669 23 INFO   pgsql.c:5747              Reported write_lsn 0/51736C0, flush_lsn 0/51735F8, replay_lsn 0/51735F8
+   2026-10-28 11:51:51.705 23 INFO   pgsql.c:5747              Reported write_lsn 0/517D7C0, flush_lsn 0/517D7C0, replay_lsn 0/517D7C0
