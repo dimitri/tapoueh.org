@@ -88,20 +88,8 @@ svc += """  # the application and the CDC consumer: psql, pg_recvlogical, perl
     build:
       context: .
       dockerfile: Dockerfile.pgcopydb
-      args: { PGVERSION: "17" }
-    image: lrdist-pgcopydb:17
-    entrypoint: ["sleep", "infinity"]
-    volumes:
-      - ./results:/results
-
-  # the same, with the slot created FAILOVER true (pgcopydb-failover-slot.patch)
-  pgcopydb-gf:
-    profiles: [g]
-    build:
-      context: .
-      dockerfile: Dockerfile.pgcopydb
       args: { PGVERSION: "17", PGCOPYDB_PATCH: pgcopydb-failover-slot.patch }
-    image: lrdist-pgcopydb:17-failover
+    image: lrdist-pgcopydb:17
     entrypoint: ["sleep", "infinity"]
     volumes:
       - ./results:/results

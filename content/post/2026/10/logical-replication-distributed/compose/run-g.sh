@@ -11,6 +11,7 @@
 #                          the same with a pgcopydb whose slot is FAILOVER true
 #                          (pgcopydb-failover-slot.patch), restarted after the kill
 #   WRITER_PAUSE=0.4 ./run-g.sh pgcopydb     slows the writer (default 0.02, ~25 rows/s)
+#   KILL_REGION=us-west ./run-g.sh pgcopydb-failover   kills the target's primary instead
 set -uo pipefail
 cd "$(dirname "$0")"
 . ./lib-regions.sh
@@ -99,13 +100,13 @@ core() {
 
 pgcopydb_link() {
   local SRC TGT SVC=pgcopydb-g PAUSE=${WRITER_PAUSE:-0.02}
-  [ "$SCN" = pgcopydb-failover ] && SVC=pgcopydb-gf
   SRC=$(rconninfo us-east); TGT=$(rconninfo us-west)
   q us-east "$SCHEMA" >/dev/null
   dc up -d $SVC >/dev/null 2>&1
   say "-- $SVC: pgcopydb $(dc exec -T $SVC pgcopydb --version 2>/dev/null | tr -d '\r' | head -1); clone --follow us-east -> us-west, writer pause ${PAUSE}s"
-  # a supervisor: clone --follow, then follow --resume each time it exits (it exits when its source connection goes)
-  dc exec -d $SVC sh -c "pgcopydb clone --follow --source '$SRC' --target '$TGT' > /results/g-$SCN.log 2>&1; while [ ! -e /tmp/pgc-stop ]; do sleep 1; pgcopydb follow --resume --source '$SRC' --target '$TGT' >> /results/g-$SCN.log 2>&1; done"
+  local FLAGS=""
+  [ "$SCN" = pgcopydb-failover ] && FLAGS="--enable-failover"
+  dc exec -d $SVC sh -c "pgcopydb clone --follow $FLAGS --source '$SRC' --target '$TGT' > /results/g-$SCN.log 2>&1"
   for i in $(seq 1 90); do
     [ "$(q us-west "select to_regclass('public.events') is not null")" = t ] && break; sleep 1
   done
@@ -140,27 +141,27 @@ pgcopydb_link() {
   q us-east "alter table events drop column remark" >/dev/null
   say "   dropped on us-west after $(waitcol absent remark); largest lag over the next 10 s: $(maxlag) rows"
 
-  say; say "== the us-east primary is killed under load =="
-  OLD=$(region_primary us-east)
-  for n in us-east-a us-east-b us-east-c; do
+  K=${KILL_REGION:-us-east}
+  say; say "== the $K primary is killed under load =="
+  OLD=$(region_primary $K)
+  for n in $K-a $K-b $K-c; do
     [ "$n" != "$OLD" ] && say "   $n: logical slots: $(rpq $n "select coalesce(string_agg(slot_name || ' (failover=' || failover || ', synced=' || coalesce(synced::text, '-') || ')', ', '), 'none') from pg_replication_slots where slot_type = 'logical'")"
   done
-  T0=$(dc exec -T us-east-monitor date +%s.%N | tr -d '\r')
+  T0=$(dc exec -T $K-monitor date +%s.%N | tr -d '\r')
   say "   at the kill: us-east holds $(q us-east "select count(*) from events where region = 'us-east'") rows, us-west $(q us-west "select count(*) from events where region = 'us-east'")"
   say "   t0=$T0: docker kill $OLD"
   dc kill $OLD >/dev/null 2>&1
   for i in $(seq 1 300); do
-    NEW=$(rmon us-east "select nodename from pgautofailover.node where nodename <> '$OLD' and reportedstate in ('primary','wait_primary','single') order by nodeid limit 1" 2>/dev/null)
+    NEW=$(rmon $K "select nodename from pgautofailover.node where nodename <> '$OLD' and reportedstate in ('primary','wait_primary','single') order by nodeid limit 1" 2>/dev/null)
     [ -n "$NEW" ] && break; sleep 1
   done
-  say "   new primary of us-east: $NEW"
+  say "   new primary of $K: $NEW"
   sleep 60
   cl touch /tmp/g-stop; sleep 3
   say "   slots on the new primary: $(rpq $NEW "$SLOTQ")"
   say "   after the writer stopped: us-west is $(lagrows us-east) rows behind"
   for i in $(seq 1 120); do [ "$(lagrows us-east)" -le 0 ] && break; sleep 1; done
-  say "   rows owned by us-east: acknowledged $(wc -l < results/g-writer-east.log | tr -d ' '), on the new us-east primary $(q us-east "select count(*) from events where region = 'us-east'"), on us-west $(q us-west "select count(*) from events where region = 'us-east'") (caught up after a further ${i}s)"
-  dc exec -T $SVC touch /tmp/pgc-stop
+  say "   rows owned by us-east: acknowledged $(wc -l < results/g-writer-east.log | tr -d ' '), on us-east $(q us-east "select count(*) from events where region = 'us-east'"), on us-west $(q us-west "select count(*) from events where region = 'us-east'") (caught up after a further ${i}s)"
   say "-- the errors in the pgcopydb log"
   grep -m4 "ERROR\|FATAL" results/g-$SCN.log | cut -c1-240 | sed 's/^/   /' | tee -a "$OUT"
   say "-- the last lines of the pgcopydb log"

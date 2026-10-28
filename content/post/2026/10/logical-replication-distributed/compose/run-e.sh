@@ -9,6 +9,8 @@
 #   ./run-e.sh failover   a provider with a physical standby (e-w1, e-s1) feeding a subscriber
 #                         (e-w2); the provider is killed and the standby promoted.
 #                         FAILOVER_SLOT=0 leaves the slot as pglogical created it
+#   ./reset-e.sh && ./run-e.sh bench native|pglogical|pgcopydb
+#                         latency and rows a second of the same one-way link e-w1 -> e-w2
 set -uo pipefail
 cd "$(dirname "$0")"
 mkdir -p results
@@ -335,11 +337,77 @@ SQL
   } 2>&1 | tee "$out"
 }
 
+# bench <native|pglogical|pgcopydb>: one-way link e-w1 -> e-w2 (Postgres 18, no standbys), same
+# table, same three workloads: latency of single-row transactions, rows a second under 8
+# concurrent single-row writers, and one transaction of a million rows.
+bench() {
+  local M=${1:?native | pglogical | pgcopydb} out=results/e-bench-$1.out
+  local TBL="create table events (id bigserial primary key, payload text not null, src_ts timestamptz not null default clock_timestamp(), applied_at timestamptz)"
+  # the target stamps the time a row is applied, whichever tool applied it
+  local TRG="create function stamp() returns trigger language plpgsql as \$\$ begin new.applied_at := clock_timestamp(); return new; end \$\$;
+create trigger stamp before insert on events for each row execute function stamp();
+alter table events enable always trigger stamp"
+  {
+  echo "== $M: e-w1 -> e-w2, PostgreSQL 18 =="
+  case "$M" in
+    native)
+      q e-w1 -c "$TBL" -c "create publication bench for table events" >/dev/null
+      q e-w2 -c "$TBL" -c "$TRG" >/dev/null
+      q e-w2 -c "create subscription bench connection 'host=e-w1 dbname=app user=postgres' publication bench with (copy_data = false)" >/dev/null ;;
+    pglogical)
+      q e-w1 -c "create extension if not exists pglogical" -c "$TBL" >/dev/null
+      q e-w1 -c "select pglogical.create_node(node_name := 'src', dsn := 'host=e-w1 dbname=app user=postgres')" -c "select pglogical.replication_set_add_table('default', 'events')" >/dev/null
+      q e-w2 -c "create extension if not exists pglogical" -c "$TBL" -c "$TRG" >/dev/null
+      q e-w2 -c "select pglogical.create_node(node_name := 'dst', dsn := 'host=e-w2 dbname=app user=postgres')" >/dev/null
+      q e-w2 -c "select pglogical.create_subscription(subscription_name := 'bench', provider_dsn := 'host=e-w1 dbname=app user=postgres', synchronize_data := false)" >/dev/null
+      wait_for e-w2 "(select count(*) from pglogical.show_subscription_status() where status = 'replicating') = 1" 60 ;;
+    pgcopydb)
+      q e-w1 -c "$TBL" >/dev/null
+      COMPOSE_PROFILES=g dc up -d pgcopydb-g >/dev/null 2>&1
+      dc exec -T pgcopydb-g sh -c "rm -rf /root/.local/share/pgcopydb /tmp/pgcopydb"
+      dc exec -d pgcopydb-g sh -c "pgcopydb clone --follow --source 'postgres://postgres@e-w1/app' --target 'postgres://postgres@e-w2/app' > /results/e-bench-pgcopydb.log 2>&1"
+      for i in $(seq 1 60); do [ "$(qa e-w2 -c "select to_regclass('public.events') is not null")" = t ] && break; sleep 1; done
+      q e-w2 -c "$TRG" >/dev/null
+      sleep 5 ;;
+  esac
+  cnt() { qa "$1" -c "select count(*) from events where payload = '$2'"; }
+  now() { date +%s.%N; }
+  drain() { # <payload> <expected>: seconds until the target has them all
+    local t0=$(now) i
+    for i in $(seq 1 3000); do [ "$(cnt e-w2 "$1")" -ge "$2" ] && break; sleep 0.2; done
+    echo "$(now) $t0" | awk '{printf "%.1f", $1 - $2}'
+  }
+
+  echo; echo "-- latency: 1000 single-row transactions, one session, 50 ms apart"
+  dc exec -T e-w1 sh -c "for i in \$(seq 1 1000); do psql -X -q -U postgres -d app -c \"insert into events (payload) values ('lat')\"; sleep 0.05; done"
+  drain lat 1000 >/dev/null
+  qa e-w2 -c "select 'p50 ' || round((percentile_cont(0.5) within group (order by extract(epoch from applied_at - src_ts)) * 1000)::numeric, 1) || ' ms, p95 ' || round((percentile_cont(0.95) within group (order by extract(epoch from applied_at - src_ts)) * 1000)::numeric, 1) || ' ms, p99 ' || round((percentile_cont(0.99) within group (order by extract(epoch from applied_at - src_ts)) * 1000)::numeric, 1) || ' ms, rows ' || count(*) from events where payload = 'lat'"
+
+  echo; echo "-- throughput: pgbench, 8 clients, 30 s, one insert per transaction"
+  dc exec -T e-w1 sh -c "echo \"insert into events (payload) values ('tp');\" > /tmp/ins.sql"
+  local t0=$(now)
+  dc exec -T e-w1 pgbench -n -c 8 -j 4 -T 30 -U postgres -f /tmp/ins.sql app > /tmp/bench.$$ 2>&1
+  local at_end=$(cnt e-w2 tp) src=$(cnt e-w1 tp)
+  local d=$(drain tp $src)
+  grep "tps =" /tmp/bench.$$ | sed 's/^/   source: /'; rm -f /tmp/bench.$$
+  echo "   source committed $src rows; $at_end were on the target when the load stopped; the rest took $d s more"
+  echo "   target applied $(awk -v n=$src -v d=$d 'BEGIN { printf "%d", n / (30 + d) }') rows/s over the whole run, $(awk -v n=$at_end 'BEGIN { printf "%d", n / 30 }') rows/s while it was loaded"
+
+  echo; echo "-- one transaction of 1,000,000 rows"
+  local tb=$(now)
+  q e-w1 -c "insert into events (payload) select 'bulk' from generate_series(1, 1000000)" >/dev/null
+  local sec=$(echo "$(now) $tb" | awk '{printf "%.1f", $1 - $2}')
+  local dd=$(drain bulk 1000000)
+  echo "   committed on the source after $sec s, complete on the target $dd s after that"
+  } 2>&1 | tee "$out"
+}
+
 case "${1:-}" in
   findings)   findings ;;
   concurrent) concurrent ;;
   ddl)        ddl ;;
   failover)   failover ;;
+  bench)      bench "${2:-}" ;;
   policy)     ensure_nodes; run_policy "$2" "${3:-15}" ;;
-  *) echo "usage: $0 findings | concurrent | ddl | failover | policy <name> [secs]" >&2; exit 2 ;;
+  *) echo "usage: $0 findings | concurrent | ddl | failover | bench <method> | policy <name> [secs]" >&2; exit 2 ;;
 esac

@@ -302,20 +302,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.pgcopydb
-      args: { PGVERSION: "17" }
-    image: lrdist-pgcopydb:17
-    entrypoint: ["sleep", "infinity"]
-    volumes:
-      - ./results:/results
-
-  # the same, with the slot created FAILOVER true (pgcopydb-failover-slot.patch)
-  pgcopydb-gf:
-    profiles: [g]
-    build:
-      context: .
-      dockerfile: Dockerfile.pgcopydb
       args: { PGVERSION: "17", PGCOPYDB_PATCH: pgcopydb-failover-slot.patch }
-    image: lrdist-pgcopydb:17-failover
+    image: lrdist-pgcopydb:17
     entrypoint: ["sleep", "infinity"]
     volumes:
       - ./results:/results
@@ -409,6 +397,33 @@ services:
     healthcheck: { disable: true }
     tmpfs: ["/var/lib/postgresql"]
     depends_on: [e-hub]
+
+  # ---------------- profile b: synchronous_commit under a round-trip time ----------------
+  b-primary:
+    <<: *pg-common
+    profiles: [b]
+    build:
+      context: .
+      dockerfile: Dockerfile.netem
+      args: { PGVERSION: "18" }
+    image: lrdist-netem:18
+    cap_add: [NET_ADMIN]
+    command: postgres -c max_wal_senders=10 -c max_replication_slots=10
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app
+      POSTGRES_HOST_AUTH_METHOD: trust
+    tmpfs: ["/var/lib/postgresql"]
+
+  b-standby:
+    <<: *pg-common
+    profiles: [b]
+    image: lrdist-netem:18
+    cap_add: [NET_ADMIN]
+    entrypoint: ["sleep", "infinity"]
+    healthcheck: { disable: true }
+    tmpfs: ["/var/lib/postgresql"]
+    depends_on: [b-primary]
 volumes:
   d-source-data:
   d-target-data:

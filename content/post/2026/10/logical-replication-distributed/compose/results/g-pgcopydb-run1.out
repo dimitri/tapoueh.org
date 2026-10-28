@@ -1,0 +1,35 @@
+== profile g, pgcopydb: us-east primary us-east-a, us-west primary us-west-a ==
+-- pgcopydb-g: pgcopydb pgcopydb version 0.18; clone --follow us-east -> us-west, writer pause 0.02s
+   table on us-west after 2s; logical slots on the us-east primary: pgcopydb (failover=false, active=true)
+   event trigger installed; steady state: lag -3 rows
+   over 20 s: 27 rows/s written on us-east, 27 rows/s arrived on us-west; largest lag 0 rows
+
+== ADD COLUMN on us-east, nothing run on us-west ==
+   column on us-west after 1s; row with the new column: carries the new column
+   largest lag over the next 10 s: 0 rows
+
+== RENAME COLUMN ==
+   renamed on us-west after 1s; largest lag over the next 10 s: 0 rows
+
+== DROP COLUMN ==
+   dropped on us-west after 1s; largest lag over the next 10 s: 0 rows
+
+== the us-east primary is killed under load ==
+   us-east-b: logical slots: none
+   us-east-c: logical slots: none
+   at the kill: us-east holds 1375 rows, us-west 1377
+   t0=1793195818.771671050: docker kill us-east-a
+   new primary of us-east: us-east-c
+   slots on the new primary: none
+   after the writer stopped: us-west is 781 rows behind
+   rows owned by us-east: acknowledged 2160, on us-east 2161, on us-west 1380 (caught up after a further 120s)
+-- the errors in the pgcopydb log
+   2026-10-28 13:56:59.167 23 ERROR  pgsql.c:5697              could not receive data from WAL stream: SSL error: unexpected eof while reading
+   2026-10-28 13:57:51.202 23 ERROR  pgsql.c:5209              Failed to send replication command:
+   2026-10-28 13:57:51.202 23 ERROR  pgsql.c:3403              [SOURCE 1154] [42704] ERROR:  replication slot "pgcopydb" does not exist
+   2026-10-28 13:57:51.202 23 ERROR  pgsql.c:3418              [SOURCE 1154] Context: START_REPLICATION SLOT "pgcopydb" LOGICAL 0/402DB00 ("proto_version" '1', "publication_names" 'pgcopydb', "messages" 'true')
+-- the last lines of the pgcopydb log
+   2026-10-28 13:59:47.688 22 ERROR  follow.c:368              Failed to follow changes from source, see above for details
+   2026-10-28 13:59:47.688 22 INFO   follow.c:294              Current sentinel replay_lsn is 0/411DBA0
+   2026-10-28 13:59:47.689 22 ERROR  follow.c:395              Follow has already been restarted 5 times within 300 seconds, giving up (see --max-restarts and --restart-window)
+   2026-10-28 13:59:47.712 19 ERROR  cli_clone_follow.c:1208   follow process 22 has terminated [12]

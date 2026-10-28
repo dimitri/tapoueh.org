@@ -87,3 +87,30 @@
     healthcheck: { disable: true }
     tmpfs: ["/var/lib/postgresql"]
     depends_on: [e-hub]
+
+  # ---------------- profile b: synchronous_commit under a round-trip time ----------------
+  b-primary:
+    <<: *pg-common
+    profiles: [b]
+    build:
+      context: .
+      dockerfile: Dockerfile.netem
+      args: { PGVERSION: "18" }
+    image: lrdist-netem:18
+    cap_add: [NET_ADMIN]
+    command: postgres -c max_wal_senders=10 -c max_replication_slots=10
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app
+      POSTGRES_HOST_AUTH_METHOD: trust
+    tmpfs: ["/var/lib/postgresql"]
+
+  b-standby:
+    <<: *pg-common
+    profiles: [b]
+    image: lrdist-netem:18
+    cap_add: [NET_ADMIN]
+    entrypoint: ["sleep", "infinity"]
+    healthcheck: { disable: true }
+    tmpfs: ["/var/lib/postgresql"]
+    depends_on: [b-primary]

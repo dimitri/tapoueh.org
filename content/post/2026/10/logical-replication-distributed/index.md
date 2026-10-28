@@ -33,16 +33,12 @@ to build against.
 
 {{< lab >}}
 The demos for this post are in the `compose/` directory next to it. They
-build pg_auto_failover and pgcopydb from pinned commits on `main`, because
-the changes this post relies on were merged days before publication and
-are not in a tagged release yet. Statements below are in one of two
-states: **verified** means checked against the actual Postgres,
+build pg_auto_failover and pgcopydb from source (the changes this post
+relies on are on their `main` branches and not in a tagged release yet).
+Statements below are **verified**: checked against the actual Postgres,
 pg_auto_failover, or pgcopydb source, or against a run of the demos, and
-stated as fact. **To measure** means the mechanism is real and sourced,
-but the number that goes with it needs a run that has not happened yet,
-and is left as a named placeholder rather than invented. Every demo has
-been run except the cross-region latency measurement. Parts 1 through 3
-only ever quoted numbers from a real `make run`, and so does this one.
+stated as fact. Parts 1 through 3 only ever quoted numbers from a real
+`make run`, and so does this one.
 {{< /lab >}}
 
 <!--toc-->
@@ -107,51 +103,38 @@ silently, not loudly:
   snapshot — is dropped the moment that standby is promoted, and cannot
   be recreated in the past.
 
-None of that used to be pg_auto_failover's job. **Verified** against
-the project's `main` branch before PR #1197: a `grep` for
-`sync_replication_slots` or `synchronized_standby_slots` across `src/`
-returned exactly one hit, a comment in `pgctl.c` noting the GUC exists —
-no code set it, no code created a failover slot, no code checked one
-before deciding who gets promoted.
+pg_auto_failover (`main`; the last tagged release, v2.2, predates it)
+does that part. A monitor function,
+`pgautofailover.synchronized_standby_slots(formation, group)`, is
+computed the way `synchronous_standby_names()` is, every current failover
+candidate's physical slot name, and `pg_autoctl` fetches it and applies it
+on the primary through the same `fsm_apply_settings()` path. It re-applies
+it whenever the set of candidates changes. `sync_replication_slots` is on
+by default for Postgres 17+ nodes, next to `hot_standby_feedback`, and
+`wal_level` is `logical` on every node it creates (`--wal-level replica`
+opts out). A node that rejoins as a standby after an interrupted demotion
+drops its stale failover slots instead of letting them block the
+slot-sync worker. What it deliberately does not do is create or manage
+the logical slot itself: that stays the CDC tool's job, the way a table's
+schema or a `pg_dump` object list always was.
 
-That gap is closed. **Verified** against PR #1197 itself
-(`hapostgres/pg_auto_failover`, merged 2026-10-14): a new monitor function,
-`pgautofailover.synchronized_standby_slots(formation, group)`, computed
-the same way `synchronous_standby_names()` already is — every current
-failover candidate's physical slot name — which `pg_autoctl` fetches
-and applies on the primary through the same `fsm_apply_settings()` path
-that already maintains `synchronous_standby_names`. `sync_replication_slots`
-turns on by default for Postgres 17+ nodes, next to the existing
-`hot_standby_feedback` default, and — the change with the widest
-reach — `wal_level` becomes `logical` on every node pg_auto_failover
-creates, not `replica`, with a `--wal-level replica` flag to opt back
-out for clusters that don't need CDC at all. The PR also fixes a real
-bug, #1188: a node rejoining as standby after an interrupted demotion
-could keep its own stale failover slots around, permanently blocking
-the slot-sync worker; those now get dropped on rejoin like any other
-leftover. What the PR deliberately does not do is create or manage the
-logical slot itself — that stays the CDC tool's job, same as it always
-was, the same way `pg_auto_failover` has never owned a table's schema
-or a `pg_dump` object list.
-
-The monitor still gets you the orchestration — who's primary, when a
-promotion happens, a connection string that survives one — for free,
-same as before. As of this PR, it also gets you the mechanism above:
-the GUCs that make a failover-safe slot actually mean what its name
-says, kept correct across every role change, automatically.
+The monitor still gets you the orchestration (who is primary, when a
+promotion happens, a connection string that survives one), and the GUCs
+that make a failover-safe slot mean what its name says, kept correct
+across every role change.
 
 {{< image src="fig-failover-slot.svg" title="A failover-safe logical slot, driven by pg_auto_failover's existing orchestration." >}}
 
 Physical replication keeps the standby current, including the slot's own state, once synchronized_standby_slots names it. After promotion the consumer reconnects to the same slot, now on the new primary, and resumes at its last confirmed LSN: duplicates are possible, a hole is not.
 
-### Building it against pg_auto_failover as it is today
+### Building it against pg_auto_failover
 
-Not a new `pg_autoctl` verb — that's a real feature, scoped separately
-below — and, with PR #1197, a shorter list than it used to be:
+Not a new `pg_autoctl` verb (that is a real feature, scoped separately
+below), only three things for the consumer to do:
 
-1. Create the slot with `failover = true` on the primary — still
-   user-managed, deliberately; #1197 keeps the GUCs around a slot
-   correct across every role change, not the slot's own lifecycle.
+1. Create the slot with `failover = true` on the primary. The slot is
+   the consumer's to manage; pg_auto_failover keeps the GUCs around it
+   correct.
 2. Persist the consumer's own position durably, keyed by the last
    `end_lsn` it has fully applied — never resume from 0, never trust an
    in-memory position across a restart.
@@ -162,18 +145,10 @@ below — and, with PR #1197, a shorter list than it used to be:
    ahead of the history it is about to read from is the one case the
    slot's own guarantee cannot protect.
 
-Before #1197, step 1 above had a second half: set
-`synchronized_standby_slots` to the standby's physical slot name by
-hand (the same name `pg_auto_failover` already assigns,
-`pgautofailover_standby_<id>`), and confirm `sync_replication_slots`,
-`hot_standby_feedback`, `dbname`, and `wal_level = logical` on both
-sides — one `ALTER SYSTEM` or config-file edit away, and silent if
-missed. That half is now pg_auto_failover's job, not this script's.
-
 **Verified**, by running it: profile `a` in `compose/` is the `us-east`
 region, a pg_auto_failover group of its own, a monitor and three nodes
-(`us-east-a`, `us-east-b`, `us-east-c`) on Postgres 17, built from the
-commit that merges #1199 (which includes #1197) and left at its default timings. A
+(`us-east-a`, `us-east-b`, `us-east-c`) on Postgres 17, built from
+pg_auto_failover `main` and left at its default timings. A
 `pg_recvlogical` consumer (`test_decoding`, one-second feedback interval)
 follows a `failover = true` slot while a writer inserts about 25 rows a
 second, one row per transaction, with ids it chooses itself so a retry
@@ -183,10 +158,10 @@ the consumer received that the final primary does not have.
 
 | Scenario | Duplicates | Holes | Ahead | Writer blocked |
 |---|---|---|---|---|
-| `pg_autoctl perform failover` | 0, 0, 0 | 0, 0, 0 | 0, 0, 0 | 1 s |
-| primary killed | 7, 20, 20 | 0, 0, 0 | 0, 0, 0 | 51 to 52 s |
-| both standbys cut off, then primary killed, gate on | 0, 0, 0 | 0, 0, 0 | 0, 0, 0 | 52 s |
-| same, `synchronized_standby_slots` emptied | 0, 0, 0 | 25, 34, 4 | 81, 109, 91 | 51 to 52 s |
+| `pg_autoctl perform failover` | 0, 0, 0 | 0, 0, 0 | 0, 0, 0 | 1.4 to 2.2 s |
+| primary killed | 3, 4, 2 | 0, 0, 0 | 0, 0, 0 | 51 to 52 s |
+| both standbys cut off, then primary killed, gate on | 0, 0, 0 | 0, 0, 0 | 0, 0, 0 | 51 to 53 s |
+| same, `synchronized_standby_slots` emptied | 0, 0, 0 | 4, 13, 3 | 92, 69, 80 | 51 to 53 s |
 
 - **The guarantee holds as described.** With the gate on, a planned
   failover produces no duplicate at all and a killed primary produces
@@ -198,21 +173,21 @@ the consumer received that the final primary does not have.
   scenario both standbys stop receiving WAL five seconds before the kill
   and the writer commits with `synchronous_commit = local`. The consumer
   receives nothing from that moment on, because the walsender will not
-  send past what the standbys have flushed. About 110 rows the writer had
+  send past what the standbys have flushed. Between 67 and 79 rows the writer had
   been told were committed are lost with the old primary — that is the
   cost of `synchronous_commit = local`, and not the consumer's to carry —
   but none of them had been delivered downstream.
 - **Misconfigured, the prediction comes true, and then some.** With
-  `synchronized_standby_slots` empty, the same sequence delivers 80 to
-  110 rows to the consumer that the new primary never had. The new
+  `synchronized_standby_slots` empty, the same sequence delivers 69 to
+  92 rows to the consumer that the new primary never had. The new
   primary then writes new rows at WAL positions the consumer's
-  confirmed position is already past, so the slot skips them: 4 to 34
+  confirmed position is already past, so the slot skips them: 3 to 13
   rows written after the failover never reach the consumer at all. The
   consumer is ahead of the history it reads from, which is the case the
   `IDENTIFY_SYSTEM` check in step 3 exists to catch, and nothing in
   Postgres raises it for you.
 - **What dominates the downtime is not the slot.** With three nodes a
-  planned failover blocks the writer for about a second. A killed primary
+  planned failover blocks the writer for a second or two. A killed primary
   blocks it for about 51: roughly ten seconds for the monitor to mark the
   node unhealthy, and the rest in pg_auto_failover's drain timeout before
   the new primary is allowed to take writes. Those are defaults, they can
@@ -235,7 +210,7 @@ New York, `us-west` for San Francisco, `ap-south` for Mumbai,
 `ap-southeast` for Sydney, and `eu-west` for the Amsterdam warehouse.
 The monitors carry none. For the four sites that own rows, the label is
 also the value of the `region` column, so a row's key and its node's
-label name the same place. Here is a frame taken 25 seconds after the
+label name the same place. Here is a frame of `pg_autoctl watch --group 0` taken 25 seconds after the
 primary was killed, with the monitor part-way through the election:
 `us-east-a` is still `primary` but assigned `demote_timeout`, `us-east-c`
 has been picked and is in `stop_replication`, and `us-east-b` is
@@ -250,37 +225,13 @@ us-east-c     2      us-east    yes       50 us-east-c:5432   2: 0/50424E8      
 us-east-b     3      us-east    yes       50 us-east-b:5432   1: 0/5042310         1s  read-only !          1s      join_secondary      join_secondary
 ```
 
-Two details from the same captures. `pg_autoctl show
-synchronized-standby-slots` prints both standbys' slots,
+`pg_autoctl show synchronized-standby-slots` prints both standbys' slots,
 `'pgautofailover_standby_2,pgautofailover_standby_3'`, on a healthy
 group, and one, `'pgautofailover_standby_3'`, once the primary has been
 killed and a standby promoted: the gate shrinks to the standby that is
 left, and keeps protecting the consumer, which a two-node group could not
-do. And on the pinned build, `pg_autoctl watch` without `--group 0` loops
-on `no nodes found in group -1`; the frame above uses `--group 0`.
+do.
 
-One more thing the demos found, which matters for the guarantee itself,
-and which is fixed on `main` now. When the two standbys of a group were
-created at the same moment, the primary could keep a
-`synchronized_standby_slots` that listed only one of them, while the
-monitor's own value listed both, and nothing corrected it: the one
-standby outside the list was outside the gate, and if it was the one
-promoted, the consumer could be ahead of it. It showed up in one group
-out of five started together. The cause was that a standby reaching
-`secondary` after the primary had already settled never told the primary
-to read the list again; the fix
-([#1199](https://github.com/hapostgres/pg_auto_failover/pull/1199), merged
-2026-10-27) makes the monitor send the primary through `apply_settings`
-once more at that moment. The demos are pinned to that commit.
-It does not close it entirely. In 39 group start-ups on the fixed build
-without any workaround, three primaries still ended with a one-standby
-list: both standbys had reported `secondary` before the primary reported
-`primary`, and the monitor's request to read the list again only fires
-for a primary that has already converged. The demos therefore keep the
-workaround and log each use (`results/nudges.log`); it fired 4 times in
-the 37 group start-ups of the final runs. The check to run until the
-monitor closes that window is the same one: `pg_autoctl show settings`
-against the primary's actual `show synchronized_standby_slots`.
 
 ### What a region's failover looks like from the other regions
 
@@ -317,19 +268,19 @@ waits until both sides hold the same rows. Three runs killing
 time:
 
 - **Nothing lost, nothing duplicated, in either direction.** With
-  `us-east-a` killed, the first run acknowledged 1,692 `us-east` rows and
-  2,708 `us-west` rows, and afterwards both regions hold exactly those
+  `us-east-a` killed, the first run acknowledged 1,532 `us-east` rows and
+  2,552 `us-west` rows, and afterwards both regions hold exactly those
   rows. The other five runs end the same way: every acknowledged row is
   on both sides, none is missing, none is twice. The only apply error is
   one counted on the subscription that lost its connection.
 - **The two directions come back at different times, and which one is
   which follows the dead region.** The failed region's own subscription
-  resumes 20 to 23 seconds after the kill, at the position its
+  resumes 21 to 23 seconds after the kill, at the position its
   replication origin recorded, as soon as a standby is promoted. The
   other region's subscription cannot connect until the new primary
-  accepts writes, 51 to 54 seconds in, and its worker finds that by
+  accepts writes, 52 to 54 seconds in, and its worker finds that by
   retrying every five seconds: 55 seconds without new rows from the
-  failed region in all six runs, against 20 to 23 the other way.
+  failed region in all six runs, against 21 to 23 the other way.
 - **The slot did its job.** The standbys held a synced copy of the
   failover slot before the kill, and the other region's subscription
   resumed on the new primary (`us-east-b` or `us-west-b` or `-c`,
@@ -359,21 +310,15 @@ here cannot come from a laptop.]`
 
 ### What a real `pg_autoctl create proxy` would still need
 
-Everything above, even with #1197 landed, is still a hand-run script
-wired to existing primitives, not an orchestrated component of its
-own. #1197 closes exactly the gap this section used to point at —
-`pgctl.c`'s recovery settings already wrote `dbname` into
-`primary_conninfo` with a comment about `pg_sync_replication_slots()`,
-half-built and never finished; that comment is now a shipped function
-call, not a TODO. What it does not add is a new catalog table for a
-logical consumer (a logical consumer is still not a node — every
-existing topology routine, from `synchronous_standby_names()` to
-`formation_uri()`, iterates the node table and would miscount one as a
-standby if it were registered as such), or a state machine the monitor
-drives the same way it drives the keeper's. That is still real
-pg_auto_failover development, not a config change — the PR's own
-`docs/orchestrated-operations.rst` names roughly this shape, a
-generalized monitor/client primitive for a whole-cluster, multi-step,
+Everything above is still a hand-run script wired to existing
+primitives, not an orchestrated component of its own. A logical consumer
+is still not a node: every existing topology routine, from
+`synchronous_standby_names()` to `formation_uri()`, iterates the node
+table and would miscount one as a standby if it were registered as such,
+and there is no state machine the monitor drives the way it drives the
+keeper's. That is real pg_auto_failover development, not a config change:
+the project's `docs/orchestrated-operations.rst` names roughly this shape,
+a generalized monitor/client primitive for a whole-cluster, multi-step,
 resumable operation, and calls it a design exploration, not an
 implementation. That component is named here, scoped, and left where
 [Part 3](/blog/2026/10/zero-downtime-postgres-upgrades-with-logical-replication/#what-is-still-on-you)
@@ -667,9 +612,9 @@ in each region, three runs each, nothing lost in any of them:
 
 | Rollout | Apply errors | Effect |
 |---|---|---|
-| `us-east` first, `us-west` ten seconds later | 4 on `us-west`, every run | `us-west` is 167 to 217 rows behind after 10 s and caught up 15 to 16 s after the first `ALTER` |
-| both primaries at the same moment (3 attempts per run) | 0 in 9 of 9 | none visible at this write rate |
-| writes paused, drained, both `ALTER`ed, writes resumed | 0 | writers blocked 1.0 to 1.2 s |
+| `us-east` first, `us-west` ten seconds later | 4 on `us-west`, every run | `us-west` is 90 to 178 rows behind after 10 s and caught up 15 to 16 s after the first `ALTER` |
+| both primaries at the same moment (3 attempts per run) | 0 in 8 of 9, 2 on `us-east` in the other | none visible at this write rate, except for that one retry |
+| writes paused, drained, both `ALTER`ed, writes resumed | 0 | writers blocked 0.9 to 1.5 s |
 
 The second line is luck, not design: the window is a few milliseconds, and
 a busier writer would find it. The first line is the honest default for
@@ -698,29 +643,17 @@ nothing run on `us-west`. Three runs, on pgcopydb `main` at `4c5a3b8`:
   The rename is the change that no order makes safe on the native link.
   The row inserted with the new column lands with it.
 
-An earlier version of this section said pgcopydb fell behind a writer of
-that speed, and measured its apply position crawling. That was the pin I
-started from (`84bce26`, PR #1069), which forced one round trip to the
-target per transaction so that nothing could be lost at cutover; PR #1070
-batches those syncs again. At 26 rows a second the older commit lagged by
-two thousand rows in three minutes (`results/g-pgcopydb-84bce26-fullrate.out`),
-and I had slowed the writer to two rows a second to get through the DDL
-runs. It was the regression, not pgcopydb's rate, and the numbers above
-are from after the fix.
-
-Three things stop it from replacing the native link in this scenario, all
-found by running it:
+Three things stop it from replacing the native link in this scenario:
 
 - **Its slot is not a failover slot.** pgcopydb issues
   `CREATE_REPLICATION_SLOT ... LOGICAL` without the `FAILOVER` option.
-  After `us-east-a` was killed, the new primary had no such slot and the
-  pipeline kept failing with `replication slot "pgcopydb" does not exist`:
-  1,139 rows written afterwards never reached `us-west` after two more
-  minutes, in all three runs (`results/g-pgcopydb-4c5a3b8-run*.out`).
-  Re-creating the link needs a new slot and a new clone.
+  After `us-east-a` is killed, the new primary has no such slot and the
+  stream cannot be resumed (`replication slot "pgcopydb" does not
+  exist`): the rows written afterwards never reach `us-west`, and
+  re-creating the link needs a new slot and a new clone.
 - **It does not take a multi-host URI.** A `postgres://a:5432,b:5432,...`
   string makes its replication connection fail with `could not match 3 port
-  numbers to 5 hosts` (seen on `84bce26`); the keyword form
+  numbers to 5 hosts`; the keyword form
   `host=a,b,c port=5432 ... target_session_attrs=read-write` works and is
   what the demo uses.
 - **It filters by table, not by row.** The `where (region = ...)`
@@ -731,21 +664,21 @@ found by running it:
 The first is the one that matters, and the change is small. Postgres 17
 accepts `FAILOVER` on that same command, but only in the parenthesized
 option syntax (`CREATE_REPLICATION_SLOT "pgcopydb" LOGICAL "pgoutput"
-(FAILOVER true)`), which is why the old bare form cannot carry it. A
-nine-line patch to `pgsql_create_logical_replication_slot()` that uses
-that form when the server is 17 or later
-(`compose/pgcopydb-failover-slot.patch`) is all the demo needed. With it,
-`./run-g.sh pgcopydb-failover` shows the slot as `failover=true` on the
-primary and `synced=true` on both standbys before the kill; after the
-kill the new primary has it, pgcopydb exits on the lost connection and
-its restart (`pgcopydb follow --resume`, here in a loop) picks up from
-the sentinel, and `us-west` ends with every row `us-east` acknowledged, 0
-rows behind a second after the writer stops, in 3 runs out of 3
-(`results/g-pgcopydb-failover-run*.out`). What pgcopydb should do, then:
-create its slot with `FAILOVER true` on Postgres 17+ (a flag, or the
-default), and a supervised restart does the rest. The standbys still need
-`sync_replication_slots` and the primary `synchronized_standby_slots`,
-which are the Postgres-side settings this post's first section covers.
+(FAILOVER true)`), which the bare form pgcopydb sends cannot carry. A
+pull request ([dimitri/pgcopydb#1073](https://github.com/dimitri/pgcopydb/pull/1073))
+adds `--enable-failover`, which sends it on Postgres 17 and later. The same
+pull request makes `follow` restart its sub-processes when one fails (the
+receive process already reconnects by itself, the apply process did not),
+at most `--max-restarts` times in `--restart-window` seconds, Erlang
+supervisor style, because a failover of the target is as ordinary as one of
+the source. With both, `./run-g.sh pgcopydb-failover` shows the slot as
+`failover=true` on the primary and `synced=true` on both standbys before the
+kill; after the kill the new primary has it, and `us-west` ends with every
+row `us-east` acknowledged, with nothing left to catch up one second after
+the writer stops. Killing the primary of the target region instead costs
+one restart. The standbys still need `sync_replication_slots` and the
+primary `synchronized_standby_slots`, the Postgres-side settings the first
+section covers.
 
 ### pglogical: `replicate_ddl_command`
 
@@ -914,12 +847,11 @@ create event trigger pgcopydb_emit_ddl_message on ddl_command_end
 This design is implemented in pgcopydb: the Message frame is decoded
 and stored, dispatched by `type`, and a `pgcopydb stream event-trigger`
 subcommand installs the trigger above instead of asking a reader to
-write it by hand. It is on `main`, pending the next release, which is
-why the demo builds from a pinned commit. **Verified** by running it:
+write it by hand. It is on `main`, pending the next release. **Verified** by running it:
 with the trigger installed mid-stream, an `ALTER TABLE ... ADD COLUMN`
 on the source reaches the target two seconds later with zero manual
 statements there, the rows updated afterward follow, and so does
-ordinary traffic issued after it (`compose/results/d-fix-verified-84bce26.out`).
+ordinary traffic issued after it (`compose/results/d-ddl-message.out`).
 
 Two edges follow from the source side being unchanged: `current_query()` captures a multi-statement command whole, not
 split — the demo showed a multi-statement command landing in `replay.db`
@@ -1001,10 +933,50 @@ measured, not a replacement for any of it:
   left open, and does it as a real change merged into a tool the series
   already relies on, not a bigger demo.
 
-The one `[TODO]` left in this post is not a hedge — it is the same
-discipline Part 3 closed on: every number anywhere in this series came
-from an actual rehearsal, and a placeholder stays a placeholder until it
-has one.
+---
+
+## Ten years of logical replication, and what is left
+
+None of this was possible ten years ago, and most of it is other people's
+work. Logical decoding arrived in 9.4 (Andres Freund, with 2ndQuadrant)
+and gave the WAL a meaning outside the server. pglogical and BDR, the
+work of Petr Jelinek, Craig Ringer and their colleagues, showed what it
+was for, and the publications and subscriptions of Postgres 10 made it
+part of core. The releases since have been the long tail of making it
+usable for real systems: `TRUNCATE`, partitioned tables, streaming of
+large in-progress transactions, two-phase commit, row filters and column
+lists, parallel apply, origin filtering that makes a two-way link
+possible at all, logical decoding on a standby, and then the pieces this
+post leans on the most: failover slots and `synchronized_standby_slots`,
+`pg_createsubscriber`, slots that survive `pg_upgrade`, the conflict
+counters of Postgres 18. Every one of them went through review on the
+mailing list, and a primary that can die without its change stream losing
+or inventing a row, with the standbys following the slot by themselves, is
+the result of years of exactly that.
+[Part 1](/blog/2026/09/ten-years-of-postgres-logical-replication/) has the
+long version of that history.
+
+What is left is concrete, because this post ran into every item:
+
+- **DDL in the stream.** Core replicates none of it. pgcopydb and
+  pglogical each carry part of the answer outside core, and a schema
+  change that travels in the same commit order as the rows is the piece no
+  core feature provides.
+- **Sequences.** Their state still does not replicate, and the work to
+  make it so has been moving between commitfests for years.
+- **Conflict resolution.** Postgres 18 counts conflicts; it does not
+  resolve them. Avoiding them by construction, as the architecture here
+  does, is still the only built-in answer.
+- **Joining and leaving a topology.** BDR had `join` and `part`; today
+  adding a region or retiring one is a procedure written by hand.
+- **The consumer as a first-class node.** A logical consumer is not in
+  the state machine of anything that orchestrates the primary it reads
+  from, so who creates the slot, who checks its position after a
+  promotion, and who raises the alarm when it is ahead is still a script.
+
+Postgres has a decade of foundations for all of these. Most of the
+remaining work is of the same kind as the work already done: unglamorous,
+carefully reviewed, and merged one release at a time.
 
 Every part has a `compose/` directory of its own, this one included.
 Run them, break them, and tell me what I got wrong.

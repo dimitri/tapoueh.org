@@ -1,19 +1,308 @@
+diff --git a/src/bin/pgcopydb/cli_clone_follow.c b/src/bin/pgcopydb/cli_clone_follow.c
+index fc0a98d..05d8e8b 100644
+--- a/src/bin/pgcopydb/cli_clone_follow.c
++++ b/src/bin/pgcopydb/cli_clone_follow.c
+@@ -65,6 +65,9 @@
+ 	"  --wal2json-numeric-as-string  Print numeric data type as string when using wal2json output plugin\n" \
+ 	"  --slot-name                   Use this Postgres replication slot name\n" \
+ 	"  --create-slot                 Create the replication slot\n" \
++	"  --enable-failover             Create the replication slot with FAILOVER (Postgres 17+)\n" \
++	"  --max-restarts <n>            Restart failed follow sub-processes at most n times (default 5)\n" \
++	"  --restart-window <seconds>    ... within this many seconds (default 300)\n" \
+ 	"  --origin                      Use this Postgres replication origin node name\n" \
+ 	"  --endpos                      Stop replaying changes when reaching this LSN\n" \
+ 	"  --use-copy-binary             Use the COPY BINARY format for COPY operations\n" \
+@@ -106,6 +109,9 @@ CommandLine follow_command =
+ 		"  --wal2json-numeric-as-string  Print numeric data type as string when using wal2json output plugin\n"
+ 		"  --slot-name                   Use this Postgres replication slot name\n"
+ 		"  --create-slot                 Create the replication slot\n"
++		"  --enable-failover             Create the replication slot with FAILOVER (Postgres 17+)\n"
++		"  --max-restarts <n>            Restart failed follow sub-processes at most n times (default 5)\n"
++		"  --restart-window <seconds>    ... within this many seconds (default 300)\n"
+ 		"  --origin                      Use this Postgres replication origin node name\n"
+ 		"  --endpos                      Stop replaying changes when reaching this LSN\n",
+ 		cli_copy_db_getopts,
+diff --git a/src/bin/pgcopydb/cli_common.c b/src/bin/pgcopydb/cli_common.c
+index cbd6e65..5176448 100644
+--- a/src/bin/pgcopydb/cli_common.c
++++ b/src/bin/pgcopydb/cli_common.c
+@@ -754,6 +754,9 @@ cli_copy_db_getopts(int argc, char **argv)
+ 		{ "publication", required_argument, NULL, 1003 },
+ 		{ "all-databases", no_argument, NULL, 1004 },
+ 		{ "replay-no-op-updates", no_argument, NULL, 1005 },
++		{ "enable-failover", no_argument, NULL, 1006 },
++		{ "max-restarts", required_argument, NULL, 1007 },
++		{ "restart-window", required_argument, NULL, 1008 },
+ 		{ "host", required_argument, NULL, 1001 },
+ 		{ "port", required_argument, NULL, 1002 },
+ 		{ "version", no_argument, NULL, 'V' },
+@@ -768,6 +771,9 @@ cli_copy_db_getopts(int argc, char **argv)
+ 
+ 	optind = 0;
+ 
++	options.maxRestarts = FOLLOW_MAX_RESTARTS;
++	options.restartWindow = FOLLOW_RESTART_WINDOW;
++
+ 	/* read values from the environment */
+ 	if (!cli_copydb_getenv(&options))
+ 	{
+@@ -1148,6 +1154,41 @@ cli_copy_db_getopts(int argc, char **argv)
+ 				break;
+ 			}
+ 
++			case 1006:      /* --enable-failover */
++			{
++				options.slot.failover = true;
++				log_trace("--enable-failover");
++				break;
++			}
++
++			case 1007:      /* --max-restarts */
++			{
++				if (!stringToInt(optarg, &options.maxRestarts) ||
++					options.maxRestarts < -1)
++				{
++					log_fatal("Failed to parse --max-restarts, "
++							  "expected a number, -1 for no limit: \"%s\"",
++							  optarg);
++					++errors;
++				}
++				log_trace("--max-restarts %d", options.maxRestarts);
++				break;
++			}
++
++			case 1008:      /* --restart-window */
++			{
++				if (!stringToInt(optarg, &options.restartWindow) ||
++					options.restartWindow < 1)
++				{
++					log_fatal("Failed to parse --restart-window, "
++							  "expected a number of seconds: \"%s\"",
++							  optarg);
++					++errors;
++				}
++				log_trace("--restart-window %d", options.restartWindow);
++				break;
++			}
++
+ 			case 1001:      /* --host: follow coordinator TCP listen host */
+ 			{
+ 				strlcpy(options.host, optarg, sizeof(options.host));
+diff --git a/src/bin/pgcopydb/cli_common.h b/src/bin/pgcopydb/cli_common.h
+index 82a0198..7865230 100644
+--- a/src/bin/pgcopydb/cli_common.h
++++ b/src/bin/pgcopydb/cli_common.h
+@@ -88,6 +88,10 @@ typedef struct CopyDBOptions
+ 	bool follow;
+ 	bool createSlot;
+ 
++	/* pgcopydb follow: restart failed sub-processes, MaxR within MaxT */
++	int maxRestarts;
++	int restartWindow;
++
+ 	/* pgcopydb stream sentinel get --flush-lsn and friends */
+ 	SentinelOptions sentinelOptions;
+ 
+diff --git a/src/bin/pgcopydb/defaults.h b/src/bin/pgcopydb/defaults.h
+index f99484d..f74ff60 100644
+--- a/src/bin/pgcopydb/defaults.h
++++ b/src/bin/pgcopydb/defaults.h
+@@ -102,6 +102,18 @@
+ #define POSTGRES_CONNECT_TIMEOUT "10"
+ 
+ /* retry PQping for a maximum of 1 min, up to 2 secs between attemps */
++
++/*
++ * pgcopydb follow restarts its receive and apply sub-processes when one of
++ * them fails: at most FOLLOW_MAX_RESTARTS restarts within FOLLOW_RESTART_WINDOW
++ * seconds, backing off between FOLLOW_RESTART_BASE_SLEEP and
++ * FOLLOW_RESTART_CAP_SLEEP milliseconds in between.
++ */
++#define FOLLOW_MAX_RESTARTS 5
++#define FOLLOW_RESTART_WINDOW 300                  /* seconds */
++#define FOLLOW_RESTART_BASE_SLEEP 1000             /* milliseconds */
++#define FOLLOW_RESTART_CAP_SLEEP (30 * 1000)       /* milliseconds */
++
+ #define POSTGRES_PING_RETRY_TIMEOUT 60               /* seconds */
+ #define POSTGRES_PING_RETRY_CAP_SLEEP_TIME (2 * 1000) /* milliseconds */
+ #define POSTGRES_PING_RETRY_BASE_SLEEP_TIME 5         /* milliseconds */
+diff --git a/src/bin/pgcopydb/follow.c b/src/bin/pgcopydb/follow.c
+index 79e5cce..a0edafd 100644
+--- a/src/bin/pgcopydb/follow.c
++++ b/src/bin/pgcopydb/follow.c
+@@ -312,7 +312,13 @@ follow_get_sentinel(StreamSpecs *specs, CopyDBSentinel *sentinel, bool verbose)
+  * subprocesses and switch to the live replay mode of operations.
+  *
+  * When a sub-process ends abnormally then the main process terminates the
+- * sibling worker processes and restart in the other mode.
++ * sibling worker processes and starts them all again, unless it already did so
++ * --max-restarts times within --restart-window seconds. This takes care
++ * of the failures that come and go by themselves: a lost connection to the
++ * source or the target, a server restart, a failover to a standby that has
++ * the replication slot. The receive process resumes at the sentinel
++ * startpos and the apply process at the replication origin progress, as they
++ * do with pgcopydb follow --resume.
+  *
+  * Each time we switch from a mode of operations to another, a catchup from
+  * disk is done to ensure we don't miss applying what has already been
+@@ -339,13 +345,81 @@ follow_main_loop(CopyDataSpec *copySpecs, StreamSpecs *streamSpecs)
+ 	 * communication and the three workers can restart in the same mode every
+ 	 * time.
+ 	 */
++
++	/*
++	 * Restart the sub-processes when they fail, at most maxRestarts times
++	 * within restartWindow seconds (the Erlang/OTP supervisor MaxR/MaxT
++	 * rule), using the same retry policy as the connection retries.
++	 */
++	ConnectionRetryPolicy restartPolicy = { 0 };
++
++	(void) pgsql_set_retry_policy(&restartPolicy,
++								  copyDBoptions.restartWindow,
++								  copyDBoptions.maxRestarts,
++								  FOLLOW_RESTART_CAP_SLEEP,
++								  FOLLOW_RESTART_BASE_SLEEP);
++
++	restartPolicy.sleepTime = FOLLOW_RESTART_BASE_SLEEP;
++
+ 	while (true)
+ 	{
+ 		if (!followDB(copySpecs, streamSpecs))
+ 		{
+ 			log_error("Failed to follow changes from source, "
+ 					  "see above for details");
+-			return false;
++
++			if (asked_to_quit || asked_to_stop || asked_to_stop_fast)
++			{
++				return false;
++			}
++
++			/*
++			 * When the endpos has been reached the failure is of no
++			 * consequence, otherwise try again unless we have been restarting
++			 * too often already.
++			 */
++			bool done = false;
++
++			if (catalog_open(streamSpecs->sourceDB) &&
++				follow_reached_endpos(streamSpecs, &done) && done)
++			{
++				return true;
++			}
++
++			/* maxRestarts = 0 means no restart at all */
++			(void) pgsql_retry_policy_renew(&restartPolicy);
++
++			if (copyDBoptions.maxRestarts == 0 ||
++				pgsql_retry_policy_expired(&restartPolicy))
++			{
++				log_error("Follow has already been restarted %d times "
++						  "within %d seconds, giving up (see --max-restarts and "
++						  "--restart-window)",
++						  restartPolicy.attempts,
++						  restartPolicy.maxT);
++				return false;
++			}
++
++			int sleepTimeMs =
++				pgsql_compute_connection_retry_sleep_time(&restartPolicy);
++
++			log_warn("Restarting follow sub-processes after %d ms "
++					 "(restart %d of at most %d in %d seconds)",
++					 sleepTimeMs,
++					 restartPolicy.attempts,
++					 restartPolicy.maxR,
++					 restartPolicy.maxT);
++
++			/* sleep in short steps so that we notice signals */
++			for (int slept = 0;
++				 slept < sleepTimeMs &&
++				 !asked_to_quit && !asked_to_stop && !asked_to_stop_fast;
++				 slept += 100)
++			{
++				pg_usleep(100 * 1000);
++			}
++
++			continue;
+ 		}
+ 
+ 		if (asked_to_quit)
+diff --git a/src/bin/pgcopydb/ld_stream.c b/src/bin/pgcopydb/ld_stream.c
+index 206fe9f..d63ace3 100644
+--- a/src/bin/pgcopydb/ld_stream.c
++++ b/src/bin/pgcopydb/ld_stream.c
+@@ -732,6 +732,7 @@ startLogicalStreaming(StreamSpecs *specs)
+ 		bool cleanExit = pgsql_stream_logical(&stream, &context);
+ 
+ 		if ((cleanExit && context.endpos != InvalidXLogRecPtr) ||
++			context.stopRequested ||
+ 			asked_to_stop || asked_to_stop_fast || asked_to_quit)
+ 		{
+ 			retry = false;
 diff --git a/src/bin/pgcopydb/pgsql.c b/src/bin/pgcopydb/pgsql.c
-index 73bf222..32250e2 100644
+index 73bf222..ff6ac70 100644
 --- a/src/bin/pgcopydb/pgsql.c
 +++ b/src/bin/pgcopydb/pgsql.c
-@@ -4905,6 +4905,20 @@ pgsql_create_logical_replication_slot(LogicalStreamClient *client,
+@@ -330,6 +330,34 @@ pgsql_compute_connection_retry_sleep_time(ConnectionRetryPolicy *retryPolicy)
+ }
+ 
+ 
++/*
++ * pgsql_retry_policy_renew starts a new time budget (and a new attempts
++ * budget) when the current one has been spent entirely: it allows a
++ * long-running caller to retry again, maxR times within maxT, each time a
++ * failure comes after the previous window has elapsed.
++ */
++void
++pgsql_retry_policy_renew(ConnectionRetryPolicy *retryPolicy)
++{
++	instr_time duration;
++
++	if (INSTR_TIME_IS_ZERO(retryPolicy->startTime))
++	{
++		return;
++	}
++
++	INSTR_TIME_SET_CURRENT(duration);
++	INSTR_TIME_SUBTRACT(duration, retryPolicy->startTime);
++
++	if (INSTR_TIME_GET_MILLISEC(duration) >= (retryPolicy->maxT * 1000))
++	{
++		INSTR_TIME_SET_ZERO(retryPolicy->startTime);
++		retryPolicy->attempts = 0;
++		retryPolicy->sleepTime = retryPolicy->baseSleepTime;
++	}
++}
++
++
+ /*
+  * pgsql_retry_policy_expired returns true when we should stop retrying, either
+  * per the policy (maxR / maxT) or because we received a signal that we have to
+@@ -4905,6 +4933,32 @@ pgsql_create_logical_replication_slot(LogicalStreamClient *client,
  		}
  	}
  
 +	/*
-+	 * Postgres 17 added the FAILOVER option, which lets the slot be copied to
-+	 * the physical standbys (sync_replication_slots) so that it survives a
-+	 * promotion. It is only available in the parenthesized option syntax,
-+	 * which Postgres 15 introduced; the snapshot is exported by default.
++	 * Postgres 17 added the FAILOVER option to CREATE_REPLICATION_SLOT, so
++	 * that the slot is copied to the physical standbys (see
++	 * sync_replication_slots) and survives a promotion. The option is only
++	 * available in the parenthesized syntax, which Postgres 15 introduced;
++	 * the snapshot is exported by default.
 +	 */
-+	if (PQserverVersion(pgsql->connection) >= 170000)
++	if (slot->failover)
 +	{
++		if (PQserverVersion(pgsql->connection) < 170000)
++		{
++			log_error("Failed to create replication slot \"%s\" with "
++					  "--enable-failover: the source server is Postgres %d "
++					  "and failover slots need Postgres 17 or later",
++					  client->slotName,
++					  PQserverVersion(pgsql->connection) / 10000);
++			pgsql_finish(pgsql);
++			return false;
++		}
++
 +		sformat(query, sizeof(query),
 +				"CREATE_REPLICATION_SLOT \"%s\" LOGICAL \"%s\" (FAILOVER true)",
 +				client->slotName,
@@ -23,3 +312,61 @@ index 73bf222..32250e2 100644
  	PGresult *result = PQexec(pgsql->connection, query);
  
  	if (PQresultStatus(result) != PGRES_TUPLES_OK)
+@@ -5011,10 +5065,11 @@ pgsql_create_logical_replication_slot(LogicalStreamClient *client,
+ 		slot->plugin = client->plugin;
+ 	}
+ 
+-	log_info("Created logical replication slot \"%s\" with plugin \"%s\" "
++	log_info("Created logical replication slot \"%s\" with plugin \"%s\"%s "
+ 			 "at %X/%X and exported snapshot %s",
+ 			 slot->slotName,
+ 			 OutputPluginToString(slot->plugin),
++			 slot->failover ? " (failover)" : "",
+ 			 LSN_FORMAT_ARGS(slot->lsn),
+ 			 slot->snapshot);
+ 
+@@ -5579,6 +5634,14 @@ pgsql_stream_logical(LogicalStreamClient *client, LogicalStreamContext *context)
+ 	clear_results(pgsql);
+ 	pgsql_finish(pgsql);
+ 
++	/*
++	 * Remember that we were asked to stop before we unset the signals, the
++	 * caller must not reconnect then: when the follow supervisor terminates
++	 * the receive process it waits for it to exit.
++	 */
++	context->stopRequested =
++		asked_to_stop || asked_to_stop_fast || asked_to_quit;
++
+ 	/* unset the signals which have been processed correctly now */
+ 	(void) unset_signal_flags();
+ 
+diff --git a/src/bin/pgcopydb/pgsql.h b/src/bin/pgcopydb/pgsql.h
+index 9d2d964..33f4349 100644
+--- a/src/bin/pgcopydb/pgsql.h
++++ b/src/bin/pgcopydb/pgsql.h
+@@ -277,6 +277,7 @@ void pgsql_set_retry_policy(ConnectionRetryPolicy *retryPolicy,
+ 							int baseSleepTime);
+ void pgsql_set_interactive_retry_policy(ConnectionRetryPolicy *retryPolicy);
+ int pgsql_compute_connection_retry_sleep_time(ConnectionRetryPolicy *retryPolicy);
++void pgsql_retry_policy_renew(ConnectionRetryPolicy *retryPolicy);
+ bool pgsql_retry_policy_expired(ConnectionRetryPolicy *retryPolicy);
+ 
+ bool pgsql_state_is_connection_error(PGSQL *pgsql);
+@@ -510,6 +511,9 @@ typedef struct LogicalStreamContext
+ 	 * JSON file to avoid partial transactions.
+ 	 */
+ 	bool onRetry;
++
++	/* set to true when the streaming loop ended because we got signaled */
++	bool stopRequested;
+ } LogicalStreamContext;
+ 
+ 
+@@ -567,6 +571,7 @@ typedef struct ReplicationSlot
+ 	bool wal2jsonNumericAsString;
+ 	char publicationName[BUFSIZE]; /* pgoutput publication name */
+ 	bool publicationAutoManaged;   /* true = pgcopydb created it, drop on cleanup */
++	bool failover;                 /* create the slot with FAILOVER (PG 17+) */
+ } ReplicationSlot;
+ 
+ bool pgsql_create_logical_replication_slot(LogicalStreamClient *client,

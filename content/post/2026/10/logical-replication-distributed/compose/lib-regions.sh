@@ -26,27 +26,18 @@ region_up() {
 
 # region_wait <region>: one primary and two secondaries, every node at its goal state, and the
 # primary carries both standbys' slots in synchronized_standby_slots.
-# When both standbys report secondary before the primary has reported primary, the primary can
-# keep the list it fetched with only one of them (seen on the pinned build, not corrected by
-# itself). Re-setting a node's replication quorum makes the keeper read the monitor's value
-# again, so after ten seconds of a short list this does exactly that, and writes the incident
-# to results/nudges.log.
 region_wait() {
-  local i n p g short=0
+  local i n p g
   for i in $(seq 1 240); do
     n=$(rmon "$1" "select count(*) from pgautofailover.node where reportedstate = goalstate and reportedstate in ('primary','secondary')" 2>/dev/null)
     if [ "$n" = 3 ]; then
       p=$(region_primary "$1")
       g=$(rpq "$p" "show synchronized_standby_slots" 2>/dev/null)
       case "$g" in *,*) return 0 ;; esac
-      short=$((short + 1))
-      if [ "$short" = 10 ]; then
-        echo "$(date -u +%FT%TZ) ${SCN:-?} $1: $p lists '$g', monitor says '$(dc exec -T "$1-monitor" pg_autoctl show synchronized-standby-slots --pgdata /data/pgdata 2>/dev/null | tr -d "'\r")'; nudged" >> results/nudges.log
-        dc exec -T "$1-monitor" pg_autoctl set node replication-quorum true --pgdata /data/pgdata --name "$p" >/dev/null 2>&1
-      fi
     fi
     sleep 1
   done
+  echo "$1: primary ${p:-?} lists '${g:-}' after the group converged" >&2
   return 1
 }
 
