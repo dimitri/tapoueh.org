@@ -83,7 +83,7 @@ I wrote [The Art of PostgreSQL](https://theartofpostgresql.com) for
 application developers who want to get serious about SQL. The premise is that
 most developers are leaving enormous query power on the floor — not because
 PostgreSQL is hard, but because nobody showed them what it can actually do.
-The book, the self-paced courses, the workshops, and The Lab all come from
+The book, the self-paced courses, the masterclass, and the practice lab all come from
 the same place: twenty years of watching people underuse a database that could
 do most of their heavy lifting.
 
