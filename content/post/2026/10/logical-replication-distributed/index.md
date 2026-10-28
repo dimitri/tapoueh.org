@@ -785,15 +785,15 @@ seconds, and one transaction of a million rows.
 | 1M rows in one transaction, applied after the commit | 3.2 s | 3.3 s | 456 s |
 
 The source took about 92,000 to 97,000 transactions a second in each case.
-Native and pglogical keep up with it. pgcopydb is a different design: it
-receives the stream, writes it to files, transforms it into SQL and replays
-that through a single apply process. It is built to
-carry a migration off a production server that has its own load, not to
-match a bulk loader, and 5,700 rows a second is more than most of those
-need. It is not what to put behind a source taking tens of thousands of
-writes a second, and the 60 to 110 ms comes from that pipeline's stages, not
-from the network. All three ran on one machine, once each: the ratios are the
-point, not the digits.
+Native and pglogical keep up with it. pgcopydb is a different design: the
+receive, transform and apply processes hand the stream to each other
+through SQLite catalogs, behind one lock, and during these runs they sat at
+10 to 20 percent of a CPU with the source's walsender waiting for the
+receiver to read. It is built to carry a migration off a production server
+that has its own load, not to match a bulk loader, and 5,700 rows a second
+is more than most of those need. It is not what to put behind a source
+taking tens of thousands of writes a second. All three ran on one machine,
+once each: the ratios are the point, not the digits.
 
 None of the three has every column. The combination the scenario needs
 (native filters and failover slots, with the schema change in the stream)
