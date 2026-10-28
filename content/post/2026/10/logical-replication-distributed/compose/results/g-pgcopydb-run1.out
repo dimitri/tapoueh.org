@@ -1,0 +1,27 @@
+== profile g, pgcopydb: us-east primary us-east-a, us-west primary us-west-a ==
+-- pgcopydb clone --follow us-east -> us-west (no native subscription on this link)
+   table on us-west after 2s; replication slots on the us-east primary: pgcopydb (failover=false)
+   event trigger installed; steady state: lag 0 rows
+
+== ADD COLUMN on us-east, nothing run on us-west ==
+   column on us-west after 2s; row with the new column: carries the new column
+   largest lag over the next 10 s: 1 rows
+
+== RENAME COLUMN ==
+   renamed on us-west after 2s; largest lag over the next 10 s: 1 rows
+
+== DROP COLUMN ==
+   dropped on us-west after 1s; largest lag over the next 10 s: 0 rows
+
+== the us-east primary is killed under load ==
+   at the kill: us-east holds 118 rows, us-west 118
+   t0=1793148528.098020176: docker kill us-east-a
+   new primary of us-east: us-east-c
+   pgcopydb processes still running: 0
+   slots on the new primary: none
+   rows owned by us-east: acknowledged 252, on the new us-east primary 253, on us-west 119
+-- the errors in the pgcopydb log
+   2026-10-28 00:48:48.431 16 ERROR  pgsql.c:5598              could not receive data from WAL stream: SSL error: unexpected eof while reading
+   2026-10-28 00:49:40.951 16 ERROR  pgsql.c:5118              Failed to send replication command:
+   2026-10-28 00:49:40.951 16 ERROR  pgsql.c:3339              [SOURCE 1090] [42704] ERROR:  replication slot "pgcopydb" does not exist
+   2026-10-28 00:49:40.952 16 ERROR  pgsql.c:3354              [SOURCE 1090] Context: START_REPLICATION SLOT "pgcopydb" LOGICAL 0/502D128 ("proto_version" '1', "publication_names" 'pgcopydb', "messages" 'true')

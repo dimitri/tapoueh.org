@@ -26,10 +26,11 @@ region_up() {
 
 # region_wait <region>: one primary and two secondaries, every node at its goal state, and the
 # primary carries both standbys' slots in synchronized_standby_slots.
-# When the standbys join at the same moment, the primary's keeper can keep the list it
-# computed after the first one joined (seen on the pinned build, never corrected by itself);
-# re-setting a node's replication quorum makes it re-read the monitor's value, so after ten
-# seconds of a short list this does exactly that.
+# When both standbys report secondary before the primary has reported primary, the primary can
+# keep the list it fetched with only one of them (seen on the pinned build, not corrected by
+# itself). Re-setting a node's replication quorum makes the keeper read the monitor's value
+# again, so after ten seconds of a short list this does exactly that, and writes the incident
+# to results/nudges.log.
 region_wait() {
   local i n p g short=0
   for i in $(seq 1 240); do
@@ -40,7 +41,7 @@ region_wait() {
       case "$g" in *,*) return 0 ;; esac
       short=$((short + 1))
       if [ "$short" = 10 ]; then
-        echo "   $1: primary lists '$g'; nudging the keeper" >&2
+        echo "$(date -u +%FT%TZ) ${SCN:-?} $1: $p lists '$g', monitor says '$(dc exec -T "$1-monitor" pg_autoctl show synchronized-standby-slots --pgdata /data/pgdata 2>/dev/null | tr -d "'\r")'; nudged" >> results/nudges.log
         dc exec -T "$1-monitor" pg_autoctl set node replication-quorum true --pgdata /data/pgdata --name "$p" >/dev/null 2>&1
       fi
     fi

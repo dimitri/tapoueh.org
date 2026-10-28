@@ -4,6 +4,8 @@
 #
 #   ./reset-e.sh && ./run-e.sh findings
 #   ./run-e.sh concurrent
+#   ./run-e.sh ddl        schema changes between two writers: plain ALTER TABLE, then
+#                         pglogical.replicate_ddl_command, then a RENAME under load
 set -uo pipefail
 cd "$(dirname "$0")"
 mkdir -p results
@@ -190,9 +192,73 @@ concurrent() {
     done; } 2>&1 | tee "$out"
 }
 
+# --- DDL ---------------------------------------------------------------------------
+# e-w1 and e-w2 subscribe to each other (the table's replication set and ddl_sql) and both
+# keep inserting. Three schema changes, each timed from the moment it is issued.
+ddl() {
+  local out=results/e-ddl.out
+  ensure_nodes
+  {
+  echo "== slots pglogical creates on the provider (failover column) =="
+  for n in 1 2; do
+    q e-w$n <<SQL >/dev/null
+create table ddl_t (id bigint primary key, src text not null, v int not null default 0);
+select pglogical.create_replication_set('set_ddl');
+select pglogical.replication_set_add_table('set_ddl', 'ddl_t');
+SQL
+  done
+  q e-w1 -c "select pglogical.create_subscription(subscription_name := 'sub_ddl_w1_from_w2', provider_dsn := 'host=e-w2 dbname=app user=postgres', replication_sets := array['set_ddl','ddl_sql'], synchronize_data := false, forward_origins := '{}')" >/dev/null
+  q e-w2 -c "select pglogical.create_subscription(subscription_name := 'sub_ddl_w2_from_w1', provider_dsn := 'host=e-w1 dbname=app user=postgres', replication_sets := array['set_ddl','ddl_sql'], synchronize_data := false, forward_origins := '{}')" >/dev/null
+  wait_for e-w1 "(select count(*) from pglogical.show_subscription_status() where subscription_name = 'sub_ddl_w1_from_w2' and status = 'replicating') = 1" 30
+  wait_for e-w2 "(select count(*) from pglogical.show_subscription_status() where subscription_name = 'sub_ddl_w2_from_w1' and status = 'replicating') = 1" 30
+  qa e-w1 -c "select slot_name || ' failover=' || failover from pg_replication_slots where plugin = 'pglogical_output'"
+
+  # two inserters, one per node, ids from disjoint ranges
+  dc exec -T e-w1 rm -f /tmp/ddl-stop; dc exec -T e-w2 rm -f /tmp/ddl-stop
+  for n in 1 2; do
+    dc exec -d e-w$n sh -c "i=$((n * 100000000)); while [ ! -e /tmp/ddl-stop ]; do psql -X -q -U postgres -d app -c \"insert into ddl_t (id, src) values (\$i, 'w$n')\" 2>/dev/null; i=\$((i + 1)); sleep 0.02; done"
+  done
+  sleep 8
+  lag() { # rows of the node $1 not yet on the node $2
+    echo $(( $(qa "$1" -c "select count(*) from ddl_t where src = '${1#e-}'") - $(qa "$2" -c "select count(*) from ddl_t where src = '${1#e-}'") ))
+  }
+  status() { q e-w1 -At -c "select status from pglogical.show_subscription_status() where subscription_name = 'sub_ddl_w1_from_w2'"; }
+  status2() { q e-w2 -At -c "select status from pglogical.show_subscription_status() where subscription_name = 'sub_ddl_w2_from_w1'"; }
+  echo "steady state: lag w1->w2 $(lag e-w1 e-w2), w2->w1 $(lag e-w2 e-w1); $(status) / $(status2)"
+
+  echo; echo "== 1: plain ALTER TABLE ... ADD COLUMN on w1 only =="
+  t1=$(date +%s)
+  q e-w1 -c "alter table ddl_t add column plain_col text" >/dev/null
+  sleep 10
+  echo "10 s later: lag w1->w2 $(lag e-w1 e-w2) rows; w2 sees the column: $(qa e-w2 -c "select count(*) from information_schema.columns where table_name = 'ddl_t' and column_name = 'plain_col'"); subscription on w2: $(status2)"
+  echo "w2 log: $(dc logs --tail 300 e-w2 2>&1 | grep -m1 'unknown column name' | sed 's/^[^|]*| //')"
+  t2=$(date +%s)
+  q e-w2 -c "alter table ddl_t add column plain_col text" >/dev/null
+  for i in $(seq 1 180); do
+    [ "$(status2)" = replicating ] && [ "$(lag e-w1 e-w2)" -le 3 ] && break; sleep 2
+  done
+  echo "the same ALTER by hand on w2 at +$((t2 - t1)) s; the subscription is replicating and caught up at +$(( $(date +%s) - t1 )) s ($(status2), lag $(lag e-w1 e-w2) rows)"
+
+  for i in $(seq 1 120); do [ "$(status)" = replicating ] && [ "$(status2)" = replicating ] && [ "$(lag e-w1 e-w2)" -le 3 ] && [ "$(lag e-w2 e-w1)" -le 3 ] && break; sleep 1; done
+  echo; echo "== 2: pglogical.replicate_ddl_command('... ADD COLUMN') on w1, both writers running =="
+  q e-w1 -c "select pglogical.replicate_ddl_command('alter table public.ddl_t add column queued_col text')" >/dev/null
+  mx=0; for i in $(seq 1 10); do l1=$(lag e-w1 e-w2); l2=$(lag e-w2 e-w1); m=$(( l1 > l2 ? l1 : l2 )); [ $m -gt $mx ] && mx=$m; sleep 1; done
+  echo "w2 has the column, nothing run there: $(qa e-w2 -c "select count(*) from information_schema.columns where table_name = 'ddl_t' and column_name = 'queued_col'"); largest lag over 10 s: $mx rows; subscriptions: $(status) / $(status2)"
+
+  echo; echo "== 3: pglogical.replicate_ddl_command('... RENAME COLUMN') on w1, both writers running =="
+  q e-w1 -c "select pglogical.replicate_ddl_command('alter table public.ddl_t rename column queued_col to renamed_col')" >/dev/null
+  mx=0; for i in $(seq 1 15); do l1=$(lag e-w1 e-w2); l2=$(lag e-w2 e-w1); m=$(( l1 > l2 ? l1 : l2 )); [ $m -gt $mx ] && mx=$m; sleep 1; done
+  echo "(15 s after the RENAME)"
+  echo "column renamed on w2: $(qa e-w2 -c "select count(*) from information_schema.columns where table_name = 'ddl_t' and column_name = 'renamed_col'"); lag w1->w2 $(lag e-w1 e-w2), w2->w1 $(lag e-w2 e-w1); subscriptions: $(status) / $(status2)"
+  echo "log lines about the rename: $(dc logs --tail 400 e-w1 e-w2 2>&1 | grep -c -i 'queued_col\|renamed_col')"
+  dc exec -T e-w1 touch /tmp/ddl-stop; dc exec -T e-w2 touch /tmp/ddl-stop
+  } 2>&1 | tee "$out"
+}
+
 case "${1:-}" in
   findings)   findings ;;
   concurrent) concurrent ;;
+  ddl)        ddl ;;
   policy)     ensure_nodes; run_policy "$2" "${3:-15}" ;;
-  *) echo "usage: $0 findings | concurrent | policy <name> [secs]" >&2; exit 2 ;;
+  *) echo "usage: $0 findings | concurrent | ddl | policy <name> [secs]" >&2; exit 2 ;;
 esac

@@ -18,13 +18,16 @@ covered a zero-downtime major upgrade, with a way back. All three assumed
 one writer, one region, and a table-shaped buffer for change data capture.
 This post is what changes once each of those assumptions breaks, in the
 order they tend to break in practice: the primary itself fails over, the
-servers are no longer close together, more than one of them writes, and
-the CDC consumer has to be a real one instead of a demo.
+servers are no longer close together, more than one of them writes, the
+schema has to change on all of them at once, and the CDC consumer has to
+be a real one instead of a demo.
 
 Like the rest of the series, everything built here is open source:
 Postgres itself, pg_auto_failover, pgcopydb, and pglogical where Part 1
-used it. Commercial multi-master systems come up once, in the conflict
-section, as a reference point rather than something to build against.
+used it. BDR, the multi-master that was open source until 2019, and the
+commercial systems that followed come up as a reference point, in the
+conflict section and in a comparison near the end, rather than something
+to build against.
 
 <!--more-->
 
@@ -52,11 +55,12 @@ only ever quoted numbers from a real `make run`, and so does this one.
 
 Four equal primaries, four disjoint region keys — us-east in New York, us-west in San Francisco, ap-south in Mumbai, ap-southeast in Sydney — so no two of them ever mint the same row. Every site, the eu-west warehouse in Amsterdam included, is a pg_auto_failover group of its own: a monitor and three nodes, one primary and two standbys, not a single server. The groups share no failover: they are linked by logical replication only. Every link is the same bidirectional logical replication: a region's own writes flow one way, a read-only mirror of everyone else's data flows back the other way. New York and Mumbai link straight to one global warehouse in Amsterdam; San Francisco and Sydney cascade through them instead of each opening its own long-haul connection. Every site has its own front desk, read-write against its own region and read-only against the mirror of the rest.
 
-Four things, each a post of its own in a shorter series, covered here in
+Five things, each a post of its own in a shorter series, covered here in
 one, in the order a team actually runs into them: the primary dies and a
 standby takes over — does the CDC consumer notice; the servers are a
 continent apart — does that change the answer; two of them accept writes
-on purpose — what happens when they touch the same row; and the thing
+on purpose — what happens when they touch the same row; a table changes
+on all of them — which tool carries the schema; and the thing
 reading the change stream has to be a real program, not three sections
 of a [Part 2](/blog/2026/10/consolidating-databases-with-postgres-logical-replication/)
 demo that stopped on purpose before finishing one.
@@ -169,7 +173,7 @@ missed. That half is now pg_auto_failover's job, not this script's.
 **Verified**, by running it: profile `a` in `compose/` is the `us-east`
 region, a pg_auto_failover group of its own, a monitor and three nodes
 (`us-east-a`, `us-east-b`, `us-east-c`) on Postgres 17, built from the
-commit that merges #1197 and left at its default timings. A
+commit that merges #1199 (which includes #1197) and left at its default timings. A
 `pg_recvlogical` consumer (`test_decoding`, one-second feedback interval)
 follows a `failover = true` slot while a writer inserts about 25 rows a
 second, one row per transaction, with ids it chooses itself so a retry
@@ -180,9 +184,9 @@ the consumer received that the final primary does not have.
 | Scenario | Duplicates | Holes | Ahead | Writer blocked |
 |---|---|---|---|---|
 | `pg_autoctl perform failover` | 0, 0, 0 | 0, 0, 0 | 0, 0, 0 | 1 s |
-| primary killed | 12, 7, 11 | 0, 0, 0 | 0, 0, 0 | 51 to 53 s |
+| primary killed | 7, 20, 20 | 0, 0, 0 | 0, 0, 0 | 51 to 52 s |
 | both standbys cut off, then primary killed, gate on | 0, 0, 0 | 0, 0, 0 | 0, 0, 0 | 52 s |
-| same, `synchronized_standby_slots` emptied | 0, 0, 0 | 16, 45, 2 | 143, 143, 140 | 51 to 53 s |
+| same, `synchronized_standby_slots` emptied | 0, 0, 0 | 25, 34, 4 | 81, 109, 91 | 51 to 52 s |
 
 - **The guarantee holds as described.** With the gate on, a planned
   failover produces no duplicate at all and a killed primary produces
@@ -194,22 +198,22 @@ the consumer received that the final primary does not have.
   scenario both standbys stop receiving WAL five seconds before the kill
   and the writer commits with `synchronous_commit = local`. The consumer
   receives nothing from that moment on, because the walsender will not
-  send past what the standbys have flushed. About 130 rows the writer had
+  send past what the standbys have flushed. About 110 rows the writer had
   been told were committed are lost with the old primary — that is the
   cost of `synchronous_commit = local`, and not the consumer's to carry —
   but none of them had been delivered downstream.
 - **Misconfigured, the prediction comes true, and then some.** With
-  `synchronized_standby_slots` empty, the same sequence delivers about
-  140 rows to the consumer that the new primary never had. The new
+  `synchronized_standby_slots` empty, the same sequence delivers 80 to
+  110 rows to the consumer that the new primary never had. The new
   primary then writes new rows at WAL positions the consumer's
-  confirmed position is already past, so the slot skips them: 2 to 45
+  confirmed position is already past, so the slot skips them: 4 to 34
   rows written after the failover never reach the consumer at all. The
   consumer is ahead of the history it reads from, which is the case the
   `IDENTIFY_SYSTEM` check in step 3 exists to catch, and nothing in
   Postgres raises it for you.
 - **What dominates the downtime is not the slot.** With three nodes a
   planned failover blocks the writer for about a second. A killed primary
-  blocks it for about 52: roughly ten seconds for the monitor to mark the
+  blocks it for about 51: roughly ten seconds for the monitor to mark the
   node unhealthy, and the rest in pg_auto_failover's drain timeout before
   the new primary is allowed to take writes. Those are defaults, they can
   be tuned, and they are measured here on a local Docker network, not a
@@ -238,12 +242,12 @@ has been picked and is in `stop_replication`, and `us-east-b` is
 following it (`join_secondary`):
 
 ```
-Formation: default - Sync Standbys: 1                                       11:13:07
+Formation: default - Sync Standbys: 1                                       23:27:13
 
      Name  Node       Region Quorum Priority      Host:Port       TLI: LSN Last Check   Connection Last Report      Reported State      Assigned State
-us-east-a     1      us-east    yes       50 us-east-a:5432   1: 0/5047430         1s read-write !         28s             primary      demote_timeout
-us-east-c     2      us-east    yes       50 us-east-c:5432   2: 0/5047C08         1s    read-only          1s    stop_replication    stop_replication
-us-east-b     3      us-east    yes       50 us-east-b:5432   1: 0/5047A30         6s    read-only          1s      join_secondary      join_secondary
+us-east-a     1      us-east    yes       50 us-east-a:5432   1: 0/5042190         2s read-write !         28s             primary      demote_timeout
+us-east-c     2      us-east    yes       50 us-east-c:5432   2: 0/50424E8         1s    read-only          1s    stop_replication    stop_replication
+us-east-b     3      us-east    yes       50 us-east-b:5432   1: 0/5042310         1s  read-only !          1s      join_secondary      join_secondary
 ```
 
 Two details from the same captures. `pg_autoctl show
@@ -255,18 +259,28 @@ left, and keeps protecting the consumer, which a two-node group could not
 do. And on the pinned build, `pg_autoctl watch` without `--group 0` loops
 on `no nodes found in group -1`; the frame above uses `--group 0`.
 
-One more thing the demos found, which matters for the guarantee itself.
-When the two standbys of a group are created at the same moment, the
-primary can keep a `synchronized_standby_slots` that lists only one of
-them, while the monitor's own value lists both, and nothing corrects it:
-the one standby outside the list is outside the gate, and if it is the
-one promoted, the consumer can be ahead of it. It showed up in one
-group out of five started together. Setting any node's replication quorum
-to the value it already has makes the keeper re-read the monitor's value,
-which is what the demos do when they see a short list. It is a bug to be
-fixed in pg_auto_failover, and `pg_autoctl show settings` against the
-primary's actual `show synchronized_standby_slots` is the check to run
-until then.
+One more thing the demos found, which matters for the guarantee itself,
+and which is fixed on `main` now. When the two standbys of a group were
+created at the same moment, the primary could keep a
+`synchronized_standby_slots` that listed only one of them, while the
+monitor's own value listed both, and nothing corrected it: the one
+standby outside the list was outside the gate, and if it was the one
+promoted, the consumer could be ahead of it. It showed up in one group
+out of five started together. The cause was that a standby reaching
+`secondary` after the primary had already settled never told the primary
+to read the list again; the fix
+([#1199](https://github.com/hapostgres/pg_auto_failover/pull/1199), merged
+2026-10-27) makes the monitor send the primary through `apply_settings`
+once more at that moment. The demos are pinned to that commit.
+It does not close it entirely. In 39 group start-ups on the fixed build
+without any workaround, three primaries still ended with a one-standby
+list: both standbys had reported `secondary` before the primary reported
+`primary`, and the monitor's request to read the list again only fires
+for a primary that has already converged. The demos therefore keep the
+workaround and log each use (`results/nudges.log`); it fired 4 times in
+the 37 group start-ups of the final runs. The check to run until the
+monitor closes that window is the same one: `pg_autoctl show settings`
+against the primary's actual `show synchronized_standby_slots`.
 
 ### What a region's failover looks like from the other regions
 
@@ -303,19 +317,19 @@ waits until both sides hold the same rows. Three runs killing
 time:
 
 - **Nothing lost, nothing duplicated, in either direction.** With
-  `us-east-a` killed, the first run acknowledged 2,288 `us-east` rows and
-  3,631 `us-west` rows, and afterwards both regions hold exactly those
+  `us-east-a` killed, the first run acknowledged 1,692 `us-east` rows and
+  2,708 `us-west` rows, and afterwards both regions hold exactly those
   rows. The other five runs end the same way: every acknowledged row is
   on both sides, none is missing, none is twice. The only apply error is
   one counted on the subscription that lost its connection.
 - **The two directions come back at different times, and which one is
   which follows the dead region.** The failed region's own subscription
-  resumes about 21 seconds after the kill, at the position its
+  resumes 20 to 23 seconds after the kill, at the position its
   replication origin recorded, as soon as a standby is promoted. The
   other region's subscription cannot connect until the new primary
-  accepts writes, about 52 seconds in, and its worker finds that by
+  accepts writes, 51 to 54 seconds in, and its worker finds that by
   retrying every five seconds: 55 seconds without new rows from the
-  failed region in all six runs, against 21 the other way.
+  failed region in all six runs, against 20 to 23 the other way.
 - **The slot did its job.** The standbys held a synced copy of the
   failover slot before the kill, and the other region's subscription
   resumed on the new primary (`us-east-b` or `us-west-b` or `-c`,
@@ -623,6 +637,135 @@ and Aurora are in Part 3, and nothing in this series builds against it.
 
 ---
 
+## Schema changes across regions
+
+Parts 1 and 2 met DDL as a single stream's problem: a table changes on
+the publisher, and the subscriber has to change with it, at the right
+point in the stream. Five groups linked by eight subscriptions, two pairs
+of them in both directions, make it a coordination problem: whoever
+changes a table changes it in every region, while the writers keep
+writing. Inside a group there is nothing to do, because the standbys get
+the change through physical replication (the demo checks: the column
+added on `us-east-a` is on `us-east-b` with no command of ours). Between
+groups, here is what each tool does, measured on `us-east` and `us-west`
+as two groups linked as in profile `f`.
+
+### Native logical replication: the schema is yours
+
+Postgres does not replicate DDL. The apply worker checks every column of
+an incoming row against the local table and fails if one is missing; an
+extra local column is fine. So a column added on the publisher first
+stops the subscriber at the next row, with this error, and the worker
+retries until the column exists:
+
+```
+ERROR:  logical replication target relation "public.events" is missing replicated column: "note_a"
+```
+
+Profile `g` (`./run-g.sh core`) runs `ADD COLUMN` three ways with a writer
+in each region, three runs each, nothing lost in any of them:
+
+| Rollout | Apply errors | Effect |
+|---|---|---|
+| `us-east` first, `us-west` ten seconds later | 4 on `us-west`, every run | `us-west` is 167 to 217 rows behind after 10 s and caught up 15 to 16 s after the first `ALTER` |
+| both primaries at the same moment (3 attempts per run) | 0 in 9 of 9 | none visible at this write rate |
+| writes paused, drained, both `ALTER`ed, writes resumed | 0 | writers blocked 1.0 to 1.2 s |
+
+The second line is luck, not design: the window is a few milliseconds, and
+a busier writer would find it. The first line is the honest default for
+an operator who does one region and then the next. Adding a column wants
+the subscriber changed first; dropping one wants the publisher changed
+first; and on a link that runs in both directions each region is both,
+so no order is safe, only a short pause is. That is also why a rename
+cannot be a rolling change here: expand, copy, switch, contract, each
+step additive or removing something nobody reads.
+
+### pgcopydb: DDL carried in the stream
+
+The design from the previous section applies: with the event trigger
+installed, a schema change is a message in the same commit-ordered stream
+as the rows, so it cannot arrive before or after them. `./run-g.sh
+pgcopydb` replaces the native subscription from `us-east` to `us-west`
+with `pgcopydb clone --follow` (a one-way link; `clone` also created the
+table on `us-west` itself) and runs three changes on `us-east`, with
+nothing run on `us-west`, three runs:
+
+- `ADD COLUMN`, `RENAME COLUMN` and `DROP COLUMN` each reached `us-west`
+  within one or two seconds, with at most one row of lag, at about two
+  rows a second. The rename is the change that no order makes safe on the
+  native link.
+- The rows follow the same order: the row inserted with the new column
+  lands with it, in two runs out of three at the moment the check ran.
+
+Four things stop it from replacing the native link in this scenario, all
+found by running it:
+
+- **Its slot is not a failover slot.** pgcopydb issues
+  `CREATE_REPLICATION_SLOT ... LOGICAL` without the `FAILOVER` option.
+  After `us-east-a` was killed, the new primary had no such slot, and the
+  pipeline exited with `replication slot "pgcopydb" does not exist`:
+  118 rows had arrived, about 135 more were written by the new primary and
+  never reached `us-west`, in all three runs. Re-creating the link needs a
+  new slot and a new clone.
+- **It does not take a multi-host URI.** A `postgres://a:5432,b:5432,...`
+  string makes its replication connection fail with `could not match 3 port
+  numbers to 5 hosts`; the keyword form `host=a,b,c port=5432 ...
+  target_session_attrs=read-write` works and is what the demo uses.
+- **It filters by table, not by row.** The `where (region = ...)`
+  publications that keep the bidirectional links from echoing have no
+  equivalent, so it can carry one-way links only, such as the warehouse
+  mirror, not the pairs.
+- **It fell behind a faster writer.** In a first run at about 25 rows a
+  second the apply position advanced a few kilobytes every ten seconds
+  while the receive position kept up, and the lag passed two thousand rows
+  in three minutes (`results/g-pgcopydb-fullrate.out`). I did not look for
+  the cause; the runs above use two rows a second.
+
+The first two are small changes (the second is a parsing bug), and the
+first is the one that matters: a `FAILOVER` slot is what the rest of this
+post is about, and Postgres 17 accepts it on that same command.
+
+### pglogical: `replicate_ddl_command`
+
+pglogical does not replicate DDL either; its README says so, and offers
+`pglogical.replicate_ddl_command()`, which runs the statement locally and
+queues it for the subscribers of a replication set (`ddl_sql` by default),
+in the stream. `./run-e.sh ddl` runs two PostgreSQL 18 nodes subscribed to
+each other, both inserting, twice:
+
+- A plain `ALTER TABLE ... ADD COLUMN` on `w1` only: `w2`'s apply worker
+  fails on the first row (`unknown column name plain_col`), the
+  subscription goes `down`, and 290 rows pile up in ten seconds. The same
+  `ALTER` by hand on `w2` ten seconds later fixes it, but the worker is
+  only back 187 seconds after the first `ALTER`, both runs: its restart
+  delay grows with each failure. Nothing was lost.
+- `replicate_ddl_command('alter table ... add column ...')` on `w1`:
+  `w2` had the column with nothing run there, lag zero, both writers
+  running. The same with `rename column`: renamed on `w2`, lag zero.
+- pglogical's own README says this will not be enough once the
+  subscriber also writes with the old structure, and that is the situation
+  of two writers on one table. Two runs did not hit it, which says nothing
+  about the window.
+- The slot pglogical creates has `failover = false`. Its source only asks
+  for a failover slot on 2ndQuadrant's PostgreSQL 9.6 and 11 builds, so on
+  community Postgres, a promotion loses it the way pgcopydb's is lost.
+
+### What the three add up to
+
+| | Native | pgcopydb | pglogical |
+|---|---|---|---|
+| Schema change in the stream, in order with the rows | no | yes, with the event trigger | yes, through `replicate_ddl_command` |
+| Survives a rename with writers on both sides | no | one-way link only | worked in two runs, README warns |
+| Row filters | yes | no (tables only) | yes (`row_filter`) |
+| Failover-enabled slot | yes | no | no |
+| Link in both directions | yes | no | yes |
+
+None of the three has every column. The combination the scenario needs
+(native filters and failover slots, with the schema change in the stream)
+is not available off the shelf today. What works today is the
+discipline of the native column: additive, nullable changes, applied
+everywhere with a short pause, and the rest as expand and contract.
+
 ## Finishing the CDC consumer: DDL as a message, not a table
 
 [Part 2](/blog/2026/10/consolidating-databases-with-postgres-logical-replication/)
@@ -748,9 +891,43 @@ pg_auto_failover-shaped future work, and not built here.
 
 ---
 
+## What BDR 1.x did about the same problems, on paper
+
+BDR 1.0 was the open source multi-master of 2ndQuadrant: a patched
+PostgreSQL 9.4 and a plugin, whose last commit on the 1.0 stable branch
+is from November 2019. It is not maintained, and its successors are not
+open source, so this is a comparison of designs, read from the
+documentation in its repository
+([`doc/`](https://github.com/2ndQuadrant/bdr/tree/bdr-plugin/REL1_0_STABLE/doc)),
+and nothing here was run.
+
+| | BDR 1.0, from its manual | This post |
+|---|---|---|
+| Topology | A full mesh: every node connects to every other, and a joining node configures all existing ones to connect to it ([node management](https://github.com/2ndQuadrant/bdr/blob/bdr-plugin/REL1_0_STABLE/doc/manual-node-management.sgml)). Five nodes are 20 directed links. | Five groups, eight subscriptions: hubs and cascades chosen by hand. |
+| Conflicts | Optimistic. Row conflicts resolve to the most recent tuple by the originating host's timestamp, or a user handler; a primary-key update or an insert violating several unique constraints is "divergent" and needs an operator ([conflicts](https://github.com/2ndQuadrant/bdr/blob/bdr-plugin/REL1_0_STABLE/doc/manual-conflicts.sgml)). | Avoided: disjoint `region` keys; a conflict is an error to see, not a rule to apply. |
+| DDL | Replicated automatically, under a global DDL lock: every node must be reachable and caught up, writes on every node pause or fail meanwhile, DDL is refused while the lock is held elsewhere, and a down node must be removed first and cannot come back ([DDL replication](https://github.com/2ndQuadrant/bdr/blob/bdr-plugin/REL1_0_STABLE/doc/manual-ddl-replication.sgml)). | No lock, and nothing automatic: the stall above unless the operator pauses writes, or the change travels in the stream. |
+| What DDL may do | A list of refused statements, among them `ADD COLUMN ... DEFAULT` and anything that rewrites a table. | Whatever Postgres accepts; the replicas must keep up. |
+| Sequences | Global sequences (`CREATE SEQUENCE ... USING bdr`), allocated in chunks by a vote of the majority, unusable on two nodes; the manual calls them deprecated and recommends step and offset sequences ([global sequences](https://github.com/2ndQuadrant/bdr/blob/bdr-plugin/REL1_0_STABLE/doc/manual-global-sequences.sgml)). | No shared sequence: the key is `(region, id)`. |
+| What replicates | Replication sets per table; a table's DDL goes to all nodes whatever its sets ([replication sets](https://github.com/2ndQuadrant/bdr/blob/bdr-plugin/REL1_0_STABLE/doc/manual-replication-sets.sgml)). | Row filters per publication; DDL is outside them. |
+| A node is down | One slot per peer holds WAL on every other node until the node is parted, with the disk-full outcome the manual warns about; a parted node cannot rejoin. | A node is a group of three; failover is pg_auto_failover's, and the slot follows through `failover = true`. |
+
+Two readings follow. BDR 1.0 bought "every change reaches every node"
+(rows, schema, keys) with a coordination cost this post's setup
+refuses to pay: no global lock, no majority vote for a sequence, no
+write pause on a continent because one node is slow. What it pays instead
+is the operator's discipline in the table above. And what BDR 1.0 left
+out is the problem the first half of this post is about: its manual
+does not discuss the failover of a node's own server or what happens to
+a peer's slot when that server's standby is promoted, because in 2019 on
+PostgreSQL 9.4 the primitive did not exist. The slot-synchronization of
+Postgres 17 is the piece BDR 1.x lacked, and `synchronized_standby_slots`
+is the guard it would have needed.
+
+---
+
 ## What this post adds to the ladder
 
-Four things, and each one is additive to what Parts 1 through 3 already
+Five things, and each one is additive to what Parts 1 through 3 already
 measured, not a replacement for any of it:
 
 - **A failover-safe slot** turns Part 3's "the publisher never moves"
@@ -762,6 +939,10 @@ measured, not a replacement for any of it:
   discipline — disjoint key spaces — applied at the size of a
   continent instead of a worker, with real multi-master conflict
   handling named honestly as commercial, not core.
+- **Schema changes** get measured on three tools instead of assumed: the
+  native link leaves them to the operator, pgcopydb and pglogical carry
+  them in the stream, and none of the three has row filters, failover
+  slots and both directions at once.
 - **A finished CDC consumer** closes the one gap Part 2 explicitly
   left open, and does it as a real change merged into a tool the series
   already relies on, not a bigger demo.

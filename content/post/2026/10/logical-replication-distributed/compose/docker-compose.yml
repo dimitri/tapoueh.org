@@ -16,10 +16,10 @@ x-pgaf: &pgaf
   tmpfs: ["/data:uid=999,gid=999,mode=0755"]
 
 services:
-  # ---------------- regions: one pg_auto_failover group each (profiles a, c, f) ----------------
+  # ---------------- regions: one pg_auto_failover group each (profiles a, c, f, g) ----------------
   us-east-monitor:
     <<: *pgaf
-    profiles: [a, c, f]
+    profiles: [a, c, f, g]
     build:
       context: .
       dockerfile: Dockerfile.pgautofailover
@@ -35,7 +35,7 @@ services:
 
   us-east-a:
     <<: *pgaf
-    profiles: [a, c, f]
+    profiles: [a, c, f, g]
     hostname: us-east-a
     depends_on:
       us-east-monitor: { condition: service_healthy }
@@ -52,7 +52,7 @@ services:
 
   us-east-b:
     <<: *pgaf
-    profiles: [a, c, f]
+    profiles: [a, c, f, g]
     hostname: us-east-b
     depends_on:
       us-east-a: { condition: service_healthy }
@@ -64,7 +64,7 @@ services:
 
   us-east-c:
     <<: *pgaf
-    profiles: [a, c, f]
+    profiles: [a, c, f, g]
     hostname: us-east-c
     depends_on:
       us-east-a: { condition: service_healthy }
@@ -76,7 +76,7 @@ services:
 
   us-west-monitor:
     <<: *pgaf
-    profiles: [c, f]
+    profiles: [c, f, g]
     hostname: us-west-monitor
     command: ["create", "monitor", "--pgdata", "/data/pgdata", "--auth", "trust",
               "--ssl-self-signed", "--hostname", "us-west-monitor", "--run"]
@@ -88,7 +88,7 @@ services:
 
   us-west-a:
     <<: *pgaf
-    profiles: [c, f]
+    profiles: [c, f, g]
     hostname: us-west-a
     depends_on:
       us-west-monitor: { condition: service_healthy }
@@ -105,7 +105,7 @@ services:
 
   us-west-b:
     <<: *pgaf
-    profiles: [c, f]
+    profiles: [c, f, g]
     hostname: us-west-b
     depends_on:
       us-west-a: { condition: service_healthy }
@@ -117,7 +117,7 @@ services:
 
   us-west-c:
     <<: *pgaf
-    profiles: [c, f]
+    profiles: [c, f, g]
     hostname: us-west-c
     depends_on:
       us-west-a: { condition: service_healthy }
@@ -288,12 +288,24 @@ services:
 
   # the application and the CDC consumer: psql, pg_recvlogical, perl
   client:
-    profiles: [a, f]
+    profiles: [a, f, g]
     image: lrdist-pgaf:17
     entrypoint: ["sleep", "infinity"]
     user: root
     volumes:
       - ./traffic:/traffic:ro
+      - ./results:/results
+
+  # profile g: pgcopydb carrying a one-way link between two regions, DDL included
+  pgcopydb-g:
+    profiles: [g]
+    build:
+      context: .
+      dockerfile: Dockerfile.pgcopydb
+      args: { PGVERSION: "17" }
+    image: lrdist-pgcopydb:17
+    entrypoint: ["sleep", "infinity"]
+    volumes:
       - ./results:/results
 
   # ---------------- profile d: pgcopydb DDL-as-a-message, against PR #1064 ----------------

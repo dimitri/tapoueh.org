@@ -1,0 +1,21 @@
+== profile g, core: us-east primary us-east-a, us-west primary us-west-a ==
+-- steady state: lag us-east -> us-west -2 rows, us-west -> us-east -2 rows; apply errors 0/0
+
+== A: ALTER TABLE ... ADD COLUMN on us-east only, us-west ten seconds later ==
+   10 s after the ALTER on us-east: us-west apply errors +4, us-east rows not yet on us-west: 199
+   us-west log: ERROR:  logical replication target relation "public.events" is missing replicated column: "note_a"
+   us-west caught up 15 s after the ALTER on us-east; no row lost: us-east rows on us-west 530 of 533
+   the standby us-east-b has the column without any command of ours: 1
+
+== B: the same ALTER on both primaries at the same moment, three times ==
+   B1: apply errors +0 on us-east, +0 on us-west; lag -3/-2 rows
+   B2: apply errors +0 on us-east, +0 on us-west; lag -1/-2 rows
+   B3: apply errors +0 on us-east, +0 on us-west; lag -3/-2 rows
+
+== C: writes paused, drained, ALTER on both, writes resumed ==
+   writes paused for 1.03 s
+   apply errors +0 on us-east, +0 on us-west; lag -3/-4 rows
+
+== result ==
+   rows owned by us-east: acknowledged 1444, on us-east 1444, on us-west 1444
+   rows owned by us-west: acknowledged 1445, on us-west 1445, on us-east 1445
