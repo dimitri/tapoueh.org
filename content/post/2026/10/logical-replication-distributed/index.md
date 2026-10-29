@@ -663,7 +663,7 @@ in single-row transactions, and runs three changes on `us-east` with
 nothing run on `us-west`. Three runs, on pgcopydb `main` as of late October
 2026:
 
-- It keeps up: 28 to 30 rows a second written, the same arriving, a
+- It keeps up: 28 to 29 rows a second written, the same arriving, a
   largest lag of 0 rows.
 - `ADD COLUMN`, `RENAME COLUMN` and `DROP COLUMN` each reached `us-west`
   within one or two seconds, with at most one row of lag, writer running.
@@ -704,7 +704,7 @@ pgcopydb-failover` shows the slot as `failover=true` on the primary and
 `synced=true` on both standbys before the kill; after the kill the new
 primary has it, and `us-west` ends with every row `us-east` acknowledged,
 with nothing left to catch up one second after the writer stops (three
-runs). Without the flag, the same kill leaves `us-west` 1,271 to 1,366 rows
+runs). Without the flag, the same kill leaves `us-west` 1,234 to 1,339 rows
 behind: the restarts find no slot, and after five attempts in 300 seconds
 `follow` logs `giving up` and exits. Killing the primary of the target region instead costs one restart of the apply
 process, which comes back by itself, and no row is missing (two runs). The standbys still need
@@ -819,7 +819,9 @@ version": `pg_dump -jN | pg_restore -jN` between two running servers, with
 the parallelism of both and the streaming that the two programs cannot do
 together. It takes one snapshot, copies the tables and builds the indexes in
 parallel, and, to keep the cutover short, follows the changes of the source
-from a slot created at that same snapshot. That last part is logical
+from a slot created at that same snapshot, which it reads all the time the
+copy runs: the source can forget the WAL as soon as it is spooled on the
+pgcopydb host, however long the copy takes. That last part is logical
 replication, used as the way to catch up. It is a separate program, run on
 any host that can reach both servers, and it needs nothing installed on
 either. It reads the slot, writes every change to a SQLite file, transforms
@@ -839,17 +841,17 @@ million rows, and one `UPDATE` statement of a million rows.
 
 | | Core | pglogical | pgcopydb |
 |---|---|---|---|
-| Latency of a single-row transaction, p50 / p99 | 0.3 / 1.7 ms | 0.2 / 2.0 ms | 0.7 / 5.2 ms |
-| Rows a second under 8 writers (the source commits 85,000) | 80,000 | 84,000 | 10,000 while loaded, 18,000 with the catch-up |
-| Lag once the 30 s load stops | 2 s | 0.2 s | 110 s |
-| One transaction of 1M rows, seconds after its commit | 4 to 6 | 3 to 6 | 7 to 8 |
-| One `UPDATE` of 1M rows that changes nothing, `REPLICA IDENTITY FULL` | 3 to 5 s | 4 s | 10 to 18 s |
+| Latency of a single-row transaction, p50 / p99 | 0.3 / 1.7 ms | 0.2 / 2.0 ms | 0.6 / 4.2 ms |
+| Rows a second under 8 writers (the source commits 85,000) | 80,000 | 84,000 | 8,000 to 10,000 while loaded, 17,000 to 18,000 with the catch-up |
+| Lag once the 30 s load stops | 2 s | 0.2 s | 75 to 110 s |
+| One transaction of 1M rows, seconds after its commit | 4 to 6 | 3 to 6 | 7 to 9 |
+| One `UPDATE` of 1M rows that changes nothing, `REPLICA IDENTITY FULL` | 3 to 5 s | 4 s | 9 to 18 s |
 
 The source commits about 85,000 single-row transactions a second in the
 third workload, whichever tool is behind it. Core and pglogical keep up with
-it. pgcopydb applies 10,000 to 18,000 rows a second and the rest queues: the
-110 seconds it needs to catch up after a 30 second load are a backlog, not a
-stall. On an idle link a change reaches the target in a fraction of a
+it. pgcopydb applies 8,000 to 18,000 rows a second and the rest queues: the
+75 to 110 seconds it needs to catch up after a 30 second load are a backlog,
+not a stall. On an idle link a change reaches the target in a fraction of a
 millisecond with the two in-server tools, and in a few milliseconds with
 pgcopydb. A single large transaction narrows the gap to about a factor of
 two, because the three wait first for the same thing: the source decodes a
@@ -857,7 +859,7 @@ transaction when it commits, and needs a second or two to hand out the last
 change. The `UPDATE` changes no value, which pgcopydb recognises when it has
 the whole old row (`REPLICA IDENTITY FULL`) and sends nothing for, where core
 and pglogical apply every row; it still has to receive and read back a million
-messages, which is what the 10 to 18 seconds are. pglogical took 66 seconds
+messages, which is what the 9 to 18 seconds are. pglogical took 66 seconds
 for that statement in one run, after the throughput workload had left 2.5
 million rows in the table, and 4 seconds in the two runs on a clean table;
 that was not investigated.
@@ -868,6 +870,15 @@ the same", "a few times slower" and "ten times slower" are the claims, not the
 digits. For a migration, 10,000 rows a second is more than most databases
 write; for a replica behind a source that takes tens of thousands of writes a
 second, it is not enough.
+
+One limit the table does not show is memory. pgcopydb builds a whole
+transaction in memory before it writes it down: its apply process peaked at
+340 MB for the transaction of one million inserted rows, and at 1.4 GB for the
+`UPDATE` of one million rows with their whole old rows, about 1.4 kB a row.
+Core and pglogical apply a change as it arrives, and a million rows cost them
+no more memory than one. A transaction a few times that size gets the process
+killed for lack of memory, and `follow` restarts it up to `--max-restarts`
+times before it gives up.
 
 ### What each one is for
 
@@ -902,7 +913,8 @@ second, it is not enough.
 | DDL | not replicated | `replicate_ddl_command()`, called by hand, in the stream | an event trigger emits it as a message, in the stream, once `pgcopydb stream event-trigger` has installed it |
 | First copy | one table synchronization worker per table (`max_sync_workers_per_subscription`, 2 by default): each table is one `COPY` | structure with `pg_dump` and `pg_restore`, then one `COPY` per table through sync workers | `--table-jobs` tables at once, a large table split across several `COPY` streams (`--split-tables-larger-than`), indexes built in parallel |
 | A long, slow link | a broken connection starts the table over | the same | many streams to fill the link; `--resume` does not resend the tables already copied (the one that was in flight starts over) |
-| WAL kept on the source during the copy | from the sync slot of each table, until that table is copied and caught up | from the sync slot, for the whole data copy | from the slot, for the whole clone and until apply has caught up |
+| WAL kept on the source during the copy | from the sync slot of each table, until that table is copied and caught up | from the sync slot, for the whole data copy | what receive has not yet spooled (on `main`; 0.18 kept it all until apply had caught up) |
+| Memory for a large transaction | constant: a change is applied as it arrives | constant | proportional to the transaction: 340 MB for a million inserted rows, 1.4 GB for a million updated rows with their old rows |
 | Sequences | values copied on demand from Postgres 19 (`REFRESH SEQUENCES`) | `replication_set_add_sequence` | copied at the end of the clone |
 | Row filters, columns | yes (15 and later) | yes | tables only |
 | Both directions | yes (`origin = none`, 16 and later) | yes | no |
@@ -951,15 +963,18 @@ keeps the WAL and the snapshot for all of it.
 
 **pgcopydb** takes a snapshot and creates its slot at the same point, copies
 with several workers, and receives the changes into SQLite at the same time.
-That does not release any WAL on the source. The position it reports to the
-server as flushed is the one apply has committed on the target
+The position it tells the source it has flushed is the one receive has
+committed and synced to its SQLite file, so the source can recycle the WAL
+while the clone runs, and the changes wait in files on the pgcopydb host
+instead of in the source's `pg_wal`. That is how it works on `main`
+([#1077](https://github.com/dimitri/pgcopydb/pull/1077)). Version 0.18
+reported the position apply had committed on the target instead
 (`stream_sync_sentinel` in `ld_stream.c`), and apply is only enabled when the
-clone is done, data, indexes and post-data included (`cli_clone_follow.c`).
-The source keeps the WAL since the slot was created for the whole clone, and
-until apply has caught up with the changes stored in the meantime. What the
-concurrent capture buys is of another kind: the changes are already decoded
-when the copy ends, so the catch-up is a local replay, where core has the
-source decode that backlog after the copy.
+clone is done, data, indexes and post-data included (`cli_clone_follow.c`):
+the source kept the WAL since the slot was created for the whole clone, and
+until apply had caught up. What the concurrent capture buys on top is that
+the changes are already decoded when the copy ends, so the catch-up is a local
+replay, where core has the source decode that backlog after the copy.
 
 **Verified**, by running it: `./run-e.sh walretention <core|pgcopydb>` copies
 a table of 600,000 rows (261 MB, with three expression indexes) while a
@@ -968,23 +983,24 @@ behind the current WAL position each slot's `restart_lsn` is, every two
 seconds. The sizes are small, the arithmetic is not: at 3 MB a second, a ten
 hour copy keeps about 100 GB.
 
-| | Core | pgcopydb |
-|---|---|---|
-| During the copy | the sync slot of the table: 52 MB after 2 s, 133 MB after 6 s | the slot: 122 MB after 2 s, rising |
-| After the copy | the sync slot is gone; the subscription's slot sits between 0 and 90 MB | rising to 208 MB for 24 s, while apply replays what was stored, then 80 MB |
+| | Core | pgcopydb 0.18 | pgcopydb `main` |
+|---|---|---|---|
+| During the copy | the sync slot of the table: 52 MB after 2 s, 133 MB after 6 s | the slot: 122 MB after 2 s, rising | the slot: 127 MB after 2 s, 144 MB after 6 s |
+| After the copy | the sync slot is gone; the subscription's slot sits between 0 and 90 MB | rising to 208 MB for 24 s, while apply replays what was stored, then 80 MB | between 79 and 232 MB, in steps |
 
-A third run shows the edge. With the writer in another database of the same
+A second run shows the edge. With the writer in another database of the same
 server, which nothing decodes, core's slot still advances (between 0 and 100
-MB, in steps of about fifteen seconds), and pgcopydb's grows without end: 122
-MB at the start, 647 MB after two minutes, and it was still growing.
-pgcopydb reports apply's position, apply only moves it when it commits a
+MB, in steps of about fifteen seconds). pgcopydb 0.18's grew without end: 122
+MB at the start, 647 MB after two minutes, and it was still growing, because
+it reported apply's position, apply only moves it when it commits a
 transaction of the database, and a quiet database on a busy server commits
-none. The sizes in a real migration depend on the write rate of the whole
-server, not only of the database being copied, so `max_slot_wal_keep_size`
-and a look at `pg_replication_slots.wal_status` belong in the plan of any
-long copy with any of the three: a slot that goes past the limit is
-invalidated, a core table synchronization starts that table over, and a
-pgcopydb clone has to start again.
+none. On `main` it moves in steps too, between 76 and 293 MB. The sizes in a
+real migration depend on the write rate of the whole server, not only of the
+database being copied, so `max_slot_wal_keep_size` and a look at
+`pg_replication_slots.wal_status` belong in the plan of any long copy with
+any of the three: a slot that goes past the limit is invalidated, a core
+table synchronization starts that table over, and a pgcopydb clone has to
+start again.
 
 ### When the two servers cannot share a binary format
 

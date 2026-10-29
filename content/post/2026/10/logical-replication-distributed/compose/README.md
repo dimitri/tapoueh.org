@@ -27,12 +27,13 @@ The nodes keep their data on tmpfs, so removing the containers is the reset.
   post's first section is about. The last tagged release is `v2.2`, which
   predates all three. The image is built by the `us-east-monitor` service and
   tagged `lrdist-pgaf:17`.
-- **pgcopydb**, pinned to `49c685409ce6981f6c2e5a3ef664ac50655916f1` on
+- **pgcopydb**, pinned to `361eb2f94945670c22a38beb666a5ac4c56e165f` on
   `main`, which includes
   [DDL replication over logical decoding](https://github.com/dimitri/pgcopydb/pull/1064),
   [`--enable-failover` and the restart of the follow sub-processes](https://github.com/dimitri/pgcopydb/pull/1073),
   [the cheap SQLite spools](https://github.com/dimitri/pgcopydb/pull/1074) and
-  [the primary-key lookup of `REPLICA IDENTITY FULL` rows](https://github.com/dimitri/pgcopydb/pull/1076).
+  [the primary-key lookup of `REPLICA IDENTITY FULL` rows](https://github.com/dimitri/pgcopydb/pull/1076) and
+  [the flushed position reported to the source](https://github.com/dimitri/pgcopydb/pull/1077).
   Not in a tagged release yet.
 
 Re-pin before running this again — `main` moves.
