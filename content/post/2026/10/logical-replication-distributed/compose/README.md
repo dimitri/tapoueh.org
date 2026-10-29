@@ -84,6 +84,9 @@ Re-pin before running this again — `main` moves.
   `pgcopydb-e` is the pgcopydb container built on Postgres 18 clients).
   The servers allow `pgoutput` and `pglogical_output` as output plugins
   (`output_plugin_libraries`). `reset-e.sh` recreates the containers.
+  `./run-e.sh walretention <core|pgcopydb>` copies a large table while a writer
+  generates WAL and samples what the source's slots keep (`WAL_NOISE=other`
+  puts the writer in another database, `WAL_ROWS` sizes the table).
   Results in `results/e-*.out`; `e-bench-<method>-bulk1.out` and `-bulk2.out`
   are the million-row workloads alone, on a clean table.
 - **g** — schema changes across regions, on `us-east` and `us-west`.

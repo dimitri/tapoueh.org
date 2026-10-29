@@ -963,14 +963,14 @@ source decode that backlog after the copy.
 
 **Verified**, by running it: `./run-e.sh walretention <core|pgcopydb>` copies
 a table of 600,000 rows (261 MB, with three expression indexes) while a
-writer produces about 3 MB of WAL a second on the source, and samples how far
+writer produces 3 to 4 MB of WAL a second on the source, and samples how far
 behind the current WAL position each slot's `restart_lsn` is, every two
-seconds. The sizes are small, the arithmetic is not: at that rate a ten hour
-copy keeps 108 GB.
+seconds. The sizes are small, the arithmetic is not: at 3 MB a second, a ten
+hour copy keeps about 100 GB.
 
 | | Core | pgcopydb |
 |---|---|---|
-| During the copy | the sync slot of the table: 52 MB, then 133 MB, six seconds later | the slot: 122 MB, rising |
+| During the copy | the sync slot of the table: 52 MB after 2 s, 133 MB after 6 s | the slot: 122 MB after 2 s, rising |
 | After the copy | the sync slot is gone; the subscription's slot sits between 0 and 90 MB | rising to 208 MB for 24 s, while apply replays what was stored, then 80 MB |
 
 A third run shows the edge. With the writer in another database of the same
