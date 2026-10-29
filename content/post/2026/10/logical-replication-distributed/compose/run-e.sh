@@ -338,10 +338,11 @@ SQL
 }
 
 # bench <native|pglogical|pgcopydb>: one-way link e-w1 -> e-w2 (Postgres 18, no standbys), same
-# table, same three workloads: latency of single-row transactions, rows a second under 8
-# concurrent single-row writers, and one transaction of a million rows.
+# table, same four workloads: latency of single-row transactions, rows a second under 8
+# concurrent single-row writers, one transaction of a million rows, and one UPDATE statement of a million rows.
 bench() {
-  local M=${1:?native | pglogical | pgcopydb} out=results/e-bench-$1.out
+  local M=${1:?native | pglogical | pgcopydb} out=${BENCH_OUT:-results/e-bench-$1.out}
+  local SECS=${BENCH_SECS:-30} BULK=${BENCH_BULK_ROWS:-1000000}
   local TBL="create table events (id bigserial primary key, payload text not null, src_ts timestamptz not null default clock_timestamp(), applied_at timestamptz)"
   # the target stamps the time a row is applied, whichever tool applied it
   local TRG="create function stamp() returns trigger language plpgsql as \$\$ begin new.applied_at := clock_timestamp(); return new; end \$\$;
@@ -363,13 +364,15 @@ alter table events enable always trigger stamp"
       wait_for e-w2 "(select count(*) from pglogical.show_subscription_status() where status = 'replicating') = 1" 60 ;;
     pgcopydb)
       q e-w1 -c "$TBL" >/dev/null
-      COMPOSE_PROFILES=e dc up -d pgcopydb-e >/dev/null 2>&1
+      # a new container: a follow left over from an earlier run would fight this one for the slot
+      COMPOSE_PROFILES=e dc up -d --force-recreate pgcopydb-e >/dev/null 2>&1
       dc exec -T pgcopydb-e sh -c "rm -rf /root/.local/share/pgcopydb /tmp/pgcopydb"
       dc exec -d pgcopydb-e sh -c "pgcopydb clone --follow --source 'postgres://postgres@e-w1/app' --target 'postgres://postgres@e-w2/app' > /results/e-bench-pgcopydb.log 2>&1"
       for i in $(seq 1 60); do [ "$(qa e-w2 -c "select to_regclass('public.events') is not null")" = t ] && break; sleep 1; done
       q e-w2 -c "$TRG" >/dev/null
       sleep 5 ;;
   esac
+  want() { case " ${BENCH_ONLY:-lat tp bulk upd} " in *" $1 "*) return 0 ;; esac; return 1; } # BENCH_ONLY="bulk upd" runs only those
   cnt() { qa "$1" -c "select count(*) from events where payload = '$2'"; }
   now() { date +%s.%N; }
   drain() { # <payload> <expected>: seconds until the target has them all
@@ -381,27 +384,51 @@ alter table events enable always trigger stamp"
   # the link must carry a row before anything is measured
   q e-w1 -c "insert into events (payload) values ('canary')" >/dev/null
   if [ "$(drain canary 1 | cut -d. -f1)" -ge 60 ]; then echo "the link did not come up: no row on e-w2 after 60 s"; return 1; fi
-  echo; echo "-- latency: 1000 single-row transactions, one session, 50 ms apart"
-  dc exec -T e-w1 sh -c "for i in \$(seq 1 1000); do psql -X -q -U postgres -d app -c \"insert into events (payload) values ('lat')\"; sleep 0.05; done"
-  drain lat 1000 >/dev/null
-  qa e-w2 -c "select 'p50 ' || round((percentile_cont(0.5) within group (order by extract(epoch from applied_at - src_ts)) * 1000)::numeric, 1) || ' ms, p95 ' || round((percentile_cont(0.95) within group (order by extract(epoch from applied_at - src_ts)) * 1000)::numeric, 1) || ' ms, p99 ' || round((percentile_cont(0.99) within group (order by extract(epoch from applied_at - src_ts)) * 1000)::numeric, 1) || ' ms, rows ' || count(*) from events where payload = 'lat'"
+  if want lat; then
+    echo; echo "-- latency: 1000 single-row transactions, one session, 50 ms apart"
+    dc exec -T e-w1 sh -c "for i in \$(seq 1 1000); do psql -X -q -U postgres -d app -c \"insert into events (payload) values ('lat')\"; sleep 0.05; done"
+    drain lat 1000 >/dev/null
+    qa e-w2 -c "select 'p50 ' || round((percentile_cont(0.5) within group (order by extract(epoch from applied_at - src_ts)) * 1000)::numeric, 1) || ' ms, p95 ' || round((percentile_cont(0.95) within group (order by extract(epoch from applied_at - src_ts)) * 1000)::numeric, 1) || ' ms, p99 ' || round((percentile_cont(0.99) within group (order by extract(epoch from applied_at - src_ts)) * 1000)::numeric, 1) || ' ms, rows ' || count(*) from events where payload = 'lat'"
+  fi
 
-  echo; echo "-- throughput: pgbench, 8 clients, 30 s, one insert per transaction"
-  dc exec -T e-w1 sh -c "echo \"insert into events (payload) values ('tp');\" > /tmp/ins.sql"
-  local t0=$(now)
-  dc exec -T e-w1 pgbench -n -c 8 -j 4 -T 30 -U postgres -f /tmp/ins.sql app > /tmp/bench.$$ 2>&1
-  local at_end=$(cnt e-w2 tp) src=$(cnt e-w1 tp)
-  local d=$(drain tp $src)
-  grep "tps =" /tmp/bench.$$ | sed 's/^/   source: /'; rm -f /tmp/bench.$$
-  echo "   source committed $src rows; $at_end were on the target when the load stopped; the rest took $d s more"
-  echo "   target applied $(awk -v n=$src -v d=$d 'BEGIN { printf "%d", n / (30 + d) }') rows/s over the whole run, $(awk -v n=$at_end 'BEGIN { printf "%d", n / 30 }') rows/s while it was loaded"
+  if want tp; then
+    echo; echo "-- throughput: pgbench, 8 clients, $SECS s, one insert per transaction"
+    dc exec -T e-w1 sh -c "echo \"insert into events (payload) values ('tp');\" > /tmp/ins.sql"
+    local t0=$(now)
+    dc exec -T e-w1 pgbench -n -c 8 -j 4 -T $SECS -U postgres -f /tmp/ins.sql app > /tmp/bench.$$ 2>&1
+    local at_end=$(cnt e-w2 tp) src=$(cnt e-w1 tp)
+    local d=$(drain tp $src)
+    grep "tps =" /tmp/bench.$$ | sed 's/^/   source: /'; rm -f /tmp/bench.$$
+    echo "   source committed $src rows; $at_end were on the target when the load stopped; the rest took $d s more"
+    echo "   target applied $(awk -v n=$src -v d=$d -v secs=$SECS 'BEGIN { printf "%d", n / (secs + d) }') rows/s over the whole run, $(awk -v n=$at_end -v secs=$SECS 'BEGIN { printf "%d", n / secs }') rows/s while it was loaded"
+  fi
 
-  echo; echo "-- one transaction of 1,000,000 rows"
-  local tb=$(now)
-  q e-w1 -c "insert into events (payload) select 'bulk' from generate_series(1, 1000000)" >/dev/null
-  local sec=$(echo "$(now) $tb" | awk '{printf "%.1f", $1 - $2}')
-  local dd=$(drain bulk 1000000)
-  echo "   committed on the source after $sec s, complete on the target $dd s after that"
+  if want bulk; then
+    echo; echo "-- one transaction of $BULK rows"
+    local tb=$(now)
+    q e-w1 -c "insert into events (payload) select 'bulk' from generate_series(1, $BULK)" >/dev/null
+    local sec=$(echo "$(now) $tb" | awk '{printf "%.1f", $1 - $2}')
+    local dd=$(drain bulk $BULK)
+    echo "   committed on the source after $sec s, complete on the target $dd s after that"
+  fi
+
+  if want upd; then
+    # One UPDATE statement, so one transaction, with a change for each of the rows just inserted. It sets
+    # a column to its own value: with the full old row in the change (REPLICA IDENTITY FULL), pgcopydb
+    # sees that nothing changed and does not replay it, where native replication and pglogical apply all
+    # of them. A row inserted after it tells when the target is through with it.
+    local upd=${BENCH_UPDATE_SQL:-set payload = payload}
+    echo; echo "-- one UPDATE statement of $BULK rows: update events $upd (REPLICA IDENTITY ${BENCH_REPLICA_IDENTITY:-FULL})"
+    # (a real change replays on the target through the whole old row under FULL, which the stamp trigger
+    # has made different from the source's: use BENCH_REPLICA_IDENTITY=DEFAULT with BENCH_UPDATE_SQL then)
+    q e-w1 -c "alter table events replica identity ${BENCH_REPLICA_IDENTITY:-FULL}" >/dev/null
+    local tu=$(now)
+    q e-w1 -c "update events $upd where payload = 'bulk'" >/dev/null
+    local secu=$(echo "$(now) $tu" | awk '{printf "%.1f", $1 - $2}')
+    q e-w1 -c "insert into events (payload) values ('updone')" >/dev/null
+    echo "   committed on the source after $secu s, complete on the target $(drain updone 1) s after that"
+  fi
+
   } 2>&1 | tee "$out"
 }
 
