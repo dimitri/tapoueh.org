@@ -2,11 +2,11 @@
 -- pgcopydb-g: pgcopydb pgcopydb version 0.18; clone --follow us-east -> us-west, writer pause 0.02s
    table on us-west after 2s; logical slots on the us-east primary: pgcopydb (failover=true, active=true)
    event trigger installed; steady state: lag -2 rows
-   over 20 s: 25 rows/s written on us-east, 25 rows/s arrived on us-west; largest lag 1 rows
+   over 20 s: 29 rows/s written on us-east, 29 rows/s arrived on us-west; largest lag 0 rows
 
 == ADD COLUMN on us-east, nothing run on us-west ==
    column on us-west after 1s; row with the new column: carries the new column
-   largest lag over the next 10 s: 1 rows
+   largest lag over the next 10 s: 0 rows
 
 == RENAME COLUMN ==
    renamed on us-west after 1s; largest lag over the next 10 s: 0 rows
@@ -17,19 +17,19 @@
 == the us-west primary is killed under load ==
    us-west-b: logical slots: none
    us-west-c: logical slots: none
-   at the kill: us-east holds 1313 rows, us-west 1315
-   t0=1793195358.985268421: docker kill us-west-a
-   new primary of us-west: us-west-c
+   at the kill: us-east holds 1731 rows, us-west 1732
+   t0=1793283898.364995387: docker kill us-west-a
+   new primary of us-west: us-west-b
    slots on the new primary: none
    after the writer stopped: us-west is 0 rows behind
-   rows owned by us-east: acknowledged 3042, on us-east 3043, on us-west 3043 (caught up after a further 1s)
+   rows owned by us-east: acknowledged 4538, on us-east 4539, on us-west 4539 (caught up after a further 1s)
 -- the errors in the pgcopydb log
-   2026-10-28 13:49:19.698 23 ERROR  pgsql.c:5697              Failed to consume input: SSL error: unexpected eof while reading
-   2026-10-28 13:49:19.757 21 ERROR  follow.c:1103             Subprocess apply with pid 23 has exited with error code 12
-   2026-10-28 13:49:19.757 21 ERROR  follow.c:1131             Process apply has exited with error code 12, terminating other processes
-   2026-10-28 13:49:19.859 21 ERROR  follow.c:752              Some sub-process exited with errors, see above for details
+   2026-10-29 14:24:58.650 25 ERROR  pgsql.c:5741              Failed to consume input: SSL error: unexpected eof while reading
+   2026-10-29 14:24:58.700 23 ERROR  follow.c:1130             Subprocess apply with pid 25 has exited with error code 12
+   2026-10-29 14:24:58.701 23 ERROR  follow.c:1158             Process apply has exited with error code 12, terminating other processes
+   2026-10-29 14:24:58.854 23 ERROR  follow.c:777              Some sub-process exited with errors, see above for details
 -- the last lines of the pgcopydb log
-   2026-10-28 13:50:41.822 61 INFO   pgsql.c:5796              Reported write_lsn 0/5167168, flush_lsn 0/51648B0, replay_lsn 0/51648B0
-   2026-10-28 13:50:51.865 61 INFO   pgsql.c:5796              Reported write_lsn 0/51717A8, flush_lsn 0/5171488, replay_lsn 0/5171488
-   2026-10-28 13:51:02.164 61 INFO   pgsql.c:5796              Reported write_lsn 0/5178D98, flush_lsn 0/5178D98, replay_lsn 0/5178D98
-   2026-10-28 13:51:13.160 61 INFO   pgsql.c:5796              Reported write_lsn 0/517D800, flush_lsn 0/517D800, replay_lsn 0/517D800
+   2026-10-29 14:26:21.582 62 INFO   pgsql.c:5840              Reported write_lsn 0/41A1030, flush_lsn 0/41A1030, replay_lsn 0/41A1030
+   2026-10-29 14:26:31.590 62 INFO   pgsql.c:5840              Reported write_lsn 0/41AEB48, flush_lsn 0/41AEB48, replay_lsn 0/41AEB48
+   2026-10-29 14:26:41.606 62 INFO   pgsql.c:5840              Reported write_lsn 0/41BB820, flush_lsn 0/41BB820, replay_lsn 0/41BB820
+   2026-10-29 14:26:52.605 62 INFO   pgsql.c:5840              Reported write_lsn 0/41C8380, flush_lsn 0/41C8380, replay_lsn 0/41C8380

@@ -354,7 +354,7 @@ alter table events enable always trigger stamp"
     native)
       q e-w1 -c "$TBL" -c "create publication bench for table events" >/dev/null
       q e-w2 -c "$TBL" -c "$TRG" >/dev/null
-      q e-w2 -c "create subscription bench connection 'host=e-w1 dbname=app user=postgres' publication bench with (copy_data = false)" >/dev/null ;;
+      q e-w2 -c "create subscription bench connection 'host=e-w1 dbname=app user=postgres' publication bench with (copy_data = false${BENCH_SUB_OPTS:+, $BENCH_SUB_OPTS})" >/dev/null ;;
     pglogical)
       q e-w1 -c "create extension if not exists pglogical" -c "$TBL" >/dev/null
       q e-w1 -c "select pglogical.create_node(node_name := 'src', dsn := 'host=e-w1 dbname=app user=postgres')" -c "select pglogical.replication_set_add_table('default', 'events')" >/dev/null

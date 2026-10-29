@@ -9,7 +9,7 @@
 #                          DROP COLUMN, then the us-east primary is killed
 #   ./run-g.sh pgcopydb-failover
 #                          the same with a pgcopydb whose slot is FAILOVER true
-#                          (pgcopydb-failover-slot.patch), restarted after the kill
+#                          (--enable-failover), restarted after the kill
 #   WRITER_PAUSE=0.4 ./run-g.sh pgcopydb     slows the writer (default 0.02, ~25 rows/s)
 #   KILL_REGION=us-west ./run-g.sh pgcopydb-failover   kills the target's primary instead
 set -uo pipefail

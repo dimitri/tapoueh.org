@@ -33,12 +33,11 @@ to build against.
 
 {{< lab >}}
 The demos for this post are in the `compose/` directory next to it. They
-build pg_auto_failover and pgcopydb from source (the changes this post
-relies on are on their `main` branches and not in a tagged release yet).
-Statements below are **verified**: checked against the actual Postgres,
-pg_auto_failover, or pgcopydb source, or against a run of the demos, and
-stated as fact. Parts 1 through 3 only ever quoted numbers from a real
-`make run`, and so does this one.
+build pg_auto_failover and pgcopydb from source (the features used here
+are on their `main` branches and not in a tagged release yet). Statements
+marked **verified** were checked against the Postgres, pg_auto_failover,
+pglogical or pgcopydb source, or against a run of the demos, and every
+number comes from such a run.
 {{< /lab >}}
 
 <!--toc-->
@@ -464,11 +463,10 @@ out before it reaches that subscriber. The id comes from
 anything it received, so a row is tagged the moment it has crossed one
 hop, and the next hop can choose not to forward it any further.
 
-Building the demo for this section turned up something the
-documentation alone does not show: for a disjoint, region-keyed schema
-like this one, `origin` is not the tool that closes the loop —
-row-filtered publications are, and once they are in place, `origin`
-has nothing left to do.
+The documentation alone does not show this: for a disjoint,
+region-keyed schema like this one, `origin` is not the tool that closes
+the loop — row-filtered publications are, and once they are in place,
+`origin` has nothing left to do.
 
 The naive version would give San Francisco an unfiltered subscription
 to everything New York publishes. New York's publication carries
@@ -494,7 +492,7 @@ Amsterdam, and `WHERE (region <> 'us-west')` toward San Francisco —
 and San Francisco's own publication back toward New York is
 `WHERE (region = 'us-west')`, nothing else, ever. An unfiltered
 publication toward Amsterdam would send Amsterdam's own mirror straight
-back to it through New York, which is the loop the demo hit first. Neither filter cares
+back to it through New York. Neither filter cares
 what hop a row arrived on or what it did or didn't already touch; each
 one only looks at a value every row already carries. With that in
 place, a row can never reach a link that would send it back to where it
@@ -505,8 +503,11 @@ the thing a loop needs to be cut on — but it is not what this
 particular architecture needs.
 
 What cascading does not change is what was already true one hop up:
-DDL and sequence state still do not replicate, at any hop, for the same
-reason Part 2 found at the first one.
+DDL does not replicate, at any hop, for the same reason Part 2 found at
+the first one, and neither do sequence values as the writes happen. Postgres
+19 adds `ALTER SUBSCRIPTION ... REFRESH SEQUENCES`, which copies the
+current values on demand from a publisher running 19 or later; nothing
+streams them.
 
 **Verified**, by running it: profile `c` in `compose/` builds exactly
 this topology on Postgres 17 — four primaries, two of them cascading
@@ -594,6 +595,11 @@ Postgres 19. `galloc` and `snowflakeid` remain EDB Postgres Distributed
 features, not core ones, and stay that way for at least one more
 release.
 
+What Postgres 19 did commit is a smaller thing, sequence synchronization:
+a publication `FOR ALL SEQUENCES` and `ALTER SUBSCRIPTION ... REFRESH
+SEQUENCES` copy the current values to the subscriber when asked. That
+helps a cutover. It does not let two writers draw from one sequence.
+
 Where does real multi-master conflict handling live today? In BDR and
 its successor, EDB Postgres Distributed: BDR 1.x was open source and
 reached its end of life in December 2019; every version since is
@@ -652,20 +658,22 @@ installed, a schema change is a message in the same commit-ordered stream
 as the rows, so it cannot arrive before or after them. `./run-g.sh
 pgcopydb` replaces the native subscription from `us-east` to `us-west`
 with `pgcopydb clone --follow` (a one-way link; `clone` also created the
-table on `us-west` itself), with a writer inserting about 26 rows a second
+table on `us-west` itself), with a writer inserting about 29 rows a second
 in single-row transactions, and runs three changes on `us-east` with
-nothing run on `us-west`. Three runs, on pgcopydb `main` at `4c5a3b8`:
+nothing run on `us-west`. Three runs, on pgcopydb `main` as of late October
+2026:
 
-- It keeps up: 26 to 27 rows a second written, the same arriving, a
-  largest lag of 0 to 1 rows.
+- It keeps up: 28 to 30 rows a second written, the same arriving, a
+  largest lag of 0 rows.
 - `ADD COLUMN`, `RENAME COLUMN` and `DROP COLUMN` each reached `us-west`
   within one or two seconds, with at most one row of lag, writer running.
   The rename is the change that no order makes safe on the native link.
   The row inserted with the new column lands with it.
 
-Three things stop it from replacing the native link in this scenario:
+Three things keep it from replacing the native link in this scenario:
 
-- **Its slot is not a failover slot.** pgcopydb issues
+- **Its slot is not a failover slot by default.** Without
+  `--enable-failover`, pgcopydb issues
   `CREATE_REPLICATION_SLOT ... LOGICAL` without the `FAILOVER` option.
   After `us-east-a` is killed, the new primary has no such slot and the
   stream cannot be resumed (`replication slot "pgcopydb" does not
@@ -681,27 +689,27 @@ Three things stop it from replacing the native link in this scenario:
   equivalent, so it can carry one-way links only, such as the warehouse
   mirror, not the pairs.
 
-The first is the one that matters, and the change is small. Postgres 17
+The first is the one that matters, and the fix is small. Postgres 17
 accepts `FAILOVER` on that same command, but only in the parenthesized
 option syntax (`CREATE_REPLICATION_SLOT "pgcopydb" LOGICAL "pgoutput"
-(FAILOVER true)`), which the bare form pgcopydb sends cannot carry. A
-pull request ([dimitri/pgcopydb#1073](https://github.com/dimitri/pgcopydb/pull/1073))
-adds `--enable-failover`, which sends it on Postgres 17 and later. The same
-pull request makes `follow` restart its sub-processes when one fails (the
-receive process already reconnects by itself, the apply process did not),
-at most `--max-restarts` times in `--restart-window` seconds, Erlang
-supervisor style, because a failover of the target is as ordinary as one of
-the source. With both, `./run-g.sh pgcopydb-failover` shows the slot as
-`failover=true` on the primary and `synced=true` on both standbys before the
-kill; after the kill the new primary has it, and `us-west` ends with every
-row `us-east` acknowledged, with nothing left to catch up one second after
-the writer stops (three runs). Without the flag, the same kill leaves
-`us-west` 781 rows behind: the restarts find no slot, and after five
-attempts in 300 seconds `follow` logs `giving up` and exits. Killing the
-primary of the target region instead costs one restart, with the apply
-process back within a few seconds and no row missing (two runs). The standbys still need `sync_replication_slots` and the
-primary `synchronized_standby_slots`, the Postgres-side settings the first
-section covers.
+(FAILOVER true)`), which the bare form older pgcopydb versions sent cannot
+carry. pgcopydb `main` has an `--enable-failover` option
+([#1073](https://github.com/dimitri/pgcopydb/pull/1073)) that sends it on
+Postgres 17 and later. The same change makes `follow` restart its
+sub-processes when one fails (the receive process already reconnects by
+itself, the apply process did not), at most `--max-restarts` times in
+`--restart-window` seconds, Erlang supervisor style, because a failover of
+the target is as ordinary as one of the source. With both, `./run-g.sh
+pgcopydb-failover` shows the slot as `failover=true` on the primary and
+`synced=true` on both standbys before the kill; after the kill the new
+primary has it, and `us-west` ends with every row `us-east` acknowledged,
+with nothing left to catch up one second after the writer stops (three
+runs). Without the flag, the same kill leaves `us-west` 1,271 to 1,366 rows
+behind: the restarts find no slot, and after five attempts in 300 seconds
+`follow` logs `giving up` and exits. Killing the primary of the target region instead costs one restart of the apply
+process, which comes back by itself, and no row is missing (two runs). The standbys still need
+`sync_replication_slots` and the primary `synchronized_standby_slots`, the
+Postgres-side settings the first section covers.
 
 ### pglogical: `replicate_ddl_command`
 
@@ -762,44 +770,152 @@ in the post's setup, pg_auto_failover computes that list. One run of each.
 
 ### What the three add up to
 
-| | Native | pgcopydb | pglogical |
+| | Core | pglogical | pgcopydb |
 |---|---|---|---|
-| Schema change in the stream, in order with the rows | no | yes, with the event trigger | yes, through `replicate_ddl_command` |
-| Survives a rename with writers on both sides | no | one-way link only | works, the README warns of the window |
-| Row filters | yes | no (tables only) | yes (`row_filter`) |
-| Failover-enabled slot | yes | not as shipped; a nine-line patch does it | not as shipped; `ALTER_REPLICATION_SLOT` after creation does it |
-| Link in both directions | yes | no | yes |
+| Schema change in the stream, in order with the rows | no | yes, through `replicate_ddl_command` | yes, with the event trigger |
+| Survives a rename with writers on both sides | no | works, the README warns of the window | one-way link only |
+| Row filters | yes | yes (`row_filter`) | no (tables only) |
+| Failover-enabled slot | yes | not as shipped; `ALTER_REPLICATION_SLOT` after creation does it | with `--enable-failover` |
+| Link in both directions | yes | yes | no |
 
-Speed is the other axis. `./run-e.sh bench <method>` puts the same table
-on two Postgres 18 servers, with a trigger on the target that stamps the
-time a row is applied, and runs three workloads over the same one-way link:
-1,000 single-row transactions 50 ms apart (the stamp minus the source's
-`clock_timestamp()` is the latency), eight concurrent writers for 30
-seconds, and one transaction of a million rows.
-
-| | Native | pglogical | pgcopydb |
-|---|---|---|---|
-| Latency p50 / p95 / p99 | 0.2 / 0.8 / 1.6 ms | 0.2 / 0.6 / 1.4 ms | 62 / 106 / 113 ms |
-| Rows a second applied under 8 writers | 91,000 | 96,000 | 5,700 |
-| Lag after the 30 s load stops | 1.7 s | 0.3 s | 452 s |
-| 1M rows in one transaction, applied after the commit | 3.2 s | 3.3 s | 456 s |
-
-The source took about 92,000 to 97,000 transactions a second in each case.
-Native and pglogical keep up with it. pgcopydb is a different design: the
-receive, transform and apply processes hand the stream to each other
-through SQLite catalogs, behind one lock, and during these runs they sat at
-10 to 20 percent of a CPU with the source's walsender waiting for the
-receiver to read. It is built to carry a migration off a production server
-that has its own load, not to match a bulk loader, and 5,700 rows a second
-is more than most of those need. It is not what to put behind a source
-taking tens of thousands of writes a second. All three ran on one machine,
-once each: the ratios are the point, not the digits.
-
-None of the three has every column. The combination the scenario needs
-(native filters and failover slots, with the schema change in the stream)
-is not available off the shelf today. What works today is the
+None of the three has every column of that table. The combination the
+scenario needs (native filters and failover slots, with the schema change in
+the stream) is not available off the shelf today. What works today is the
 discipline of the native column: additive, nullable changes, applied
-everywhere with a short pause, and the rest as expand and contract.
+everywhere with a short pause, and the rest as expand and contract. Speed,
+first copy and version support come next, side by side.
+
+## Core, pglogical and pgcopydb side by side
+
+The schema section compared the three tools on one axis. The choice between
+them has several, and they pull in different directions: where the code
+runs, how fast it applies changes, what it does with the first copy of a
+large database, whether it carries DDL, and which Postgres versions it can
+connect.
+
+### Three architectures
+
+{{< image src="fig-deployment.svg" title="Where the replication code runs: inside the servers, or between them." >}}
+
+**Core logical replication** is part of Postgres. The publisher's walsender
+decodes the WAL with the built-in `pgoutput` plugin and streams the changes.
+On the subscriber, an apply worker, a background process of the server
+itself, applies each change as it arrives, in one local transaction per
+source transaction, and commits when the COMMIT message comes in. Nothing is
+stored in between (`replication/logical/worker.c`). The target is the one
+who pulls: it opens the connection to the source.
+
+**pglogical** has the same shape, as an extension that has to be installed
+on both servers (`shared_preload_libraries`, one build per major version).
+It brings its own output plugin and its own apply workers. They write to the
+heap directly, turn runs of consecutive inserts into one `heap_multi_insert`
+call, and commit asynchronously by default (`pglogical_apply.c`, settings
+`pglogical.batch_inserts` and `pglogical.synchronous_commit`).
+
+**pgcopydb** is another kind of tool: a separate program, run on any host
+that can reach both servers, which needs nothing installed on either. It
+reads the replication slot of the source, writes every change to a SQLite
+file, transforms them into SQL statements kept in a second SQLite file, and
+replays those on the target through ordinary connections with prepared
+statements. There are two reasons for that shape. The first is that it exists
+to migrate a database, and a migration starts with copying the data, which
+takes hours or days for a database of several terabytes. While a core
+subscription copies a table, the source keeps the WAL since that table's
+snapshot, in a table synchronization slot of its own; pgcopydb takes one
+snapshot, creates its slot at the same point, and reads the slot all the time
+it copies, so nothing piles up on the source and the changes wait in files on
+the pgcopydb host instead. The second reason is reach: SQL over plain
+connections works against any server, managed or not, at any version. The
+price is that every change is written twice and read twice before the target
+sees it.
+
+### Order of magnitude
+
+The same table on two Postgres 18 servers on one machine, over a one-way link, with a trigger on the target that stamps the time a row is
+applied. `./run-e.sh bench <method>` runs four workloads: 1,000 single-row
+transactions 50 ms apart (the stamp minus the source's `clock_timestamp()` is
+the latency), eight concurrent writers for 30 seconds, one transaction of a
+million rows, and one `UPDATE` statement of a million rows.
+
+| | Core | pglogical | pgcopydb |
+|---|---|---|---|
+| Latency of a single-row transaction, p50 / p99 | 0.3 / 1.7 ms | 0.2 / 2.0 ms | 0.7 / 5.2 ms |
+| Rows a second under 8 writers (the source commits 85,000) | 80,000 | 84,000 | 10,000 while loaded, 18,000 with the catch-up |
+| Lag once the 30 s load stops | 2 s | 0.2 s | 110 s |
+| One transaction of 1M rows, seconds after its commit | 4 to 6 | 3 to 6 | 7 to 8 |
+| One `UPDATE` of 1M rows that changes nothing, `REPLICA IDENTITY FULL` | 3 to 5 s | 4 s | 10 to 18 s |
+
+The source commits about 85,000 single-row transactions a second in the
+third workload, whichever tool is behind it. Core and pglogical keep up with
+it. pgcopydb applies 10,000 to 18,000 rows a second and the rest queues: the
+110 seconds it needs to catch up after a 30 second load are a backlog, not a
+stall. On an idle link a change reaches the target in a fraction of a
+millisecond with the two in-server tools, and in a few milliseconds with
+pgcopydb. A single large transaction narrows the gap to about a factor of
+two, because the three wait first for the same thing: the source decodes a
+transaction when it commits, and needs a second or two to hand out the last
+change. The `UPDATE` changes no value, which pgcopydb recognises when it has
+the whole old row (`REPLICA IDENTITY FULL`) and sends nothing for, where core
+and pglogical apply every row; it still has to receive and read back a million
+messages, which is what the 10 to 18 seconds are. pglogical took 66 seconds
+for that statement in one run, after the throughput workload had left 2.5
+million rows in the table, and 4 seconds in the two runs on a clean table;
+that was not investigated.
+
+Read these as orders of magnitude: one machine, a handful of runs, and the
+runs of one tool differ by a factor of two on the large transactions. "About
+the same", "a few times slower" and "ten times slower" are the claims, not the
+digits. For a migration, 10,000 rows a second is more than most databases
+write; for a replica behind a source that takes tens of thousands of writes a
+second, it is not enough.
+
+### What each one is for
+
+- **Core logical replication** is the default when both servers run
+  Postgres 10 or later and you may configure them: the lowest latency, the
+  highest throughput, nothing to install, and the only one of the three that
+  is part of the server's own release process. It is what Parts 2 and 3 and
+  the region links of this post use. Its gaps are the ones listed above: no
+  DDL, no help with a first copy that is large or interrupted, and some
+  features need a recent version on both sides.
+- **pglogical** is for what core cannot do: servers older than 10 down to
+  9.4, per-table replication sets, five conflict policies when two nodes
+  write the same row, and a `replicate_ddl_command()` that puts a schema
+  change in the stream. It needs the extension on both servers, so it is out
+  on hosting that does not offer it. Part 1's worker hub is built on it.
+- **pgcopydb** is for migrating a database, in particular a large one, from
+  an old server or a hosted one to a new one, with a short cutover: parallel
+  copy of the data and the indexes, the changes captured from the first
+  second, DDL carried in the stream, and nothing installed on either side.
+  Part 3's upgrade is built on it. It is not the tool to leave running
+  behind a source that takes tens of thousands of writes a second: the table
+  above says why.
+
+### What each supports
+
+| | Core | pglogical | pgcopydb |
+|---|---|---|---|
+| Installed on | nothing | an extension on the source and on the target | nothing on the servers; one program on any host |
+| Postgres versions | 10 and later; source and target may be different major versions | 9.4 and later on both, one build per major version | source 9.6 and later (`wal2json` or `test_decoding` before 10, `pgoutput` from 10); target: a server `pg_restore` can load; `pg_dump` must be at least as recent as the source |
+| DDL | not replicated | `replicate_ddl_command()`, called by hand, in the stream | an event trigger emits it as a message, in the stream, once `pgcopydb stream event-trigger` has installed it |
+| First copy | one table synchronization worker per table (`max_sync_workers_per_subscription`, 2 by default): each table is one `COPY` | structure with `pg_dump` and `pg_restore`, then one `COPY` per table through sync workers | `--table-jobs` tables at once, a large table split across several `COPY` streams (`--split-tables-larger-than`), indexes built in parallel |
+| A long, slow link | a broken connection starts the table over | the same | many streams to fill the link; `--resume` does not resend the tables already copied (the one that was in flight starts over) |
+| WAL kept on the source during the copy | since the snapshot of each table being copied | since the snapshot its sync slot exports | none: the slot is read from the first second |
+| Sequences | values copied on demand from Postgres 19 (`REFRESH SEQUENCES`) | `replication_set_add_sequence` | copied at the end of the clone |
+| Row filters, columns | yes (15 and later) | yes | tables only |
+| Both directions | yes (`origin = none`, 16 and later) | yes | no |
+| Conflict handling | detects and counts (18), can skip | five policies | none |
+| Failover slot | yes (17 and later) | not as shipped | `--enable-failover` |
+
+Read the first-copy rows with the network in mind. A single TCP stream rarely
+fills a long, slow link, and a copy that breaks after nine hours of a ten
+hour table is a bad evening. Core and pglogical copy one table over one
+stream and begin that table again if the connection drops; pgcopydb opens as
+many as you allow, can split one table across several of them (on an integer
+key, or on `ctid` when there is none), and remembers which tables are done.
+None of the three has a compression option; that is the network's job. These
+rows come from the documentation and the source of each tool; the lab
+measures speed, not copy times.
 
 ## Finishing the CDC consumer: DDL as a message, not a table
 
@@ -961,7 +1077,7 @@ is the guard it would have needed.
 
 ## What this post adds to the ladder
 
-Five things, and each one is additive to what Parts 1 through 3 already
+Six things, and each one is additive to what Parts 1 through 3 already
 measured, not a replacement for any of it:
 
 - **A failover-safe slot** turns Part 3's "the publisher never moves"
@@ -977,6 +1093,11 @@ measured, not a replacement for any of it:
   native link leaves them to the operator, pgcopydb and pglogical carry
   them in the stream, and none of the three has row filters, failover
   slots and both directions at once.
+- **A side-by-side of the three tools** puts numbers on what the
+  architectures cost (latency of a few milliseconds against a fraction of
+  one, ten thousand rows a second against eighty thousand) and says what
+  each is for: core by default, pglogical for what core lacks, pgcopydb for
+  migrating a large or old database.
 - **A finished CDC consumer** closes the one gap Part 2 explicitly
   left open, and does it as a real change merged into a tool the series
   already relies on, not a bigger demo.
@@ -1004,14 +1125,16 @@ the result of years of exactly that.
 [Part 1](/blog/2026/09/ten-years-of-postgres-logical-replication/) has the
 long version of that history.
 
-What is left is concrete, because this post ran into every item:
+What is left is concrete:
 
 - **DDL in the stream.** Core replicates none of it. pgcopydb and
   pglogical each carry part of the answer outside core, and a schema
   change that travels in the same commit order as the rows is the piece no
   core feature provides.
-- **Sequences.** Their state still does not replicate, and the work to
-  make it so has been moving between commitfests for years.
+- **Sequences.** Postgres 19 can copy their values on demand
+  (`REFRESH SEQUENCES`, publisher 19 or later), which is what a cutover
+  needs; nothing streams them as they advance, and nothing allocates
+  them across several writers.
 - **Conflict resolution.** Postgres 18 counts conflicts; it does not
   resolve them. Avoiding them by construction, as the architecture here
   does, is still the only built-in answer.

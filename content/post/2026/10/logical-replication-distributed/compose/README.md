@@ -27,13 +27,13 @@ The nodes keep their data on tmpfs, so removing the containers is the reset.
   post's first section is about. The last tagged release is `v2.2`, which
   predates all three. The image is built by the `us-east-monitor` service and
   tagged `lrdist-pgaf:17`.
-- **pgcopydb**, pinned to `4c5a3b8a7472c645e9d6247d315c7d6677c938cc` on
+- **pgcopydb**, pinned to `49c685409ce6981f6c2e5a3ef664ac50655916f1` on
   `main`, which includes
-  [DDL replication over logical decoding](https://github.com/dimitri/pgcopydb/pull/1064).
-  Not in a tagged release yet. `pgcopydb-failover-slot.patch`, applied on top
-  (the `pgcopydb-g` service), is the source change of
-  [dimitri/pgcopydb#1073](https://github.com/dimitri/pgcopydb/pull/1073):
-  `--enable-failover` and the restart of the follow sub-processes.
+  [DDL replication over logical decoding](https://github.com/dimitri/pgcopydb/pull/1064),
+  [`--enable-failover` and the restart of the follow sub-processes](https://github.com/dimitri/pgcopydb/pull/1073),
+  [the cheap SQLite spools](https://github.com/dimitri/pgcopydb/pull/1074) and
+  [the primary-key lookup of `REPLICA IDENTITY FULL` rows](https://github.com/dimitri/pgcopydb/pull/1076).
+  Not in a tagged release yet.
 
 Re-pin before running this again — `main` moves.
 
@@ -79,11 +79,13 @@ Re-pin before running this again — `main` moves.
   `FAILOVER_SLOT=0` skips the `ALTER_REPLICATION_SLOT` step as a control.
   `./run-e.sh bench <native|pglogical|pgcopydb>` compares the three over a
   one-way link on Postgres 18: latency of single-row transactions, rows a
-  second under eight writers, and one transaction of a million rows
-  (`pgcopydb-e` is the pgcopydb container built on Postgres 18 clients).
+  second under eight writers, one transaction of a million rows, and one
+  `UPDATE` statement of a million rows (`BENCH_ONLY` picks workloads;
+  `pgcopydb-e` is the pgcopydb container built on Postgres 18 clients).
   The servers allow `pgoutput` and `pglogical_output` as output plugins
   (`output_plugin_libraries`). `reset-e.sh` recreates the containers.
-  Results in `results/e-*.out`.
+  Results in `results/e-*.out`; `e-bench-<method>-bulk1.out` and `-bulk2.out`
+  are the million-row workloads alone, on a clean table.
 - **g** — schema changes across regions, on `us-east` and `us-west`.
   `./run-g.sh core` runs `ADD COLUMN` three ways over native logical
   replication in both directions (one region then the other, both at once,

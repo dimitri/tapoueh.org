@@ -1,14 +1,9 @@
 # pgcopydb, built from source at a pinned commit.
 #
-# Default pin: 4c5a3b8a7472c645e9d6247d315c7d6677c938cc, on main (2026-10-27): it
-# includes PR #1064 ("replicate DDL over logical decoding as a typed message"),
-# PR #1069 ("flush the apply pipeline after every COMMIT", which fixed an apply
-# stall but cost one round trip to the target per transaction) and PR #1070,
-# which batches the syncs again. 84bce26, the commit this post first ran on, is
-# #1069 without #1070.
-#
-# PGCOPYDB_PATCH names a patch file in this directory to apply on top of the pin;
-# pgcopydb-failover-slot.patch makes the slot a failover slot on Postgres 17+.
+# Default pin: 49c685409ce6981f6c2e5a3ef664ac50655916f1, on main (2026-10-29): it
+# includes DDL replication over logical decoding (#1064), --enable-failover and
+# the restart of the follow sub-processes (#1073), the cheap SQLite spools
+# (#1074) and the primary-key lookup of REPLICA IDENTITY FULL rows (#1076).
 #
 # Usage:
 #   docker build --build-arg PGVERSION=17 -t pgcopydb:demo \
@@ -18,9 +13,8 @@ ARG PGVERSION=17
 FROM postgres:${PGVERSION} AS build
 
 ARG PGVERSION
-ARG PGCOPYDB_COMMIT=4c5a3b8a7472c645e9d6247d315c7d6677c938cc
+ARG PGCOPYDB_COMMIT=49c685409ce6981f6c2e5a3ef664ac50655916f1
 ARG PGCOPYDB_REF=main
-ARG PGCOPYDB_PATCH=
 
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -36,9 +30,6 @@ WORKDIR /usr/src/pgcopydb
 RUN git init -q \
  && git fetch -q https://github.com/dimitri/pgcopydb.git ${PGCOPYDB_REF} \
  && git checkout -q ${PGCOPYDB_COMMIT}
-
-COPY pgcopydb-failover-slot.patch /tmp/
-RUN if [ -n "${PGCOPYDB_PATCH}" ]; then git apply "/tmp/${PGCOPYDB_PATCH}"; fi
 
 RUN make -s clean && make -s install -j"$(nproc)" BINDIR=/usr/local/bin
 
