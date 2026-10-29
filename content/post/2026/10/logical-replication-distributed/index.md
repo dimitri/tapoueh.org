@@ -812,22 +812,22 @@ heap directly, turn runs of consecutive inserts into one `heap_multi_insert`
 call, and commit asynchronously by default (`pglogical_apply.c`, settings
 `pglogical.batch_inserts` and `pglogical.synchronous_commit`).
 
-**pgcopydb** is another kind of tool: a separate program, run on any host
-that can reach both servers, which needs nothing installed on either. It
-reads the replication slot of the source, writes every change to a SQLite
-file, transforms them into SQL statements kept in a second SQLite file, and
-replays those on the target through ordinary connections with prepared
-statements. There are two reasons for that shape. The first is that it exists
-to migrate a database, and a migration starts with copying the data, which
-takes hours or days for a database of several terabytes. While a core
-subscription copies a table, the source keeps the WAL since that table's
-snapshot, in a table synchronization slot of its own; pgcopydb takes one
-snapshot, creates its slot at the same point, and reads the slot all the time
-it copies, so nothing piles up on the source and the changes wait in files on
-the pgcopydb host instead. The second reason is reach: SQL over plain
-connections works against any server, managed or not, at any version. The
-price is that every change is written twice and read twice before the target
-sees it.
+**pgcopydb** is another kind of tool, and logical replication is not its
+main use case. Its documentation puts it as "migration to a new Postgres
+system, either for new hardware, new architecture, or new Postgres major
+version": `pg_dump -jN | pg_restore -jN` between two running servers, with
+the parallelism of both and the streaming that the two programs cannot do
+together. It takes one snapshot, copies the tables and builds the indexes in
+parallel, and, to keep the cutover short, follows the changes of the source
+from a slot created at that same snapshot. That last part is logical
+replication, used as the way to catch up. It is a separate program, run on
+any host that can reach both servers, and it needs nothing installed on
+either. It reads the slot, writes every change to a SQLite file, transforms
+the changes into SQL statements kept in a second SQLite file, and replays
+those on the target through ordinary connections with prepared statements.
+SQL over plain connections works against any server, managed or not, at any
+version, which is the reach a migration tool needs. The price is that every
+change is written twice and read twice before the target sees it.
 
 ### Order of magnitude
 
@@ -883,13 +883,15 @@ second, it is not enough.
   write the same row, and a `replicate_ddl_command()` that puts a schema
   change in the stream. It needs the extension on both servers, so it is out
   on hosting that does not offer it. Part 1's worker hub is built on it.
-- **pgcopydb** is for migrating a database, in particular a large one, from
-  an old server or a hosted one to a new one, with a short cutover: parallel
-  copy of the data and the indexes, the changes captured from the first
-  second, DDL carried in the stream, and nothing installed on either side.
-  Part 3's upgrade is built on it. It is not the tool to leave running
-  behind a source that takes tens of thousands of writes a second: the table
-  above says why.
+- **pgcopydb** is for migrating a database, in particular a large one, to a
+  server that cannot be a physical copy of the first: another CPU
+  architecture or operating system, another build of Postgres, another major
+  version, a hosted service. It is dump and restore with the parallelism,
+  the resume and the filtering that `pg_dump | pg_restore` lack, and then a
+  short cutover: the changes captured from the first second, DDL carried in
+  the stream, and nothing installed on either side. Part 3's upgrade is
+  built on it. It is not the tool to leave running behind a source that takes
+  tens of thousands of writes a second: the table above says why.
 
 ### What each supports
 
@@ -900,7 +902,7 @@ second, it is not enough.
 | DDL | not replicated | `replicate_ddl_command()`, called by hand, in the stream | an event trigger emits it as a message, in the stream, once `pgcopydb stream event-trigger` has installed it |
 | First copy | one table synchronization worker per table (`max_sync_workers_per_subscription`, 2 by default): each table is one `COPY` | structure with `pg_dump` and `pg_restore`, then one `COPY` per table through sync workers | `--table-jobs` tables at once, a large table split across several `COPY` streams (`--split-tables-larger-than`), indexes built in parallel |
 | A long, slow link | a broken connection starts the table over | the same | many streams to fill the link; `--resume` does not resend the tables already copied (the one that was in flight starts over) |
-| WAL kept on the source during the copy | since the snapshot of each table being copied | since the snapshot its sync slot exports | none: the slot is read from the first second |
+| WAL kept on the source during the copy | from the sync slot of each table, until that table is copied and caught up | from the sync slot, for the whole data copy | from the slot, for the whole clone and until apply has caught up |
 | Sequences | values copied on demand from Postgres 19 (`REFRESH SEQUENCES`) | `replication_set_add_sequence` | copied at the end of the clone |
 | Row filters, columns | yes (15 and later) | yes | tables only |
 | Both directions | yes (`origin = none`, 16 and later) | yes | no |
@@ -916,6 +918,129 @@ key, or on `ctid` when there is none), and remembers which tables are done.
 None of the three has a compression option; that is the network's job. These
 rows come from the documentation and the source of each tool; the lab
 measures speed, not copy times.
+
+### The first copy and the source's WAL
+
+A first copy of a huge table is long, and a logical slot keeps the WAL the
+source has written since the slot's position until its consumer confirms it.
+What each tool does with that position during the copy decides how much WAL a
+busy source has to keep.
+
+**Core** gives each table its own synchronization worker
+(`replication/logical/tablesync.c`). The worker opens `BEGIN READ ONLY
+ISOLATION LEVEL REPEATABLE READ` on the publisher, creates a permanent logical
+slot named `pg_<subscription>_sync_<table>_<system id>` inside that
+transaction, copies the table, and then reads its slot to apply the changes
+made since the snapshot until it reaches the position of the subscription's
+apply worker; the slot is dropped after that. What the source keeps for a
+table is the WAL since its sync slot was created, until the table has been
+copied and has caught up, and the snapshot of the copy holds back vacuum on
+the publisher for as long as the `COPY` runs. The source comment says why it
+is done per table: the synchronization "does not have to hold the xid and LSN
+for the time it takes to copy data of all tables". The subscription's own
+slot keeps being consumed meanwhile, the apply worker skipping the changes of
+the tables still being copied. The bound is one table's copy, times the
+workers running at once, and for a table of several terabytes that is the
+whole copy.
+
+**pglogical** takes one slot and one exported snapshot for the whole
+subscription (`pglogical_sync_subscription`): the structure with
+`pg_dump --snapshot`, then the data of the tables of the replication sets,
+then the constraints, and only then the catch-up from the slot. The source
+keeps the WAL and the snapshot for all of it.
+
+**pgcopydb** takes a snapshot and creates its slot at the same point, copies
+with several workers, and receives the changes into SQLite at the same time.
+That does not release any WAL on the source. The position it reports to the
+server as flushed is the one apply has committed on the target
+(`stream_sync_sentinel` in `ld_stream.c`), and apply is only enabled when the
+clone is done, data, indexes and post-data included (`cli_clone_follow.c`).
+The source keeps the WAL since the slot was created for the whole clone, and
+until apply has caught up with the changes stored in the meantime. What the
+concurrent capture buys is of another kind: the changes are already decoded
+when the copy ends, so the catch-up is a local replay, where core has the
+source decode that backlog after the copy.
+
+**Verified**, by running it: `./run-e.sh walretention <core|pgcopydb>` copies
+a table of 600,000 rows (261 MB, with three expression indexes) while a
+writer produces about 3 MB of WAL a second on the source, and samples how far
+behind the current WAL position each slot's `restart_lsn` is, every two
+seconds. The sizes are small, the arithmetic is not: at that rate a ten hour
+copy keeps 108 GB.
+
+| | Core | pgcopydb |
+|---|---|---|
+| During the copy | the sync slot of the table: 52 MB, then 133 MB, six seconds later | the slot: 122 MB, rising |
+| After the copy | the sync slot is gone; the subscription's slot sits between 0 and 90 MB | rising to 208 MB for 24 s, while apply replays what was stored, then 80 MB |
+
+A third run shows the edge. With the writer in another database of the same
+server, which nothing decodes, core's slot still advances (between 0 and 100
+MB, in steps of about fifteen seconds), and pgcopydb's grows without end: 122
+MB at the start, 647 MB after two minutes, and it was still growing.
+pgcopydb reports apply's position, apply only moves it when it commits a
+transaction of the database, and a quiet database on a busy server commits
+none. The sizes in a real migration depend on the write rate of the whole
+server, not only of the database being copied, so `max_slot_wal_keep_size`
+and a look at `pg_replication_slots.wal_status` belong in the plan of any
+long copy with any of the three: a slot that goes past the limit is
+invalidated, a core table synchronization starts that table over, and a
+pgcopydb clone has to start again.
+
+### When the two servers cannot share a binary format
+
+The tools above are compared on speed, and for pgcopydb that is not the
+question it was made for. A physical copy of a cluster (a base backup, a
+streaming standby, a copy of the files) moves pages and WAL as they are, so
+the two servers have to agree on everything that shapes those bytes. At
+startup the server compares its own settings to the ones recorded in
+`pg_control` and refuses to run on a mismatch ("database files are
+incompatible with server", `ReadControlFile()` in `access/transam/xlog.c`),
+and `pg_upgrade` makes the same comparison between the old and the new
+cluster (`check_control_data()` in `bin/pg_upgrade/controldata.c`). What has
+to match:
+
+- **The CPU architecture**: word size, maximum alignment (`MAXALIGN`) and byte
+  order. The documentation is blunt about it: "the hardware architecture must
+  be the same — shipping from, say, a 32-bit to a 64-bit system will not
+  work."
+- **The relation block size**, 8 kB unless built with `--with-blocksize` (the
+  `blocksize` option of the meson build), from 1 to 32 kB. It fixes the TOAST
+  chunk size and the large-object chunk size too.
+- **The WAL block size**, 8 kB, `--with-wal-blocksize`, from 1 to 64 kB.
+- **The relation segment size**, 1 GB, `--with-segsize` or `segsize_blocks`.
+- **The WAL segment size**, 16 MB, chosen by `initdb --wal-segsize`.
+- **The maximum identifier length** (`NAMEDATALEN`, 64), **the maximum number
+  of columns of an index** (`INDEX_MAX_KEYS`, 32) and **the SLRU segment size**
+  (`SLRU_PAGES_PER_SEGMENT`, 32): constants of `pg_config_manual.h`, each with
+  the comment "changing this requires an initdb".
+- **Data checksums**, set by `initdb --data-checksums`. `pg_upgrade` refuses
+  a mismatch in either direction.
+- **The catalog version and the control file version**, which change with
+  the major version: this is why a physical copy needs the same major version.
+
+Outside `pg_control`, the operating system and its C library decide how text
+sorts, and a physical copy carries indexes that are only correct where that
+order is the same.
+
+| | Same major version | Architecture and build settings | Online |
+|---|---|---|---|
+| Physical standby, base backup, file copy | required | must match | yes |
+| `pg_upgrade` | new major version | must match | no |
+| Logical replication, core or pglogical | no | free; "Linux to Windows" is in the list of uses in the documentation | yes, but the first copy and DDL are yours |
+| `pg_dump` and `pg_restore` | no | free: "the only method that will work when transferring a database to a different machine architecture" | no |
+| pgcopydb | no | free | yes, after a parallel dump and restore |
+
+pgcopydb belongs to the last two rows, and its main use case is the second
+to last: a dump and a restore, made fast, with the catch-up of logical
+replication added at the end so that the cutover is short. The migrations it
+is for are the ones where the first two rows are closed: from a server built
+with a 32 kB block size, a custom segment size or an unusual `NAMEDATALEN` to
+a default build, which is what a hosted service runs; from one CPU
+architecture or operating system to another; to a server with data checksums
+when the old one had none; or from a database nobody can install an extension
+on. Logical replication ignores the layout too, and it can do the same moves
+for the tables it carries; it leaves the first copy, the schema and the
+sequences to you, and that is the part of the work pgcopydb packages.
 
 ## Finishing the CDC consumer: DDL as a message, not a table
 

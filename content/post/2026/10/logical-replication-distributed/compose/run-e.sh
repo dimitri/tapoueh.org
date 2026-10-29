@@ -9,6 +9,8 @@
 #   ./run-e.sh failover   a provider with a physical standby (e-w1, e-s1) feeding a subscriber
 #                         (e-w2); the provider is killed and the standby promoted.
 #                         FAILOVER_SLOT=0 leaves the slot as pglogical created it
+#   ./reset-e.sh && ./run-e.sh walretention core|pgcopydb
+#                         what the source keeps in pg_wal while a large table is copied
 #   ./reset-e.sh && ./run-e.sh bench native|pglogical|pgcopydb
 #                         latency and rows a second of the same one-way link e-w1 -> e-w2
 set -uo pipefail
@@ -432,12 +434,62 @@ alter table events enable always trigger stamp"
   } 2>&1 | tee "$out"
 }
 
+# walretention <core|pgcopydb>: what the source keeps in pg_wal while a large table is copied, with a writer
+# producing about 3 MB of WAL a second. WAL_NOISE=app (default): the writer inserts into a table of the
+# database being replicated, so there are changes to carry; WAL_NOISE=other: it writes in another database
+# of the same server, which nothing decodes. The sizes are sampled every 2 seconds. WAL_ROWS sets the
+# number of rows of the big table (1.5 million by default).
+walretention() {
+  local M=${1:?core | pgcopydb} ROWS=${WAL_ROWS:-1500000} NOISE=${WAL_NOISE:-app}
+  local out=results/e-walretention-$1$([ "$NOISE" = other ] && echo -otherdb).out
+  {
+  echo "== $M: first copy of a table of $ROWS rows, e-w1 -> e-w2, a writer in $([ "$NOISE" = app ] && echo the replicated || echo another) database of e-w1 =="
+  # three indexes on md5 expressions, so that loading the table, or building its indexes, takes a while
+  local T="create table big (id bigserial primary key, payload text not null); create index on big (md5(payload)); create index on big (md5(payload || 'a')); create index on big (md5(payload || 'b'))"
+  local N="create table noise (id int, v text)"
+  q e-w1 -c "$T" >/dev/null
+  q e-w1 -c "insert into big (payload) select repeat(md5(g::text), 5) from generate_series(1, $ROWS) g" -c checkpoint >/dev/null
+  local NDB=app
+  if [ "$NOISE" = other ]; then
+    q e-w1 -c "create database noise" >/dev/null; NDB=noise
+    dc exec -T e-w1 psql -X -q -U postgres -d noise -c "$N" >/dev/null
+  else
+    q e-w1 -c "$N" >/dev/null
+  fi
+  dc exec -T e-w1 sh -c "echo 'insert into noise select g, md5(g::text) from generate_series(1, 20000) g;' > /tmp/noise.sql"
+  echo "table on the source: $(qa e-w1 -c "select pg_size_pretty(pg_total_relation_size('big'))")"
+  dc exec -d e-w1 sh -c "pgbench -n -f /tmp/noise.sql -R 2 -T 300 -U postgres $NDB > /dev/null 2>&1"
+  sleep 3
+  case "$M" in
+    core)
+      q e-w2 -c "$T" >/dev/null
+      [ "$NOISE" = app ] && q e-w2 -c "$N" >/dev/null
+      q e-w1 -c "create publication wal for all tables" >/dev/null
+      q e-w2 -c "create subscription wal connection 'host=e-w1 dbname=app user=postgres' publication wal with (copy_data = true)" >/dev/null ;;
+    pgcopydb)
+      COMPOSE_PROFILES=e dc up -d --force-recreate pgcopydb-e >/dev/null 2>&1
+      dc exec -T pgcopydb-e sh -c "rm -rf /root/.local/share/pgcopydb /tmp/pgcopydb"
+      dc exec -d pgcopydb-e sh -c "pgcopydb clone --follow --table-jobs 1 --source 'postgres://postgres@e-w1/app' --target 'postgres://postgres@e-w2/app' > /results/e-walretention-pgcopydb.log 2>&1" ;;
+  esac
+  local small=0 i
+  for i in $(seq 1 60); do
+    sleep 2
+    local keep=$(qa e-w1 -c "select coalesce(string_agg(regexp_replace(slot_name, '^pg_[0-9]+_sync_[0-9]+_[0-9]+\$', 'sync slot of big') || ' ' || round(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) / 1048576) || ' MB', '; '), 'no slot') from pg_replication_slots")
+    local walmb=$(qa e-w1 -c "select round(sum(size) / 1048576) from pg_ls_waldir()")
+    local tgt=$(qa e-w2 -c "select coalesce(pg_total_relation_size(to_regclass('big')) / 1048576, 0)" 2>/dev/null)
+    echo "t=$((i * 2))s  pg_wal ${walmb} MB  big on the target ${tgt:-0} MB  slots: $keep"
+  done
+  dc exec -T e-w1 sh -c "pkill -f 'pgbench -n -f /tmp/noise.sql'; true" >/dev/null 2>&1
+  } 2>&1 | tee "$out"
+}
+
 case "${1:-}" in
   findings)   findings ;;
   concurrent) concurrent ;;
   ddl)        ddl ;;
   failover)   failover ;;
   bench)      bench "${2:-}" ;;
+  walretention) walretention "${2:-}" ;;
   policy)     ensure_nodes; run_policy "$2" "${3:-15}" ;;
   *) echo "usage: $0 findings | concurrent | ddl | failover | bench <method> | policy <name> [secs]" >&2; exit 2 ;;
 esac
