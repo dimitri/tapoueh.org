@@ -669,13 +669,15 @@ What's left is concrete:
     them. Avoiding them by construction is still the only built-in answer.
   - **Joining and leaving.** BDR had `join` and `part`, and today adding a
     region or retiring one is a procedure you write by hand.
-  - **The consumer as a node.** A logical consumer isn't in the state machine
-    of anything that orchestrates the primary it reads from, so who creates the
-    slot, checks its position after a promotion and raises the alarm when it's
-    ahead is still a script. In pg_auto_failover, every routine that looks at
-    the topology iterates the node table and would count a consumer as a
-    standby. That's work for its [roadmap](https://oss.theartofpostgresql.com/roadmap/),
-    which is [funded by the teams that run
+  - **The consumer as a node.** A logical consumer isn't a node of anything
+    that orchestrates the primary it reads from, so who creates the slot,
+    checks its position after a promotion and raises the alarm when it's ahead
+    is still a script. That's the *Logical replication nodes* item of the
+    pg_auto_failover [roadmap](https://oss.theartofpostgresql.com/roadmap/):
+    first-class nodes for CDC consumers, next to the physical standbys, in the
+    failover state machine. It's a different thing from the roadmap's
+    *Connection pooling as a managed node type*, which is the pgbouncer or
+    HAProxy kind of proxy. The project is [funded by the teams that run
     it](https://oss.theartofpostgresql.com/pg_auto_failover/).
 
 None of this was possible ten years ago, and most of it is other people's
