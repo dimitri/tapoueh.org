@@ -1,0 +1,16 @@
+== provider e-w1, physical standby e-s1, subscriber e-w2 (FAILOVER_SLOT=1) ==
+standby: in recovery t, sync_replication_slots=on
+slot pglogical created on the provider: pgl_app_provider_sub failover=false
+
+== ALTER_REPLICATION_SLOT "pgl_app_provider_sub" ( FAILOVER true ), subscription disabled meanwhile ==
+ALTER_REPLICATION_SLOT
+slot on the provider now: pgl_app_provider_sub failover=true
+on the standby: pgl_app_provider_sub failover=true synced=true
+
+steady state: provider 297 rows, subscriber 299
+== docker kill e-w1; pg_ctl promote on e-s1 ==
+standby writable after 1 s; logical slots on it: pgl_app_provider_sub failover=true active=false
+200 rows written on the new provider; on the subscriber: 200 (waited 1s after the last insert)
+subscription: replicating
+rows on the new provider 500, on the subscriber 500; missing on the subscriber 0
+subscriber log: 

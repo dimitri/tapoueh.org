@@ -1,0 +1,13 @@
+== provider e-w1, physical standby e-s1, subscriber e-w2 (FAILOVER_SLOT=0) ==
+standby: in recovery t, sync_replication_slots=on
+slot pglogical created on the provider: pgl_app_provider_sub failover=false
+slot on the provider now: pgl_app_provider_sub failover=false
+on the standby: no logical slot
+
+steady state: provider 275 rows, subscriber 278
+== docker kill e-w1; pg_ctl promote on e-s1 ==
+standby writable after 1 s; logical slots on it: none
+200 rows written on the new provider; on the subscriber: 0 (waited 90s after the last insert)
+subscription: down
+rows on the new provider 479, on the subscriber 279; missing on the subscriber 200
+subscriber log: 2026-10-28 11:30:44.817 UTC [901] FATAL:  could not send replication command "START_REPLICATION SLOT "pgl_app_provider_sub" LOGICAL 0/309E488 (expected_encoding 'UTF8', min_proto_version '1', max_proto_version '1', start

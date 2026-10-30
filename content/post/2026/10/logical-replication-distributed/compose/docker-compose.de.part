@@ -1,0 +1,128 @@
+  # ---------------- profile d: pgcopydb DDL-as-a-message, against PR #1064 ----------------
+  d-source:
+    <<: *pg-common
+    profiles: [d]
+    image: postgres:18
+    command: >
+      postgres -c wal_level=logical -c max_wal_senders=10
+      -c max_replication_slots=10
+    ports: ["127.0.0.1:5760:5432"]
+    volumes: ["d-source-data:/var/lib/postgresql"]
+
+  d-target:
+    <<: *pg-common
+    profiles: [d]
+    image: postgres:18
+    ports: ["127.0.0.1:5761:5432"]
+    volumes: ["d-target-data:/var/lib/postgresql"]
+
+  pgcopydb:
+    profiles: [d]
+    build:
+      context: .
+      dockerfile: Dockerfile.pgcopydb
+      args: { PGVERSION: "18" }
+    entrypoint: ["sleep", "infinity"]
+    depends_on: [d-source, d-target]
+    volumes:
+      - ./sql:/sql:ro
+      - ./results:/results
+
+  # ---------------- profile e: pglogical on PostgreSQL 18 ----------------
+  e-hub:
+    <<: *pg-common
+    profiles: [e]
+    build:
+      context: .
+      dockerfile: Dockerfile.pglogical
+      args: { PGVERSION: "18" }
+    image: lrdist-pglogical:18
+    command: &pgl-cmd >
+      postgres -c shared_preload_libraries=pglogical
+      -c output_plugin_libraries=pglogical_output,pgoutput
+      -c wal_level=logical -c track_commit_timestamp=on
+      -c max_worker_processes=24 -c max_replication_slots=16
+      -c max_wal_senders=16 -c max_logical_replication_workers=12
+      -c wal_retrieve_retry_interval=1s
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports: ["127.0.0.1:5770:5432"]
+    tmpfs: ["/var/lib/postgresql"]
+
+  e-w1:
+    <<: *pg-common
+    profiles: [e]
+    image: lrdist-pglogical:18
+    command: *pgl-cmd
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports: ["127.0.0.1:5771:5432"]
+    tmpfs: ["/var/lib/postgresql"]
+    depends_on: [e-hub]
+
+  e-w2:
+    <<: *pg-common
+    profiles: [e]
+    image: lrdist-pglogical:18
+    command: *pgl-cmd
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports: ["127.0.0.1:5772:5432"]
+    tmpfs: ["/var/lib/postgresql"]
+    depends_on: [e-hub]
+
+
+  # a physical standby of e-w1, for `run-e.sh failover`: the script runs pg_basebackup and starts Postgres in it
+  e-s1:
+    <<: *pg-common
+    profiles: [e]
+    image: lrdist-pglogical:18
+    entrypoint: ["sleep", "infinity"]
+    healthcheck: { disable: true }
+    tmpfs: ["/var/lib/postgresql"]
+    depends_on: [e-hub]
+
+  # pgcopydb on Postgres 18 clients (pg_dump must not be older than the server), for `run-e.sh bench pgcopydb`
+  pgcopydb-e:
+    profiles: [e]
+    build:
+      context: .
+      dockerfile: Dockerfile.pgcopydb
+      args: { PGVERSION: "18", PGCOPYDB_PATCH: pgcopydb-failover-slot.patch }
+    image: lrdist-pgcopydb:18
+    entrypoint: ["sleep", "infinity"]
+    volumes:
+      - ./results:/results
+
+  # ---------------- profile b: synchronous_commit under a round-trip time ----------------
+  b-primary:
+    <<: *pg-common
+    profiles: [b]
+    build:
+      context: .
+      dockerfile: Dockerfile.netem
+      args: { PGVERSION: "18" }
+    image: lrdist-netem:18
+    cap_add: [NET_ADMIN]
+    command: postgres -c max_wal_senders=10 -c max_replication_slots=10
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app
+      POSTGRES_HOST_AUTH_METHOD: trust
+    tmpfs: ["/var/lib/postgresql"]
+
+  b-standby:
+    <<: *pg-common
+    profiles: [b]
+    image: lrdist-netem:18
+    cap_add: [NET_ADMIN]
+    entrypoint: ["sleep", "infinity"]
+    healthcheck: { disable: true }
+    tmpfs: ["/var/lib/postgresql"]
+    depends_on: [b-primary]

@@ -1,0 +1,133 @@
+== versions ==
+PostgreSQL 18.6 (Debian 18.6-1.pgdg13+2) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+CREATE EXTENSION
+pglogical 2.4.8
+
+== nodes and reference data (hub), one replication set per worker, row filter + column list ==
+ create_node 
+-------------
+  2170291304
+(1 row)
+
+ create_replication_set 
+------------------------
+             1971856048
+             2656805207
+(2 rows)
+
+ replication_set_add_table 
+---------------------------
+ t
+ t
+(2 rows)
+
+ replication_set_add_table 
+---------------------------
+ t
+ t
+(2 rows)
+
+ create_node 
+-------------
+  2397248439
+(1 row)
+
+ created 
+---------
+ t
+(1 row)
+
+ wait_for_subscription_sync_complete 
+-------------------------------------
+ 
+(1 row)
+
+ create_node 
+-------------
+    77614140
+(1 row)
+
+ created 
+---------
+ t
+(1 row)
+
+ wait_for_subscription_sync_complete 
+-------------------------------------
+ 
+(1 row)
+
+
+== finding 2: move customer 3 from worker 1's filter to worker 2's ==
+-- worker1
+ customer_id |    name    | worker_id 
+-------------+------------+-----------
+           1 | customer-1 |         1
+           2 | customer-2 |         1
+           3 | customer-3 |         1
+           7 | marker-w1  |         1
+(4 rows)
+
+-- worker2
+ customer_id |    name    | worker_id 
+-------------+------------+-----------
+           4 | customer-4 |         2
+           5 | customer-5 |         2
+           6 | customer-6 |         2
+           8 | marker-w2  |         2
+(4 rows)
+
+-- hub
+ customer_id |    name    | worker_id 
+-------------+------------+-----------
+           1 | customer-1 |         1
+           2 | customer-2 |         1
+           3 | customer-3 |         2
+           4 | customer-4 |         2
+           5 | customer-5 |         2
+           6 | customer-6 |         2
+           7 | marker-w1  |         1
+           8 | marker-w2  |         2
+(8 rows)
+
+
+== finding 1: replicate into a partitioned parent ==
+ create_replication_set 
+------------------------
+              707577157
+(1 row)
+
+ replication_set_add_table 
+---------------------------
+ t
+(1 row)
+
+ created 
+---------
+ t
+(1 row)
+
+ wait_for_subscription_sync_complete 
+-------------------------------------
+ 
+(1 row)
+
+ rows_copied_by_initial_sync 
+-----------------------------
+                           1
+(1 row)
+
+second row never arrived within 20s
+-- hub server log since the INSERT (signal / crash lines)
+2026-10-26 15:20:47.092 UTC [182] LOG:  starting apply for subscription sub_crash
+2026-10-26 15:20:47.379 UTC [1] LOG:  background worker "pglogical apply 16384:2317079215" (PID 182) was terminated by signal 11: Segmentation fault
+2026-10-26 15:20:47.381 UTC [1] LOG:  all server processes terminated; reinitializing
+2026-10-26 15:20:47.409 UTC [197] LOG:  starting apply for subscription sub_crash
+2026-10-26 15:20:47.412 UTC [1] LOG:  background worker "pglogical apply 16384:2317079215" (PID 197) was terminated by signal 11: Segmentation fault
+2026-10-26 15:20:47.413 UTC [1] LOG:  all server processes terminated; reinitializing
+2026-10-26 15:20:47.434 UTC [210] LOG:  starting apply for subscription sub_crash
+2026-10-26 15:20:47.437 UTC [1] LOG:  background worker "pglogical apply 16384:2317079215" (PID 210) was terminated by signal 11: Segmentation fault
+-- apply-worker crashes logged since the INSERT (about 30 s)
+918
+-- dropping the subscription (retried: the server is restarting in a loop)
+dropped after 13 attempt(s)

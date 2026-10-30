@@ -1,0 +1,138 @@
+# Part 4 demo — compose/
+
+Same pattern as parts 1 through 3: `docker-compose.yml` with profile-gated
+containers, `run-*.sh` scripts, `results/`. Profiles **a** through **h**
+have been built and run.
+
+## One group per region
+
+Every region is one pg_auto_failover group of its own: a monitor and three
+Postgres nodes, `<region>-monitor`, `<region>-a`, `<region>-b`, `<region>-c`.
+The groups share no failover; they are connected by logical replication only.
+The nodes of a region carry its name as their `region` label (informational
+in pg_auto_failover: it affects no failover or quorum decision). The
+regions are `us-east`, `us-west`, `ap-south`, `ap-southeast` and `eu-west`
+(the Amsterdam warehouse). `gen-regions.py` generates their services in
+`docker-compose.yml`; `lib-regions.sh` has the helpers the scripts share.
+The nodes keep their data on tmpfs, so removing the containers is the reset.
+
+## Images build from source, not from a release
+
+- **pg_auto_failover**, pinned to `7701bc951ca39326ab7168295250dab79087d5f5`
+  on `main`, the merge of
+  [PR #1200](https://github.com/hapostgres/pg_auto_failover/pull/1200), which
+  follows [#1199](https://github.com/hapostgres/pg_auto_failover/pull/1199) and
+  [#1197](https://github.com/hapostgres/pg_auto_failover/pull/1197):
+  `synchronized_standby_slots()` and the rest of the CDC-continuity work the
+  post's first section is about. The last tagged release is `v2.2`, which
+  predates all three. The image is built by the `us-east-monitor` service and
+  tagged `lrdist-pgaf:17`.
+- **pgcopydb**, pinned to `d02e5916a6c07eef0cd12d03426d0e543129ede1` on
+  `main`, which includes
+  [DDL replication over logical decoding](https://github.com/dimitri/pgcopydb/pull/1064),
+  [`--enable-failover` and the restart of the follow sub-processes](https://github.com/dimitri/pgcopydb/pull/1073),
+  [the cheap SQLite spools](https://github.com/dimitri/pgcopydb/pull/1074) and
+  [the primary-key lookup of `REPLICA IDENTITY FULL` rows](https://github.com/dimitri/pgcopydb/pull/1076) and
+  [the flushed position reported to the source](https://github.com/dimitri/pgcopydb/pull/1077) and
+  [the transform and the apply of a large transaction while it is still being received](https://github.com/dimitri/pgcopydb/pull/1078).
+  Not in a tagged release yet.
+
+Re-pin before running this again — `main` moves.
+
+## Profiles
+
+- **a** — failover-slot continuity in one region, `us-east`. A
+  `pg_recvlogical` consumer on a `failover = true` slot, a writer inserting
+  numbered rows. `./run-a.sh <scenario>` with `planned`, `kill`,
+  `kill-lag-gated` (both standbys are cut off from the primary's WAL before
+  the kill) or `kill-lag-ungated` (the same, with
+  `synchronized_standby_slots` emptied). It prints duplicates, holes, rows the
+  consumer received that the new primary lacks, how long writer and consumer
+  were silent, and what `pg_autoctl show state`, `show settings`,
+  `show synchronized-standby-slots` and `watch` show before, during and
+  after. Three runs of each scenario are in `results/a-*-run*.out`
+  (`a-*-captures.out` are the first runs). On the pinned build `watch` needs
+  `--group 0`; without it it loops on "no nodes found in group -1".
+- **b** — `synchronous_commit` modes under a simulated cross-region RTT.
+  `./run-b.sh`: a primary and a standby (`b-primary`, `b-standby`), a round-trip
+  time added with `tc netem` on both, and `pgbench` single-row inserts under
+  each setting, with one client and with 32. Results in `results/b-sync-commit.out`.
+- **c** — five regions: four writers with equal primaries, row-filtered
+  cascades, and the `eu-west` warehouse. `./run-c.sh` creates the
+  publications and the failover-enabled subscriptions (each connection
+  string lists every node of the publishing group), writes 2,000 rows in each
+  of the four regions at once, and counts: 8,000 rows on every primary and
+  standby, 2,000 per region on the warehouse, zero apply or sync errors. Three
+  runs in `results/c-run*.out`.
+- **d** — pgcopydb DDL-as-a-message. `run-d.sh` starts `clone --follow`,
+  installs the event trigger mid-stream, runs an `ALTER TABLE` on the source
+  and polls the target for the new column. Success is `got_column=1`.
+  `reset-d.sh` must run between runs: it also drops the `pgcopydb`
+  publication on the target, which clone's schema copy leaves behind.
+- **e** — pglogical 2.4.8 on Postgres 18.6, three nodes. `./run-e.sh findings`
+  re-runs Part 1's partitioned-parent crash and filter-move findings;
+  `./run-e.sh concurrent` has two nodes update the same 1,000 keys under each
+  conflict-resolution policy (`SECS` sets the duration). `./run-e.sh ddl`
+  runs a plain `ALTER TABLE`, then `pglogical.replicate_ddl_command` (add and
+  rename a column) between two nodes that both write, and prints the slot's
+  `failover` flag. `./run-e.sh failover` adds a physical standby (`e-s1`)
+  to a provider, turns the pglogical slot into a failover slot with
+  `ALTER_REPLICATION_SLOT`, kills the provider and promotes the standby;
+  `FAILOVER_SLOT=0` skips the `ALTER_REPLICATION_SLOT` step as a control.
+  `./run-e.sh bench <native|pglogical|pgcopydb>` compares the three over a
+  one-way link on Postgres 18: latency of single-row transactions, rows a
+  second under eight writers, one transaction of a million rows, and one
+  `UPDATE` statement of a million rows (`BENCH_ONLY` picks workloads;
+  `pgcopydb-e` is the pgcopydb container built on Postgres 18 clients).
+  The servers allow `pgoutput` and `pglogical_output` as output plugins
+  (`output_plugin_libraries`). `reset-e.sh` recreates the containers.
+  `./run-e.sh walretention <core|pgcopydb>` copies a large table while a writer
+  generates WAL and samples what the source's slots keep (`WAL_NOISE=other`
+  puts the writer in another database, `WAL_ROWS` sizes the table).
+  Results in `results/e-*.out`; `e-bench-<method>-bulk1.out` and `-bulk2.out`
+  are the million-row workloads alone, on a clean table.
+- **g** — schema changes across regions, on `us-east` and `us-west`.
+  `./run-g.sh core` runs `ADD COLUMN` three ways over native logical
+  replication in both directions (one region then the other, both at once,
+  writes paused); `./run-g.sh pgcopydb` replaces the `us-east` to `us-west`
+  subscription with `pgcopydb clone --follow` and the DDL event trigger, runs
+  `ADD`, `RENAME` and `DROP COLUMN`, then kills the `us-east` primary. The
+  pgcopydb container takes the keyword connection form
+  (`host=a,b,c port=5432 ...`), not a multi-host URI. `./run-g.sh
+  pgcopydb-failover` is the same with `--enable-failover`, so the slot is a
+  failover slot; `KILL_REGION=us-west` kills the target's primary instead.
+  `WRITER_PAUSE` sets the writer's pause (default 0.02 s, about 26 rows a
+  second). Results in `results/g-core-run*.out`, `g-pgcopydb-run*.out`,
+  `g-pgcopydb-failover-run*.out` and `g-pgcopydb-failover-target-run*.out`;
+  `g-pgcopydb-multihost.log` is the URI failure.
+- **f** — two regions, `us-east` and `us-west`, each a group of its own,
+  replicating to each other with native logical replication
+  (`sub_us_west_from_us_east` and `sub_us_east_from_us_west`, both
+  `failover = true`, both through every node of the other group), a writer
+  on each side. `./run-f.sh east` kills `us-east-a` under load,
+  `./run-f.sh west` kills `us-west-a`, and the script compares what both
+  regions hold afterwards. Three runs of each in
+  `results/f-failover-*-run*.out`.
+- **h** — Postgres 19 release candidate 1 (`postgres:19rc1`), sequence synchronization.
+  `./run-h.sh` publishes `FOR ALL TABLES, ALL SEQUENCES`, inserts 1,000 rows whose ids
+  come from a sequence, shows the subscriber's sequence still at 1, runs
+  `ALTER SUBSCRIPTION ... REFRESH SEQUENCES` and shows it at 1,000. Result in
+  `results/h-sequences.out`.
+
+## Running it
+
+```
+docker compose --profile c build us-east-monitor    # lrdist-pgaf:17, profiles a, c, f
+docker compose --profile d --profile e build        # pgcopydb, e-hub
+./run-c.sh                                          # five regions, 20 containers
+./run-a.sh planned                                  # also: kill, kill-lag-gated, kill-lag-ungated
+./run-f.sh east                                     # also: west
+./run-g.sh core                                     # also: pgcopydb (build pgcopydb-g first)
+./run-d.sh                                          # after ./reset-d.sh && COMPOSE_PROFILES=d docker compose up -d --wait
+./reset-e.sh && ./run-e.sh findings && ./run-e.sh concurrent
+```
+
+Profile `c` runs 20 containers and wants a few GB of memory.
+`results/c-startup-stress-*.log` is the start-up test: five groups started
+together, several rounds, each primary's `synchronized_standby_slots` compared
+with the monitor's.
