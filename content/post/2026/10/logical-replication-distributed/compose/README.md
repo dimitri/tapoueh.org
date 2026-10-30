@@ -1,7 +1,7 @@
 # Part 4 demo — compose/
 
 Same pattern as parts 1 through 3: `docker-compose.yml` with profile-gated
-containers, `run-*.sh` scripts, `results/`. Profiles **a** through **g**
+containers, `run-*.sh` scripts, `results/`. Profiles **a** through **h**
 have been built and run.
 
 ## One group per region
@@ -27,13 +27,14 @@ The nodes keep their data on tmpfs, so removing the containers is the reset.
   post's first section is about. The last tagged release is `v2.2`, which
   predates all three. The image is built by the `us-east-monitor` service and
   tagged `lrdist-pgaf:17`.
-- **pgcopydb**, pinned to `361eb2f94945670c22a38beb666a5ac4c56e165f` on
+- **pgcopydb**, pinned to `d02e5916a6c07eef0cd12d03426d0e543129ede1` on
   `main`, which includes
   [DDL replication over logical decoding](https://github.com/dimitri/pgcopydb/pull/1064),
   [`--enable-failover` and the restart of the follow sub-processes](https://github.com/dimitri/pgcopydb/pull/1073),
   [the cheap SQLite spools](https://github.com/dimitri/pgcopydb/pull/1074) and
   [the primary-key lookup of `REPLICA IDENTITY FULL` rows](https://github.com/dimitri/pgcopydb/pull/1076) and
-  [the flushed position reported to the source](https://github.com/dimitri/pgcopydb/pull/1077).
+  [the flushed position reported to the source](https://github.com/dimitri/pgcopydb/pull/1077) and
+  [the transform and the apply of a large transaction while it is still being received](https://github.com/dimitri/pgcopydb/pull/1078).
   Not in a tagged release yet.
 
 Re-pin before running this again — `main` moves.
@@ -112,6 +113,11 @@ Re-pin before running this again — `main` moves.
   `./run-f.sh west` kills `us-west-a`, and the script compares what both
   regions hold afterwards. Three runs of each in
   `results/f-failover-*-run*.out`.
+- **h** — Postgres 19 release candidate 1 (`postgres:19rc1`), sequence synchronization.
+  `./run-h.sh` publishes `FOR ALL TABLES, ALL SEQUENCES`, inserts 1,000 rows whose ids
+  come from a sequence, shows the subscriber's sequence still at 1, runs
+  `ALTER SUBSCRIPTION ... REFRESH SEQUENCES` and shows it at 1,000. Result in
+  `results/h-sequences.out`.
 
 ## Running it
 
