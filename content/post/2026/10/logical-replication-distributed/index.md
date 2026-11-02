@@ -190,7 +190,12 @@ already passed, so it never sees 3 to 13 rows. That's exactly the case the
 The slot isn't what costs time: a killed primary blocks the writer for about
 51 seconds, roughly ten for the monitor to declare the node unhealthy and the
 rest for pg_auto_failover's drain timeout. Those are defaults you can tune,
-measured here on a local Docker network.
+measured here on a local Docker network. They lean on the conservative side,
+because they're chosen to protect against network partitions and split brain
+rather than to fail over as fast as possible; the
+[Failover and Fault Tolerance](https://pg-auto-failover.readthedocs.io/en/main/fault-tolerance.html)
+page of the pg_auto_failover documentation details each timeout and what it
+guards against, so read it before shortening any of them.
 
 ## Regions own their rows
 
