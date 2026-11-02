@@ -421,39 +421,35 @@ in and the same out, and each change reached `us-west` within a second, with
 no lag at any point. The rename is the change that no ordering makes safe on
 the native link.
 
-It doesn't replace the native link in our system though, for three reasons.
-First, its slot isn't a failover slot by default. Postgres 17 accepts
-`FAILOVER` on `CREATE_REPLICATION_SLOT` only in the parenthesized option
-syntax, and the form older pgcopydb versions send can't carry it. On `main`,
-`--enable-failover` sends it, and the same change makes `follow` restart its
-sub-processes when one fails, a bit like an Erlang supervisor, because a
-failover of the target is as ordinary as one of the source. With the flag the
-slot is `failover=true` on the primary and `synced=true` on both standbys, and
-after killing the primary `us-west` ends with every row, nothing left to catch
-up one second after the writer stops (three runs). Without the flag the same
-kill leaves `us-west` 1,306 to 1,450 rows behind: the restarts find no slot,
-and after five attempts in 300 seconds `follow` gives up. Killing the primary
-of the target region costs one restart of the apply process and no row (two
-runs).
+It doesn't replace the native link in our system though: it filters by table
+and not by row, so it can carry the one-way links, like the warehouse mirror,
+but not the two-way pairs.
 
-Second, it doesn't take a multi-host URI (`postgres://a,b,c/...` fails with
-`could not match 3 port numbers to 5 hosts`), the keyword form with
-`target_session_attrs=read-write` works. Third, it filters by table and not by
-row, so it can carry the one-way links, like the warehouse mirror, but not the
-two-way pairs.
+It does survive a failover when we ask it to. With `--enable-failover` the slot
+is `failover = true` on the primary and `synced = true` on both standbys. After
+we killed the `us-east` primary, `us-west` ended with every row, and nothing was
+left to catch up one second after the writer stopped (three runs). Killing the
+primary of the target region instead lost no row either (two runs).
 
 ### pglogical: replicate_ddl_command
 
-pglogical doesn't replicate DDL either, its README says so, and gives us
-`pglogical.replicate_ddl_command()` which runs the statement locally and queues
-it in the stream. With two nodes subscribed to each other and both inserting,
-a plain `alter table ... add column` on one of them stops the other's apply
-worker at the first row, and it's only back 187 seconds after the first
-`alter`, because its restart delay grows with each failure. Nothing is lost.
-With `replicate_ddl_command` the other node has the column with nothing run
-there, and no lag, rename included. The README warns that this isn't enough
-once the subscriber writes with the old structure, which is the case of two
-writers on one table, and our test didn't hit it.
+pglogical doesn't replay DDL by itself, but it can replay the DDL you hand to
+`pglogical.replicate_ddl_command()`, which runs the statement locally and sends
+it down the same stream. With two nodes subscribed to each other and both
+inserting, we ran `alter table ... add column` both ways.
+
+- **A plain `alter table` on one node** stops the other node's apply worker at
+  the first row that carries the new column. The worker comes back 187 seconds
+  after the `alter`, because its restart delay grows with each failure. No row
+  is lost, but that node lags for three minutes.
+- **The same statement through `replicate_ddl_command`** reaches the other node
+  with nothing run there, and with no lag. A rename works the same way.
+
+There is no event trigger behind it: whoever changes the schema, a DBA or a
+migration tool, has to wrap each statement in the call, where pgcopydb captures
+DDL on its own. The README warns that this isn't enough once the subscriber
+keeps writing with the old structure, which is the case with two writers on one
+table. Our test didn't hit that case.
 
 Its slot has `failover = false`, because it uses the 2ndQuadrant syntax of
 `CREATE_REPLICATION_SLOT`. You can flip it after the fact with Postgres 17's
