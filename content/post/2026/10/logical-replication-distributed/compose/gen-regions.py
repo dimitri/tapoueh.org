@@ -7,11 +7,11 @@ Postgres nodes (<region>-a, -b, -c). Run it after changing REGIONS.
 import re, sys
 
 REGIONS = {                       # region -> compose profiles that use it
-    "us-east":       ["a", "c", "f", "g"],
-    "us-west":       ["c", "f", "g"],
-    "ap-south":      ["c"],
-    "ap-southeast":  ["c"],
-    "eu-west":       ["c"],
+    "us-east":       ["a", "c", "f", "g", "i"],
+    "us-west":       ["c", "f", "g", "i"],
+    "ap-south":      ["c", "i"],
+    "ap-southeast":  ["c", "i"],
+    "eu-west":       ["c", "i"],
 }
 
 def region(r, profiles):
@@ -69,12 +69,12 @@ block = """x-pgaf: &pgaf
   tmpfs: ["/data:uid=999,gid=999,mode=0755"]
 
 """
-svc = "  # ---------------- regions: one pg_auto_failover group each (profiles a, c, f, g) ----------------\n"
+svc = "  # ---------------- regions: one pg_auto_failover group each (profiles a, c, f, g, i) ----------------\n"
 for r, p in REGIONS.items():
     svc += region(r, p) + "\n"
 svc += """  # the application and the CDC consumer: psql, pg_recvlogical, perl
   client:
-    profiles: [a, f, g]
+    profiles: [a, f, g, i]
     image: lrdist-pgaf:17
     entrypoint: ["sleep", "infinity"]
     user: root
@@ -88,7 +88,7 @@ svc += """  # the application and the CDC consumer: psql, pg_recvlogical, perl
     build:
       context: .
       dockerfile: Dockerfile.pgcopydb
-      args: { PGVERSION: "17", PGCOPYDB_PATCH: pgcopydb-failover-slot.patch }
+      args: { PGVERSION: "17" }
     image: lrdist-pgcopydb:17
     entrypoint: ["sleep", "infinity"]
     volumes:

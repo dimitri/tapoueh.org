@@ -1,0 +1,33 @@
+== four groups, 200000 rows owned by each of three regions ==
+   us-east: primary us-east-a
+   us-west: primary us-west-a
+   ap-south: primary ap-south-a
+   eu-west: primary eu-west-a
+   every one of the four primaries holds 600000 rows, 6 s after the bulk insert
+   size of the table: 75 MB
+== ap-southeast joins ==
+   ap-southeast: primary ap-southeast-a
+   the new group is up 10 s later
+   first copy done 2 s after the subscription: ap-southeast holds 601742 rows
+   most WAL any logical slot on the ap-south primary kept during the copy: 1 MB
+== writers paused, waiting for every region to hold every acknowledged row ==
+   converged 2 s after the pause
+   rows owned by us-east: acknowledged 201241; held by us-east=201241 us-west=201241 ap-south=201241 ap-southeast=201241 eu-west=201241
+   rows owned by us-west: acknowledged 201238; held by us-east=201238 us-west=201238 ap-south=201238 ap-southeast=201238 eu-west=201238
+   rows owned by ap-south: acknowledged 201250; held by us-east=201250 us-west=201250 ap-south=201250 ap-southeast=201250 eu-west=201250
+   rows owned by ap-southeast: acknowledged 655; held by us-east=655 us-west=655 ap-south=655 ap-southeast=655 eu-west=655
+   us-east: 1 distinct digest(s) of its ids across the five primaries
+   us-west: 1 distinct digest(s) of its ids across the five primaries
+   ap-south: 1 distinct digest(s) of its ids across the five primaries
+   ap-southeast: 1 distinct digest(s) of its ids across the five primaries
+-- the longest pause between two acknowledged rows, per writer, over the whole run including the join
+   us-east: 0.1 s
+   us-west: 0.2 s
+   ap-south: 0.1 s
+   ap-southeast: 0.1 s
+-- apply and sync errors
+   us-east: sub_us_east_from_us_west apply_errors=0 sync_errors=0; sub_us_east_from_eu_west apply_errors=0 sync_errors=0
+   us-west: sub_us_west_from_us_east apply_errors=0 sync_errors=0
+   ap-south: sub_ap_south_from_eu_west apply_errors=0 sync_errors=0; sub_ap_south_from_ap_southeast apply_errors=0 sync_errors=0
+   ap-southeast: sub_ap_southeast_from_ap_south apply_errors=0 sync_errors=0
+   eu-west: sub_eu_west_from_us_east apply_errors=0 sync_errors=0; sub_eu_west_from_ap_south apply_errors=0 sync_errors=0

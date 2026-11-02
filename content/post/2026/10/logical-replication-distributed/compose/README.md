@@ -1,7 +1,7 @@
 # Part 4 demo — compose/
 
 Same pattern as parts 1 through 3: `docker-compose.yml` with profile-gated
-containers, `run-*.sh` scripts, `results/`. Profiles **a** through **h**
+containers, `run-*.sh` scripts, `results/`. Profiles **a** through **j**
 have been built and run.
 
 ## One group per region
@@ -13,7 +13,8 @@ The nodes of a region carry its name as their `region` label (informational
 in pg_auto_failover: it affects no failover or quorum decision). The
 regions are `us-east`, `us-west`, `ap-south`, `ap-southeast` and `eu-west`
 (the Amsterdam warehouse). `gen-regions.py` generates their services in
-`docker-compose.yml`; `lib-regions.sh` has the helpers the scripts share.
+`docker-compose.yml`; `lib-regions.sh` has the helpers the scripts share, and
+`lib-topology.sh` the five-region topology of profiles **c** and **i**.
 The nodes keep their data on tmpfs, so removing the containers is the reset.
 
 ## Images build from source, not from a release
@@ -118,6 +119,27 @@ Re-pin before running this again — `main` moves.
   come from a sequence, shows the subscriber's sequence still at 1, runs
   `ALTER SUBSCRIPTION ... REFRESH SEQUENCES` and shows it at 1,000. Result in
   `results/h-sequences.out`.
+- **i** — the five regions of profile c under load. `./run-i.sh cascade` runs
+  a writer in each of the four regions (about 25 rows a second each), kills
+  the primary of `us-east` (the hub that `us-west`'s rows, and the Asian rows
+  on their way to `us-west`, travel through), waits for every region to hold
+  every acknowledged row, then adds a column on all five primaries with the
+  writers paused. `./run-i.sh join` starts four regions holding `PRELOAD`
+  rows per owning region (200,000 in the runs) with writers running, then
+  brings up `ap-southeast` and subscribes it to `ap-south` with a first copy
+  while the writers keep going. Both compare the rows every primary holds,
+  and a digest of their ids, with what each writer was acknowledged.
+  `RUN=<n>` names `results/i-<scenario>-run<n>.out`. Twenty containers: the Docker
+  VM needs 8 GB; with 900,000 rows per owning region the kernel kills the
+  servers (`OOMKilled`), the data being on tmpfs.
+- **j** — core logical replication with two nodes subscribed to each other
+  (`origin = none`, `track_commit_timestamp = on`) and four clients per node
+  updating the same 1,000 keys for 15 seconds, the workload of `run-e.sh
+  concurrent`. `J_IMAGE=postgres:18` or `postgres:19rc1` picks the server.
+  `./run-j.sh updates` updates; `./run-j.sh mixed` updates, deletes and
+  upserts, with `RETAIN=on` setting `retain_dead_tuples` on both
+  subscriptions (Postgres 19). It prints whether the nodes converged, how
+  many rows differ, and the conflicts `pg_stat_subscription_stats` counted.
 
 ## Running it
 
@@ -127,6 +149,8 @@ docker compose --profile d --profile e build        # pgcopydb, e-hub
 ./run-c.sh                                          # five regions, 20 containers
 ./run-a.sh planned                                  # also: kill, kill-lag-gated, kill-lag-ungated
 ./run-f.sh east                                     # also: west
+./run-i.sh cascade                                  # also: join
+./run-j.sh updates                                  # J_IMAGE=postgres:19rc1, also: mixed
 ./run-g.sh core                                     # also: pgcopydb (build pgcopydb-g first)
 ./run-d.sh                                          # after ./reset-d.sh && COMPOSE_PROFILES=d docker compose up -d --wait
 ./reset-e.sh && ./run-e.sh findings && ./run-e.sh concurrent

@@ -94,7 +94,7 @@
     build:
       context: .
       dockerfile: Dockerfile.pgcopydb
-      args: { PGVERSION: "18", PGCOPYDB_PATCH: pgcopydb-failover-slot.patch }
+      args: { PGVERSION: "18" }
     image: lrdist-pgcopydb:18
     entrypoint: ["sleep", "infinity"]
     volumes:
@@ -126,3 +126,50 @@
     healthcheck: { disable: true }
     tmpfs: ["/var/lib/postgresql"]
     depends_on: [b-primary]
+
+  # ---------------- profile h: Postgres 19 release candidate 1, sequence synchronization ----------------
+  h-pub:
+    <<: *pg-common
+    profiles: [h]
+    image: postgres:19rc1
+    command: postgres -c wal_level=logical
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app
+      POSTGRES_HOST_AUTH_METHOD: trust
+    tmpfs: ["/var/lib/postgresql"]
+
+  h-sub:
+    <<: *pg-common
+    profiles: [h]
+    image: postgres:19rc1
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app
+      POSTGRES_HOST_AUTH_METHOD: trust
+    tmpfs: ["/var/lib/postgresql"]
+    depends_on: [h-pub]
+
+  # ---------------- profile j: core logical replication, two writers on the same keys ----------------
+  # J_IMAGE picks the server: postgres:18 (default) or postgres:19rc1
+  j-a:
+    <<: *pg-common
+    profiles: [j]
+    image: ${J_IMAGE:-postgres:18}
+    command: postgres -c wal_level=logical -c track_commit_timestamp=on -c max_wal_senders=10 -c max_replication_slots=10
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app
+      POSTGRES_HOST_AUTH_METHOD: trust
+    tmpfs: ["/var/lib/postgresql"]
+
+  j-b:
+    <<: *pg-common
+    profiles: [j]
+    image: ${J_IMAGE:-postgres:18}
+    command: postgres -c wal_level=logical -c track_commit_timestamp=on -c max_wal_senders=10 -c max_replication_slots=10
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app
+      POSTGRES_HOST_AUTH_METHOD: trust
+    tmpfs: ["/var/lib/postgresql"]

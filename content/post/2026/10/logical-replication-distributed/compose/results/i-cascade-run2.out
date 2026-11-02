@@ -1,0 +1,55 @@
+== five groups ==
+   us-east: primary us-east-a
+   us-west: primary us-west-a
+   ap-south: primary ap-south-a
+   ap-southeast: primary ap-southeast-a
+   eu-west: primary eu-west-a
+== writers in the four regions, about 25 rows a second each ==
+-- steady state: us-west holds 439 rows of ap-southeast, two hops away (ap-southeast, eu-west, us-east, us-west)
+-- t0=1793630366.066011919: docker kill us-east-a, the primary of us-east, which us-west and eu-west read from and which feeds both of them
+   new primary of us-east: us-east-b, 51.2 s after t0
+== writers paused, waiting for every region to hold every acknowledged row ==
+   converged 2 s after the pause
+   rows owned by us-east: acknowledged 2225; held by us-east=2225 us-west=2225 ap-south=2225 ap-southeast=2225 eu-west=2225
+   rows owned by us-west: acknowledged 3474; held by us-east=3474 us-west=3474 ap-south=3474 ap-southeast=3474 eu-west=3474
+   rows owned by ap-south: acknowledged 3505; held by us-east=3505 us-west=3505 ap-south=3505 ap-southeast=3505 eu-west=3505
+   rows owned by ap-southeast: acknowledged 3506; held by us-east=3506 us-west=3506 ap-south=3506 ap-southeast=3506 eu-west=3506
+   digests of the ids per region key, identical on all five primaries?
+   us-east: 1 distinct digest(s) across        5 primaries
+   us-west: 1 distinct digest(s) across        5 primaries
+   ap-south: 1 distinct digest(s) across        5 primaries
+   ap-southeast: 1 distinct digest(s) across        5 primaries
+-- apply and sync errors on the five primaries
+   us-east: sub_us_east_from_us_west apply_errors=0 sync_errors=0; sub_us_east_from_eu_west apply_errors=0 sync_errors=0
+   us-west: sub_us_west_from_us_east apply_errors=1 sync_errors=0
+   ap-south: sub_ap_south_from_ap_southeast apply_errors=0 sync_errors=0; sub_ap_south_from_eu_west apply_errors=0 sync_errors=0
+   ap-southeast: sub_ap_southeast_from_ap_south apply_errors=0 sync_errors=0
+   eu-west: sub_eu_west_from_us_east apply_errors=1 sync_errors=0; sub_eu_west_from_ap_south apply_errors=0 sync_errors=0
+   longest time the us-west rows stood still on eu-west: 54 s; the ap-southeast rows on us-west: 56 s
+-- the longest pause between two acknowledged rows, per writer
+   us-east: 51.2 s
+   us-west: 0.2 s
+   ap-south: 0.2 s
+   ap-southeast: 0.2 s
+-- slots on the new primary of us-east
+   us-east-b: sub_eu_west_from_us_east|t|t
+   us-east-b: sub_us_west_from_us_east|t|t
+== a column added on all five primaries, writers paused ==
+   altered on every primary 0.4 s after the pause was confirmed, no row in flight
+   converged again after 30 s of writes on the new schema
+   rows owned by us-east: acknowledged 2832; held by us-east=2832 us-west=2832 ap-south=2832 ap-southeast=2832 eu-west=2832
+   rows owned by us-west: acknowledged 4131; held by us-east=4131 us-west=4131 ap-south=4131 ap-southeast=4131 eu-west=4131
+   rows owned by ap-south: acknowledged 4167; held by us-east=4167 us-west=4167 ap-south=4167 ap-southeast=4167 eu-west=4167
+   rows owned by ap-southeast: acknowledged 4167; held by us-east=4167 us-west=4167 ap-south=4167 ap-southeast=4167 eu-west=4167
+   digests of the ids per region key, identical on all five primaries?
+   us-east: 1 distinct digest(s) across        5 primaries
+   us-west: 1 distinct digest(s) across        5 primaries
+   ap-south: 1 distinct digest(s) across        5 primaries
+   ap-southeast: 1 distinct digest(s) across        5 primaries
+-- the column exists on: us-east=1 us-west=1 ap-south=1 ap-southeast=1 eu-west=1 
+-- apply and sync errors after the change
+   us-east: sub_us_east_from_us_west apply_errors=0 sync_errors=0; sub_us_east_from_eu_west apply_errors=0 sync_errors=0
+   us-west: sub_us_west_from_us_east apply_errors=1 sync_errors=0
+   ap-south: sub_ap_south_from_ap_southeast apply_errors=0 sync_errors=0; sub_ap_south_from_eu_west apply_errors=0 sync_errors=0
+   ap-southeast: sub_ap_southeast_from_ap_south apply_errors=0 sync_errors=0
+   eu-west: sub_eu_west_from_us_east apply_errors=1 sync_errors=0; sub_eu_west_from_ap_south apply_errors=0 sync_errors=0
