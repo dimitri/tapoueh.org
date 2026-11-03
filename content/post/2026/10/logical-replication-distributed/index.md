@@ -599,8 +599,9 @@ over several of them and remembers which tables are done. It runs between the
 two servers, and writes every change twice, to a SQLite file and to the target,
 so we'd keep it for the copy and not for the steady links.
 
-Can it do the copy and hand the stream over to core, so that the source doesn't
-keep the WAL of a long copy and the steady link stays in-core? It can, with
+{{< image src="fig-copy-modes.svg" title="Core alone, pgcopydb alone, or pgcopydb for the copy and core for the link." >}}
+
+There is a third way, between the two: pgcopydb for the copy and core for the steady link. Can it hand the stream over to core, so that the source doesn't keep the WAL of a long copy and the link stays in-core? It can, with
 care. pgcopydb receives the changes while it copies and spools them to files on
 its own host, so the source recycles its WAL during the copy. We ran it with a
 writer inserting 50 rows a second: `pgcopydb clone --follow --plugin pgoutput`
