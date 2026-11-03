@@ -143,9 +143,16 @@ for RDS for PostgreSQL 17 and later, with `failover = true`,
 `rds.logical_slot_sync_dbname`, and Azure [documents
 that](https://learn.microsoft.com/azure/reliability/reliability-postgresql-flexible-server)
 slots of a flexible server survive a failover with `sync_replication_slots` and
-`hot_standby_feedback`. We haven't tested any of them, and we haven't looked at
-Google Cloud SQL, so check the documentation of what you run before relying on
-it.
+`hot_standby_feedback`. Google Cloud SQL [documents
+it](https://docs.cloud.google.com/sql/docs/postgres/advanced-dr-logical-failover-slot)
+for PostgreSQL 17 and later on the Enterprise Plus edition, through its
+cross-region disaster recovery replica, with `failover = true` on the
+subscription and the replica as a synchronized standby; the pages about its
+regular high availability instances don't say what happens to a logical slot
+there. We haven't tested any of them. There are many more providers than we
+could read, from Scaleway and OVHcloud to the large ones in the US, China,
+Russia or India, and each has its own answer, so check the documentation of
+what you run before relying on it.
 
 pg_auto_failover keeps those true for you. The monitor computes the list for
 `synchronized_standby_slots` the same way it computes
