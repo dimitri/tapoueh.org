@@ -180,16 +180,44 @@ there are three things the consumer must do on its side:
      `create subscription ... with (failover = true)`);
   2. store its own position durably, as the last `end_lsn` it fully applied,
      and never restart from zero;
-  3. at every reconnection, check the server it reaches before it streams:
+  3. at every reconnection, check the server it reaches before it streams.
 
-~~~ bash
-# xlogpos is where the server's WAL is now; our stored position must not be past it
-psql "dbname=app replication=database" -Atc "IDENTIFY_SYSTEM"
-#   systemid | timeline | xlogpos | dbname
-# refuse to stream if xlogpos < stored LSN, or if a timeline switch point
-# is below it: a consumer ahead of the history it reads from is the one
-# case the slot can't protect
+The check is one replication command, which a consumer can send on the
+connection it is about to stream from. Here it is on the new primary, after
+`us-east-a` was killed and `us-east-c` promoted:
+
 ~~~
+$ psql "dbname=app replication=database" -Atc "IDENTIFY_SYSTEM"
+7703946002234535959|2|0/5049AD8|app
+~~~
+
+The columns are the system identifier, the timeline (2: the history forked
+once), the position of the server's WAL (`xlogpos`) and the database. The
+consumer compares them with what it stored, and refuses to stream if its
+stored position is past `xlogpos`, or past the point where the history it
+read from was left behind: a consumer ahead of the history it reads from is
+the one case the slot can't protect. For the second half of that rule, the
+operator's view of the same history is `pg_autoctl show timeline`, which lists
+the timelines with the position where each one was forked from its parent
+(the switchpoint), and each node's position against them:
+
+~~~
+$ pg_autoctl show timeline
+     TLI | Parent TLI | Switchpoint LSN
+---------+------------+----------------
+       1 |          0 |             0/0
+       2 |          1 |       0/50497C0
+
+                Name | NodeId |  TLI |         LSN | Status
+---------------------+--------+------+-------------+-----------------------------------------
+           us-east-a |      1 |    1 |   0/50021D0 | ok, on accepted lineage
+           us-east-c |      2 |    2 |   0/5049AD8 | ok, on accepted lineage
+           us-east-b |      3 |    2 |   0/5049AD8 | ok, on accepted lineage
+~~~
+
+Timeline 2 forked from timeline 1 at `0/50497C0`. A consumer that had
+received anything on timeline 1 past that position holds rows the new primary
+doesn't have.
 
 We tried it: a region is a monitor and three nodes on Postgres 17, and a
 `pg_recvlogical` consumer follows a failover slot while a writer inserts
