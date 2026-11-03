@@ -1,0 +1,57 @@
+# pg_auto_failover, built from source at a pinned commit: no tagged release
+# (the last is v2.2) has synchronized_standby_slots and the CDC-continuity work
+# of PRs #1197, #1199 and #1200, so this demo cannot start from a published image.
+#
+# Pinned commit: 7701bc951ca39326ab7168295250dab79087d5f5, the merge of #1200 on
+# hapostgres/pg_auto_failover main (2026-10-28). Re-pin before running this; main moves.
+#
+# Usage:
+#   docker build --build-arg PGVERSION=17 -t pgaf:demo \
+#     -f Dockerfile.pgautofailover .
+
+ARG PGVERSION=17
+FROM postgres:${PGVERSION} AS build
+
+ARG PGVERSION
+ARG PGAF_COMMIT=7701bc951ca39326ab7168295250dab79087d5f5
+
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      build-essential git ca-certificates \
+      postgresql-server-dev-${PGVERSION} \
+      libssl-dev libcurl4-gnutls-dev liblz4-dev libzstd-dev \
+      libselinux1-dev libicu-dev libedit-dev libreadline-dev \
+      libxslt1-dev libpam0g-dev libkrb5-dev libnuma-dev \
+      flex bison \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /usr/src/pg_auto_failover
+RUN git clone --no-checkout https://github.com/hapostgres/pg_auto_failover.git . \
+ && git checkout ${PGAF_COMMIT}
+
+ENV PG_CONFIG=/usr/lib/postgresql/${PGVERSION}/bin/pg_config
+RUN make -s clean && make -s install -j"$(nproc)" BINDIR=/usr/local/bin
+
+# ---------------------------------------------------------------------------
+# run — just the official postgres image plus the pg_autoctl binary and the
+# pgautofailover monitor extension this build just produced
+# ---------------------------------------------------------------------------
+FROM postgres:${PGVERSION} AS run
+
+ARG PGVERSION
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libncurses6 tmux \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY --from=build /usr/local/bin/pg_autoctl /usr/local/bin/pg_autoctl
+COPY --from=build /usr/lib/postgresql/${PGVERSION}/lib/pgautofailover.so \
+     /usr/lib/postgresql/${PGVERSION}/lib/pgautofailover.so
+COPY --from=build /usr/share/postgresql/${PGVERSION}/extension/pgautofailover* \
+     /usr/share/postgresql/${PGVERSION}/extension/
+
+# pg_autoctl refuses to run Postgres as root
+RUN mkdir -p /data && chown postgres:postgres /data
+ENV HOME=/var/lib/postgresql
+USER postgres
+
+ENTRYPOINT ["pg_autoctl"]

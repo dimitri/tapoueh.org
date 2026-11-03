@@ -1,0 +1,36 @@
+== two regions, each a pg_auto_failover group: the primary of us-west is killed ==
+   us-east primary: us-east-a, us-west primary: us-west-a
+-- slots on each primary, and what its standbys hold
+   us-east-a: sub_us_west_from_us_east|logical|t
+   us-east-a: synchronized_standby_slots = pgautofailover_standby_2,pgautofailover_standby_3
+   us-west-a: sub_us_east_from_us_west|logical|t
+   us-west-a: synchronized_standby_slots = pgautofailover_standby_2,pgautofailover_standby_3
+   us-east-b: synced copy of the failover slot: t (after 13s)
+   us-east-c: synced copy of the failover slot: t (after 1s)
+   us-west-b: synced copy of the failover slot: t (after 1s)
+   us-west-c: synced copy of the failover slot: t (after 1s)
+-- steady state: us-east holds 138 own rows and 138 from us-west
+-- t0=1793193558.105056296: docker kill us-west-a
+   new primary of us-west: us-west-b, 53.3 s after t0
+-- waiting for both regions to converge
+   converged: 1 after 1s  (us-east rows on us-east/us-west: 2298/2298, us-west rows: 1343/1343)
+
+== result ==
+rows owned by us-east: acknowledged     2298, on us-east     2298, on us-west     2298
+   missing from us-east: 0   missing from us-west: 0
+   acknowledged but nowhere: 0
+rows owned by us-west: acknowledged     1343, on us-east     1343, on us-west     1343
+   missing from us-east: 0   missing from us-west: 0
+   acknowledged but nowhere: 0
+
+-- apply errors, per subscription
+   on us-east: sub_us_east_from_us_west apply_errors=1 sync_errors=0
+   on us-west: sub_us_west_from_us_east apply_errors=0 sync_errors=0
+-- longest silence between consecutive rows, per region key and database (applied_at, each database's own clock)
+   on us-east: us-east|2.3
+   on us-east: us-west|55.2
+   on us-west: us-east|22.3
+   on us-west: us-west|53.2
+-- slots now
+   us-east-a: sub_us_west_from_us_east|logical|t|t
+   us-west-b: sub_us_east_from_us_west|logical|t|t

@@ -1,0 +1,16 @@
+== slots pglogical creates on the provider (failover column) ==
+pgl_app_worker1_sub_ddl_a6229ff failover=false
+steady state: lag w1->w2 -2, w2->w1 -2; replicating / replicating
+
+== 1: plain ALTER TABLE ... ADD COLUMN on w1 only ==
+10 s later: lag w1->w2 290 rows; w2 sees the column: 0; subscription on w2: down
+w2 log: 2026-10-28 00:57:17.664 UTC [122] ERROR:  unknown column name plain_col
+the same ALTER by hand on w2 at +11 s; the subscription is replicating and caught up at +187 s (replicating, lag -2 rows)
+
+== 2: pglogical.replicate_ddl_command('... ADD COLUMN') on w1, both writers running ==
+w2 has the column, nothing run there: 1; largest lag over 10 s: 0 rows; subscriptions: replicating / replicating
+
+== 3: pglogical.replicate_ddl_command('... RENAME COLUMN') on w1, both writers running ==
+(15 s after the RENAME)
+column renamed on w2: 1; lag w1->w2 -2, w2->w1 -2; subscriptions: replicating / replicating
+log lines about the rename: 0

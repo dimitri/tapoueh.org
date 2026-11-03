@@ -1,0 +1,32 @@
+== pglogical: pgcopydb copies 300000 rows and follows, then pglogical takes over, a writer inserting meanwhile ==
+-- pgcopydb has copied 300000 rows and caught up after 2 s: source 300247 rows, target 300248 rows
+-- slot on the source while pgcopydb follows
+   handover (pgoutput), confirmed_flush_lsn 0/5DB90E8, current 0/5DBDB58
+== pglogical on both servers, subscription created and disabled at once ==
+-- slots on the provider
+   handover (pgoutput), active=false, confirmed_flush_lsn 0/5E95690, current 0/5E95690
+   pgl_app_provider_takeover (pglogical_output), active=false, confirmed_flush_lsn 0/5E8D4F8, current 0/5E95690
+== stop pgcopydb at a marker ==
+   endpos 0/5E957F0
+   pgcopydb exited
+   the last transaction pgcopydb applied is at 0/5E8ABE0
+== enable the pglogical subscription (its slot started before pgcopydb stopped, so inserts that pgcopydb applied arrive again) ==
+ alter_subscription_enable 
+---------------------------
+ t
+(1 row)
+
+== the writer finishes, then both servers must hold the same rows ==
+   identical 1 s after the writer stopped
+   source: 303953 rows, ids 1 to 303953, digest e1532e2b35b5800ea127e5f8f6712bcd
+   target: 303953 rows, ids 1 to 303953, digest e1532e2b35b5800ea127e5f8f6712bcd
+-- subscription
+   takeover replicating
+-- in the subscriber's log: 0 inserts already applied by pgcopydb, resolved with apply_remote; 6 duplicate-key errors from the apply worker's first start, before we disabled it
+-- a schema change through the stream, with the writers stopped
+ replicate_ddl_command 
+-----------------------
+ t
+(1 row)
+
+   column on the target: 1

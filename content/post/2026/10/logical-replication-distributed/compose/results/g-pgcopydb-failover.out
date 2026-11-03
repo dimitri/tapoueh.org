@@ -1,0 +1,35 @@
+== profile g, pgcopydb-failover: us-east primary us-east-a, us-west primary us-west-a ==
+-- pgcopydb-g: pgcopydb pgcopydb version 0.18; clone --follow us-east -> us-west, writer pause 0.02s
+   table on us-west after 2s; logical slots on the us-east primary: pgcopydb (failover=true, active=true)
+   event trigger installed; steady state: lag -1 rows
+   over 20 s: 29 rows/s written on us-east, 29 rows/s arrived on us-west; largest lag 0 rows
+
+== ADD COLUMN on us-east, nothing run on us-west ==
+   column on us-west after 1s; row with the new column: carries the new column
+   largest lag over the next 10 s: 0 rows
+
+== RENAME COLUMN ==
+   renamed on us-west after 1s; largest lag over the next 10 s: 0 rows
+
+== DROP COLUMN ==
+   dropped on us-west after 1s; largest lag over the next 10 s: 0 rows
+
+== the us-west primary is killed under load ==
+   us-west-b: logical slots: none
+   us-west-c: logical slots: none
+   at the kill: us-east holds 1718 rows, us-west 1720
+   t0=1793366899.033931045: docker kill us-west-a
+   new primary of us-west: us-west-b
+   slots on the new primary: none
+   after the writer stopped: us-west is 0 rows behind
+   rows owned by us-east: acknowledged 4451, on us-east 4452, on us-west 4452 (caught up after a further 1s)
+-- the errors in the pgcopydb log
+   2026-10-30 13:28:19.325 23 ERROR  pgsql.c:5741              Failed to consume input: SSL error: unexpected eof while reading
+   2026-10-30 13:28:19.377 21 ERROR  follow.c:1130             Subprocess apply with pid 23 has exited with error code 12
+   2026-10-30 13:28:19.378 21 ERROR  follow.c:1158             Process apply has exited with error code 12, terminating other processes
+   2026-10-30 13:28:19.529 21 ERROR  follow.c:777              Some sub-process exited with errors, see above for details
+-- the last lines of the pgcopydb log
+   2026-10-30 13:29:42.783 61 INFO   pgsql.c:5840              Reported write_lsn 0/419FB38, flush_lsn 0/4193310, replay_lsn 0/419FB38
+   2026-10-30 13:29:52.798 61 INFO   pgsql.c:5840              Reported write_lsn 0/41AD178, flush_lsn 0/419FB38, replay_lsn 0/41AD178
+   2026-10-30 13:30:02.806 61 INFO   pgsql.c:5840              Reported write_lsn 0/41B99A0, flush_lsn 0/41AD178, replay_lsn 0/41B99A0
+   2026-10-30 13:30:13.808 61 INFO   pgsql.c:5840              Reported write_lsn 0/41C46D8, flush_lsn 0/41B99A0, replay_lsn 0/41C46D8

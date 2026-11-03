@@ -1,0 +1,50 @@
+# pgcopydb, built from source at a pinned commit.
+#
+# Default pin: d02e5916a6c07eef0cd12d03426d0e543129ede1, on main (2026-10-30): it
+# includes DDL replication over logical decoding (#1064), --enable-failover and
+# the restart of the follow sub-processes (#1073), the cheap SQLite spools
+# (#1074), the primary-key lookup of REPLICA IDENTITY FULL rows (#1076) and the
+# flushed position reported to the source (#1077).
+#
+# Usage:
+#   docker build --build-arg PGVERSION=17 -t pgcopydb:demo \
+#     -f Dockerfile.pgcopydb .
+
+ARG PGVERSION=17
+FROM postgres:${PGVERSION} AS build
+
+ARG PGVERSION
+ARG PGCOPYDB_COMMIT=d02e5916a6c07eef0cd12d03426d0e543129ede1
+ARG PGCOPYDB_REF=main
+
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      build-essential bison flex git ca-certificates \
+      postgresql-server-dev-${PGVERSION} \
+      libpq-dev libssl-dev libicu-dev liblz4-dev libzstd-dev \
+      libncurses-dev libedit-dev libselinux1-dev libxml2-dev libxslt1-dev \
+      libgc-dev libkrb5-dev libnuma-dev libpam0g-dev libreadline-dev \
+      zlib1g-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /usr/src/pgcopydb
+RUN git init -q \
+ && git fetch -q https://github.com/dimitri/pgcopydb.git ${PGCOPYDB_REF} \
+ && git checkout -q ${PGCOPYDB_COMMIT}
+
+RUN make -s clean && make -s install -j"$(nproc)" BINDIR=/usr/local/bin
+
+# ---------------------------------------------------------------------------
+# run — official postgres image (for psql/libpq) plus the pgcopydb binary
+# and the runtime (non -dev) shared libraries it links against
+# ---------------------------------------------------------------------------
+FROM postgres:${PGVERSION} AS run
+
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      libgc1 libkrb5-3 libnuma1 libpam0g \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY --from=build /usr/local/bin/pgcopydb /usr/local/bin/pgcopydb
+
+ENTRYPOINT ["pgcopydb"]
