@@ -634,20 +634,10 @@ change was made, so a publication created at the handover skips every row
 committed before it existed (96 rows in the run that did it). With both in
 place, three runs end with identical ids on the two servers and no apply error.
 
-pglogical can't read that slot, because it speaks its own output plugin, so it
-takes over another way. Its subscription creates its own slot as soon as it
-exists, and we disable it right away, let pgcopydb stop at its marker, drop
-pgcopydb's slot and enable it. The slot starts before pgcopydb stops, so the
-apply worker, which starts at creation, fails on rows pgcopydb has already
-applied, six duplicate-key errors in each run before we disable it. Once enabled
-it replays from its slot, and three runs end with identical ids too.
-`pglogical.replicate_ddl_command` then carries a schema change, with the table
-name schema-qualified, which core can't.
-
 The trade-off is a handover that has to be exact, which a first copy done by core
 alone doesn't ask for. In exchange the copy runs in parallel with the
 resumable streams of pgcopydb and the source doesn't hold its WAL for it, and
-the steady link is core's, or pglogical's if we want DDL in the stream.
+the steady link is core's, with no DDL in the stream.
 
 ## When two writers do touch the same row
 
