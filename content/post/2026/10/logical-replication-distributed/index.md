@@ -128,23 +128,23 @@ miss it:
   - the standby needs `sync_replication_slots = on`, `hot_standby_feedback =
     on` and a `dbname` in its `primary_conninfo`.
 
-pg_auto_failover isn't the only way to run a region. Patroni is the other
-widely used one, and the HA of a cloud provider's managed service is a third.
-We use pg_auto_failover because we know it well, and we could contribute
-failover slots support to it while preparing this article. As far as the
-documentation says, Patroni keeps its own [permanent logical
+A region doesn't have to run on pg_auto_failover. Patroni is the other widely
+used way to run a group, and the high availability of a cloud provider's
+managed service is a third. We use pg_auto_failover because we know it well,
+and we could contribute failover slots support to it while preparing this
+article. As far as the documentation says, Patroni keeps its own [permanent logical
 slots](https://www.dbi-services.com/blog/surviving-a-patroni-failover-with-logical-replication/),
 which it creates on the leader and copies to the standbys, advancing their
 positions periodically: a mechanism older than the `failover` flag of Postgres
-17. AWS documents [slot
+17. For RDS for PostgreSQL 17 and later, AWS documents [slot
 synchronization](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Appendix.PostgreSQL.CommonDBATasks.pglogical.slot.synchronization.html)
-for RDS for PostgreSQL 17 and later, with `failover = true`,
+with `failover = true`,
 `synchronized_standby_slots` and a database name in
 `rds.logical_slot_sync_dbname`, and Azure [documents
 that](https://learn.microsoft.com/azure/reliability/reliability-postgresql-flexible-server)
 slots of a flexible server survive a failover with `sync_replication_slots` and
-`hot_standby_feedback`. Google Cloud SQL [documents
-it](https://docs.cloud.google.com/sql/docs/postgres/advanced-dr-logical-failover-slot)
+`hot_standby_feedback`. On Google Cloud SQL, it is
+[documented](https://docs.cloud.google.com/sql/docs/postgres/advanced-dr-logical-failover-slot)
 for PostgreSQL 17 and later on the Enterprise Plus edition, through its
 cross-region disaster recovery replica, with `failover = true` on the
 subscription and the replica as a synchronized standby; the pages about its
@@ -154,8 +154,9 @@ could read, from Scaleway and OVHcloud to the large ones in the US, China,
 Russia or India, and each has its own answer, so check the documentation of
 what you run before relying on it.
 
-pg_auto_failover keeps those true for you. The monitor computes the list for
-`synchronized_standby_slots` the same way it computes
+In a pg_auto_failover group, listing the standbys in
+`synchronized_standby_slots` (the second condition above) is the monitor's job.
+It computes the list the same way it computes
 `synchronous_standby_names`, as the physical slot of every failover candidate,
 and `pg_autoctl` applies it on the primary and updates it when the candidates
 change:
