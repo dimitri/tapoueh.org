@@ -417,15 +417,36 @@ the publisher first, and on a two-way link each region is both, so no order
 is safe, only a short pause is. For the same reason a rename can't be a
 rolling change here, and you do *expand, copy, switch, contract* instead.
 
-A pause is three steps. The gate closes: writers stop starting transactions,
-and the ones in flight finish. We wait for the links to drain, until every
-region holds every row the others committed, so no change made on the old schema
-is still on its way. Then we alter every primary, and reopen the gate. In the
-lab the gate is a flag file that each writer checks between two transactions.
-In production the usual gate is the pooler: PgBouncer's `PAUSE` waits for the
-running queries to finish and holds the new ones, and `RESUME` lets them go,
-so the application sees a latency bump and no error. We haven't run it behind
-PgBouncer.
+A pause is three steps, and it concerns the connections the application opens
+to the database, not the replication links: those keep running, since they are
+what we wait for. First the gate closes: the application stops starting
+transactions, and the ones in flight finish. Second, we wait for the links to
+drain, until every region holds every row the others committed, so no change
+made on the old schema is still on its way, and we alter every primary. Third,
+the gate reopens. In the lab the gate is a flag file that each writer checks
+between two transactions.
+
+{{< image src="fig-pause.svg" title="The pause happens at the central PgBouncer of the database node; the application nodes only relay to it." >}}
+
+In production the gate is a pooler, and the figure shows where it goes. One
+PgBouncer per application node, reached through a local unix domain socket,
+makes it easy to add application nodes, but each of them only relays its own
+node's connections: pausing one of them stops nothing coming from the others.
+The pause needs a central PgBouncer on the database node, where every
+connection converges. With transaction pooling, `PAUSE app` there waits for
+the running transactions to finish and holds the new ones, and `RESUME app`
+lets them go, so the application sees a latency bump and no error. The
+migration itself, like our `alter` loop below, connects to Postgres directly.
+
+PgBouncer [has proxied replication
+connections](https://www.pgbouncer.org/changelog.html) since version 1.23.0,
+and lists them as `logical` or `physical` in `SHOW CLIENTS` and `SHOW SERVERS`,
+but the documentation says little more than that. The [pull
+request](https://github.com/pgbouncer/pgbouncer/pull/876) that added them
+pairs each with one server connection and doesn't pool them. A `PAUSE` waits for session-mode
+connections to close, so a subscription behind the central PgBouncer would hold
+the pause open. Ours connect to Postgres directly, and aren't part of it. We
+haven't run any of this behind PgBouncer.
 
 The pause is the baseline, and it scales to the five-region system. After the
 failover of the previous section, we paused the four writers, ran the same
