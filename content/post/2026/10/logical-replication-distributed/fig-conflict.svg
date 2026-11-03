@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 410" role="img" aria-label="Two nodes that subscribe to each other each commit an update of the same row, A sets v to 1 and B sets v to 2, before they receive each other. The updates cross. Each node finds that the row was last changed by another origin, which core counts as update_origin_differs. Core then applies what arrives, so A ends with 2 and B with 1: they have swapped and differ. pglogical with last_update_wins keeps the later commit timestamp on both nodes, so both end with 2 and one update is lost. With keep_local each node keeps its own value, 1 and 2, they differ and nothing in the logs says so.">
+  <style>
+    text { font-family: system-ui, sans-serif; fill: #222; }
+    .title { font-size: 19px; font-weight: 700; }
+    .zone { fill: #f4f6fb; stroke: #b9c4d6; stroke-width: 1.5; }
+    .zone-label { font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em; fill: #5c6b84; }
+    .node { fill: #fff; stroke-width: 2; }
+    .n-own { stroke: #2a6fdb; }
+    .n-wh { stroke: #7a5cc2; }
+    .n-new { stroke: #2f8fae; stroke-dasharray: 5 3; }
+    .node-title { font-size: 15px; font-weight: 700; fill: #1b2230; }
+    .node-sub { font-size: 11px; fill: #5c6b84; }
+    .lbl { font-size: 11.5px; fill: #37414f; }
+    .lbl-b { font-size: 11.5px; fill: #37414f; font-weight: 700; }
+    .lg { stroke: #c2570c; stroke-width: 2.2; fill: none; marker-end: url(#m2); }
+    .lgb { stroke: #c2570c; stroke-width: 3; fill: none; marker-end: url(#m2); }
+    .pr { stroke: #37414f; stroke-width: 2; fill: none; }
+    .ok { fill: #8fd0a8; stroke: #1f7a46; stroke-width: 1.2; }
+    .bad { fill: #f2b3ab; stroke: #c0392b; stroke-width: 1.2; }
+    .warn { fill: #f6d8b8; stroke: #c2570c; stroke-width: 1.2; }
+    .idle { fill: #dfe4ee; stroke: #8a96ab; stroke-width: 1.2; }
+    .tick { stroke: #b9c4d6; stroke-width: 1; }
+    .axis { stroke: #8a96ab; stroke-width: 1.5; }
+    .ev { stroke: #37414f; stroke-width: 1.3; stroke-dasharray: 4 3; }
+    .chip { fill: #fff; stroke-width: 1.4; }
+    .c-core { stroke: #2a6fdb; } .c-paf { stroke: #7a5cc2; } .c-you { stroke: #c2570c; stroke-dasharray: 5 3; }
+    .band-core { fill: #eaf1fd; stroke: #2a6fdb; stroke-width: 1.5; }
+    .band-paf { fill: #f1ecfb; stroke: #7a5cc2; stroke-width: 1.5; }
+    .band-you { fill: #fdf0e6; stroke: #c2570c; stroke-width: 1.5; stroke-dasharray: 6 4; }
+    .badt { font-size: 11.5px; font-weight: 700; fill: #c0392b; }
+    .okt { font-size: 11.5px; font-weight: 700; fill: #1f7a46; }
+    .num { font-size: 12px; font-weight: 700; fill: #fff; }
+    .numc { fill: #c2570c; }
+    @media (prefers-color-scheme: dark) {
+      text { fill: #e8e8e8; }
+      .zone { fill: #1b2130; stroke: #4a5873; } .zone-label { fill: #9aa8c2; }
+      .node { fill: #1d2129; } .n-own { stroke: #6ea8ff; } .n-wh { stroke: #b39af0; } .n-new { stroke: #5fb8d6; }
+      .node-title { fill: #f0f0f0; } .node-sub { fill: #aab2c2; }
+      .lbl, .lbl-b { fill: #c3cadb; }
+      .lg, .lgb { stroke: #ff9a57; } .pr { stroke: #c3cadb; }
+      .ok { fill: #1f4a33; stroke: #6fd69b; } .bad { fill: #5a2822; stroke: #ff7b6b; }
+      .warn { fill: #4a3320; stroke: #ff9a57; } .idle { fill: #2a303c; stroke: #6b7790; }
+      .tick { stroke: #3b465b; } .axis { stroke: #6b7790; } .ev { stroke: #c3cadb; }
+      .chip { fill: #1d2129; } .c-core { stroke: #6ea8ff; } .c-paf { stroke: #b39af0; } .c-you { stroke: #ff9a57; }
+      .band-core { fill: #1b2638; stroke: #6ea8ff; } .band-paf { fill: #251f36; stroke: #b39af0; } .band-you { fill: #33241a; stroke: #ff9a57; }
+      .badt { fill: #ff7b6b; } .okt { fill: #6fd69b; } .numc { fill: #ff9a57; } .num { fill: #1d2129; }
+    }
+  </style>
+  <defs>
+    <marker id="m2" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#c2570c"/></marker>
+  </defs>
+  <text class="title" x="30" y="32" text-anchor="start">Two writers update the same row before they see each other</text>
+  <rect class="zone" x="60" y="56" width="300" height="150" rx="10"/>
+  <text class="zone-label" x="76" y="78" text-anchor="start">NODE A</text>
+  <rect class="zone" x="640" y="56" width="300" height="150" rx="10"/>
+  <text class="zone-label" x="656" y="78" text-anchor="start">NODE B</text>
+  <text class="node-sub" x="210" y="104" text-anchor="middle">row 7: v = 0</text>
+  <text class="node-sub" x="790" y="104" text-anchor="middle">row 7: v = 0</text>
+  <rect class="node n-own" x="100" y="116" width="220" height="28" rx="6"/>
+  <text class="lbl-b" x="210" y="135" text-anchor="middle">update v = 1, commits locally</text>
+  <rect class="node n-own" x="680" y="116" width="220" height="28" rx="6"/>
+  <text class="lbl-b" x="790" y="135" text-anchor="middle">update v = 2, commits locally</text>
+  <path class="lg" d="M322 130 L636 176"/>
+  <text class="lbl" x="410" y="146" text-anchor="middle">row 7: v = 1</text>
+  <path class="lg" d="M678 130 L364 176"/>
+  <text class="lbl" x="590" y="164" text-anchor="middle">row 7: v = 2</text>
+  <rect class="node n-new" x="100" y="170" width="220" height="28" rx="6"/>
+  <text class="lbl-b" x="210" y="189" text-anchor="middle">receives v = 2</text>
+  <rect class="node n-new" x="680" y="170" width="220" height="28" rx="6"/>
+  <text class="lbl-b" x="790" y="189" text-anchor="middle">receives v = 1</text>
+  <text class="lbl" x="500" y="218" text-anchor="middle">Each node finds the row last changed by another origin: core counts it as update_origin_differs.</text>
+  <rect class="bad" x="30" y="244" width="290" height="136" rx="10"/>
+  <text class="lbl-b" x="44" y="268" text-anchor="start">Core applies what arrives</text>
+  <text class="lbl" x="44" y="286" text-anchor="start">and counts the conflict</text>
+  <text class="lbl-b" x="44" y="326" text-anchor="start">node A: v = 2</text>
+  <text class="lbl-b" x="190" y="326" text-anchor="start">node B: v = 1</text>
+  <text class="lbl-b" x="44" y="360" text-anchor="start">swapped: they differ</text>
+  <rect class="ok" x="355" y="244" width="290" height="136" rx="10"/>
+  <text class="lbl-b" x="369" y="268" text-anchor="start">pglogical last_update_wins</text>
+  <text class="lbl" x="369" y="286" text-anchor="start">the later commit timestamp wins</text>
+  <text class="lbl-b" x="369" y="326" text-anchor="start">node A: v = 2</text>
+  <text class="lbl-b" x="515" y="326" text-anchor="start">node B: v = 2</text>
+  <text class="lbl-b" x="369" y="360" text-anchor="start">same value, one update lost</text>
+  <rect class="warn" x="680" y="244" width="290" height="136" rx="10"/>
+  <text class="lbl-b" x="694" y="268" text-anchor="start">pglogical keep_local</text>
+  <text class="lbl" x="694" y="286" text-anchor="start">each node keeps its own value</text>
+  <text class="lbl-b" x="694" y="326" text-anchor="start">node A: v = 1</text>
+  <text class="lbl-b" x="840" y="326" text-anchor="start">node B: v = 2</text>
+  <text class="lbl-b" x="694" y="360" text-anchor="start">differ, and nothing says so</text>
+
+</svg>

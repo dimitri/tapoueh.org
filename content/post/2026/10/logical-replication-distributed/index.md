@@ -1,6 +1,6 @@
 +++
 title     = "Postgres logical replication beyond one writer"
-date      = "2026-10-27T09:00:00+0100"
+date      = "2026-11-03T14:50:00+0100"
 tags      = ["PostgreSQL", "Replication", "Logical Decoding", "Architecture"]
 categories = ["PostgreSQL", "Architecture"]
 icon      = "🐘"
@@ -127,6 +127,25 @@ miss it:
     promoted, or the gate never applied to the new primary;
   - the standby needs `sync_replication_slots = on`, `hot_standby_feedback =
     on` and a `dbname` in its `primary_conninfo`.
+
+pg_auto_failover isn't the only way to run a region. Patroni is the other
+widely used one, and the HA of a cloud provider's managed service is a third.
+We use pg_auto_failover because we know it well, and we could contribute
+failover slots support to it while preparing this article. As far as the
+documentation says, Patroni keeps its own [permanent logical
+slots](https://www.dbi-services.com/blog/surviving-a-patroni-failover-with-logical-replication/),
+which it creates on the leader and copies to the standbys, advancing their
+positions periodically: a mechanism older than the `failover` flag of Postgres
+17. AWS documents [slot
+synchronization](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Appendix.PostgreSQL.CommonDBATasks.pglogical.slot.synchronization.html)
+for RDS for PostgreSQL 17 and later, with `failover = true`,
+`synchronized_standby_slots` and a database name in
+`rds.logical_slot_sync_dbname`, and Azure [documents
+that](https://learn.microsoft.com/azure/reliability/reliability-postgresql-flexible-server)
+slots of a flexible server survive a failover with `sync_replication_slots` and
+`hot_standby_feedback`. We haven't tested any of them, and we haven't looked at
+Google Cloud SQL, so check the documentation of what you run before relying on
+it.
 
 pg_auto_failover keeps those true for you. The monitor computes the list for
 `synchronized_standby_slots` the same way it computes
@@ -362,6 +381,16 @@ the publisher first, and on a two-way link each region is both, so no order
 is safe, only a short pause is. For the same reason a rename can't be a
 rolling change here, and you do *expand, copy, switch, contract* instead.
 
+A pause is three steps. The gate closes: writers stop starting transactions,
+and the ones in flight finish. We wait for the links to drain, until every
+region holds every row the others committed, so no change made on the old schema
+is still on its way. Then we alter every primary, and reopen the gate. In the
+lab the gate is a flag file that each writer checks between two transactions.
+In production the usual gate is the pooler: PgBouncer's `PAUSE` waits for the
+running queries to finish and holds the new ones, and `RESUME` lets them go,
+so the application sees a latency bump and no error. We haven't run it behind
+PgBouncer.
+
 The pause is the baseline, and it scales to the five-region system. After the
 failover of the previous section, we paused the four writers, ran the same
 statement on the five primaries one after the other, and resumed them:
@@ -513,10 +542,64 @@ over several of them and remembers which tables are done. It runs between the
 two servers, and writes every change twice, to a SQLite file and to the target,
 so we'd keep it for the copy and not for the steady links.
 
+Can it do the copy and hand the stream over to core, so that the source doesn't
+keep the WAL of a long copy and the steady link stays in-core? It can, with
+care. pgcopydb receives the changes while it copies and spools them to files on
+its own host, so the source recycles its WAL during the copy. We ran it with a
+writer inserting 50 rows a second: `pgcopydb clone --follow --plugin pgoutput`
+copied 300,000 rows and followed, we stopped it at a marker with `pgcopydb
+stream sentinel set endpos --current`, and a core subscription took over its
+slot and its publication:
+
+~~~ sql
+-- on the target, once pgcopydb has stopped and applied what it had spooled, up to :lsn
+create subscription takeover
+  connection 'host=e-w1 dbname=app user=postgres'
+  publication handover                     -- the publication pgcopydb created
+  with (create_slot = false, slot_name = 'handover',
+        copy_data = false, enabled = false);
+
+select pg_replication_origin_advance('pg_' || oid, :'lsn')
+  from pg_subscription where subname = 'takeover';
+
+alter subscription takeover enable;
+~~~
+
+Two details decide whether rows survive. pgcopydb confirms to the source what
+its receiver has spooled, not what its applier has written, so right after it
+stops the slot is a few seconds ahead of the target. A second pass, `pgcopydb
+follow --resume --not-consistent --endpos` with the slot's `confirmed_flush_lsn`,
+applies that spool, and that position is the one to give
+`pg_replication_origin_advance`. And the publication must be pgcopydb's:
+`pgoutput` decides what to send with the publications as they were when the
+change was made, so a publication created at the handover skips every row
+committed before it existed (96 rows in the run that did it). With both in
+place, three runs end with identical ids on the two servers and no apply error.
+
+pglogical can't read that slot, because it speaks its own output plugin, so it
+takes over another way. Its subscription creates its own slot as soon as it
+exists, and we disable it right away, let pgcopydb stop at its marker, drop
+pgcopydb's slot and enable it. The slot starts before pgcopydb stops, so the
+apply worker, which starts at creation, fails on rows pgcopydb has already
+applied, six duplicate-key errors in each run before we disable it. Once enabled
+it replays from its slot, and three runs end with identical ids too.
+`pglogical.replicate_ddl_command` then carries a schema change, with the table
+name schema-qualified, which core can't.
+
+The trade-off is a handover that has to be exact, which a first copy done by core
+alone doesn't ask for. In exchange the copy runs in parallel with the
+resumable streams of pgcopydb and the source doesn't hold its WAL for it, and
+the steady link is core's, or pglogical's if we want DDL in the stream.
+
 ## When two writers do touch the same row
 
 Not every schema can be split by owner. A reference table that every region
-edits is the usual counterexample, and then conflicts are real. We ran two
+edits is the usual counterexample, and then conflicts are real. Here is what can
+happen to one row:
+
+{{< image src="fig-conflict.svg" title="Two writers, one row: what each policy leaves behind." >}}
+
+We ran two
 nodes subscribed to each other, with four clients per node updating the same
 1,000 keys at 2,000 transactions a second per node for 15 seconds, about 60,000
 updates, three runs each.

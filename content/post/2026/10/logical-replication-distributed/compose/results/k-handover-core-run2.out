@@ -1,0 +1,20 @@
+== core: pgcopydb copies 300000 rows and follows, then core takes over, a writer inserting meanwhile ==
+-- pgcopydb has copied 300000 rows and caught up after 2 s: source 300274 rows, target 300280 rows
+-- slot on the source while pgcopydb follows
+   handover (pgoutput), confirmed_flush_lsn 0/5DB9FC8, current 0/5DBFFF8
+== stop pgcopydb at a marker ==
+   endpos 0/5DC06C0
+   pgcopydb exited
+   the slot's confirmed_flush_lsn is 0/5DDDEB0, the last transaction pgcopydb applied is at 0/5DC0670
+   (pgcopydb confirms what its receiver has spooled, and the applier is behind it)
+== apply what pgcopydb has received, up to the slot's position ==
+   last transaction applied: 0/5DDDEB0, slot's confirmed_flush_lsn: 0/5DDDEB0
+== core subscription on pgcopydb's slot and publication, its origin moved to 0/5DDDEB0 ==
+== the writer finishes, then both servers must hold the same rows ==
+   identical 1 s after the writer stopped
+   source: 304049 rows, ids 1 to 304049, digest 7da5acd87ab99cc7eba3bfb429e5136e
+   target: 304049 rows, ids 1 to 304049, digest 7da5acd87ab99cc7eba3bfb429e5136e
+-- subscription errors
+   apply_error_count=0 sync_error_count=0
+-- the slot
+   handover active=true failover=false

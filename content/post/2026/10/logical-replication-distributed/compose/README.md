@@ -1,7 +1,7 @@
 # Part 4 demo — compose/
 
 Same pattern as parts 1 through 3: `docker-compose.yml` with profile-gated
-containers, `run-*.sh` scripts, `results/`. Profiles **a** through **j**
+containers, `run-*.sh` scripts, `results/`. Profiles **a** through **k**
 have been built and run.
 
 ## One group per region
@@ -140,6 +140,16 @@ Re-pin before running this again — `main` moves.
   upserts, with `RETAIN=on` setting `retain_dead_tuples` on both
   subscriptions (Postgres 19). It prints whether the nodes converged, how
   many rows differ, and the conflicts `pg_stat_subscription_stats` counted.
+- **k** — a first copy by pgcopydb, then a handover to a subscription of the
+  long-lived tools, with a writer inserting 50 rows a second on `e-w1` (the
+  source) and `e-w2` (the target) of profile e. `./reset-e.sh && ./run-k.sh core`
+  stops `pgcopydb clone --follow --plugin pgoutput` at a marker, applies what
+  its receiver had spooled, and starts a core subscription on pgcopydb's slot
+  and publication with the origin moved to that position. `./run-k.sh pglogical`
+  creates a pglogical subscription (and its slot) before pgcopydb stops, drops
+  pgcopydb's slot and enables it, then runs `replicate_ddl_command`. Both compare
+  the ids and a digest of the two servers. `PRELOAD` sets the rows copied (300,000),
+  `SECS` the writer's duration, `RUN=<n>` names `results/k-handover-<method>-run<n>.out`.
 
 ## Running it
 
@@ -151,6 +161,7 @@ docker compose --profile d --profile e build        # pgcopydb, e-hub
 ./run-f.sh east                                     # also: west
 ./run-i.sh cascade                                  # also: join
 ./run-j.sh updates                                  # J_IMAGE=postgres:19rc1, also: mixed
+./reset-e.sh && ./run-k.sh core                     # also: pglogical
 ./run-g.sh core                                     # also: pgcopydb (build pgcopydb-g first)
 ./run-d.sh                                          # after ./reset-d.sh && COMPOSE_PROFILES=d docker compose up -d --wait
 ./reset-e.sh && ./run-e.sh findings && ./run-e.sh concurrent
