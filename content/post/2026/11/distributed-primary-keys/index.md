@@ -32,6 +32,8 @@ What is already on the site, to cite and not to repeat:
     as an assertion that no article here measures.
 
 What is not on the site yet, and is the reason for this article:
+  - the 32-bit wall of serial and int identity columns (measured on 19rc1,
+    sql/10-serial-limits.sql and its results/ file);
   - index size, insert rate, WAL volume, full-page images and buffers touched,
     per candidate key, on one server and in the five-region lab;
   - the cost of a wide key in a child table, measured and not just described;
@@ -85,6 +87,81 @@ we only use it.
   already satisfied; for a single-column key it needs a second index, which
   is a cost we count.
 - **Stay cheap to index and to join on**, since every child table repeats it.
+
+## The 32-bit wall
+
+Before comparing keys, the one failure that has nothing to do with regions and
+that every candidate below can hit: a key stored on 32 bits. `serial` is the
+familiar way to get one, and the width of the column and the width of the
+sequence behind it are two separate things. We looked at what Postgres 19 release
+candidate 1 builds for each way of writing an auto-numbered column:
+
+~~~ sql
+create table t_serial    (id serial primary key);
+create table t_bigserial (id bigserial primary key);
+create table t_ident     (id int    generated always as identity primary key);
+create table t_identbig  (id bigint generated always as identity primary key);
+
+create sequence s_plain;
+create table t_plain     (id int primary key default nextval('s_plain'));
+~~~
+
+~~~ results
+    table    | column_type | sequence_type |    sequence_max
+-------------+-------------+---------------+---------------------
+ t_bigserial | bigint      | bigint        | 9223372036854775807
+ t_ident     | integer     | integer       |          2147483647
+ t_identbig  | bigint      | bigint        | 9223372036854775807
+ t_plain     | integer     | bigint        | 9223372036854775807
+ t_serial    | integer     | integer       |          2147483647
+~~~
+
+A `serial` or an `int` identity column gets a sequence of its own width, which
+stops at 2,147,483,647 with a clear message, before it hands out anything the
+column can't hold:
+
+~~~ results
+ERROR:  nextval: reached maximum value of sequence "t_serial_id_seq" (2147483647)
+~~~
+
+The dangerous one is the last kind: a sequence created on its own, which is
+`bigint` unless we say otherwise, used as the default of an `int` column. The
+sequence goes on, and the column is the one that stops:
+
+~~~ results
+ERROR:  integer out of range
+ERROR:  integer out of range
+ last_value
+------------
+ 2147483649
+~~~
+
+Every failed insert took a value from the sequence anyway, so the sequence
+is already two past the wall after two attempts, and nothing in the error says
+which side to look at. Sequences are not transactional, so a rollback gives
+nothing back either: an application that retries a failing insert in a loop
+moves the sequence faster than it adds rows.
+
+In a system with several writers the wall comes closer than the table size
+suggests. A sequence per region with a step of 10 spends 10 values for each row
+it keeps, which leaves 214,748,364 rows per region before the wall, about 25
+days of a writer doing 100 inserts a second. With `(region, id)` the wall is
+per region and the step is 1, but it's the same wall. Widening a column later
+rewrites the table, and every foreign key that points at it has to follow,
+which is the pause of Part 4, for a mistake that's cheaper to avoid on the first
+day: use `bigint`, and `generated always as identity` over `serial`.
+
+<!-- TODO: run the widening in the lab, with a row-filtered link in both
+     directions. DDL isn't replicated, so the order matters: which side first,
+     what a subscriber with an int column does when a bigint arrives that
+     doesn't fit, and how long the rewrite blocks writers on a table of N
+     million rows. Part 1 and Part 4 have the order rule for DDL on core. -->
+
+<!-- TODO: check the older databases. The AS clause of CREATE SEQUENCE is
+     from Postgres 10; the claim to confirm, on a cluster that went through
+     pg_upgrade, is that a serial column created before it still has a bigint
+     sequence behind it, which is the dangerous combination above, found in
+     the wild instead of built by hand. -->
 
 ## Four candidates
 
