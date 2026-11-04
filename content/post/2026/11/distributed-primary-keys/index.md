@@ -181,6 +181,87 @@ day: use `bigint`, and `generated always as identity` over `serial`.
      counter, as an SQL function: the shape of the snowflakeid kind that Part 1
      mentions for EDB Postgres Distributed. Say whether it earns its place. -->
 
+### `uuidv7()` before Postgres 18
+
+The built-in `uuidv7()` arrived with Postgres 18, and the regions of a system
+don't all upgrade on the same day. The function is short enough to write in SQL:
+take a random v4 uuid, overwrite its first 48 bits with the Unix time in
+milliseconds, and set the version nibble to 7. The variant bits that
+`gen_random_uuid()` already put there are the right ones for
+[RFC 9562](https://www.rfc-editor.org/rfc/rfc9562).
+
+~~~ sql
+create function public.uuidv7() returns uuid
+    language sql volatile parallel safe
+as $$
+    select encode(
+        set_bit(
+            set_bit(
+                overlay(uuid_send(gen_random_uuid())
+                        placing substring(int8send((extract(epoch from clock_timestamp()) * 1000)::bigint) from 3)
+                        from 1 for 6),
+                52, 1),
+            53, 1),
+        'hex')::uuid
+$$;
+~~~
+
+`gen_random_uuid()` is built in from Postgres 13; before that, `pgcrypto` has
+it. We ran the script on 13, 17 and 19rc1. On every one the version nibble is 7,
+the variant is `8`, `9`, `a` or `b`, and the 48 bits read back as the current
+time:
+
+~~~ results
+ version | rfc_variant | clock_within_1s
+---------+-------------+-----------------
+ 7       | t           | t
+~~~
+
+Two differences with the built-in one are worth knowing. We generated a million
+ids in a single statement and counted how many are smaller than the one before:
+
+| | ids smaller than the previous one | time for 1,000,000 ids (19rc1) |
+|---|---|---|
+| SQL function | about 500,000 on 13, 17 and 19rc1 | 810 ms |
+| built-in `uuidv7()` | 0 | 472 ms |
+
+The SQL function fills everything after the millisecond with random bits, so
+two ids made in the same millisecond come out in random order. A million ids in
+under a second is a thousand or so per millisecond, which is why half of them
+are out of order. Across milliseconds the order holds, and that's what the
+index cares about: new keys land in the pages of the last few milliseconds,
+not anywhere in the tree. The built-in function spends 12 bits on the
+sub-millisecond fraction and stays ordered inside a session; we'd only notice
+the difference if something sorts on the key to recover the insert order of
+one session.
+
+The name needs no care at the upgrade. The function lives in `public`, and an
+unqualified `uuidv7()` finds `pg_catalog` first, so on 19rc1, with both defined,
+the plan shows the built-in one:
+
+~~~ results
+ Result
+   Output: uuidv7()
+~~~
+
+A call written as `public.uuidv7()` keeps running the SQL one. We drop the
+function once every region runs 18 or later.
+
+<!-- TODO: a column default is stored against the function that was resolved
+     when it was created. Check what a dump and restore, a pg_upgrade and a
+     logical copy each do with `default uuidv7()` created on 17, so the
+     article can say whether the defaults switch to the built-in by
+     themselves or need an ALTER ... SET DEFAULT. -->
+
+<!-- Sources: sql/20-uuidv7-sql.sql, sql/21-uuidv7-native.sql, results/20-*.out.
+     The function is adapted from the one in TAOP's download-tracking
+     migration (internal/db/migrations/0001_init.sql). NB: the TAOP course
+     text 2-1-uuid-gen.sql and the generated page say uuidv7() came with
+     Postgres 17; it came with 18. -->
+
+<!-- TODO: a uuidv7 value reveals when a row was created, to the millisecond.
+     One sentence, when the key is exposed in URLs. -->
+
 ## What each one costs on one server
 
 <!-- TODO: single-node run first, so it can be compared with the multi-region
