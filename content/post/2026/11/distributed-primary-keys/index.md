@@ -897,6 +897,29 @@ the clock keys are the ones that need the clocks of a region's nodes to agree
 to better than the time a switchover takes, and a switchover is the case that
 gives the least room.
 
+**After more than 16 timelines.** The 4 timeline bits of `regionseq` wrap at 16, so we ran 20 switchovers one after the other under writes (`SWITCHES=20`,
+`results/132-pgaf-20-switchovers.out`), the primary alternating between the
+nodes and node 2's clock 5 seconds behind. The timeline went from 1 to 21, and
+the timeline bits of the ids, in the order they were made, were `1 2 3 4 5 6 7 8 9
+10 11 12 13 14 15 0 1 2 3 4 5`. Over 3,882,000 ids acknowledged in 20 pauses of
+the writes, no batch was refused on a duplicate key, no id was lower than one
+made before, no acknowledged row was missing, and the subscriber ended with the
+same 3,882,000 rows. The wrap changes nothing here because the ids stay unique
+and increasing through the state, which the standby has, and the timeline bits are
+only the second line of defence for a standby that doesn't: a repeat needs a
+stale standby, a clock behind and 16 promotions of the region inside that
+window, which we argue and didn't run.
+
+The run showed something about the other half of the topology. With 2 seconds
+between two switchovers the logical slot was gone after the second one
+(`replication slot "sub" does not exist` on both nodes), and the subscription
+had to be recreated: the demoted node hadn't had time to receive the slot from
+the new primary, and the next promotion went to a node without it. With 30
+seconds between switchovers the slot was on both nodes, `synced=true`, after all
+20. We didn't look for the shortest safe pause, and a rolling maintenance that
+switches over in quick succession should check that the slot is on the standby
+before the next one.
+
 ### Regions whose clocks differ
 
 Three regions, region 0 on time, region 1 ahead and region 2 behind by 0, 50 ms
@@ -979,6 +1002,9 @@ ranges handed out by consensus or gapless numbers, which we didn't test.
   3 seconds only.
 - **Other uses of a sequence access method:** ranges handed out by consensus,
   gapless numbers, pseudo-random sequences.
+- **The wrap of the timeline bits where it would matter,** a stale standby and a
+  clock behind after 16 promotions, and the shortest pause between switchovers that
+  keeps a failover slot.
 - **A larger pg_auto_failover formation.** The drill is one region of two nodes
   and one subscriber, one run per cell, with the clock skew on the promoted node
   from libfaketime. Three nodes, priorities, a planned switchover, and a
