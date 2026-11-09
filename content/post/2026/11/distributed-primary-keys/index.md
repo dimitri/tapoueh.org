@@ -823,10 +823,14 @@ cut off the mark is old, and with a clock behind the ids go below what the old
 primary made. Our first version, without the timeline bits, repeated 48,510 ids
 in that line, 24% of the new ones, which is why the bits are there: the ids of
 the new timeline differ, so uniqueness no longer depends on the standby having
-the WAL, and only the increasing order does. In the topology of Part 4 it does:
+the WAL, and only the increasing order does. In the topology of Part 4 it should:
 `synchronized_standby_slots` doesn't let another region see a row that the
-standby doesn't have. A plain sequence per region has the same dependency, for
-the same reason, and no clock.
+standby doesn't have. We didn't run that topology here: the failovers of this
+article are a physical standby promoted by hand (`pg_promote()`) after a
+`docker kill`, with no logical replication, no failover slots and no
+pg_auto_failover, so the claim is Part 4's and an argument from the WAL order.
+A plain sequence per region has the same dependency, for the same reason, and
+no clock.
 
 ### Regions whose clocks differ
 
