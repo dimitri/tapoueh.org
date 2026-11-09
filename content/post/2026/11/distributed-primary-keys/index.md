@@ -9,9 +9,8 @@ icon      = "🔑"
 <!--
 Lab: compose/ has one script per experiment (README.md), sql/ the SQL scripts,
 results/ the output of every run quoted below. Servers are postgres:19rc1
-containers on tmpfs, except where a section says otherwise (the sequence access
-method section runs a build of the v29 patches, compose/seqam/, and the
-extension/ directory: our own sequence access method, built into it).
+containers on tmpfs, except in the last section, which runs a build of the
+sequence access method patches (compose/seqam/) with our extension/ built in.
 
 Already on the site, cited and not repeated: Part 1 ("Minting ids on the
 workers"), Part 4, the consolidation article, and the 2018 "Database
@@ -49,26 +48,25 @@ What we found, in short:
   27% larger. A `uuidv7()` index behaves like a sequence's.
 - **Across regions, every key we tried converged without a collision.** They
   differ in price. A composite `(region, id)` repeats 10 to 16 bytes in every
-  table that points at it, and a single-column key needs a second index to be
-  filtered by region, which is about 85 bytes of WAL per row.
+  table that points at it, and a uuid needs a second index to be filtered by
+  region, which is about 85 bytes of WAL per row. A `bigint` that holds the
+  region in its bits is filtered on the key alone.
 - **A per-region sequence is state that a failover can rewind.** Promoted from
   a lagging standby, it hands out numbers that were already used. A UUID has no
   such state.
 - **A key made from the clock repeats if the clock goes back.** A `bigint` of
   milliseconds and a counter survived every failover we ran, and failed 0.2% to
   0.3% of its transactions when the clock stepped back 2 seconds. A `uuidv7()`
-  didn't, and neither did a sequence access method of ours that keeps the last
-  millisecond (`extension/`).
-- **The region can be read from the key.** With the region in the bits of a
-  `bigint`, a publication filters on `((id >> 18) & 15) = 1` with the primary
-  key as replica identity, and the second index above isn't needed.
+  didn't.
 - **`uuidv7()` stays cheap while the clocks of the regions agree to within a few
   milliseconds.** With 50 ms of skew its index was up to 55% bigger.
 - **Whatever the key, 32 bits is a wall.** `serial` and `int` identity columns
   stop at 2,147,483,647, and a `serial` column made before Postgres 10 can hide
   a `bigint` sequence behind an `int` column.
 
-The last section is a table that says which key to use when.
+The last sections are a table that says which key to use when, and whether
+Postgres would need a sequence access method for it: we wrote one, and it isn't
+needed.
 
 ## What a key has to do here
 
@@ -205,19 +203,16 @@ For a random uuid the two indexes both receive writes at random, and the 500,000
 rows after a checkpoint cost 477 MB of WAL, 954 bytes each, five times the row
 with a sequence.
 
-The time, region and counter `bigint` doesn't have to pay it, though, and we
-only saw that after the section on sequence access methods below. Its region is
-in its bits, and a row filter may use the operators that read them, which are
+The time, region and counter `bigint` doesn't have to pay it, though. Its region
+is in its bits, and a row filter may use the operators that read them, which are
 built in, on the key alone: `where ((id >> 18) & 15) = 1`. With the primary key
 as the replica identity, one index on the table and no `region` column in the
 filter, a publisher of region 1 that inserted 1,000 rows of its own and 1,000
 of region 2, then updated and deleted 100 and 50 of each, sent the subscriber
 the rows of region 1 only, the updates and the deletes included, with no apply
-error (`results/111-region-filter-expression.out`; the extension's ids, with the
-region in bits 16 to 21, do the same in `results/111-region-filter-regionseq.out`).
-So the line "Time, region, counter" of the table above is the price of filtering
-on a `region` column, and the bits make it unnecessary; a `uuidv7()` has no
-such bits, and pays.
+error (`results/111-region-filter-expression.out`). So the line "Time, region,
+counter" of the table above is the price of filtering on a `region` column, and
+the bits make it unnecessary; a `uuidv7()` has no such bits, and pays.
 
 ## What each one costs across regions
 
@@ -434,239 +429,6 @@ by consensus and a snowflake kind. Our time, region and counter `bigint` has the
 same shape, with 4 bits of region and 18 of counter, and it's an expression in
 the column default instead of an extension to install. The pgEdge page gives no
 measurements.
-
-## Sequence access methods: the patches that never landed
-
-Postgres has no hook for how a sequence computes its next value. Two patch
-sets tried to add one, with the same aim: let a `serial` or identity column be
-fed by something other than a counter, and so give distributed systems globally
-unique ids without an expression in every column default.
-
-The first one, SeqAM, began in January 2013 on pgsql-hackers, from Simon Riggs,
-with a `CREATE SEQUENCE ... USING` clause, a `pg_seqam` catalog and a built-in
-`local` method, for clustering.
-[The thread](https://postgrespro.com/list/thread-id/1814639) shows where it
-caught: Heikki Linnakangas objected in November 2013 that the API leaked the
-on-disk format and the WAL records to the plugin, and wanted the backend to keep
-caching and logging with the plugin only allocating values; Andres Freund
-answered that BDR had built distributed sequences on exactly that API. Petr
-Jelinek rewrote it around Heikki's allocation callback in 2014, Heikki asked for
-a second, real method to test the API against, and [the CommitFest
-entry](https://commitfest.postgresql.org/patch/44/) was returned with feedback
-in February and again in July 2015. In August 2016 Petr wrote that he wouldn't
-revive it [until there was built-in logical
-replication](https://postgrespro.com/list/thread-id/1899415), and Peter
-Eisentraut's `pg_sequence` catalog, which removed the properties from the
-sequence's heap, was committed that December.
-
-The second, ["Sequence Access Methods, round
-two"](https://commitfest.postgresql.org/patch/4677/), is Michael Paquier's, from
-December 2023, built on that catalog: a sequence AM may store nothing, or keep
-its state in any table AM, with its own WAL if it wants; the built-in behaviour
-becomes a `local` method; `default_sequence_access_method` picks the method for
-`serial` and identity columns; and `pg_dump` reads sequences through
-`pg_sequence_last_value()` instead of their heap. Some of its refactoring parts
-were committed, in February 2024 and August 2025, and the rest went through 29
-versions and twelve CommitFests. The reviews asked for the use case before the
-code: Peter Eisentraut asked for more than two lines of use cases, and for a real
-implementation instead of a dummy module, and Tomas Vondra doubted that
-active-active systems want this at all, since they mostly pick UUIDs. The 2024
-pgconf.dev unconference reached no consensus, and in a poll about half of the
-answers found 64-bit values enough. The entry was closed as returned with
-feedback on 2026-02-27, and on 2026-05-16, after a v29 and a benchmark from
-Andrei Lepikhov, Paquier wrote that he had dropped the series from the
-CommitFest: little enthusiasm, and "zero feedback" from other core developers.
-What the threads show missing, in both rounds, is a use case with a committer
-behind it. The multi-region key of this article is one, so we ran the v29
-patches (`compose/seqam/Dockerfile` builds the Postgres master of 2026-05-14
-with them, without assertions; its `snowflake` and core regression suites pass)
-and then wrote a method of our own for it.
-
-### The method in the patches: `snowflake`
-
-The set includes a `contrib/snowflake` method, the demonstration of the API. It
-makes a Snowflake id, the layout that Twitter published in 2010: 64 bits, the
-sign unused, so 63 are left for 41 bits of milliseconds, 10 of a machine number
-and 12 of a counter. The state of the sequence is one 16-bit counter in a
-one-row unlogged relation, and `nextval` does this:
-
-1. lock the page of that relation;
-2. add 1 to the counter; if it passes 4,095, set it back to 1 and sleep for 1 ms;
-3. read the clock in milliseconds;
-4. put the milliseconds, the machine number from the superuser setting
-   `snowflake.machine_id` (0 to 1,023, default 1) and the counter together;
-5. write the counter back and unlock.
-
-Two ids differ if they come from different machines, or from different
-milliseconds, or have different counters, and the sleep is what keeps the third
-true: after 4,095 ids at least a millisecond has passed, so the counter can't
-come round to the same value within one. A machine can make 4,096 ids per
-millisecond, 4.1 million a second. Nothing is written to the WAL.
-
-Run on the lab, it did what it says, and showed what a demonstration leaves out
-(`results/101-seqam-func.out`):
-
-- *Columns narrower than 64 bits.* An `int` identity column gets a sequence
-  typed `integer` with maximum 2,147,483,647, which the method doesn't look at:
-  `nextval` returns the 64-bit id and the column keeps its low 32 bits, without
-  an error. The first row held -1237315582, and a duplicate key stopped the
-  inserts after 634,724 rows. A `smallint` column stopped after 4,094. A plain
-  sequence says `nextval: reached maximum value` instead.
-- *`MAXVALUE`* isn't enforced either. After `MAXVALUE 100` the sequence went on
-  to hand out 64-bit ids, and a `pg_dump` taken once the counter was past 100
-  doesn't restore: `setval: value 151 is out of bounds for sequence "sf"
-  (1..100)`.
-- *The machine number* is a setting of the session, with 1 as its default, and
-  nothing checks that two servers differ (the mesh below).
-- *The clock set back* isn't handled, and a clock that is a few milliseconds
-  behind repeats ids (the table below).
-- *Speed.* The page is locked exclusively for the whole call, the clock is read
-  inside the lock, and the 1 ms sleep happens inside it too: a million `nextval`
-  take about 620 ms in one session against 145 for a plain sequence, and at
-  least 244 ms of that are the sleeps. 1.3 million values a second whether 1, 4
-  or 16 clients ask (`results/105-seqam-scale.out`).
-
-Dump and restore otherwise work, and a crash (`kill -9` of the checkpointer)
-resets the counter to 1 with ids that are still higher, because the time is.
-
-### A method of our own: `regionseq`
-
-The `extension/` directory of this article is a sequence access method for the
-multi-region key, written against the same API and shipped as an extension: a
-`Makefile` that uses PGXS, a control file, a SQL script, 527 lines of C, a
-regression test and a README. The Dockerfile builds it out of tree, the way a
-user would, against the patched server that is installed. What it keeps from the
-`snowflake` method is the layout idea, 41 bits of milliseconds then the region
-then a counter; the rest answers what the run above found.
-
-The id is 63 bits, from the top: 41 of milliseconds since 2026-01-01 (until
-2095), 6 of region number, 16 of counter. The region comes from
-`regionseq.region_id`, a setting that is fixed for the life of the server and
-has no default: until it is set, `nextval` fails, and without
-`shared_preload_libraries = 'regionseq'` the sequence can't be used at all. The
-state is the last millisecond and counter handed out, and `nextval` does this,
-with the page locked:
-
-~~~ c
-now = clock_ms()
-if now > last_ms:   ms = now;      counter = 0           # the clock moved on
-else:               ms = last_ms;  counter = counter + 1 # same millisecond, or the clock went back
-                    if counter > 65535: ms = ms + 1; counter = 0   # take the next ms, don't wait for it
-if last_ms - now > regionseq.max_clock_regression: error # 60 s by default
-if (region << 16 | counter | ms << 22) > MAXVALUE:  error
-if ms >= high_water or first id since the checkpoint:
-    log to the WAL: "everything below high_water = ms + 1000 ms is used"
-(last_ms, counter) = (ms, counter); return ms << 22 | region << 16 | counter
-~~~
-
-Four properties come from that:
-
-- **Ids of a region increase whatever the clock does.** A clock that goes back
-  doesn't repeat an id: the sequence keeps the last millisecond and counts on
-  inside it, and the next millisecond is borrowed when the counter runs out, at
-  65,536 ids a millisecond. Until the clock is past the last millisecond again,
-  the ids run a little ahead of it. A clock more than a minute behind is an error
-  rather than a long crawl.
-- **No sleep, no wait.** The call holds the lock for the time of an addition, so
-  it costs what a plain sequence costs.
-- **The state survives a crash and a promotion** the way a plain sequence's does,
-  with one WAL record, a full page image, a second at most instead of one per 32
-  values: the WAL says that everything below the high-water mark is used, and
-  after a crash or on a promoted standby the ids resume at that mark or at the
-  clock, whichever is later.
-- **A configuration mistake is an error.** `MAXVALUE` is honoured, so an `int`
-  identity column fails at its first `nextval` with a hint to use `bigint`;
-  `INCREMENT` and `CACHE` other than 1 are errors; the region number can't be
-  forgotten, only chosen twice.
-
-`setval()` reads the time and the counter of the id it is given, so `pg_dump`
-and a restore into another region carry the position and not the region. Three
-SQL functions decode an id, and a publication's row filter, which can't call
-them, can use the operators they are made of.
-
-### The same tests on the three, and on the expression
-
-All on the patched build, in the lab of the sections above. One server's index
-is that of one region: four writers, but one region number, which is what a
-region's own writers are.
-
-| | `snowflake` method | Expression (ours, the fifth key) | `regionseq` | `uuidv7()` |
-|---|---|---|---|---|
-| Rows/s, 4 writers, 5 M rows | 992,472 | 1,477,606 | 1,539,386 | 1,336,588 |
-| Primary key index, one region | 112 MB | 112 MB | 112 MB | 158 MB |
-| WAL per row | 165 B | 168 B | 165 B | 182 B |
-| `nextval` alone, 1 and 16 clients | 1.3 M/s, 1.3 M/s | | 5.9 M/s, 4.5 M/s (plain sequence 6.5, 4.5) | |
-| After a failover, six runs | first id above the last, by 290 to 350 ms | same, by 310 to 350 ms | above, by 975 ms (streaming) or 280 to 300 ms (cut off) | |
-| Three regions, distinct numbers | converge, no conflict | converge | converge: 597,800 rows, same digest | converge |
-| The same number everywhere | stops on `insert_exists` | | stops on `insert_exists` | |
-| The number left at its default | runs, as region 1 | | `nextval` refuses | |
-| Clock back 50 ms | 17 to 39 of about 19,300 transactions fail | 0 | 0 | 0 |
-| Clock back 200 ms | 82 to 168 fail | 0 | 0 | 0 |
-| Clock back 2 s | 1,587 to 1,973 fail (8.5% to 10.6%) | 183 to 197 of about 71,000 (0.26%) | 0 | 0 |
-| Clock back 120 s | | | refuses until the clock catches up | |
-| Crash, the clock set back 10 s before it | | | 200,000 ids, no duplicate, first one 778 ms above the last | |
-| `int` column | keeps 32 bits of the id, duplicates after 634,724 rows | `integer out of range` | `reached maximum value`, with a hint | no such column |
-
-Reading across, in the order of the rows:
-
-- **Cost.** All three of the bigint keys build the same table and the same
-  index: 112 MB when one region writes, against 148 to 150 MB when four regions
-  write the same table, which is the cost of interleaving that the one-server
-  section measured and has nothing to do with the method. `regionseq` is the
-  fastest by a few percent, within the spread of the runs, and writes the least
-  WAL with the `snowflake` method, whose counter isn't logged at all: its record
-  is one a second, where a plain sequence logs once per 32 values. The
-  `snowflake` method is a third slower, for the lock and the sleep.
-- **Failover.** Time moves on, so none of the three repeats an id; the other
-  plain sequences of the failover section repeat 300,000 numbers. `regionseq`
-  skips ahead by up to a second after a promotion, which is the high-water mark
-  of its WAL record: that's what it pays to stay safe when the clock of the new
-  primary is behind.
-- **The number of the region** is where the methods differ in kind. Written in a
-  column default, as the expression has it, the number belongs to a table; in a
-  setting that has a default, as `snowflake` has it, it belongs to a server that
-  can silently share it, with the result of the mesh run: with 1 on all three
-  servers, the regions stopped at 197,600, 99,500 and 192,400 rows, each with 32
-  conflicts; with 1, 2 and 3, all three held the same 597,800 rows
-  (`results/103-*`, `results/113-*`). In a setting without a default, the
-  mistake is an error that the first insert shows. Two servers given the same
-  number is still a mistake, which the subscriptions show as conflicts.
-- **The clock** was stepped back while four clients inserted, three runs of each
-  size, with libfaketime on the server (`results/104-*`; a failed transaction
-  loses its 100 rows). The 12-bit counter of the `snowflake` method repeats an
-  id once the clock is as little as 50 ms behind; the 18-bit counter of the
-  expression, once it is seconds behind; `regionseq` and `uuidv7()` never did.
-  For the first two, an id repeats when a millisecond comes round again with the
-  same counter value, and a wider counter lines up less often. At 10,000 ids a
-  second, one run of each with a 2 s step, none failed.
-  (The rows/s of this test are slowed by libfaketime and don't compare with the
-  table's first row. An earlier version of this table gave 50 and 200 ms for
-  steps that libfaketime had read as minutes.)
-- **The width of the column** is the difference that matters for upgrades: of the
-  four, the one that keeps part of an id without telling is the one that has no
-  `MAXVALUE` check.
-
-### What the use case is, and what it isn't
-
-Paquier's thread asks for an example that an expression can't match. What we
-found is narrower than "global sequences". The method doesn't make the key
-cheaper or smaller: the table, the index and the WAL are those of the
-expression, and a `uuidv7()` costs more storage and less thought. What a method
-adds is a place for the state, which the expression doesn't have: the last
-millisecond and counter, kept through a clock that goes back, a crash and a
-promotion, and the checks that go with a state, the region number that can't be
-left unset and the maximum that an `int` column must meet. An expression can't
-keep a value; a function could, with a table and a lock, but then a `serial`,
-an identity column, `pg_dump` and `setval` no longer work with it, and that's
-the integration that `default_sequence_access_method` gives. We'd weigh that
-against what the patches cost the next ones who change `sequence.c`. We didn't
-run the other uses that the proposal names: range allocation for global
-sequences, and the pseudo-random sequences for short ids that Matthias van de
-Meent described.
-
-For the filter of the section above, the method adds one thing, which isn't the
-method's: it's the shape of the key. With the region in the bits of the id, a
-publication's row filter can say `where ((id >> 16) & 63) = 1` on the key alone.
 
 ## Before choosing: the 32-bit wall
 
@@ -923,7 +685,7 @@ timestamp for the row, which a random v4 doesn't give away.
 |---|---|---|
 | One writer region, others only read | `bigint generated always as identity` | Nothing to coordinate; the 32-bit wall is the one trap, and the query above finds the columns that are on it |
 | Several writer regions, each row owned by one, few tables point at the key | `(region, id)`, one identity column per region, `bigint` first in the table | The filter of Part 4 works without a second index, no clock is involved, no step to outgrow. It costs 3% to 10% more storage in a pair of tables, and each region's sequence has to survive a failover, which is [Part 4's gating](/blog/2026/11/postgres-logical-replication-beyond-one-writer/#a-region-is-a-group-of-three) |
-| Several writer regions, each row owned by one, many tables point at the key | a single-column key: the time, region and counter `bigint`, filtered on its bits (`where ((id >> 18) & 15) = 1`, no second index), or `uuidv7()` with a `region` column and a unique `(id, region)` as replica identity | 8 or 16 bytes in every child instead of 10 or 16. The `bigint` needs nothing else, and didn't repeat after a failover in six runs, but it repeats when a clock is stepped back by 2 seconds (0.26% of the transactions of the test); a 12-bit counter, as in the `snowflake` method, repeats at 50 ms. It's an expression to write and keep, with 16 regions at most; a sequence access method such as `extension/` would hold its state and refuse a clock that is a minute behind, on a server that has the patches. `uuidv7()` is a built-in function, and its companion index adds about 85 bytes of WAL per row |
+| Several writer regions, each row owned by one, many tables point at the key | a single-column key: the time, region and counter `bigint`, filtered on its bits (`where ((id >> 18) & 15) = 1`, no second index), or `uuidv7()` with a `region` column and a unique `(id, region)` as replica identity | 8 or 16 bytes in every child instead of 10 or 16. The `bigint` needs nothing else, and didn't repeat after a failover in six runs, but it repeats when a clock is stepped back by 2 seconds (0.26% of the transactions of the test). It's an expression to write and keep, with 16 regions at most. `uuidv7()` is a built-in function, and its companion index adds about 85 bytes of WAL per row |
 | Rows created anywhere, nobody filters on the owner | `uuidv7()` | 16 bytes, an index that behaves like a sequence's, nothing to coordinate. The clocks need to agree within a few milliseconds |
 | The creation time must not leak | `gen_random_uuid()` | An index 27% larger, 2.7 times the WAL after a checkpoint (487 bytes a row against 182), and 5 times with a companion index (954) |
 
@@ -935,6 +697,75 @@ For a table that already has a sequence, the first steps come before the key:
 the query above for its width, and Part 1's step and headroom arithmetic if
 it's to become one of several writers. We haven't measured that migration, and
 we'd keep the old tables single-writer and use the new key for new ones.
+
+## Would Postgres need a sequence access method?
+
+Two patch sets, in 2013 to 2016 and again from 2023 to 2026, tried to let `create
+sequence ... using method` choose how a sequence computes its next value, so that
+a `serial` or an identity column could be fed by a Snowflake-style id instead of
+a counter. Both were returned with feedback. The reviews of the second one asked
+for the use case before the code, and in May 2026, after a v29, its author
+dropped it from the CommitFest for lack of interest from other core developers
+(`compose/seqam/README.md` has the history and the threads). The key of this
+article is such a use case, so we asked what a method would change, by building
+the v29 patches into a Postgres master and writing the method for it: `regionseq`,
+in `extension/`, a PGXS extension that the Dockerfile of `compose/seqam/`
+installs.
+
+Its id is 41 bits of milliseconds, 6 of region and 16 of counter. The region is
+`regionseq.region_id`, a server setting with no default. The sequence keeps the
+last millisecond and counter it handed out and never goes below them, so a clock
+that steps back doesn't repeat an id, and a counter that runs out takes the next
+millisecond instead of waiting for it. A high-water mark one second ahead is
+logged to the WAL, so ids stay above what was made, after a crash and on a
+promoted standby. The patches' own demonstration, a `snowflake` method, is in the
+table as the example of a method without these.
+
+| Same lab, same workload | Our expression | `regionseq` | `snowflake` method (the patches') |
+|---|---|---|---|
+| Rows/s, table, index, WAL per row, one region | 1.48 M, 112 MB, 168 B | 1.54 M, 112 MB, 165 B | 0.99 M, 112 MB, 165 B |
+| After a failover (6 runs) | ids above the last | ids above the last | ids above the last |
+| Three regions, distinct numbers | converge | converge | converge |
+| The same number on every server | stops on `insert_exists` | stops | stops |
+| The number never set | not possible: it's in the default | `nextval` refuses | runs as region 1 |
+| Clock back 50 ms, 200 ms, 2 s (3 runs) | 0, 0, 0.26% of transactions fail | 0, 0, 0 | 0.1% to 0.2%, 0.4% to 0.9%, 8.5% to 10.6% fail |
+| Clock back 120 s | not run | refused | not run |
+| Crash with the clock set back 10 s | not run | no duplicate | not run |
+| `int` column | `integer out of range` | `reached maximum value` | keeps 32 bits of the id, duplicates after 634,724 rows |
+
+The first three rows are the point. The table, the index and the WAL are those
+of the expression, and no method changes what a key costs, since the key is what
+it makes. What differs is below them, and it's about guard rails: the region
+number that can't be left unset, a maximum that an `int` column must meet, and
+ids that keep increasing under a clock that is wrong.
+
+**Is it needed? No. Would it be nice? Yes, a little.**
+
+- **The expression already meets the requirements of a deployment.** It
+  converged in the mesh, never repeated an id after a failover in six runs, and
+  the only clock failure is a step of seconds, which makes a duplicate-key error
+  for the few transactions in the window: loud, bounded, retried. A production
+  deployment keeps its clocks slewed and monitored for `uuidv7()` anyway.
+- **What the method adds are checks, and most can be had without it.** A
+  `bigint` column answers the 32-bit wall; the region in the column default is
+  written once per region and reviewed like any DDL; a publication filter on the
+  bits of the key removes the second index. What stays out of reach of an
+  expression is a state, and so a key that increases through a clock that steps
+  back. It matters when something orders by id or reads ids as a stream, and then
+  a stateful generator is required, whether it's a method or a service.
+- **The price is a patched server.** No released Postgres has the patches, a
+  managed service wouldn't normally run a patched server, the region number needs
+  a restart to change, and the API has been through two patch sets over a decade
+  without an agreed shape.
+  For a team that has to ship this month, the method isn't an option, and
+  `uuidv7()` or the expression are.
+- **What would change our answer** is a use case that has state and that an
+  expression can't hold: ranges handed out by consensus, or gapless numbers. We
+  didn't test those, and they're the ones the proposal should be argued from.
+
+For the question "should core carry it", we'd answer that the patches deserve a
+reviewer who runs a multi-region system, and that the multi-region key doesn't
+wait for them.
 
 ## What we didn't test
 
@@ -948,8 +779,9 @@ we'd keep the old tables single-writer and use the new key for new ones.
 - **Real clock drift.** Skew was simulated by shifting the timestamps with
   `uuidv7(interval)`, with one server's clock, and the 5, 50 and 200 ms cases
   were run three times. The clock stepped back was a libfaketime offset on one
-  server, 2 seconds at most for the keys that don't refuse it, three runs each,
-  with four writers and a table of one region.
+  server, three runs each, with four writers and a table of one region.
+- **Other uses of a sequence access method:** ranges handed out by consensus,
+  gapless numbers, pseudo-random sequences.
 - **The time-based `bigint` under skew between regions.** The region is in its
   bits, so uniqueness doesn't depend on it, and we didn't measure the index.
 - **A failover drill with the standby gated.** The sequence results are for a
