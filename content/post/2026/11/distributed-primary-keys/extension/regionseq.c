@@ -7,7 +7,20 @@
  *
  *	  41 bits	milliseconds since 2026-01-01 00:00:00 UTC
  *	   6 bits	region number, from the regionseq.region_id setting
- *	  16 bits	counter, within one millisecond of one region
+ *	   4 bits	timeline of the server, modulo 16
+ *	  12 bits	counter, within one millisecond of one region
+ *
+ * The timeline changes at every promotion, and when a server is restored to a
+ * point in time.  A promoted standby may have a stale copy of the state and a
+ * clock that is behind the old primary's; what it makes is still different from
+ * what the old primary made, because the timeline bits are.  Sixteen promotions of
+ * one region within the time a clock was wrong are needed to repeat an id; two
+ * standbys promoted independently from the same primary (split brain) get the
+ * same timeline, and are a matter for fencing.
+ *
+ * 4,096 ids per millisecond, as Snowflake has, is 4.1 million a second, about
+ * what one sequence can do under its lock; a region that makes more takes the
+ * next millisecond and its ids run ahead of the clock for a while.
  *
  * Ids of one region increase strictly, whatever the clock does: the sequence
  * keeps the last (millisecond, counter) it handed out and never goes below
@@ -16,7 +29,7 @@
  *	  - the clock is ahead: the id gets the clock's millisecond, counter 0;
  *	  - the clock is behind or equal (same millisecond, or the clock was set
  *		back): the id keeps the last millisecond and adds 1 to the counter;
- *	  - the counter would pass 65535: the id takes the next millisecond
+ *	  - the counter would pass 4095: the id takes the next millisecond
  *		instead of waiting for it.
  *
  * The state is also kept safe across a crash and a promotion, the way a
@@ -62,7 +75,9 @@ typedef struct regionseq_magic
 #define REGIONSEQ_EPOCH_MS		INT64CONST(1767225600000)	/* 2026-01-01 UTC */
 #define REGIONSEQ_TIME_SHIFT	22
 #define REGIONSEQ_REGION_SHIFT	16
-#define REGIONSEQ_COUNTER_MASK	0xFFFF
+#define REGIONSEQ_TIMELINE_SHIFT	12
+#define REGIONSEQ_TIMELINE_MASK	0xF
+#define REGIONSEQ_COUNTER_MASK	0xFFF
 #define REGIONSEQ_REGION_MASK	0x3F
 #define REGIONSEQ_TIME_MASK		((INT64CONST(1) << 41) - 1)
 
@@ -79,6 +94,7 @@ typedef struct FormData_regionseq_data
 	int32		counter;		/* counter of the last id */
 	bool		is_called;
 	int64		high_water;		/* ids below this millisecond are all used */
+	int64		last_clock;		/* highest reading of the clock; not logged */
 } FormData_regionseq_data;
 
 typedef FormData_regionseq_data *Form_regionseq_data;
@@ -102,11 +118,21 @@ regionseq_now_ms(void)
 		REGIONSEQ_EPOCH_MS;
 }
 
+static int
+regionseq_timeline(void)
+{
+	/* a temporary sequence can be used on a standby; nothing is logged there */
+	if (RecoveryInProgress())
+		return 0;
+	return (int) (GetWALInsertionTimeLine() & REGIONSEQ_TIMELINE_MASK);
+}
+
 static int64
-regionseq_make_id(int64 ms, int region, int32 counter)
+regionseq_make_id(int64 ms, int region, int timeline, int32 counter)
 {
 	return (ms << REGIONSEQ_TIME_SHIFT) |
-		((int64) region << REGIONSEQ_REGION_SHIFT) | counter;
+		((int64) region << REGIONSEQ_REGION_SHIFT) |
+		((int64) timeline << REGIONSEQ_TIMELINE_SHIFT) | counter;
 }
 
 static Form_regionseq_data
@@ -148,6 +174,7 @@ regionseq_log_state(Relation rel, Buffer buf, int64 image_last_ms,
 	seq->counter = image_counter;
 	seq->is_called = image_is_called;
 	seq->high_water = image_high_water;
+	seq->last_clock = 0;		/* what the WAL holds says nothing of the clock */
 	GenericXLogFinish(state);
 }
 
@@ -217,8 +244,8 @@ regionseq_check_persistence(char relpersistence)
 static void
 regionseq_init(Relation rel, int64 last_value, bool is_called)
 {
-	Datum		values[4];
-	bool		nulls[4] = {false, false, false, false};
+	Datum		values[5];
+	bool		nulls[5] = {false, false, false, false, false};
 	List	   *atcmds = NIL;
 	TupleDesc	tupdesc;
 	HeapTuple	tuple;
@@ -232,10 +259,10 @@ regionseq_init(Relation rel, int64 last_value, bool is_called)
 	 * of 2026, which any clock is past.
 	 */
 	{
-		const char *names[4] = {"last_ms", "counter", "is_called", "high_water"};
-		Oid			types[4] = {INT8OID, INT4OID, BOOLOID, INT8OID};
+		const char *names[5] = {"last_ms", "counter", "is_called", "high_water", "last_clock"};
+		Oid			types[5] = {INT8OID, INT4OID, BOOLOID, INT8OID, INT8OID};
 
-		for (int i = 0; i < 4; i++)
+		for (int i = 0; i < 5; i++)
 		{
 			ColumnDef  *coldef = makeColumnDef(names[i], types[i], -1, InvalidOid);
 			AlterTableCmd *atcmd = makeNode(AlterTableCmd);
@@ -253,6 +280,7 @@ regionseq_init(Relation rel, int64 last_value, bool is_called)
 	values[1] = Int32GetDatum((int32) (last_value & REGIONSEQ_COUNTER_MASK));
 	values[2] = BoolGetDatum(is_called);
 	values[3] = Int64GetDatum(ms);
+	values[4] = Int64GetDatum(ms);
 
 	tupdesc = RelationGetDescr(rel);
 	tuple = heap_form_tuple(tupdesc, values, nulls);
@@ -290,6 +318,19 @@ regionseq_nextval(Relation rel, int64 incby, int64 maxv, int64 minv,
 	seq = read_regionseq(rel, &buf, &seqdatatuple);
 	page = BufferGetPage(buf);
 
+	/*
+	 * The clock, not the ids: a region that makes ids faster than 4,096 a
+	 * millisecond runs ahead of the clock and that is fine; a clock that is
+	 * behind its own last reading is not.
+	 */
+	if (seq->last_clock - now > regionseq_max_regression)
+		ereport(ERROR,
+				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
+				 errmsg("the clock is " INT64_FORMAT " ms behind its last reading for sequence \"%s\"",
+						seq->last_clock - now, RelationGetRelationName(rel)),
+				 errhint("regionseq.max_clock_regression is %d ms.",
+						 regionseq_max_regression)));
+
 	if (seq->is_called)
 	{
 		if (now > seq->last_ms)
@@ -299,13 +340,6 @@ regionseq_nextval(Relation rel, int64 incby, int64 maxv, int64 minv,
 		}
 		else
 		{
-			if (seq->last_ms - now > regionseq_max_regression)
-				ereport(ERROR,
-						(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
-						 errmsg("the clock is " INT64_FORMAT " ms behind the last id of sequence \"%s\"",
-								seq->last_ms - now, RelationGetRelationName(rel)),
-						 errhint("regionseq.max_clock_regression is %d ms.",
-								 regionseq_max_regression)));
 			ms = seq->last_ms;
 			counter = seq->counter + 1;
 			if (counter > REGIONSEQ_COUNTER_MASK)
@@ -337,7 +371,7 @@ regionseq_nextval(Relation rel, int64 incby, int64 maxv, int64 minv,
 				 errmsg("sequence \"%s\" has used all its 41 bits of milliseconds",
 						RelationGetRelationName(rel))));
 
-	id = regionseq_make_id(ms, regionseq_region_id, counter);
+	id = regionseq_make_id(ms, regionseq_region_id, regionseq_timeline(), counter);
 
 	/* the sequence's own MAXVALUE, which is 2147483647 under an int column */
 	if (maxv >= 0 && id > maxv)
@@ -381,6 +415,8 @@ regionseq_nextval(Relation rel, int64 incby, int64 maxv, int64 minv,
 	seq->counter = counter;
 	seq->is_called = true;
 	seq->high_water = high_water;
+	if (now > seq->last_clock)
+		seq->last_clock = now;
 	END_CRIT_SECTION();
 
 	UnlockReleaseBuffer(buf);
@@ -410,6 +446,7 @@ regionseq_setval(Relation rel, int64 next, bool iscalled)
 	seq->counter = counter;
 	seq->is_called = iscalled;
 	seq->high_water = ms;
+	seq->last_clock = ms;
 	END_CRIT_SECTION();
 
 	UnlockReleaseBuffer(buf);
@@ -434,6 +471,7 @@ regionseq_get_state(Relation rel, int64 *last_value, bool *is_called,
 	*last_value = regionseq_make_id(seq->last_ms,
 									(seq->is_called && regionseq_region_id > 0) ?
 									regionseq_region_id : 0,
+									seq->is_called ? regionseq_timeline() : 0,
 									seq->counter);
 	*is_called = seq->is_called;
 	*page_lsn = PageGetLSN(BufferGetPage(buf));
@@ -459,6 +497,7 @@ regionseq_reset(Relation rel, int64 startv, bool is_called, bool reset_state)
 	seq->counter = (int32) (startv & REGIONSEQ_COUNTER_MASK);
 	seq->is_called = is_called;
 	seq->high_water = ms;
+	seq->last_clock = ms;
 
 	RelationSetNewRelfilenumber(rel, rel->rd_rel->relpersistence);
 	fill_regionseq(rel, tuple);
@@ -516,8 +555,8 @@ _PG_init(void)
 							0, NULL, NULL, NULL);
 
 	DefineCustomIntVariable("regionseq.max_clock_regression",
-							"How far the clock may be behind the last id before nextval fails.",
-							"Ids stay increasing while the clock is behind, at the pace of 65,536 a millisecond.",
+							"How far the clock may be behind its last reading before nextval fails.",
+							"Ids stay increasing while the clock is behind, at the pace of 4,096 a millisecond.",
 							&regionseq_max_regression,
 							60000, 0, INT_MAX,
 							PGC_SUSET,

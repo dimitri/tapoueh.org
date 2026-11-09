@@ -9,12 +9,20 @@ SELECT * FROM rs;
 CREATE TEMP TABLE ids AS SELECT n, nextval('rs') AS id FROM generate_series(1, 5000) n;
 SELECT regionseq_region(id) AS region, min(regionseq_counter(id)) AS first_counter
   FROM ids GROUP BY 1;
+-- the timeline of the server, 1 on a cluster that was never promoted
+SELECT regionseq_timeline(id) AS timeline, count(*) FROM ids GROUP BY 1;
 -- strictly increasing, and unique
 SELECT count(*) AS ids, count(distinct id) AS distinct_ids,
        bool_and(id > lag) AS increasing
   FROM (SELECT id, lag(id) OVER (ORDER BY n) AS lag FROM ids) s WHERE lag IS NOT NULL;
 SELECT lastval() = (SELECT max(id) FROM ids) AS lastval_is_last;
 SELECT abs(extract(epoch from now() - regionseq_time(max(id)))) < 60 AS time_is_now FROM ids;
+
+-- A bulk load takes ids faster than 4,096 a millisecond: the ids run ahead of the
+-- clock by the difference, and nothing is refused
+CREATE TEMP TABLE bulk AS SELECT nextval('rs') AS id FROM generate_series(1, 300000);
+SELECT count(distinct id) AS distinct_ids, max(id) > min(id) AS increasing,
+       regionseq_time(max(id)) - clock_timestamp() < interval '5 seconds' AS less_than_5_s_ahead FROM bulk;
 
 -- An identity column
 SET default_sequence_access_method = 'regionseq';

@@ -1,5 +1,11 @@
 # Sequence access methods: history, and the tests behind the article
 
+> The `regionseq` figures of the full table below are from its first layout, 41 bits
+> of time, 6 of region and 16 of counter. The extension now has 41 / 6 / 4 timeline /
+> 12 counter and a guard on the clock instead of on the ids; the failover with a
+> skewed clock (`results/120-*`, `results/123-*`) and the clock-order tests
+> (`results/121-*`, `results/124-*`) are the ones to read for the current one.
+
 Details that the article "Distributed primary keys" summarises in one section: the
 history of the two patch sets, the `snowflake` method that the second one
 includes, and the full table of tests on it, on `regionseq` (`../../extension/`),

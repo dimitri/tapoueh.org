@@ -25,4 +25,8 @@ CREATE FUNCTION regionseq_time(id int8) RETURNS timestamptz
 
 CREATE FUNCTION regionseq_counter(id int8) RETURNS int4
   LANGUAGE sql IMMUTABLE PARALLEL SAFE STRICT
-  AS $$ SELECT (id & 65535)::int4 $$;
+  AS $$ SELECT (id & 4095)::int4 $$;
+
+CREATE FUNCTION regionseq_timeline(id int8) RETURNS int4
+  LANGUAGE sql IMMUTABLE PARALLEL SAFE STRICT
+  AS $$ SELECT ((id >> 12) & 15)::int4 $$;

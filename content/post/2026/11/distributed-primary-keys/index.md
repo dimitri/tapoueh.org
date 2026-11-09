@@ -724,14 +724,35 @@ clocks differ.
 We tested that with the v29 patches built into a Postgres master
 (`compose/seqam/Dockerfile`) and a method of our own, `regionseq`
 (`extension/`, a PGXS extension with its regression test). Its id is 41 bits of
-milliseconds, 6 of region from a server setting that has no default, and 16 of
-counter. It keeps the last millisecond and counter it made and never goes below
-them, takes the next millisecond when the counter runs out instead of waiting,
-and logs a high-water mark one second ahead to the WAL, so that ids stay above
-what was made after a crash and on a standby. The table, the index and the WAL
-are those of the expression of the fifth key (1.54 M rows/s against 1.48 M, 112
-MB of index and 165 bytes of WAL against 168, one region writing), since a
-method makes the same `bigint`.
+milliseconds, 6 of region from a server setting that has no default, 4 of
+timeline and 12 of counter. It keeps the last millisecond and counter it made
+and never goes below them, takes the next millisecond when the counter runs out
+instead of waiting, and logs a high-water mark one second ahead to the WAL, so
+that ids stay above what was made after a crash and on a standby. The table, the
+index and the WAL are those of the expression of the fifth key (1.48 M rows/s
+for both, 112 MB of index and 165 bytes of WAL against 168, one region
+writing), since a method makes the same `bigint`.
+
+The timeline bits are there for the failover below. Postgres opens a new
+timeline at every promotion and every restore to a point in time, and a
+promoted standby with a stale copy of the state and a clock behind makes ids
+that differ from the old primary's, because that number does. Four bits are 16
+values, which we chose from what production reports: a Percona forum thread
+reads TL 11 as ten switchovers, a [Patroni
+issue](https://github.com/patroni/patroni/issues/1733) of a test cluster that is
+killed repeatedly is on timelines 40 to 81, and one pgsql-general reporter had
+[5,787 history files](https://postgresql.org/message-id/1521007012.2368.3.camel%40cybertec.at)
+because every restart opened a timeline. What counts isn't the lifetime total
+but how many promotions fall inside the time a clock or a standby was wrong,
+seconds to minutes, and a Patroni cluster that flaps promotes once per leader
+lock expiry. A coarser clock wouldn't buy bits: time and counter share a budget
+of `log2(lifetime) + log2(ids per tick)`, 41 + 12 bits with milliseconds and
+31 + 22 with seconds, so a tick of a second only moves bits from the time to the
+counter, and coarsens the order between regions. The bits are bought by the peak
+rate we plan for, and 4,096 ids a millisecond is what one sequence does under
+its lock. Two standbys promoted independently from the same primary pick the
+same timeline number, a case that pgsql-hackers is discussing in 2026 (with a
+UUID per history entry as one answer), and that fencing has to prevent.
 
 ### What "fine" means
 
@@ -787,7 +808,7 @@ repeat one the old primary gave, and the new ids below the highest one it gave
 | In sync, 0 or 0.1 s | 0 / 0 | 0 / 0 | 0 / 0 |
 | In sync, 2 s | 98 / all | 0 / all | 0 / 0 |
 | In sync, 10 s | 0 / all | 0 / all | 0 / 0 |
-| Cut off 3 s before, 2 s | 782 / all | 0 / all | **48,510** / all |
+| Cut off 3 s before, 2 s | 782 / all | 0 / all | 0 / all |
 | Cut off 3 s before, 10 s | 0 / all | 0 / all | 0 / all |
 
 Up to 0.1 s every key is fine, since the promotion itself takes longer than
@@ -796,11 +817,13 @@ made, and the expression repeats ids when the new clock falls into the
 milliseconds that the old primary used and the counters line up. (The 10 s lines
 show no repeat only because the old primary had written for 3 seconds; with
 writes all along, any skew larger than the promotion repeats whatever was made
-in that window.) `regionseq` is the only one that stays above, because its WAL
-record holds a high-water mark, and that is also its limit: on a standby that
-was cut off, the mark is old, and with a clock behind it counts from zero over
-milliseconds that already have ids, which is the worst line of the table. The
-guarantee is the standby's WAL, and in the topology of Part 4 it is there:
+in that window.) `regionseq` never repeats, and stays above when the standby is
+current, because its WAL record holds a high-water mark. On a standby that was
+cut off the mark is old, and with a clock behind the ids go below what the old
+primary made. Our first version, without the timeline bits, repeated 48,510 ids
+in that line, 24% of the new ones, which is why the bits are there: the ids of
+the new timeline differ, so uniqueness no longer depends on the standby having
+the WAL, and only the increasing order does. In the topology of Part 4 it does:
 `synchronized_standby_slots` doesn't let another region see a row that the
 standby doesn't have. A plain sequence per region has the same dependency, for
 the same reason, and no clock.
@@ -840,10 +863,12 @@ implications are about meaning, not correctness:
 
 On what a production deployment has to survive:
 
-- **The failover problem is the same for every key that has state.** A sequence
-  per region needs the standby to be current, and so does `regionseq`; the clock
-  keys need clocks that agree within the promotion time. Part 4's gating gives
-  the first, and a method doesn't replace it.
+- **The failover problem is the same for every key that has state, except for
+  uniqueness.** A sequence per region needs the standby to be current to stay
+  unique; `regionseq` stays unique whatever the standby has, thanks to the
+  timeline, and needs the standby only to keep increasing; the clock keys need
+  clocks that agree within the promotion time. Part 4's gating gives the
+  standby, and a method doesn't replace it.
 - **A clock that steps back is a rare event that the expression turns into a
   burst of duplicate-key errors and into ids that are lower than earlier ones.**
   A method that keeps state turns it into ids that run ahead of the clock for a

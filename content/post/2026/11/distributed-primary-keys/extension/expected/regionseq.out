@@ -7,9 +7,9 @@ SHOW regionseq.region_id;
 
 CREATE SEQUENCE rs USING regionseq;
 SELECT * FROM rs;
- last_ms | counter | is_called | high_water 
----------+---------+-----------+------------
-       0 |       1 | f         |          0
+ last_ms | counter | is_called | high_water | last_clock 
+---------+---------+-----------+------------+------------
+       0 |       1 | f         |          0 |          0
 (1 row)
 
 -- The parts of an id: the region from the setting, a counter that starts at 0
@@ -19,6 +19,13 @@ SELECT regionseq_region(id) AS region, min(regionseq_counter(id)) AS first_count
  region | first_counter 
 --------+---------------
       5 |             0
+(1 row)
+
+-- the timeline of the server, 1 on a cluster that was never promoted
+SELECT regionseq_timeline(id) AS timeline, count(*) FROM ids GROUP BY 1;
+ timeline | count 
+----------+-------
+        1 |  5000
 (1 row)
 
 -- strictly increasing, and unique
@@ -40,6 +47,16 @@ SELECT abs(extract(epoch from now() - regionseq_time(max(id)))) < 60 AS time_is_
  time_is_now 
 -------------
  t
+(1 row)
+
+-- A bulk load takes ids faster than 4,096 a millisecond: the ids run ahead of the
+-- clock by the difference, and nothing is refused
+CREATE TEMP TABLE bulk AS SELECT nextval('rs') AS id FROM generate_series(1, 300000);
+SELECT count(distinct id) AS distinct_ids, max(id) > min(id) AS increasing,
+       regionseq_time(max(id)) - clock_timestamp() < interval '5 seconds' AS less_than_5_s_ahead FROM bulk;
+ distinct_ids | increasing | less_than_5_s_ahead 
+--------------+------------+---------------------
+       300000 | t          | t
 (1 row)
 
 -- An identity column
