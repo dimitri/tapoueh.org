@@ -718,47 +718,71 @@ last millisecond and counter it handed out and never goes below them, so a clock
 that steps back doesn't repeat an id, and a counter that runs out takes the next
 millisecond instead of waiting for it. A high-water mark one second ahead is
 logged to the WAL, so ids stay above what was made, after a crash and on a
-promoted standby. The patches' own demonstration, a `snowflake` method, is in the
-table as the example of a method without these.
+promoted standby. (The patches' own demonstration, a `snowflake` method, has
+none of these; `compose/seqam/README.md` has its results.)
 
-| Same lab, same workload | Our expression | `regionseq` | `snowflake` method (the patches') |
-|---|---|---|---|
-| Rows/s, table, index, WAL per row, one region | 1.48 M, 112 MB, 168 B | 1.54 M, 112 MB, 165 B | 0.99 M, 112 MB, 165 B |
-| After a failover (6 runs) | ids above the last | ids above the last | ids above the last |
-| Three regions, distinct numbers | converge | converge | converge |
-| The same number on every server | stops on `insert_exists` | stops | stops |
-| The number never set | not possible: it's in the default | `nextval` refuses | runs as region 1 |
-| Clock back 50 ms, 200 ms, 2 s (3 runs) | 0, 0, 0.26% of transactions fail | 0, 0, 0 | 0.1% to 0.2%, 0.4% to 0.9%, 8.5% to 10.6% fail |
-| Clock back 120 s | not run | refused | not run |
-| Crash with the clock set back 10 s | not run | no duplicate | not run |
-| `int` column | `integer out of range` | `reached maximum value` | keeps 32 bits of the id, duplicates after 634,724 rows |
+| Same lab, same workload | Our expression | `regionseq` |
+|---|---|---|
+| Rows/s, table, index, WAL per row, one region | 1.48 M, 112 MB, 168 B | 1.54 M, 112 MB, 165 B |
+| After a failover (6 runs) | ids above the last | ids above the last |
+| Three regions, distinct numbers | converge | converge |
+| The same number on every server | stops on `insert_exists` | stops on `insert_exists` |
+| The number never set | not possible: it's in the default | `nextval` refuses |
+| Clock back 50 ms, 200 ms, 2 s (3 runs) | 0, 0, 0.26% of transactions fail | 0, 0, 0 |
+| Clock back 120 s | not run | refused |
+| Crash with the clock set back 10 s | not run | no duplicate |
+| `int` column | `integer out of range` | `reached maximum value`, with a hint |
 
-The first three rows are the point. The table, the index and the WAL are those
+The first row is the point. The table, the index and the WAL are those
 of the expression, and no method changes what a key costs, since the key is what
-it makes. What differs is below them, and it's about guard rails: the region
+it makes. What differs is in the rows below it, and it's about guard rails: the region
 number that can't be left unset, a maximum that an `int` column must meet, and
 ids that keep increasing under a clock that is wrong.
 
-**Is it needed? No. Would it be nice? Yes, a little.**
+**Is it needed? No. Would it be nice? Yes, a little.** The two things that
+decide it for a multi-region deployment are what happens at a failover and what
+happens when a clock is wrong, and in both the expression gets most of the way
+without a method.
 
-- **The expression already meets the requirements of a deployment.** It
-  converged in the mesh, never repeated an id after a failover in six runs, and
-  the only clock failure is a step of seconds, which makes a duplicate-key error
-  for the few transactions in the window: loud, bounded, retried. A production
-  deployment keeps its clocks slewed and monitored for `uuidv7()` anyway.
-- **What the method adds are checks, and most can be had without it.** A
-  `bigint` column answers the 32-bit wall; the region in the column default is
-  written once per region and reviewed like any DDL; a publication filter on the
-  bits of the key removes the second index. What stays out of reach of an
-  expression is a state, and so a key that increases through a clock that steps
-  back. It matters when something orders by id or reads ids as a stream, and then
-  a stateful generator is required, whether it's a method or a service.
+- **Failover: the time in the key is the state, and it isn't rewound.** A plain
+  sequence is state that a lagging standby hands back: 300,000 numbers a second
+  time in our cut-off run. A key that starts with the clock has no such state:
+  the new primary's clock is past the old one's last millisecond by at least the
+  time the promotion took, and the first id was above the last one in all six
+  runs of the expression (by 310 to 350 ms) and of `regionseq` (by 280 to 300 ms
+  from a cut-off standby, 975 ms from a streaming one). What a method adds is
+  the case where the new primary's clock is behind the old one's: the high-water
+  mark in its WAL keeps the ids above what was made, and our crash test with the
+  clock set back 10 s showed no duplicate. That's a clock problem met at a
+  failover, and our runs had both servers on one clock, so the cross-machine
+  version is an argument from the design, not a measurement.
+- **A clock stepped back inside a region.** The expression repeats an id only
+  when a millisecond comes round with the same counter value, and in three runs
+  that didn't happen at 50 or 200 ms, and hit 0.26% of the transactions at 2 s
+  (a narrower counter hits more). The failure is a duplicate-key error, for the
+  transactions of the window, which the application retries: loud, bounded, no
+  corrupt row. A method turns it into no error, and charges for it: the ids run
+  ahead of the clock until it catches up, so their time bits stop meaning the
+  creation time, and a clock a minute behind is refused outright, which is an
+  outage of that sequence in place of a few retries. Neither is free, and which
+  one a team prefers is a choice, not a missing feature. Slewing the clock
+  instead of stepping it avoids the situation, and `uuidv7()` needs a disciplined
+  clock anyway.
+- **A clock that differs between regions** is not something a method fixes. Each
+  region's ids increase, whatever it does, and the interleaving across regions
+  is by the clocks, so three streams at three offsets fill an index the way
+  the skew table above shows for `uuidv7()`: 28% to 55% bigger from 50 ms
+  of skew. We measured that for `uuidv7()` and argue it for a time-prefixed
+  `bigint`, since the tree's behaviour doesn't depend on who made the key.
+- **Where it would be needed:** when something reads ids as a stream, with a
+  consumer that keeps "the last id seen" and asks for what is above it. A
+  repeated or backward id there is silent, where a duplicate key is loud, and a
+  stateful generator is required, whether it's a method or a service.
 - **The price is a patched server.** No released Postgres has the patches, a
   managed service wouldn't normally run a patched server, the region number needs
   a restart to change, and the API has been through two patch sets over a decade
-  without an agreed shape.
-  For a team that has to ship this month, the method isn't an option, and
-  `uuidv7()` or the expression are.
+  without an agreed shape. For a team that has to ship this month, the method
+  isn't an option, and `uuidv7()` or the expression are.
 - **What would change our answer** is a use case that has state and that an
   expression can't hold: ranges handed out by consensus, or gapless numbers. We
   didn't test those, and they're the ones the proposal should be argued from.
