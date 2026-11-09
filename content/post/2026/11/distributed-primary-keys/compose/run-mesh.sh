@@ -1,12 +1,15 @@
 #!/bin/bash
 # Three regions, each writing at once and each subscribed to the other two (origin = none).
-# ./run-mesh.sh <variant> [RUN]    variants: naive seqstep composite uuidv4 uuidv7 snowflake
+# ./run-mesh.sh <variant> [RUN]    variants: naive seqstep composite uuidv4 uuidv7 snowflake snowam snowam-same regionam regionam-same
 cd "$(dirname "$0")"; . ./lib.sh
 V=${1:?variant}; RUN=${2:-1}
 NET=pknet; docker network create $NET >/dev/null 2>&1
 TMPFS=1500m
 for i in 0 1 2; do
-  pg_start pk-m$i -c wal_level=logical -c max_wal_size=3GB -c track_commit_timestamp=on
+  EXTRA=""
+  [ "$V" = regionam ] && EXTRA=$(rsargs $((i+1)))
+  [ "$V" = regionam-same ] && EXTRA=$(rsargs 1)       # the same number in every region: the mistake
+  pg_start pk-m$i -c wal_level=logical -c max_wal_size=3GB -c track_commit_timestamp=on $EXTRA
 done
 for i in 0 1 2; do
   variant $V $i

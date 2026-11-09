@@ -1,16 +1,19 @@
 #!/bin/bash
 # A key made from the clock, with the clock stepped back while four clients insert.
-# ./run-clock.sh <variant> <step> <rate> [RUN]     variants: snowam snowone uuidv7
-#   step: how far back the clock goes after 3 s, e.g. 2s or 50ms; rate: "full" or transactions a second (100 rows each)
+# ./run-clock.sh <variant> <step> <rate> [RUN]     variants: snowam snowone uuidv7 regionam (extension/)
+#   step: how far back the clock goes after 3 s, in libfaketime's syntax: 2s, 0.05s, 120s. NOT 50ms: libfaketime reads "m" as minutes.
+#    rate: "full" or transactions a second (100 rows each)
 # Needs pk-seqam-ft (seqam/Dockerfile.faketime): libfaketime on the server process, stepped through /tmp/ft.
 # The file is replaced atomically: libfaketime reads it at every clock call and a half-written file kills the server.
 cd "$(dirname "$0")"; . ./lib.sh; IMAGE=pk-seqam-ft
 V=${1:?variant}; STEP=${2:?step}; RATE=${3:?rate}; RUN=${4:-1}
-N=pk-clock; pg_start $N -c max_wal_size=3GB
+EXTRA=""; [ "$V" = regionam ] && EXTRA=$(rsargs 1)
+N=pk-clock; pg_start $N -c max_wal_size=3GB $EXTRA
 SNOW1="(((extract(epoch from clock_timestamp()) * 1000)::bigint - 1767225600000) << 22) | (1::bigint << 18) | (nextval('s') & 262143)"
 case $V in
   snowam) DDL="create extension snowflake; create sequence s using snowflake; create table t (id bigint primary key, payload text);"; EXPR="nextval('s')" ;;
   snowone) DDL="create sequence s; create table t (id bigint primary key, payload text);"; EXPR="$SNOW1" ;;
+  regionam) DDL="create extension regionseq; create sequence s using regionseq; create table t (id bigint primary key, payload text);"; EXPR="nextval('s')" ;;
   uuidv7) DDL="create table t (id uuid primary key, payload text);"; EXPR="uuidv7()" ;;
   *) echo "unknown variant $V"; exit 1 ;;
 esac
@@ -25,4 +28,5 @@ docker exec $N pgbench -n -U postgres -d postgres -c 4 -j 4 -T 8 $R --continue-o
 wait
 psqlx $N -At -F ' | ' -c "select 'rows kept', count(*) from t"
 docker logs $N 2>&1 | grep -c "duplicate key" | sed 's/^/duplicate key errors in the log: /'
+docker logs $N 2>&1 | grep -c "behind the last id" | sed 's/^/refused, clock behind the last id: /'
 docker rm -f $N >/dev/null

@@ -3,22 +3,24 @@
 # ./run-failover.sh <insync|lagging> [RUN]
 cd "$(dirname "$0")"; . ./lib.sh
 SC=${1:?insync|lagging}; RUN=${2:-1}
-# third argument "snowam": the snowflake sequence access method instead of a plain sequence (IMAGE=pk-seqam)
+# third argument "snowam" or "regionam" (our own, extension/): the snowflake sequence access method instead of a plain sequence (IMAGE=pk-seqam)
 SEQ=${3:-plain}
 # "snowflake": the time, region, counter bigint of the article, made from a plain sequence in an expression
 EXPR="nextval('s')"
 if [ $SEQ = snowflake ]; then EXPR="(((extract(epoch from clock_timestamp()) * 1000)::bigint - 1767225600000) << 22) | (1::bigint << 18) | (nextval('s') & 262143)"; fi
-if [ $SEQ = snowam ]; then CREATE="create extension snowflake; create sequence s using snowflake"; else CREATE="create sequence s"; fi
+EXTRA=""
+if [ $SEQ = regionam ]; then CREATE="create extension regionseq; create sequence s using regionseq"; EXTRA=$(rsargs 1)
+elif [ $SEQ = snowam ]; then CREATE="create extension snowflake; create sequence s using snowflake"; else CREATE="create sequence s"; fi
 NET=pknet; docker network create $NET >/dev/null 2>&1
 TMPFS=1g
-pg_start pk-fo-p
+pg_start pk-fo-p $EXTRA
 docker exec pk-fo-p sh -c 'echo "host replication all all trust" >> $PGDATA/pg_hba.conf'
 psqlx pk-fo-p -c "select pg_reload_conf()" -c "$CREATE" >/dev/null
 docker rm -f pk-fo-s >/dev/null 2>&1
 docker run -d --name pk-fo-s --network $NET --tmpfs /var/lib/postgresql:rw,size=1g -e POSTGRES_PASSWORD=x \
   --entrypoint bash $IMAGE -c 'mkdir -p $PGDATA && chown postgres:postgres $PGDATA && chmod 700 $PGDATA &&
     gosu postgres pg_basebackup -h pk-fo-p -U postgres -D $PGDATA -R -X stream &&
-    exec gosu postgres postgres' >/dev/null
+    exec gosu postgres postgres $0' "$EXTRA" >/dev/null
 until docker exec pk-fo-s pg_isready -q -U postgres 2>/dev/null; do sleep 1; done
 sleep 2
 echo "== scenario=$SC sequence=$SEQ run=$RUN; standby in recovery: $(psqlx pk-fo-s -At -c 'select pg_is_in_recovery()')"

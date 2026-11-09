@@ -13,7 +13,7 @@ NEXT="nextval(('s_r' || :r)::regclass)"
 SNOW="(((extract(epoch from clock_timestamp()) * 1000)::bigint - 1767225600000) << 22) | (:r::bigint << 18) | (nextval(('s_r' || :r)::regclass) & 262143)"
 COMPANION="create unique index t_id_region on t (id, region); alter table t replica identity using index t_id_region;"
 COLS="region smallint not null, payload text not null"
-PRE=""
+PRE=""; EXTRA=""
 BASE=${V%+}                               # a trailing + means: with the companion index
 case $BASE in
   seqstep)   DDL="$STEP create table t (id bigint primary key, $COLS);";           EXPR="$NEXT" ;;
@@ -25,14 +25,22 @@ case $BASE in
   # and the same bit layout from a default expression, both on ONE shared sequence.
   snowam)    DDL="create extension snowflake; create sequence sf using snowflake; create table t (id bigint primary key, $COLS);"
              EXPR="nextval('sf')"; PRE="set snowflake.machine_id = :r;" ;;
+  snowam1)   DDL="create extension snowflake; create sequence sf using snowflake; create table t (id bigint primary key, $COLS);"
+             EXPR="nextval('sf')" ;;      # one machine number for all four writers, like one region
   snowone)   DDL="create sequence s_r0; create table t (id bigint primary key, $COLS);"
              EXPR="(((extract(epoch from clock_timestamp()) * 1000)::bigint - 1767225600000) << 22) | (:r::bigint << 18) | (nextval('s_r0') & 262143)" ;;
+  # snowone with the region of one server for all four writers, which is what regionseq does
+  snowone1)  DDL="create sequence s_r0; create table t (id bigint primary key, $COLS);"
+             EXPR="(((extract(epoch from clock_timestamp()) * 1000)::bigint - 1767225600000) << 22) | (1::bigint << 18) | (nextval('s_r0') & 262143)" ;;
+  # extension/: our regionseq sequence access method, one shared sequence, region 1 for the server
+  regionam)  DDL="create extension regionseq; create sequence rs using regionseq; create table t (id bigint primary key, $COLS);"
+             EXPR="nextval('rs')"; EXTRA=$(rsargs 1) ;;
   *) echo "unknown variant $V"; exit 1 ;;
 esac
 [ "$V" != "$BASE" ] && DDL="$DDL $COMPANION"
 
 N=pk-single
-pg_start $N -c max_wal_size=6GB -c checkpoint_timeout=15min -c track_io_timing=on
+pg_start $N -c max_wal_size=6GB -c checkpoint_timeout=15min -c track_io_timing=on $EXTRA
 psqlx $N -c "$DDL"
 if [ "$BASE" = composite ]; then
   IDCOL="region, id, payload"; SEL="select :r, $EXPR, 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'"

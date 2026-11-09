@@ -30,6 +30,11 @@ variant() {
     # IMAGE=pk-seqam: the snowflake sequence access method; machine id 1..3 per region, or the default 1 everywhere
     snowam)    DDL="create extension snowflake; create sequence s using snowflake; alter database postgres set snowflake.machine_id = $((i+1)); create table t (id bigint primary key, region smallint not null, payload text not null);"; EXPR="nextval('s')" ;;
     snowam-same) DDL="create extension snowflake; create sequence s using snowflake; create table t (id bigint primary key, region smallint not null, payload text not null);"; EXPR="nextval('s')" ;;
+    # our own sequence access method, extension/ in the article's directory
+    regionam|regionam-same) DDL="create extension regionseq; create sequence s using regionseq; create table t (id bigint primary key, region smallint not null, payload text not null);"; EXPR="nextval('s')" ;;
     *) echo "unknown variant $v"; return 1 ;;
   esac
 }
+
+# Server arguments that regionseq needs: region number $1 (the preload library and the setting are fixed for the server's life)
+rsargs() { echo "-c shared_preload_libraries=regionseq -c regionseq.region_id=$1"; }

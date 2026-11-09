@@ -19,11 +19,15 @@ Results are in `../results/`, named after the script that made them.
 | `run-serial-old.sh` | a `serial` column made on 9.6, dumped and restored on 19rc1 | `40-serial-old.out` |
 | `run-default.sh` | the default `uuidv7()` of a column, dumped from 17 and restored on 19rc1 | `45-uuidv7-default.out` |
 | `run-seqam-single-all.sh` (`run-single.sh` with `snowone`, `snowam`) | the one-server workload on the build with the sequence access method patches (`seqam/Dockerfile`, v29 on the master of 2026-05-14): the keys again, the expression on one shared sequence, the `snowflake` method | `31-seqam-*.out`, `summarize-single.py ../results 31-seqam` makes `31-seqam-summary.txt` |
+| `extension/` (at the article's root) | `regionseq`, our own sequence access method as a PGXS extension: C, control and SQL files, a regression test (`make installcheck`) and its README. `compose/seqam/Dockerfile` builds it out of tree into the patched server: `docker build -t pk-seqam -f compose/seqam/Dockerfile .` from the article's directory | `100-seqam-regress.out` (the patches' suites) |
 | `run-seqam-func.sh` | the `snowflake` method: ids, `int` columns, `MAXVALUE`, dump and restore, a crash | `101-seqam-func.out` (regression suites: `100-seqam-regress.out`) |
 | `run-seqam-scale.sh` | `nextval()` alone, 1, 4 and 16 clients on one sequence | `105-seqam-scale.out` |
 | `run-failover.sh <insync\|lagging> [run] snowam\|snowflake` | the failover test for the method and for the time-based `bigint` | `102-failover-snowam-*.out`, `106-failover-snowflake-*.out` |
 | `run-mesh.sh snowam\|snowam-same` | the mesh with a machine number per region, and with the default everywhere | `103-mesh-*.out` |
 | `run-clock.sh <variant> <step> <rate>` | a key made from the clock, with the clock stepped back (`seqam/Dockerfile.faketime`) | `104-clock-step*.out` |
+| `run-regionseq-func.sh` | `regionseq`: library not preloaded, region number unset, a crash with the clock set back 10 s, dump from region 2 and restore into region 3 | `110-regionseq-func.out` |
+| `run-region-filter.sh <regionseq\|expression>` | a publication filtered on the bits of the key, replica identity the primary key, with inserts, updates and deletes of two regions | `111-region-filter-*.out` |
+| `run-single.sh regionam\|snowone1\|snowam1`, `run-failover.sh <s> [run] regionam`, `run-mesh.sh regionam\|regionam-same`, `run-clock.sh regionam ...`, `run-seqam-scale.sh` | `regionseq` and its like-for-like references (one region for all four writers) on the same tests | `31-seqam-*.out`, `112-failover-regionam-*`, `113-mesh-*`, `104-clock-step*.out`, `114-*`, `105-seqam-scale.out` |
 | `run-rest.sh`, `run-rest2.sh` | the order in which the results above were produced | |
 
 The 32-bit wall (`../sql/10-serial-limits.sql`), the detection query

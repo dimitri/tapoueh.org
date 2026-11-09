@@ -24,7 +24,7 @@ for f in sorted(glob.glob(sys.argv[1] + "/" + PFX + "-*-run*.out")):
     rows[v].append(d)
 def med(v, k): return statistics.median(r[k] for r in rows[v] if k in r)
 print("variant | table MB | pk MB | companion MB | rows/s | WAL B/row | after checkpoint: WAL B/row | FPI | pk idx blocks read (500k)")
-for v in ["seqstep","seqstep+","composite","uuidv4","uuidv4+","uuidv7","uuidv7+","snowflake","snowflake+","snowone","snowam"]:
+for v in ["seqstep","seqstep+","composite","uuidv4","uuidv4+","uuidv7","uuidv7+","snowflake","snowflake+","snowone","snowam","regionam","snowone1","snowam1"]:
     if v not in rows: continue
     pk = statistics.median(sum(x for k,x in r["idx"].items() if k.endswith("pkey")) for r in rows[v])
     co = statistics.median(sum(x for k,x in r["idx"].items() if not k.endswith("pkey")) for r in rows[v])
