@@ -9,6 +9,7 @@ cd "$(dirname "$0")"; . ./lib.sh; IMAGE=pk-pgaf
 K=${1:?key}; SK=${2:?skew in seconds}; RUN=${3:-1}
 # pg_autoctl confirms a promotion by the timeline of the last checkpoint, which the checkpoint after a promotion spreads
 # over checkpoint_completion_target x checkpoint_timeout; CKPT=default keeps Postgres's 0.9 x 5 min, otherwise 0.
+MODE=${MODE:-kill}      # kill: docker kill of the primary; switchover: pg_autoctl perform switchover
 CKPTLINE='checkpoint_completion_target = 0'; WAIT=60
 [ "$CKPT" = default ] && { CKPTLINE='# default checkpoint settings'; WAIT=420; }
 case $K in
@@ -81,8 +82,13 @@ docker cp /tmp/pk-writer.sh pk-sub:/tmp/writer.sh
 docker exec pk-sub rm -f /tmp/stop
 docker exec -d pk-sub bash -c "bash /tmp/writer.sh > /tmp/writer.log 2>&1"
 sleep 6
-echo "== killing the primary"; date +%s > /tmp/pk-kill.t
-docker kill pk-n1 >/dev/null
+if [ "$MODE" = switchover ]; then
+  echo "== controlled switchover"; date +%s > /tmp/pk-kill.t
+  docker exec -u postgres pk-n1 pg_autoctl perform switchover --pgdata /var/lib/postgresql/node 2>&1 | tail -3 | cut -c1-160
+else
+  echo "== killing the primary"; date +%s > /tmp/pk-kill.t
+  docker kill pk-n1 >/dev/null
+fi
 for i in $(seq 1 $WAIT); do
   S=$(docker exec pk-mon psql -X -At -U postgres -d pg_auto_failover -c "select string_agg(nodename || '=' || reportedstate, ' ' order by nodename) from pgautofailover.node")
   case "$S" in *"node_2=primary"*|*"node_2=wait_primary"*) break ;; esac; sleep 1
@@ -93,7 +99,7 @@ sleep 12
 docker exec pk-sub touch /tmp/stop; sleep 3
 docker cp pk-sub:/tmp/writer.log /tmp/pk-writer.log
 sleep 5
-echo "== key=$K node 2 clock behind by ${SK}s run=$RUN"
+echo "== key=$K mode=$MODE node 2 clock behind by ${SK}s run=$RUN"
 python3 - <<'PY'
 import re
 calls=[]; cur=None

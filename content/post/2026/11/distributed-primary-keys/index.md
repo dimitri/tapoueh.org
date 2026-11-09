@@ -873,6 +873,30 @@ runs above set `checkpoint_completion_target = 0`. It was the main branch of
 pg_auto_failover (7701bc9) against a Postgres 19 master, so it may not be what
 a released pair does.
 
+**A controlled switchover.** Everything above is a hard failover, a kill, and
+most promotions in production are planned: `pg_autoctl perform switchover`
+drains the primary, promotes node 2 and makes the old primary its standby. The
+writes paused for 2 to 4 seconds instead of 34, which changes what a skew does:
+it is no longer hidden by the outage. The same drill, node 2's clock 0, 5, 10 or
+60 seconds behind (`MODE=switchover`, `results/131-pgaf-switchover.out`, one run
+each, 2 to 4 million ids a run):
+
+| Node 2 clock behind by | Expression: refused batches / ids below | `uuidv7()` | `regionseq` |
+|---|---|---|---|
+| 0 s | 0 / 0 | 0 / 0 | 0 / 0 |
+| 5 s | 0 / 289,000 (11%) | 0 / 527,474 (20%) | 0 / 0 |
+| 10 s | 2 / 1,376,000 (55%) | 0 / 1,296,000 (53%) | 0 / 0 |
+| 60 s | 0 / 1,892,000 (all) | 0 / 2,346,000 (all) | 0 / 0 |
+
+No acknowledged row was lost and the subscriber ended with the rows of the new
+primary in all twelve runs. A skew that the 34 s of a hard failover absorbed up
+to 60 s now shows from 5 s: the clock keys make ids below what the old primary
+made, and the expression repeated ids in the 10 s run, two batches refused and
+retried. `regionseq` was above the old ids in every run, and never repeated. So
+the clock keys are the ones that need the clocks of a region's nodes to agree
+to better than the time a switchover takes, and a switchover is the case that
+gives the least room.
+
 ### Regions whose clocks differ
 
 Three regions, region 0 on time, region 1 ahead and region 2 behind by 0, 50 ms
