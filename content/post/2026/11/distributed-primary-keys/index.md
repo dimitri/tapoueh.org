@@ -24,20 +24,41 @@ needs rethinking. Two regions that each ask their own sequence for "the next
 number" will hand out the same one, and the first time those rows meet on a
 subscriber, one of them is rejected.
 
-This article is about that choice, for the multi-writer system we built in
-[Part 4 of the logical replication
+This article is about that choice, for the multi-writer system we built in [Part
+4 of the logical replication
 series](/blog/2026/11/postgres-logical-replication-beyond-one-writer/): which
-primary key to give a table that several regions write at the same time.
-[Part 1](/blog/2026/09/ten-years-of-postgres-logical-replication/#minting-ids-on-the-workers)
+primary key to give a table that several regions write at the same time. [Part
+1](/blog/2026/09/ten-years-of-postgres-logical-replication/#minting-ids-on-the-workers)
 listed the ways to mint ids that cannot collide, and showed that they work. It
 did not measure what they cost, and that's what we do here, on the same
 workload: a sequence per region with its own step, a composite `(region, id)`
-key, random UUIDs, time-ordered `uuidv7()`, and a `bigint` made of a
-timestamp, a region and a counter. We look at key size, index
-locality, WAL and queries, and at what each choice allows the replication links
-to do. What a primary key is, and why a surrogate key doesn't replace a natural
-one, is [an older story](/blog/2018/03/database-normalization-and-primary-keys/);
-we only use it.
+key, random UUIDs, time-ordered
+[`uuidv7()`](/blog/2026/07/sql-improvements-in-postgresql-1118-a-personal-selection/#uuidv7--time-sortable-uuids-pg-18),
+and a `bigint` made of a timestamp, a region and a counter. We look at key size,
+index locality, WAL and queries, and at what each choice allows the replication
+links to do. What a primary key is, and why a surrogate key doesn't replace a
+natural one, is [an older
+story](/blog/2018/03/database-normalization-and-primary-keys/); we only use it.
+
+What we found, in short:
+
+- **On one server, the random UUID is the expensive key.** After a checkpoint it
+  writes 487 bytes of WAL per row against 182 for `uuidv7()`, and its index is
+  27% larger. A `uuidv7()` index behaves like a sequence's.
+- **Across regions, every key we tried converged without a collision.** They
+  differ in price. A composite `(region, id)` repeats 10 to 16 bytes in every
+  table that points at it, and a single-column key needs a second index to be
+  filtered by region, which is about 85 bytes of WAL per row.
+- **A per-region sequence is state that a failover can rewind.** Promoted from
+  a lagging standby, it hands out numbers that were already used. A UUID has no
+  such state.
+- **`uuidv7()` stays cheap while the clocks of the regions agree to within a few
+  milliseconds.** With 50 ms of skew its index was up to 55% bigger.
+- **Whatever the key, 32 bits is a wall.** `serial` and `int` identity columns
+  stop at 2,147,483,647, and a `serial` column made before Postgres 10 can hide
+  a `bigint` sequence behind an `int` column.
+
+The last section is a table that says which key to use when.
 
 ## What a key has to do here
 
@@ -51,167 +72,10 @@ we only use it.
   is a cost we count.
 - **Stay cheap to index and to join on**, since every child table repeats it.
 
-## The 32-bit wall
-
-Before comparing keys, the one failure that has nothing to do with regions and
-that every candidate below can hit: a key stored on 32 bits. `serial` is the
-familiar way to get one, and the width of the column and the width of the
-sequence behind it are two separate things. We looked at what Postgres 19 release
-candidate 1 builds for each way of writing an auto-numbered column:
-
-~~~ sql
-create table t_serial    (id serial primary key);
-create table t_bigserial (id bigserial primary key);
-create table t_ident     (id int    generated always as identity primary key);
-create table t_identbig  (id bigint generated always as identity primary key);
-
-create sequence s_plain;
-create table t_plain     (id int primary key default nextval('s_plain'));
-~~~
-
-~~~ results
-    table    | column_type | sequence_type |    sequence_max
--------------+-------------+---------------+---------------------
- t_bigserial | bigint      | bigint        | 9223372036854775807
- t_ident     | integer     | integer       |          2147483647
- t_identbig  | bigint      | bigint        | 9223372036854775807
- t_plain     | integer     | bigint        | 9223372036854775807
- t_serial    | integer     | integer       |          2147483647
-~~~
-
-A `serial` or an `int` identity column gets a sequence of its own width, which
-stops at 2,147,483,647 with a clear message, before it hands out anything the
-column can't hold:
-
-~~~ results
-ERROR:  nextval: reached maximum value of sequence "t_serial_id_seq" (2147483647)
-~~~
-
-The dangerous one is the last kind: a sequence created on its own, which is
-`bigint` unless we say otherwise, used as the default of an `int` column. The
-sequence goes on, and the column is the one that stops:
-
-~~~ results
-ERROR:  integer out of range
-ERROR:  integer out of range
- last_value
-------------
- 2147483649
-~~~
-
-Every failed insert took a value from the sequence anyway, so the sequence
-is already two past the wall after two attempts, and nothing in the error says
-which side to look at. Sequences are not transactional, so a rollback gives
-nothing back either: an application that retries a failing insert in a loop
-moves the sequence faster than it adds rows.
-
-In a system with several writers the wall comes closer than the table size
-suggests. A sequence per region with a step of 10 spends 10 values for each row
-it keeps, which leaves 214,748,364 rows per region before the wall, about 25
-days of a writer doing 100 inserts a second. With `(region, id)` the wall is
-per region and the step is 1, but it's the same wall. Widening a column later
-rewrites the table, and every foreign key that points at it has to follow,
-which is the pause of Part 4, for a mistake that's cheaper to avoid on the first
-day: use `bigint`, and `generated always as identity` over `serial`.
-
-### Widening the column under logical replication
-
-DDL isn't replicated, so a link between two servers has two columns to
-widen, and the order matters. We built the smallest case that shows it: an
-`int` primary key on a publisher and on a subscriber, 3,000,000 rows copied, a
-publication filtered on `region = 1`, and the widening done on each side in
-turn. The rewrite of 3,000,000 rows took about a second on either side (a
-lab on tmpfs, so this is the CPU part of the rewrite; the table is locked
-against readers and writers for that long, and with it every foreign key that
-needs the same change).
-
-With the publisher first, the link carries on until the first value that
-doesn't fit in 32 bits, and then the subscriber stops on it and retries:
-
-~~~ results
-publisher-first
-rows on subscriber | 3000000
-apply_error_count | 2
-ERROR:  value "3000000000" is out of range for type integer
-CONTEXT:  processing remote data for replication origin "pg_16394" during message type "INSERT" for replication target relation "public.t" column "id" in transaction 667
-~~~
-
-Widening the subscriber afterwards unblocks it, and the row arrives. With the
-subscriber first, the same row goes through with no error:
-
-~~~ results
-subscriber-first
-rows on subscriber has 3000000000 | 1
-apply_error_count | 0
-~~~
-
-So the order is the one of any schema change on core logical replication:
-widen the receiving side first, the publishing side after. The error only
-shows up when the first value past 2,147,483,647 is written, which can be days
-after the `ALTER TABLE` on the publisher. In a mesh where every region both
-publishes and subscribes, that's every region before any of them starts
-minting the large ids, which is the paused rollout of Part 4.
-
-### Databases that are older than Postgres 10
-
-The `AS` clause of `CREATE SEQUENCE` arrived in Postgres 10. Before it a
-sequence was always a `bigint`, including the one behind a `serial` column.
-We created a `serial` column on 9.6, then dumped it with the `pg_dump` of
-19rc1, which is what `pg_upgrade` runs for the schema, and restored it. On 9.6
-the column is `integer` and the sequence goes up to 9,223,372,036,854,775,807,
-so the failure is the one of the standalone sequence above:
-
-~~~ results
-9.6:     select setval('t_id_seq', 2147483647);  insert into t default values;
-ERROR:  integer out of range
-~~~
-
-The dump carries no `AS integer` for it, and on 19rc1 the restored column is
-still `integer` with a `bigint` sequence behind it, and fails the same way:
-
-~~~ results
- column_type | sequence_type |       seqmax
--------------+---------------+---------------------
- integer     | bigint        | 9223372036854775807
-~~~
-
-A `serial` column made before Postgres 10 and carried through every upgrade
-since is the dangerous combination, found in the wild rather than built by
-hand. This query lists the integer columns whose owned sequence is wider than
-the column:
-
-~~~ sql
-select c.oid::regclass as "table", a.attname as "column", a.atttypid::regtype as column_type,
-       q.oid::regclass as sequence, s.seqtypid::regtype as sequence_type, s.seqmax
-  from pg_sequence s
-  join pg_class q on q.oid = s.seqrelid
-  join pg_depend d on d.objid = q.oid and d.classid = 'pg_class'::regclass
-                  and d.refclassid = 'pg_class'::regclass and d.deptype in ('a', 'i')
-  join pg_class c on c.oid = d.refobjid
-  join pg_attribute a on a.attrelid = c.oid and a.attnum = d.refobjsubid
- where a.atttypid in ('int2'::regtype, 'int4'::regtype)
-   and s.seqmax > case a.atttypid when 'int2'::regtype then 32767 else 2147483647 end;
-~~~
-
-On a `t_old` table we built by hand, an `int` column that owns a `bigint`
-sequence, it returns one row and ignores the `serial` and `bigserial` columns
-next to it:
-
-~~~ results
- table | column | column_type |   sequence   | sequence_type |       seqmax
--------+--------+-------------+--------------+---------------+---------------------
- t_old | id     | integer     | t_old_id_seq | bigint        | 9223372036854775807
-~~~
-
-It finds sequences that are owned by the column, as `serial` makes them. A
-sequence that is only the default of the column, with no `owned by`, has to be
-found through `pg_attrdef`.
-
 ## Five candidates
 
 Every table below has the same columns: the key, `region smallint` and
-`payload text` (32 bytes). Region `r` of the lab
-is a number from 0 to 3.
+`payload text` (32 bytes). Region `r` of the lab is a number from 0 to 3.
 
 ~~~ sql
 -- one sequence per region, interleaved: region r runs `increment by 10 start with r + 1`
@@ -230,13 +94,15 @@ create table t (id bigint primary key, region smallint not null, payload text no
 -- default ((ms_since_2026 << 22) | (region << 18) | (nextval('s') & 262143))
 ~~~
 
-[Part 1](/blog/2026/09/ten-years-of-postgres-logical-replication/#minting-ids-on-the-workers)
+[Part
+1](/blog/2026/09/ten-years-of-postgres-logical-replication/#minting-ids-on-the-workers)
 has the output of the interleaved sequences and the warning about headroom, and
-the first three are the candidates it listed. The fifth is the shape of the
-`snowflakeid` kind it mentions for EDB Postgres Distributed, written as an
-expression: time first so that ids sort by creation, then the region, then 18 bits of a
-per-region sequence, which only has to differ between the ids that one region
-makes within the same millisecond.
+shows the composite key and `uuidv7()` at work. It mentions the random uuid for
+its reputation only. The fifth key is the shape of the `snowflakeid` kind it
+mentions for EDB Postgres Distributed, written as an expression: time first so
+that ids sort by creation, then the region, then 18 bits of a per-region
+sequence, which only has to differ between the ids that one region makes within
+the same millisecond.
 
 | Key | How regions avoid each other | Size of one key |
 |---|---|---|
@@ -245,94 +111,6 @@ makes within the same millisecond.
 | `gen_random_uuid()` (v4) | the space is too large to collide | 16 bytes |
 | `uuidv7()` | the same, with a time prefix | 16 bytes |
 | Time, region, counter | the region is in the bits | 8 bytes |
-
-### `uuidv7()` before Postgres 18
-
-The built-in `uuidv7()` arrived with Postgres 18, and the regions of a system
-don't all upgrade on the same day. The function is short enough to write in SQL:
-take a random v4 uuid, overwrite its first 48 bits with the Unix time in
-milliseconds, and set the version nibble to 7. The variant bits that
-`gen_random_uuid()` already put there are the right ones for
-[RFC 9562](https://www.rfc-editor.org/rfc/rfc9562).
-
-~~~ sql
-create function public.uuidv7() returns uuid
-    language sql volatile parallel safe
-as $$
-    select encode(
-        set_bit(
-            set_bit(
-                overlay(uuid_send(gen_random_uuid())
-                        placing substring(int8send((extract(epoch from clock_timestamp()) * 1000)::bigint) from 3)
-                        from 1 for 6),
-                52, 1),
-            53, 1),
-        'hex')::uuid
-$$;
-~~~
-
-`gen_random_uuid()` is built in from Postgres 13; before that, `pgcrypto` has
-it. We ran the script on 13, 17 and 19rc1. On every one the version nibble is 7,
-the variant is `8`, `9`, `a` or `b`, and the 48 bits read back as the current
-time:
-
-~~~ results
- version | rfc_variant | clock_within_1s
----------+-------------+-----------------
- 7       | t           | t
-~~~
-
-Two differences with the built-in one are worth knowing. We generated a million
-ids in a single statement and counted how many are smaller than the one before:
-
-| | ids smaller than the previous one | time for 1,000,000 ids (19rc1) |
-|---|---|---|
-| SQL function | about 500,000 on 13, 17 and 19rc1 | 810 ms |
-| built-in `uuidv7()` | 0 | 472 ms |
-
-The SQL function fills everything after the millisecond with random bits, so
-two ids made in the same millisecond come out in random order. A million ids in
-under a second is a thousand or so per millisecond, which is why half of them
-are out of order. Across milliseconds the order holds, and that's what the
-index cares about: new keys land in the pages of the last few milliseconds,
-not anywhere in the tree. The built-in function spends 12 bits on the
-sub-millisecond fraction and stays ordered inside a session; we'd only notice
-the difference if something sorts on the key to recover the insert order of
-one session.
-
-The function lives in `public`, and an unqualified `uuidv7()` finds
-`pg_catalog` first, so on 19rc1, with both defined, a call written without a
-schema runs the built-in one:
-
-~~~ results
- Result
-   Output: uuidv7()
-~~~
-
-That covers the queries and the code that call `uuidv7()`. It doesn't cover a
-column default, because `pg_dump` writes it with the schema. We created
-`default uuidv7()` on 17, with the SQL function, and dumped it with the
-`pg_dump` of 19rc1, which is what `pg_upgrade` does for the schema:
-
-~~~ results
-    id uuid DEFAULT public.uuidv7() NOT NULL,
-~~~
-
-After the restore the default still calls the SQL function. Once every region
-runs 18 or later, we set the defaults again, without a schema (`alter table ...
-alter column id set default uuidv7()`), which resolves to the built-in one,
-and then drop `public.uuidv7()`.
-
-Last, a `uuidv7()` value carries the time of its creation to the millisecond.
-When the key appears in a URL or an API, that's a public timestamp for the
-row, which a random v4 doesn't give away.
-
-<!-- Sources: sql/20-uuidv7-sql.sql, sql/21-uuidv7-native.sql, results/20-*.out,
-     results/45-uuidv7-default.out (compose/run-default.sh).
-     The function is adapted from the one in TAOP's download-tracking
-     migration (internal/db/migrations/0001_init.sql). NB: the TAOP course
-     text 2-1-uuid-gen.sql and the generated page say uuidv7() came with
-     Postgres 17; it came with 18. -->
 
 ## What each one costs on one server
 
@@ -354,16 +132,17 @@ full-page image. Each figure is the median of three runs (`compose/run-single.sh
 | `uuidv7()` | 422 MB | 158 MB | 182 bytes | 182 bytes | 10 | 4 |
 | Time, region, counter | 383 MB | 151 MB | 175 bytes | 174 bytes | 9 | 4 |
 
-The last three columns are for the 500,000 rows inserted after the checkpoint. The
-random uuid index has about 24,000 pages, and the 500,000 inserts wrote 24,396
-full-page images: nearly every page of the index was touched and written whole
-once. That's 487 bytes of WAL for each row, which carries about 183 bytes of its own.
-The 198,663 index pages missing from `shared_buffers` say the same from the
-buffer side: with an index larger than `shared_buffers`, four inserts in ten
-found their page somewhere else. The other four keys put a new row into the rightmost leaf of the index or
-near it, and read four pages in the same run. `uuidv7()` behaves like the
-sequences from the point of view of the index, which is the claim that Part 1
-and the 11-18 selection made and that we hadn't measured.
+The last three columns are for the 500,000 rows inserted after the checkpoint.
+The random uuid index has about 24,000 pages, and the 500,000 inserts wrote
+24,396 full-page images: nearly every page of the index was touched and written
+whole once. That's 487 bytes of WAL for each row, which carries about 183 bytes
+of its own. The 198,663 index pages missing from `shared_buffers` say the same
+from the buffer side: with an index larger than `shared_buffers`, four inserts
+in ten found their page somewhere else. The other four keys put a new row into
+the rightmost leaf of the index or near it, and read four pages in the same run.
+`uuidv7()` behaves like the sequences from the point of view of the index, which
+is the claim that Part 1 and the 11-18 selection made and that we hadn't
+measured.
 
 The size columns hold two more results. A random uuid's index is 27% larger than
 `uuidv7()`'s for the same 16-byte keys (200 MB against 158 MB), because
@@ -468,15 +247,29 @@ result for the numbers inside it.
 
 What this means for the keys: the per-region sequence of the first two keys is
 state that has to be at least as new as the rows other regions have already
-received. Part 4's `synchronized_standby_slots` provides that, since a
-subscriber isn't sent a row before the standby has it, and the `nextval` record
-comes before the row's commit in the WAL: an argument from the order of the WAL,
-which we didn't run as a failure drill. Without it, a region whose standby
-lagged at the time of the failover hands out ids that other regions
-hold, and their subscriptions stop on `insert_exists`. A uuid has no state to
-rewind. The time-based `bigint` has a counter, but the time in front of it has
-moved on by at least the time the failover took, so a repeated counter value
-doesn't repeat the key, by construction; we didn't run that one.
+received. [Part
+4's](/blog/2026/11/postgres-logical-replication-beyond-one-writer/#a-region-is-a-group-of-three)
+`synchronized_standby_slots` provides that, since a subscriber isn't sent a row
+before the standby has it, and the `nextval` record comes before the row's
+commit in the WAL: an argument from the order of the WAL, which we didn't run as
+a failure drill. Without it, a region whose standby lagged at the time of the
+failover hands out ids that other regions hold, and their subscriptions stop on
+`insert_exists`. A uuid has no state to rewind. The time-based `bigint` has a
+counter, but the time in front of it has moved on by at least the time the
+failover took, so a repeated counter value doesn't repeat the key, by
+construction; we didn't run that one.
+
+After a promotion that may follow a lagging standby, we move each sequence past
+the highest id the other regions hold for that region, with a `setval` built
+from the catalog the way [the 2010
+article](/blog/2010/02/resetting-sequences.-all-of-them-please/) builds it,
+before the region accepts writes. Postgres 19's sequence synchronization, which
+[Part
+1](/blog/2026/09/ten-years-of-postgres-logical-replication/#what-about-sequences)
+and [the consolidation
+article](/blog/2026/10/consolidating-databases-with-postgres-logical-replication/#sequences-dont-replicate-either)
+cover, copies a sequence's position to a subscriber; it doesn't make a writer's
+own sequence safer in this case.
 
 ### Clocks that disagree
 
@@ -498,28 +291,29 @@ uuid:
 | one region 1 hour ahead | 66.7% | 8.7 MB | 59% |
 
 The 5, 50 and 200 ms lines are the median of three runs, whose index sizes
-differ by up to 5%. With a 5 ms skew two rows in three already arrive with a key lower than one
-that's in the index, and the index doesn't care: the three streams of keys
-land within the same few pages. At 50 ms and beyond they land on separate
-parts of the tree. Only the rightmost page of a B-tree is split to leave it
-full; any other page splits in the middle and leaves two half-full pages, and
-with three streams of keys, each behind the next, two of them are never at the
-right edge. So the index is 28% to 55% bigger from 50 ms of skew up, which is
-what the random uuid cost (27%) in the one-server table, though we didn't count
-the WAL of these runs. The size isn't monotonic in the skew, and 50 ms was the
-worst case we ran. Uniqueness and correctness don't depend on the clocks; the
-order of keys across regions does, and so does the index.
+differ by up to 5%. With a 5 ms skew two rows in three already arrive with a key
+lower than one that's in the index, and the index doesn't care: the three
+streams of keys land within the same few pages. At 50 ms and beyond they land on
+separate parts of the tree. Only the rightmost page of a B-tree is split to
+leave it full; any other page splits in the middle and leaves two half-full
+pages, and with three streams of keys, each behind the next, two of them are
+never at the right edge. So the index is 28% to 55% bigger from 50 ms of skew
+up, which is what the random uuid cost (27%) in the one-server table, though we
+didn't count the WAL of these runs. The size isn't monotonic in the skew, and 50
+ms was the worst case we ran. Uniqueness and correctness don't depend on the
+clocks; the order of keys across regions does, and so does the index.
 
 ## What `(region, id)` costs
 
 The composite key looked cheap in the one-server table, and its price is paid
 somewhere else: every table that points at it repeats both columns, in the
-column list and in the index on the foreign key. This is the argument of the
-natural against surrogate keys of
-[2018](/blog/2018/03/database-normalization-and-primary-keys/), which stops at
-"the foreign keys get wider". We measured how much wider, with a `parent` table
+column list and in the index on the foreign key. The
+[2018 article](/blog/2018/03/database-normalization-and-primary-keys/) has the
+example, a `comment` table that repeats three columns of `article` to reference
+it, and stops at "quite a big table". We measured how big, with a `parent` table
 of 1,000,000 rows and a `child` of 5,000,000 rows that has a foreign key to it
-and an index on that foreign key (`compose/run-child.sh`, `results/95-child.out`):
+and an index on that foreign key (`compose/run-child.sh`,
+`results/95-child.out`):
 
 | Key of `parent` | Parent: heap + indexes | Child: heap + indexes | Both | Join of all children to their parents |
 |---|---|---|---|---|
@@ -558,10 +352,12 @@ isn't.
 ## What changed since the UUID advice of 2018
 
 [The 2018 advice](/blog/2018/03/database-modelization-anti-patterns/) was to
-reach for UUIDs when a central sequence would be a single point of failure,
-with random numbers in a 128-bit space in mind and a collision as unlikely as
-makes no difference. Two things moved. `gen_random_uuid()` became built in with
-Postgres 13, and `uuidv7()` with 18, so the choice is no longer between a
+reach for UUIDs when a central sequence would be a single point of failure, with
+random numbers in a 128-bit space in mind and a collision as unlikely as makes
+no difference. Two things moved. `gen_random_uuid()` became built in with
+Postgres 13 ([the 11-18
+selection](/blog/2026/07/sql-improvements-in-postgresql-1118-a-personal-selection/#built-in-gen_random_uuid-pg-13)
+has the details), and `uuidv7()` with 18, so the choice is no longer between a
 random key and an extension. And the price of the random one is now measured:
 the index is 27% larger and each insert after a checkpoint writes 487 bytes of
 WAL against 182, which is the whole difference with `uuidv7()`, whose index
@@ -571,19 +367,310 @@ Two things didn't move. A UUID is still not a natural key: it identifies the row
 and says nothing about what the row is, so the unique constraint on the natural
 columns stays. And it's 16 bytes in every table that points at it, 11% more
 storage than a `bigint` for the pair of tables of the previous section. What the
-2018 text called a single point of failure has a name in a multi-writer system
-too: a sequence per region isn't one, but it's state that a failover can rewind,
-which is the next section.
+2018 text called a single point of failure has a counterpart in a multi-writer
+system: a sequence per region isn't one, but it's state that a failover can
+rewind, as the failover test above measured.
+
+## What others measured
+
+The index behaviour of random and time-ordered UUIDs has been measured before,
+on one writer. [A 2024
+benchmark](https://ardentperf.com/2024/02/03/uuid-benchmark-war/) inserted a
+million rows with 10 clients into a 20-million-row table, on a development build
+with the `uuidv7()` patch: `uuidv7()` took as long as a `bigint` (290 seconds
+each), a random UUID took about 30% longer, and the `bigint` table was 20%
+smaller than the `uuidv7()` one. Its explanation is the one our buffer numbers
+give: a random key spreads over the whole index and crowds the other tables out
+of `shared_buffers`. [credativ's look at Postgres
+18](https://www.credativ.de/en/blog/postgresql-en/a-deeper-look-at-old-uuidv4-vs-new-uuidv7-in-postgresql-18/)
+measured the index itself at a million rows: 40.0 MB against 31.6 MB for the
+random one, which is the 27% we found, and 71% leaf density against 90%. At 50
+million rows, by dividing the times in its tables, the random UUID was 12 times
+slower to insert into an empty table and 28 times into a full one. That's the
+scale we didn't reach, and the direction we expected.
+
+Neither of the two measures WAL or full-page images, and neither has a second
+writer, which is the half of this article that is new: the WAL after a
+checkpoint, the second index that a row filter needs, what a failover does to a
+region's sequence, and what skewed clocks do to `uuidv7()`.
+
+For minting ids on several writers at once, the closest published designs are
+the ones [Part
+1](/blog/2026/09/ten-years-of-postgres-logical-replication/#minting-ids-on-the-workers)
+lists. [pgEdge's Snowflake
+sequences](https://pgedge.com/blog/introducing-snowflake-sequences-in-a-postgres-extension)
+are a `bigint` of 41 bits of milliseconds since 2023, 12 bits of counter and 10
+bits of node number set in `postgresql.conf`, and the algorithm moves the
+timestamp into the future when a node needs more than 4,096 ids in a
+millisecond. EDB's [sequences for
+PGD](https://enterprisedb.com/docs/pgd/5/sequences) offer both ranges handed out
+by consensus and a snowflake kind. Our time, region and counter `bigint` has the
+same shape, with 4 bits of region and 18 of counter, and it's an expression in
+the column default instead of an extension to install. The pgEdge page gives no
+measurements.
+
+## Before choosing: the 32-bit wall
+
+One failure has nothing to do with regions, and every candidate above can hit
+it: a key stored on 32 bits. `serial` is the familiar way to get one, and the
+width of the column and the width of the sequence behind it are two separate
+things. We looked at what Postgres 19 release candidate 1 builds for each way of
+writing an auto-numbered column:
+
+~~~ sql
+create table t_serial    (id serial primary key);
+create table t_bigserial (id bigserial primary key);
+create table t_ident     (id int    generated always as identity primary key);
+create table t_identbig  (id bigint generated always as identity primary key);
+
+create sequence s_plain;
+create table t_plain     (id int primary key default nextval('s_plain'));
+~~~
+
+~~~ results
+    table    | column_type | sequence_type |    sequence_max
+-------------+-------------+---------------+---------------------
+ t_bigserial | bigint      | bigint        | 9223372036854775807
+ t_ident     | integer     | integer       |          2147483647
+ t_identbig  | bigint      | bigint        | 9223372036854775807
+ t_plain     | integer     | bigint        | 9223372036854775807
+ t_serial    | integer     | integer       |          2147483647
+~~~
+
+A `serial` or an `int` identity column gets a sequence of its own width, which
+stops at 2,147,483,647 with a clear message, before it hands out anything the
+column can't hold:
+
+~~~ results
+ERROR:  nextval: reached maximum value of sequence "t_serial_id_seq" (2147483647)
+~~~
+
+The dangerous one is the last kind: a sequence created on its own, which is
+`bigint` unless we say otherwise, used as the default of an `int` column. The
+sequence goes on, and the column is the one that stops:
+
+~~~ results
+ERROR:  integer out of range
+ERROR:  integer out of range
+ last_value
+------------
+ 2147483649
+~~~
+
+Every failed insert took a value from the sequence anyway, so the sequence
+is already two past the wall after two attempts, and nothing in the error says
+which side to look at. Sequences are not transactional, so a rollback gives
+nothing back either: an application that retries a failing insert in a loop
+moves the sequence faster than it adds rows.
+
+In a system with several writers the wall comes closer than the table size
+suggests. A sequence per region with a step of 10 spends 10 values for each row
+it keeps, which leaves 214,748,364 rows per region before the wall, about 25
+days of a writer doing 100 inserts a second. With `(region, id)` the wall is
+per region and the step is 1, but it's the same wall. Widening a column later
+rewrites the table, and every foreign key that points at it has to follow,
+which is the pause of Part 4, for a mistake that's cheaper to avoid on the first
+day: use `bigint`, and `generated always as identity` over `serial`.
+
+### Widening the column under logical replication
+
+DDL isn't replicated, so a link between two servers has two columns to
+widen, and the order matters. We built the smallest case that shows it: an
+`int` primary key on a publisher and on a subscriber, 3,000,000 rows copied, a
+publication filtered on `region = 1`, and the widening done on each side in
+turn. The rewrite of 3,000,000 rows took about a second on either side (a
+lab on tmpfs, so this is the CPU part of the rewrite; the table is locked
+against readers and writers for that long, and with it every foreign key that
+needs the same change).
+
+With the publisher first, the link carries on until the first value that
+doesn't fit in 32 bits, and then the subscriber stops on it and retries:
+
+~~~ results
+publisher-first
+rows on subscriber | 3000000
+apply_error_count | 2
+ERROR:  value "3000000000" is out of range for type integer
+CONTEXT:  processing remote data for replication origin "pg_16394" during message type "INSERT" for replication target relation "public.t" column "id" in transaction 667
+~~~
+
+Widening the subscriber afterwards unblocks it, and the row arrives. With the
+subscriber first, the same row goes through with no error:
+
+~~~ results
+subscriber-first
+rows on subscriber has 3000000000 | 1
+apply_error_count | 0
+~~~
+
+So the order is the one of any schema change on core logical replication: widen
+the receiving side first, the publishing side after. The error only shows up
+when the first value past 2,147,483,647 is written, which can be days after the
+`ALTER TABLE` on the publisher. In a mesh where every region both publishes and
+subscribes, every region is a receiving side, so all of them have to be widened
+before any of them starts minting large ids, which is [the paused rollout of Part
+4](/blog/2026/11/postgres-logical-replication-beyond-one-writer/#schema-changes-the-one-gap).
+
+### Databases that are older than Postgres 10
+
+The `AS` clause of `CREATE SEQUENCE` arrived in Postgres 10. Before it a
+sequence was always a `bigint`, including the one behind a `serial` column.
+We created a `serial` column on 9.6, then dumped it with the `pg_dump` of
+19rc1, which is what `pg_upgrade` runs for the schema, and restored it. On 9.6
+the column is `integer` and the sequence goes up to 9,223,372,036,854,775,807,
+so the failure is the one of the standalone sequence above:
+
+~~~ results
+9.6:     select setval('t_id_seq', 2147483647);  insert into t default values;
+ERROR:  integer out of range
+~~~
+
+The dump carries no `AS integer` for it, and on 19rc1 the restored column is
+still `integer` with a `bigint` sequence behind it, and fails the same way:
+
+~~~ results
+ column_type | sequence_type |       seqmax
+-------------+---------------+---------------------
+ integer     | bigint        | 9223372036854775807
+~~~
+
+A `serial` column made before Postgres 10 and carried through every upgrade
+since is the dangerous combination, found in the wild rather than built by
+hand. This query lists the integer columns whose owned sequence is wider than
+the column:
+
+~~~ sql
+select c.oid::regclass as "table", a.attname as "column", a.atttypid::regtype as column_type,
+       q.oid::regclass as sequence, s.seqtypid::regtype as sequence_type, s.seqmax
+  from pg_sequence s
+  join pg_class q on q.oid = s.seqrelid
+  join pg_depend d on d.objid = q.oid and d.classid = 'pg_class'::regclass
+                  and d.refclassid = 'pg_class'::regclass and d.deptype in ('a', 'i')
+  join pg_class c on c.oid = d.refobjid
+  join pg_attribute a on a.attrelid = c.oid and a.attnum = d.refobjsubid
+ where a.atttypid in ('int2'::regtype, 'int4'::regtype)
+   and s.seqmax > case a.atttypid when 'int2'::regtype then 32767 else 2147483647 end;
+~~~
+
+On a `t_old` table we built by hand, an `int` column that owns a `bigint`
+sequence, it returns one row and ignores the `serial` and `bigserial` columns
+next to it:
+
+~~~ results
+ table | column | column_type |   sequence   | sequence_type |       seqmax
+-------+--------+-------------+--------------+---------------+---------------------
+ t_old | id     | integer     | t_old_id_seq | bigint        | 9223372036854775807
+~~~
+
+It finds sequences that are owned by the column, as `serial` makes them. A
+sequence that is only the default of the column, with no `owned by`, has to be
+found through `pg_attrdef`, which is what the 2010 query of
+[resetting sequences](/blog/2010/02/resetting-sequences.-all-of-them-please/)
+reads, and a sequence that no column owns at all is what
+[finding orphaned sequences](/blog/2010/03/finding-orphaned-sequences/) looks for.
+
+## Using `uuidv7()` before Postgres 18
+
+The built-in `uuidv7()` arrived with Postgres 18, and the regions of a system
+don't all upgrade on the same day. Part 1 sends readers of older versions to
+the application or to an extension; there's a third way, a function that is
+short enough to write in SQL. It takes a random v4 uuid, overwrites its first 48
+bits with the Unix time in milliseconds, and sets the version nibble to 7. The
+variant bits that `gen_random_uuid()` already put there are the right ones for
+[RFC 9562](https://www.rfc-editor.org/rfc/rfc9562).
+
+~~~ sql
+create function public.uuidv7() returns uuid
+    language sql volatile parallel safe
+as $$
+    select encode(
+        set_bit(
+            set_bit(
+                overlay(uuid_send(gen_random_uuid())
+                        placing substring(int8send((extract(epoch from clock_timestamp()) * 1000)::bigint) from 3)
+                        from 1 for 6),
+                52, 1),
+            53, 1),
+        'hex')::uuid
+$$;
+~~~
+
+`gen_random_uuid()` is built in from Postgres 13; before that, `pgcrypto` has
+it. We ran the script on 13, 17 and 19rc1. On every one the version nibble is 7,
+the variant is `8`, `9`, `a` or `b`, and the 48 bits read back as the current
+time:
+
+~~~ results
+ version | rfc_variant | clock_within_1s
+---------+-------------+-----------------
+ 7       | t           | t
+~~~
+
+Two differences with the built-in one are worth knowing. We generated a million
+ids in a single statement and counted how many are smaller than the one before:
+
+| | ids smaller than the previous one | time for 1,000,000 ids (19rc1) |
+|---|---|---|
+| SQL function | about 500,000 on 13, 17 and 19rc1 | 810 ms |
+| built-in `uuidv7()` | 0 | 472 ms |
+
+The SQL function fills everything after the millisecond with random bits, so
+two ids made in the same millisecond come out in random order. A million ids in
+under a second is a thousand or so per millisecond, which is why half of them
+are out of order. Across milliseconds the order holds, and that's what the
+index cares about: new keys land in the pages of the last few milliseconds,
+not anywhere in the tree. The built-in function spends 12 bits on the
+sub-millisecond fraction and stays ordered inside a session; we'd only notice
+the difference if something sorts on the key to recover the insert order of
+one session.
+
+The function lives in `public`, and an unqualified `uuidv7()` finds
+`pg_catalog` first, so on 19rc1, with both defined, a call written without a
+schema runs the built-in one:
+
+~~~ results
+ Result
+   Output: uuidv7()
+~~~
+
+That covers the queries and the code that call `uuidv7()`. It doesn't cover a
+column default, because `pg_dump` writes it with the schema. We created
+`default uuidv7()` on 17, with the SQL function, and dumped it with the
+`pg_dump` of 19rc1, which is what `pg_upgrade` does for the schema:
+
+~~~ results
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+~~~
+
+After the restore the default still calls the SQL function. Once every region
+runs 18 or later, we set the defaults again, without a schema (`alter table ...
+alter column id set default uuidv7()`), which resolves to the built-in one,
+and then drop `public.uuidv7()`.
+
+Last, a `uuidv7()` value carries the time of its creation to the millisecond,
+as Part 1 notes. When the key appears in a URL or an API, that's a public
+timestamp for the row, which a random v4 doesn't give away.
+
+<!-- Sources: sql/20-uuidv7-sql.sql, sql/21-uuidv7-native.sql, results/20-*.out,
+     results/45-uuidv7-default.out (compose/run-default.sh).
+     The function is adapted from the one in TAOP's download-tracking
+     migration (internal/db/migrations/0001_init.sql). NB: the TAOP course
+     text 2-1-uuid-gen.sql and the generated page say uuidv7() came with
+     Postgres 17; it came with 18. -->
 
 ## Which one to pick
 
 | Situation | Key | Why, and what it costs |
 |---|---|---|
 | One writer region, others only read | `bigint generated always as identity` | Nothing to coordinate; the 32-bit wall is the one trap, and the query above finds the columns that are on it |
-| Several writer regions, each row owned by one, few tables point at the key | `(region, id)`, one identity column per region, `bigint` first in the table | The filter of Part 4 works without a second index, no clock is involved, no step to outgrow. It costs 3% to 10% more storage in a pair of tables, and each region's sequence has to survive a failover, which is Part 4's gating |
+| Several writer regions, each row owned by one, few tables point at the key | `(region, id)`, one identity column per region, `bigint` first in the table | The filter of Part 4 works without a second index, no clock is involved, no step to outgrow. It costs 3% to 10% more storage in a pair of tables, and each region's sequence has to survive a failover, which is [Part 4's gating](/blog/2026/11/postgres-logical-replication-beyond-one-writer/#a-region-is-a-group-of-three) |
 | Several writer regions, each row owned by one, many tables point at the key | a single-column key, a `region` column, and a unique `(id, region)` as replica identity: the time, region and counter `bigint`, or `uuidv7()` | 8 or 16 bytes in every child instead of 10 or 16; the companion index adds about 85 bytes of WAL per row. The `bigint` is smaller and, by construction, doesn't repeat after a failover, and it's an expression to write and keep, with 16 regions at most. `uuidv7()` is a built-in function |
 | Rows created anywhere, nobody filters on the owner | `uuidv7()` | 16 bytes, an index that behaves like a sequence's, nothing to coordinate. The clocks need to agree within a few milliseconds |
 | The creation time must not leak | `gen_random_uuid()` | An index 27% larger, 2.7 times the WAL after a checkpoint (487 bytes a row against 182), and 5 times with a companion index (954) |
+
+If we had to keep one rule: `uuidv7()` where nothing filters on the owner and
+the clocks are kept in sync, `(region, id)` where the owner is the point, a
+random uuid only when the creation time must stay hidden, and never 32 bits.
 
 For a table that already has a sequence, the first steps come before the key:
 the query above for its width, and Part 1's step and headroom arithmetic if
