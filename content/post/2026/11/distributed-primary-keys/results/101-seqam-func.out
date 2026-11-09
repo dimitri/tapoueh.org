@@ -1,0 +1,180 @@
+== version, and the sequence relation
+                               version                               
+---------------------------------------------------------------------
+ PostgreSQL 19devel on aarch64-linux, compiled by gcc-14.2.0, 64-bit
+(1 row)
+
+                        Unlogged sequence "public.sf"
+  Type  | Start | Minimum |       Maximum       | Increment | Cycles? | Cache 
+--------+-------+---------+---------------------+-----------+---------+-------
+ bigint |     1 |       1 | 9223372036854775807 |         1 | no      |     1
+
+ count | is_called 
+-------+-----------
+     1 | f
+(1 row)
+
+== one id, decoded; identity column through default_sequence_access_method
+         id          
+---------------------
+ 7525600462431588354
+(1 row)
+
+           at            | machine | counter 
+-------------------------+---------+---------
+ 2026-11-09 16:49:29.139 |       1 |       3
+(1 row)
+
+         id          |    time_ms    | machine | counter 
+---------------------+---------------+---------+---------
+ 7525600462435782658 | 1794242969140 |       1 |       2
+ 7525600462435782659 | 1794242969140 |       1 |       3
+ 7525600462435782660 | 1794242969140 |       1 |       4
+(3 rows)
+
+== column widths: int and smallint identity columns (the sequence is typed integer, maximum 2147483647)
+     ?column?     |      a      
+------------------+-------------
+ int column holds | -1749020670
+(1 row)
+
+       ?column?        |  a   
+-----------------------+------
+ smallint column holds | 4098
+(1 row)
+
+NOTICE:  int column: duplicate key after 666992 rows
+NOTICE:  smallint column: duplicate key after 4094 rows
+== the state is one small counter: setval
+ count | is_called 
+-------+-----------
+     3 | t
+(1 row)
+
+ setval 
+--------
+   4000
+(1 row)
+
+ count | is_called 
+-------+-----------
+  4000 | t
+(1 row)
+
+ counter 
+---------
+    4001
+(1 row)
+
+== speed of nextval in one session: 1,000,000 values
+  count  
+---------
+ 1000000
+(1 row)
+
+Time: 146.421 ms
+  count  
+---------
+ 1000000
+(1 row)
+
+Time: 596.363 ms
+  count  
+---------
+ 1000000
+(1 row)
+
+Time: 178.394 ms
+  count  
+---------
+ 1000000
+(1 row)
+
+Time: 624.294 ms
+== pg_dump and restore
+\restrict UlO8T81LNSkmTSOzy6fHs5m7X9bwQgmqO19fg5tOfLg0xm2UEfurBVr5ptgYJ0W
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
+SET client_encoding = 'SQL_ASCII';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+SET default_sequence_access_method = snowflake;
+CREATE UNLOGGED SEQUENCE public.sf
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ALTER SEQUENCE public.sf OWNER TO postgres;
+SET default_tablespace = '';
+SET default_table_access_method = heap;
+CREATE TABLE public.t (
+    id bigint NOT NULL,
+    v text
+);
+ALTER TABLE public.t OWNER TO postgres;
+ALTER TABLE public.t ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.t_id_seq
+    UNLOGGED
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+ALTER TABLE ONLY public.t
+    ADD CONSTRAINT t_pkey PRIMARY KEY (id);
+\unrestrict UlO8T81LNSkmTSOzy6fHs5m7X9bwQgmqO19fg5tOfLg0xm2UEfurBVr5ptgYJ0W
+  amname   | amtype 
+-----------+--------
+ snowflake | s
+(1 row)
+
+ relname  | relpersistence |  amname   
+----------+----------------+-----------
+ t_id_seq | u              | snowflake
+ sf       | u              | snowflake
+(2 rows)
+
+ counter 
+---------
+       5
+(1 row)
+
+== kill -9 of a server process, then crash recovery
+    before_crash     | counter_before 
+---------------------+----------------
+ 7525600475178079755 |           1547
+(1 row)
+
+sh: 1: cannot open /proc/45/cmdline: No such file
+crash recoveries in the server log: 1
+ count | is_called 
+-------+-----------
+     1 | f
+(1 row)
+
+     after_crash     
+---------------------
+ 7525600497143648258
+(1 row)
+
+== MAXVALUE is not enforced by nextval, and a dump of such a sequence does not restore
+   above_maxvalue    
+---------------------
+ 7525600497328197783
+(1 row)
+
+ count | is_called 
+-------+-----------
+   151 | t
+(1 row)
+
+pg_restore: error: could not execute query: ERROR:  setval: value 151 is out of bounds for sequence "sf" (1..100)
+pg_restore: warning: errors ignored on restore: 1

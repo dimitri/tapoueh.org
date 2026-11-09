@@ -1,6 +1,8 @@
 # Distributed primary keys: lab
 
-Every script starts throwaway `postgres:19rc1` containers on tmpfs (and one
+The scripts of the sequence access method section use the `pk-seqam` image
+(`docker build -t pk-seqam compose/seqam`, and `pk-seqam-ft` from
+`Dockerfile.faketime`). Every other script starts throwaway `postgres:19rc1` containers on tmpfs (and one
 `postgres:9.6`, one `postgres:17`, and `postgres:13` and `postgres:17` for the
 SQL `uuidv7()`), and removes them at the end. `lib.sh` has the helpers.
 Results are in `../results/`, named after the script that made them.
@@ -16,6 +18,12 @@ Results are in `../results/`, named after the script that made them.
 | `run-widen.sh <publisher-first\|subscriber-first>` | `int` to `bigint` under logical replication | `60-widen-*.out` |
 | `run-serial-old.sh` | a `serial` column made on 9.6, dumped and restored on 19rc1 | `40-serial-old.out` |
 | `run-default.sh` | the default `uuidv7()` of a column, dumped from 17 and restored on 19rc1 | `45-uuidv7-default.out` |
+| `run-seqam-single-all.sh` (`run-single.sh` with `snowone`, `snowam`) | the one-server workload on the build with the sequence access method patches (`seqam/Dockerfile`, v29 on the master of 2026-05-14): the keys again, the expression on one shared sequence, the `snowflake` method | `31-seqam-*.out`, `summarize-single.py ../results 31-seqam` makes `31-seqam-summary.txt` |
+| `run-seqam-func.sh` | the `snowflake` method: ids, `int` columns, `MAXVALUE`, dump and restore, a crash | `101-seqam-func.out` (regression suites: `100-seqam-regress.out`) |
+| `run-seqam-scale.sh` | `nextval()` alone, 1, 4 and 16 clients on one sequence | `105-seqam-scale.out` |
+| `run-failover.sh <insync\|lagging> [run] snowam\|snowflake` | the failover test for the method and for the time-based `bigint` | `102-failover-snowam-*.out`, `106-failover-snowflake-*.out` |
+| `run-mesh.sh snowam\|snowam-same` | the mesh with a machine number per region, and with the default everywhere | `103-mesh-*.out` |
+| `run-clock.sh <variant> <step> <rate>` | a key made from the clock, with the clock stepped back (`seqam/Dockerfile.faketime`) | `104-clock-step*.out` |
 | `run-rest.sh`, `run-rest2.sh` | the order in which the results above were produced | |
 
 The 32-bit wall (`../sql/10-serial-limits.sql`), the detection query

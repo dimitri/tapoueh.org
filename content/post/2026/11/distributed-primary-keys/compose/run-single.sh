@@ -13,6 +13,7 @@ NEXT="nextval(('s_r' || :r)::regclass)"
 SNOW="(((extract(epoch from clock_timestamp()) * 1000)::bigint - 1767225600000) << 22) | (:r::bigint << 18) | (nextval(('s_r' || :r)::regclass) & 262143)"
 COMPANION="create unique index t_id_region on t (id, region); alter table t replica identity using index t_id_region;"
 COLS="region smallint not null, payload text not null"
+PRE=""
 BASE=${V%+}                               # a trailing + means: with the companion index
 case $BASE in
   seqstep)   DDL="$STEP create table t (id bigint primary key, $COLS);";           EXPR="$NEXT" ;;
@@ -20,6 +21,12 @@ case $BASE in
   uuidv4)    DDL="create table t (id uuid primary key, $COLS);";                   EXPR="gen_random_uuid()" ;;
   uuidv7)    DDL="create table t (id uuid primary key, $COLS);";                   EXPR="uuidv7()" ;;
   snowflake) DDL="$SEQS create table t (id bigint primary key, $COLS);";           EXPR="$SNOW" ;;
+  # IMAGE=pk-seqam (seqam/Dockerfile): the snowflake sequence access method of the v29 patches,
+  # and the same bit layout from a default expression, both on ONE shared sequence.
+  snowam)    DDL="create extension snowflake; create sequence sf using snowflake; create table t (id bigint primary key, $COLS);"
+             EXPR="nextval('sf')"; PRE="set snowflake.machine_id = :r;" ;;
+  snowone)   DDL="create sequence s_r0; create table t (id bigint primary key, $COLS);"
+             EXPR="(((extract(epoch from clock_timestamp()) * 1000)::bigint - 1767225600000) << 22) | (:r::bigint << 18) | (nextval('s_r0') & 262143)" ;;
   *) echo "unknown variant $V"; exit 1 ;;
 esac
 [ "$V" != "$BASE" ] && DDL="$DDL $COMPANION"
@@ -34,6 +41,7 @@ else
 fi
 cat > /tmp/pk-single.sql <<SQL
 \set r :client_id % 4
+$PRE
 insert into t ($IDCOL) $SEL from generate_series(1, $ROWS_PER_TX);
 SQL
 docker cp /tmp/pk-single.sql $N:/tmp/pk-single.sql

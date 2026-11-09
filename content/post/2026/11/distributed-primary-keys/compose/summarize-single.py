@@ -2,8 +2,10 @@
 """Median over the runs of each variant, from results/30-single-<variant>-run<n>.out."""
 import glob, re, statistics, collections, sys
 rows = collections.defaultdict(list)
-for f in sorted(glob.glob(sys.argv[1] + "/30-single-*-run*.out")):
-    v = re.search(r"30-single-(.+)-run\d+\.out", f).group(1)
+# optional 2nd argument: result prefix and variants, e.g. "31-seqam" for the sequence access method build
+PFX = sys.argv[2] if len(sys.argv) > 2 else "30-single"
+for f in sorted(glob.glob(sys.argv[1] + "/" + PFX + "-*-run*.out")):
+    v = re.search(PFX + r"-(.+)-run\d+\.out", f).group(1)
     phase, d = 1, {}
     for line in open(f):
         if line.startswith("== phase 2"): phase = 2; continue
@@ -22,7 +24,7 @@ for f in sorted(glob.glob(sys.argv[1] + "/30-single-*-run*.out")):
     rows[v].append(d)
 def med(v, k): return statistics.median(r[k] for r in rows[v] if k in r)
 print("variant | table MB | pk MB | companion MB | rows/s | WAL B/row | after checkpoint: WAL B/row | FPI | pk idx blocks read (500k)")
-for v in ["seqstep","seqstep+","composite","uuidv4","uuidv4+","uuidv7","uuidv7+","snowflake","snowflake+"]:
+for v in ["seqstep","seqstep+","composite","uuidv4","uuidv4+","uuidv7","uuidv7+","snowflake","snowflake+","snowone","snowam"]:
     if v not in rows: continue
     pk = statistics.median(sum(x for k,x in r["idx"].items() if k.endswith("pkey")) for r in rows[v])
     co = statistics.median(sum(x for k,x in r["idx"].items() if not k.endswith("pkey")) for r in rows[v])

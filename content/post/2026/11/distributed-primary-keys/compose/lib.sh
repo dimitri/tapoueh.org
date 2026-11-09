@@ -27,6 +27,9 @@ variant() {
     uuidv7)    DDL="create table t (id uuid primary key, region smallint not null, payload text not null);"; EXPR="uuidv7()" ;;
     snowflake) DDL="create sequence s; create table t (id bigint primary key, region smallint not null, payload text not null);"
                EXPR="(((extract(epoch from clock_timestamp()) * 1000)::bigint - 1767225600000) << 22) | ($i::bigint << 18) | (nextval('s') & 262143)" ;;
+    # IMAGE=pk-seqam: the snowflake sequence access method; machine id 1..3 per region, or the default 1 everywhere
+    snowam)    DDL="create extension snowflake; create sequence s using snowflake; alter database postgres set snowflake.machine_id = $((i+1)); create table t (id bigint primary key, region smallint not null, payload text not null);"; EXPR="nextval('s')" ;;
+    snowam-same) DDL="create extension snowflake; create sequence s using snowflake; create table t (id bigint primary key, region smallint not null, payload text not null);"; EXPR="nextval('s')" ;;
     *) echo "unknown variant $v"; return 1 ;;
   esac
 }
