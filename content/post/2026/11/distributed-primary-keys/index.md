@@ -95,13 +95,10 @@ create table t (id bigint primary key, region smallint not null, payload text no
 | `uuidv7()` | the same, with a time prefix | 16 bytes |
 | Time, region, counter | the region is in the bits | 8 bytes |
 
-The last one is the shape of the Snowflake ids that [pgEdge's
-extension](https://pgedge.com/blog/introducing-snowflake-sequences-in-a-postgres-extension)
-and [EDB Postgres
-Distributed](https://enterprisedb.com/docs/pgd/5/sequences) offer, written as an
-expression in the column default: time first, so that ids sort by creation, then
-the region, then a counter that only has to differ between the ids that one
-region makes within the same millisecond.
+The last one is the Snowflake layout, written as an expression in the column
+default: time first, so that ids sort by creation, then the region, then a
+counter that only has to differ between the ids that one region makes within the
+same millisecond.
 
 The UUID advice of [2018](/blog/2018/03/database-modelization-anti-patterns/)
 was to reach for them when a central sequence would be a single point of
