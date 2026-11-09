@@ -28,6 +28,9 @@ Results are in `../results/`, named after the script that made them.
 | `run-regionseq-func.sh` | `regionseq`: library not preloaded, region number unset, a crash with the clock set back 10 s, dump from region 2 and restore into region 3 | `110-regionseq-func.out` |
 | `run-region-filter.sh <regionseq\|expression>` | a publication filtered on the bits of the key, replica identity the primary key, with inserts, updates and deletes of two regions | `111-region-filter-*.out` |
 | `run-single.sh regionam\|snowone1\|snowam1`, `run-failover.sh <s> [run] regionam`, `run-mesh.sh regionam\|regionam-same`, `run-clock.sh regionam ...`, `run-seqam-scale.sh` | `regionseq` and its like-for-like references (one region for all four writers) on the same tests | `31-seqam-*.out`, `112-failover-regionam-*`, `113-mesh-*`, `104-clock-step*.out`, `114-*`, `105-seqam-scale.out` |
+| `run-failover-skew.sh <key> <insync\|lagging> <skew> [run]` | a promoted standby whose clock is behind by `skew` seconds: ids repeated and ids below the old ones, for the expression, `uuidv7()` and `regionseq` | `120-failover-skew.out` |
+| `run-clock-order.sh <key> <step> [run]` | the clock stepped back while four clients insert: ids lower than an earlier one (same client, any client), time in the id ahead of the clock | `121-clock-order.out` |
+| `run-mesh-skew.sh <key> <skew>` | the three-region mesh with clocks 0, +skew, -skew: convergence, index size and leaf density | `122-mesh-skew.out` |
 | `run-rest.sh`, `run-rest2.sh` | the order in which the results above were produced | |
 
 The 32-bit wall (`../sql/10-serial-limits.sql`), the detection query
