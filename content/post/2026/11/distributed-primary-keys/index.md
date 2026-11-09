@@ -633,14 +633,12 @@ we didn't test.
 
 ## Going further
 
-Keys, indexes and what the planner does with them are the material of [The Art
-of PostgreSQL](https://theartofpostgresql.com), the book: schema design and
-primary keys, the cost of an index, joins and what they read. Every query of the
-book runs in [the Lab](https://theartofpostgresql.com/lab/) against real data,
-and the [self-paced course](https://theartofpostgresql.com/course/) and the
-[Masterclass](https://theartofpostgresql.com/masterclass/) work through the same
-ground with exercises, including the replication and high availability side that
-this series is about. [pg_auto_failover](https://oss.theartofpostgresql.com/pg_auto_failover/),
+If the SQL and schema design side of this is your daily work, [The Art of
+PostgreSQL](https://theartofpostgresql.com) is the book for it, and every query
+of the book runs in [the Lab](https://theartofpostgresql.com/lab/) against real
+data. The [self-paced course](https://theartofpostgresql.com/course/) and the
+[Masterclass](https://theartofpostgresql.com/masterclass/) are the guided
+versions. [pg_auto_failover](https://oss.theartofpostgresql.com/pg_auto_failover/),
 used in the takeover tests above, has its own page for support and the roadmap.
 
 The scripts, the SQL and the output of every run quoted here are in this
