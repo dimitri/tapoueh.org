@@ -251,7 +251,8 @@ slower link the collision happens on the subscriber instead, as Part 1 shows.
 A sequence is state, and a standby's copy of it is as old as the last piece of
 WAL it received. We took a primary and a physical standby, a client taking
 numbers from a sequence as fast as it could, killed the primary after three
-seconds and promoted the standby (`compose/run-failover.sh`,
+seconds and promoted the standby by hand, so that we control how stale it is
+(`compose/run-failover.sh`,
 `results/70-failover-*.out`). The first number the new primary hands out, against
 the last number the client received:
 
@@ -274,8 +275,8 @@ received. [Part
 4's](/blog/2026/11/postgres-logical-replication-beyond-one-writer/#a-region-is-a-group-of-three)
 `synchronized_standby_slots` provides that, since a subscriber isn't sent a row
 before the standby has it, and the `nextval` record comes before the row's
-commit in the WAL: an argument from the order of the WAL, which we didn't run as
-a failure drill. Without it, a region whose standby lagged at the time of the
+commit in the WAL: an argument from the order of the WAL, and the last section's
+drill runs it under pg_auto_failover. Without it, a region whose standby lagged at the time of the
 failover hands out ids that other regions hold, and their subscriptions stop on
 `insert_exists`. A uuid has no state to rewind. The time-based `bigint` has a
 counter, but the time in front of it has moved on by at least the time the
@@ -823,14 +824,54 @@ cut off the mark is old, and with a clock behind the ids go below what the old
 primary made. Our first version, without the timeline bits, repeated 48,510 ids
 in that line, 24% of the new ones, which is why the bits are there: the ids of
 the new timeline differ, so uniqueness no longer depends on the standby having
-the WAL, and only the increasing order does. In the topology of Part 4 it should:
-`synchronized_standby_slots` doesn't let another region see a row that the
-standby doesn't have. We didn't run that topology here: the failovers of this
-article are a physical standby promoted by hand (`pg_promote()`) after a
-`docker kill`, with no logical replication, no failover slots and no
-pg_auto_failover, so the claim is Part 4's and an argument from the WAL order.
-A plain sequence per region has the same dependency, for the same reason, and
-no clock.
+the WAL, and only the increasing order does. A plain sequence per region has the
+same dependency, for the same reason, and no clock.
+
+Those are physical standbys promoted by hand, which is how we made one that is
+stale. A production region is managed, and its standby is not stale, so we ran
+that too.
+
+**With pg_auto_failover.** A region is a monitor and two nodes, the second a
+synchronous standby (`synchronous_standby_names = ANY 1`), in the topology of
+Part 4. A subscriber in another region follows it with a failover slot
+(`failover = true`), and pg_auto_failover manages `synchronized_standby_slots`,
+`sync_replication_slots` and the `dbname` of `primary_conninfo` itself (we built
+its main branch against the server of this section: it needed three build fixes
+for gcc 14 and the server's warning flags, none in its logic). A writer inserts
+1,000 ids per statement through a two-host URI, the primary is killed after 6
+seconds, and pg_auto_failover promotes node 2, whose clock is 0, 2 or 60 seconds
+behind (`compose/run-pgaf-drill.sh`, `results/130-pgaf-drill.out`, one run each,
+5 to 7 million ids a run):
+
+| Node 2 clock behind by | Expression: refused batches / ids below | `uuidv7()` | `regionseq` |
+|---|---|---|---|
+| 0 s | 0 / 0 | 0 / 0 | 0 / 0 |
+| 2 s | 0 / 0 | 0 / 0 | 0 / 0 |
+| 60 s | 1 / 3,223,000 (61%) | 0 / 3,229,318 (61%) | 0 / 0 |
+
+In all nine runs writes were back after 34 seconds, no acknowledged row was
+missing on the new primary (0 of 6 to 7 million), and the subscriber ended with
+exactly the rows of the new primary: the failover slot survived the promotion,
+and the subscription reconnected by itself. The skew table has two readings.
+First, 34 seconds of outage is longer than the 0 and 2 s of skew, so the new
+primary's clock was already past the old one's last id when it started, and
+nothing repeated or went below: a failover that takes tens of seconds hides a
+small skew. Second, at 60 s the clock keys go wrong, as the manual tests said:
+the expression had a batch refused on a repeated id, which the writer retried,
+and both clock keys made 61% of their ids below ones already issued. `regionseq`
+had neither, because the standby is current and its WAL holds the high-water
+mark.
+
+One thing about the tool, which we saw and didn't pursue. With Postgres's default
+`checkpoint_timeout` the failover took 274 seconds in place of 34. The keeper
+confirms a promotion by checking that the timeline advanced, and we infer from
+the timing that it reads it from the checkpoint that follows the promotion,
+which is spread over `checkpoint_completion_target` times `checkpoint_timeout`,
+270 seconds by default: the events show the standby reported `stop_replication`
+271 seconds after `prepare_promotion`. The
+runs above set `checkpoint_completion_target = 0`. It was the main branch of
+pg_auto_failover (7701bc9) against a Postgres 19 master, so it may not be what
+a released pair does.
 
 ### Regions whose clocks differ
 
@@ -914,12 +955,12 @@ ranges handed out by consensus or gapless numbers, which we didn't test.
   3 seconds only.
 - **Other uses of a sequence access method:** ranges handed out by consensus,
   gapless numbers, pseudo-random sequences.
-- **A failover drill with the standby gated.** The sequence results are for a
-  plain physical standby, in the healthy and the cut-off case. That a gated
-  standby never lags behind a row another region holds is an argument from the
-  WAL order.
-- **More than three regions in the mesh, and pg_auto_failover groups.** The
-  mesh is three plain servers.
+- **A larger pg_auto_failover formation.** The drill is one region of two nodes
+  and one subscriber, one run per cell, with the clock skew on the promoted node
+  from libfaketime. Three nodes, priorities, a planned switchover, and a
+  partition instead of a kill are not run.
+- **More than three regions in the mesh.** The mesh is three plain servers,
+  without a standby.
 - **Keys made by the application,** with an ORM or a library: they bring their
   own `uuid` version and their own clock.
 - **Postgres 19 after RC1.** Everything here ran on 19rc1, RC2 is planned for
