@@ -145,6 +145,8 @@ set app.region = 1`); a custom setting needs a dotted name, which is why it
 isn't just `region`. The origin is spelled in UTC, since a bare `'2026-01-01'`
 would move by hours with the `TimeZone` of the session that inserts.
 
+{{< image src="fig-bits.svg" title="The 63 bits of the time, region and counter key, and the expressions that read them." >}}
+
 The UUID advice of [2018](/blog/2018/03/database-modelization-anti-patterns/)
 was to reach for them when a central sequence would be a single point of
 failure, with random numbers in mind. Since then `gen_random_uuid()` became
@@ -175,6 +177,9 @@ is the median of three runs:
 Pkey is the primary key index. The last three columns are for the 500,000 rows
 inserted after the checkpoint: WAL per row, full-page images (FPIs), and index
 pages missing from `shared_buffers` (index misses).
+
+{{< image src="fig-wal.svg" title="WAL per row in the 500,000 inserts after a checkpoint." >}}
+
 The random uuid index has about 24,000 pages, and the 500,000 inserts wrote
 24,396 full-page images: nearly every page of the index was touched and written
 whole once. That's 487 bytes of WAL for each row, which carries about 183 bytes
@@ -183,6 +188,8 @@ from the buffer side: with an index larger than `shared_buffers`, four inserts
 in ten found their page somewhere else. The other four keys put a new row into
 the rightmost leaf of the index or near it, and read four pages in the same run.
 `uuidv7()` behaves like the sequences from the point of view of the index.
+
+{{< image src="fig-btree.svg" title="Where the new rows land in the index: random pages cost a full-page image each, the last page costs one." >}}
 
 The size columns hold two more results. A random uuid's index is 27% larger than
 `uuidv7()`'s for the same 16-byte keys, because random inserts split pages that
@@ -388,6 +395,8 @@ received:
 | Streaming | skips 13 numbers | skips 16 | skips 3 |
 | Cut off from the primary three seconds before the kill | hands out 302,000 numbers a second time | 297,000 | 299,000 |
 
+{{< image src="fig-stale.svg" title="A standby whose copy of the sequence is behind hands out numbers the old primary already used." >}}
+
 A sequence logs 32 numbers ahead of itself, so a promotion that follows an
 up-to-date standby skips a few numbers and never repeats one. When the standby
 hadn't received the last seconds of WAL, the new primary starts where the
@@ -438,6 +447,8 @@ switchover takes seconds, and shows a skew of 5 s. When the new primary's clock
 is behind, its time-based ids go below what the old primary made, and the plain
 `bigint` can repeat one (the refused batches, which the writer retried);
 `uuidv7()` never repeats, in exchange for the same inverted order.
+
+{{< image src="fig-clock-behind.svg" title="After a takeover onto a clock that is behind, time-based ids go below the highest one made before; regionseq doesn't." >}}
 
 Three things about the tool, since they came up. With Postgres's default
 `checkpoint_timeout` the promotion took 274 seconds instead of 34: the keeper
@@ -699,6 +710,8 @@ killed repeatedly), and what counts is how many promotions fall within the
 seconds or minutes that a standby or a clock is wrong. The table, the index and
 the WAL are those of the expression, since a method makes the same `bigint`.
 
+{{< image src="fig-bits-regionseq.svg" title="The 63 bits of a regionseq id." >}}
+
 What a key can promise comes in three levels. **Unique:** an id is never made
 twice. **Increasing per region:** what one region makes only goes up, which is
 what a consumer that remembers "the last id I saw from this origin" needs, and
@@ -720,6 +733,8 @@ ids for the first lines):
 | Switchover onto a clock 5 s, 10 s, 60 s behind: ids below | 11%, 55%, all | 20%, 53%, all | 0, 0, 0 |
 | Failover from a cut-off standby with a clock 2 s behind: repeated ids | 782 of 200,000 | 0 | 0 |
 | `int` column | `integer out of range` | not applicable | `reached maximum value`, with a hint |
+
+{{< image src="fig-ids-below.svg" title="The same switchover measurement, for the three keys that carry a clock." >}}
 
 `uuidv7()` keeps each session increasing, because a backend remembers its last
 timestamp and adds to it, and the sessions do it separately, so a region's ids
