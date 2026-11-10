@@ -29,7 +29,27 @@ it cannot stop two rows that describe the same thing. [Database Normalization
 and Primary Keys](/blog/2018/03/database-normalization-and-primary-keys/)
 covers both, and what this article adds is where the generated id comes from.
 
-The short version:
+**TL;DR** We compared five primary keys for a table that several regions write
+at once, on size, WAL, joins, failovers and clocks. A sequence per region is the
+trap: when a standby takes over, it can hand out numbers that were already used.
+`uuidv7()` is cheap and needs nothing to coordinate, a composite `(region, id)`
+key lets a publication filter on the region without a second index, and a
+`bigint` that holds a timestamp, the region and a counter does the same with a
+single column, provided the clocks agree. Whatever the key, 32 bits is a wall.
+
+<!--more-->
+
+{{< lab >}}
+All the measurements come from throwaway containers on Postgres 19 release
+candidate 1, on one laptop, with four writers unless said otherwise. The sizes
+and WAL volumes are exact; the rates are only good for comparing the keys with
+each other. The scripts and the output of every run are in the [lab
+directory](#going-further) of this article.
+{{< /lab >}}
+
+<!--toc-->
+
+## The short version
 
 - **On one server, the random UUID is the expensive key.** After a checkpoint it
   writes 487 bytes of WAL per row against 182 for `uuidv7()`, and its index is
@@ -56,11 +76,7 @@ The short version:
   one to find out.
 - **Whatever the key, 32 bits is a wall.**
 
-All the measurements come from throwaway containers on Postgres 19 release
-candidate 1, on one laptop, with four writers unless said otherwise. The sizes
-and WAL volumes are exact; the rates are only good for comparing the keys with
-each other. The scripts and the output of every run are in the [lab
-directory](#going-further) of this article.
+
 
 ## What a key has to do here
 
