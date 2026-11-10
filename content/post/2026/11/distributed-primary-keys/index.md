@@ -221,12 +221,12 @@ replica identity using index t_id_region` the `UPDATE` goes through. The
 column. The single-server benchmark again, with the second index on each of the
 other four:
 
-| Key | 2nd index | Rows/s | WAL/row | After checkpoint | FPIs |
+| Key | 2nd index | Rows/s | WAL/row | After<br />checkpoint | FPIs |
 |---|---|---|---|---|---|
-| Sequence with a step | 204 MB | 1.36 M (was 1.91) | 263 bytes (was 176) | 263 bytes | 11 |
-| `gen_random_uuid()` | 270 MB | **0.51 M** (was 1.17) | 301 bytes (was 197) | **954 bytes** | **57,657** |
-| `uuidv7()` | 203 MB | 1.01 M (was 1.35) | 266 bytes (was 182) | 266 bytes | 11 |
-| Time, region, counter | 211 MB | 1.10 M (was 1.51) | 260 bytes (was 175) | 259 bytes | 11 |
+| Sequence with a step | 204 MB | 1.36 M (was 1.91) | 263 bytes (was 176) | 263 bytes | 11 |
+| `gen_random_uuid()` | 270 MB | **0.51 M** (was 1.17) | 301 bytes (was 197) | **954 bytes** | **57,657** |
+| `uuidv7()` | 203 MB | 1.01 M (was 1.35) | 266 bytes (was 182) | 266 bytes | 11 |
+| Time, region, counter | 211 MB | 1.10 M (was 1.51) | 260 bytes (was 175) | 259 bytes | 11 |
 
 The second index is larger than the primary key it accompanies, because it holds
 the key and the region, and it adds about 85 bytes of WAL to every row. For a
@@ -327,11 +327,11 @@ create index on child(parent_region, parent_id);
 
 | Parent key | Parent | Child | Both | Join |
 |---|---|---|---|---|
-| `bigint` | 77 + 22 MB | 422 + 171 MB | 692 MB | 395 ms |
-| `uuid` (v4 or v7: 16 bytes) | 84 + 40 MB | 465 + 180 MB | 770 MB | 433 ms |
-| `(region smallint, id bigint)`, columns in key order | 84 + 32 MB | 465 + 180 MB | 761 MB | 450 ms |
-| `(region smallint, id bigint)`, `bigint` first in the table | 77 + 32 MB | 422 + 180 MB | 710 MB | 519 ms |
-| `(region text, id bigint)` | 89 + 52 MB | 482 + 184 MB | 807 MB | 487 ms |
+| `bigint` | 77 + 22 MB | 422 + 171 MB | 692 MB | 395 ms |
+| `uuid`<br />(v4 or v7, 16 bytes) | 84 + 40 MB | 465 + 180 MB | 770 MB | 433 ms |
+| `(region smallint, id bigint)`<br />columns in key order | 84 + 32 MB | 465 + 180 MB | 761 MB | 450 ms |
+| `(region smallint, id bigint)`<br />`bigint` first in the table | 77 + 32 MB | 422 + 180 MB | 710 MB | 519 ms |
+| `(region text, id bigint)` | 89 + 52 MB | 482 + 184 MB | 807 MB | 487 ms |
 
 Parent and Child are the heap plus the indexes of each table, and Join is the join
 of all the children to their parents. The join times vary by up to 20% from one
@@ -421,11 +421,11 @@ highest id made before (5 to 7 million ids a run, one run per cell):
 
 | Takeover | Clock behind | Time-based `bigint`: refused / below | `uuidv7()` |
 |---|---|---|---|
-| Primary killed, writes back after 34 s | 0 s or 2 s | 0 / 0 | 0 / 0 |
-| Primary killed | 60 s | 1 / 3,223,000 (61%) | 0 / 3,229,318 (61%) |
-| `pg_autoctl perform switchover`, writes back after 2 to 4 s | 5 s | 0 / 289,000 (11%) | 0 / 527,474 (20%) |
-| Switchover | 10 s | 2 / 1,376,000 (55%) | 0 / 1,296,000 (53%) |
-| Switchover | 60 s | 0 / 1,892,000 (all) | 0 / 2,346,000 (all) |
+| Primary killed, writes back after 34 s | 0 s or 2 s | 0 / 0 | 0 / 0 |
+| Primary killed | 60 s | 1 / 3,223,000 (61%) | 0 / 3,229,318 (61%) |
+| `pg_autoctl perform switchover`, writes back after 2 to 4 s | 5 s | 0 / 289,000 (11%) | 0 / 527,474 (20%) |
+| Switchover | 10 s | 2 / 1,376,000 (55%) | 0 / 1,296,000 (53%) |
+| Switchover | 60 s | 0 / 1,892,000 (all) | 0 / 2,346,000 (all) |
 
 Whatever the key, no acknowledged row was missing on the new primary, and the
 subscriber ended with exactly the rows of the new primary: the failover slot
@@ -458,7 +458,7 @@ the rows with a key below one already inserted:
 
 | Region shifts | Out of order | Index size | Leaf density |
 |---|---|---|---|
-| 0, 0, 0 | 0% | 5.7 MB | 90% |
+| 0, 0, 0 | 0% | 5.7 MB | 90% |
 | 0, +5 ms, -5 ms | 66.7% | 5.5 MB | 93% |
 | 0, +50 ms, -50 ms | 66.7% | 8.8 MB | 58% |
 | 0, +2 s, -2 s | 66.7% | 7.6 MB | 68% |
@@ -711,11 +711,11 @@ ids for the first lines):
 
 | | Time-based `bigint` | `uuidv7()` | `regionseq` |
 |---|---|---|---|
-| Clock steps back 2 s / 10 s: ids lower than one the same client already got | 18% / 59% | 0 / 0 | 0 / 0 |
-| Same, lower than one any client got | 18% / 59% | 16% / 47% | 0.1% |
+| Clock steps back 2 s / 10 s: ids lower than one the same client already got | 18% / 59% | 0 / 0 | 0 / 0 |
+| Same, lower than one any client got | 18% / 59% | 16% / 47% | 0.1% |
 | Time in the id ahead of the clock | none | up to 2 s / 10 s | up to 2 s / 10 s |
-| Takeover onto a clock 60 s behind, standby current: repeats / ids below | 1 / 61% | 0 / 61% | 0 / 0 |
-| Switchover onto a clock 5 s, 10 s, 60 s behind: ids below | 11%, 55%, all | 20%, 53%, all | 0, 0, 0 |
+| Takeover onto a clock 60 s behind, standby current: repeats / ids below | 1 / 61% | 0 / 61% | 0 / 0 |
+| Switchover onto a clock 5 s, 10 s, 60 s behind: ids below | 11%, 55%, all | 20%, 53%, all | 0, 0, 0 |
 | Failover from a cut-off standby with a clock 2 s behind: repeated ids | 782 of 200,000 | 0 | 0 |
 | `int` column | `integer out of range` | not applicable | `reached maximum value`, with a hint |
 
