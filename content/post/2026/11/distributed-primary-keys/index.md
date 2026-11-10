@@ -81,19 +81,23 @@ Every table below has the same columns: the key, `region smallint` and
 
 ~~~ sql
 -- one sequence per region, interleaved: region r runs `increment by 10 start
--- with r + 1`
+-- with r + 1`, here region 0
+create sequence s increment by 10 start with 1;
+
 create table t
  (
-  id      bigint primary key,
+  id      bigint primary key default nextval('s'),
   region  smallint not null,
   payload text not null
 );
 
 -- the region in the key, one sequence per region counting by 1
+create sequence s;
+
 create table t
  (
-  region  smallint not null,
-  id      bigint not null,
+  region  smallint not null default 0,
+  id      bigint not null default nextval('s'),
   payload text not null,
 
   primary key (region, id)
@@ -102,23 +106,21 @@ create table t
 -- random uuid, and time-ordered uuid
 create table t
  (
-  id      uuid primary key,
+  id      uuid primary key default gen_random_uuid(),  -- or default uuidv7()
   region  smallint not null,
   payload text not null
 );
 
--- default gen_random_uuid() / default uuidv7()
+-- a bigint made of 41 bits of milliseconds since 2026-01-01, 4 bits of region
+-- and 18 of a per-region counter, here region 0
+create sequence s;
 
--- a bigint made of 41 bits of milliseconds, 4 of region and 18 of a per-region
--- counter
 create table t
  (
-  id      bigint primary key,
+  id      bigint primary key default ((((extract(epoch from clock_timestamp()) * 1000)::bigint - 1767225600000) << 22) | (0::bigint << 18) | (nextval('s') & 262143)),
   region  smallint not null,
   payload text not null
 );
-
--- default ((ms_since_2026 << 22) | (region << 18) | (nextval('s') & 262143))
 ~~~
 
 | Key | How regions avoid each other | Size of one key |
