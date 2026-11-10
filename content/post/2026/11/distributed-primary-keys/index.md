@@ -355,7 +355,9 @@ Three servers on a network, each a region, each subscribed to the other two
 with `origin = none` so that a row isn't sent back where it came from. Every
 region runs 200 transactions of 100 rows a second for 10 seconds, then we wait
 for the three links to catch up and compare the row count and a digest of the
-keys on each server:
+keys on each server.
+
+{{< image src="fig-mesh.svg" title="Three regions that write to each other: every row crosses each link once, and origin = none stops it from going round." >}}
 
 | Key | Written | Per server | Digests | Apply errors |
 |---|---|---|---|---|
