@@ -72,8 +72,10 @@ directory](#going-further) of this article.
   can be equal to ids already given out.
 - **A clock that steps back does the same to the time-based `bigint`,** and
   doesn't repeat the ids of `uuidv7()`.
-- **A sequence access method for this would be nice, and isn't needed.** We wrote
-  one to find out.
+- **A sequence access method could make the key increasing per region through a
+  failover or a clock that steps back,** at the price of state to maintain. It
+  doesn't exist in any release; we built it on a patch to see what it would
+  change, and the section lays out the trade-offs for the reader to weigh.
 - **Whatever the key, 32 bits is a wall.**
 
 
@@ -713,7 +715,7 @@ for its width, and the step and headroom arithmetic of [Part
 if it's to become one of several writers. We'd keep the old tables single-writer and use the new
 key for new ones.
 
-## Would Postgres need a sequence access method?
+## What a sequence access method could change
 
 The time-based `bigint` is an expression because nothing lets a sequence compute
 its own next value. Two patch sets, from 2013 to 2016 and from 2023 to 2026,
@@ -721,11 +723,14 @@ tried to add that, as `create sequence ... using method`, so that a `serial` or
 an identity column could be fed by a Snowflake-style id instead of a counter.
 Both were returned with feedback; the reviews of the second asked for the use
 case before the code, and in May 2026 its author dropped it from the CommitFest.
-This article is a use case, so we asked what a method would change. Suppose that
-Postgres 20 ships the facility: a method is then an extension like any other,
-loaded with `shared_preload_libraries`, and what's left is whether it earns its
-place for a multi-region key. We built the second patch set into a Postgres
-development build and wrote the method, `regionseq`, as an extension.
+This article is a use case, so we asked what a method would change. Nothing
+indicates that the facility lands in Postgres 20, and it may well not, so what
+follows is a thought experiment, not a feature to wait for. If Postgres 20 did
+ship it, a method would be an extension like any other, loaded with
+`shared_preload_libraries`, and the question would be what it does for a
+multi-region key that the other keys don't. We built the second patch set into a
+Postgres development build and wrote the method, `regionseq`, as an extension to
+measure that.
 
 An id of `regionseq` is 41 bits of milliseconds, 6 of region from a server
 setting that has no default, 4 of timeline and 12 of counter. The sequence keeps
@@ -783,35 +788,46 @@ second line of defence. Two standbys promoted independently from the same primar
 pick the same timeline number, which pgsql-hackers is discussing in 2026 and
 which fencing has to prevent.
 
-**Is it needed? No. Would it be nice? A little.**
+A method changes two things that the other keys leave to the system around them,
+and costs three. Whether the trade is worth it depends on the distributed setup,
+not on the key.
 
-- **The failover problem is the same for every key that has state.** A sequence
-  per region needs the standby to be current to stay unique; `regionseq` stays
-  unique whatever the standby has, thanks to the timeline, and needs the standby
-  only to keep increasing; the clock keys need clocks that agree within the time
-  of a takeover. A synchronous standby and a gated slot give the first, and a
-  method doesn't replace them.
-- **A clock that steps back is a rare event** that the expression turns into a
-  burst of duplicate-key errors and ids lower than earlier ones. A method that
-  keeps state turns it into ids that run ahead of the clock for a while, and keeps
-  the region increasing. The per-region sequence does the same without a clock, in
-  exchange for a two-column key or a step. For a consumer that reads one origin as
-  a stream, the guarantee is what a method adds, and the expression can't give it.
-- **Everything else a method adds is a guard rail:** a region number that can't be
-  left unset, a maximum that an `int` column must meet, and the single-column
-  `bigint` with region bits that a publication can filter without a second index.
+**What it adds**
 
-So, with the facility in Postgres 20 and the method an extension: nice, because
-it gives a single-column, 8-byte key with a region in it, increasing per region
-through a clock that steps back and unique through a promotion, which nothing
-built in does. Not needed, because the choice that carries the load in
-production is the one this article makes with `uuidv7()`, `(region, id)` or the
-expression, together with synchronous standbys and clocks that are watched, and a
-method fails the same way the others do when the second one is missing. What would
-make it needed is a reader of ids as a stream in a system that can't ask its
-clocks to behave, and what would change this section is a use with state that an
-expression can't hold, ranges handed out by consensus or gapless numbers, which
-we didn't test.
+- **Resilience to a failover.** A sequence per region stays unique only if the
+  standby that takes over is current, which a synchronous standby and a gated
+  slot ensure. The clock keys stay unique if the clocks agree within the time of
+  a takeover. `regionseq` stays unique whatever the standby had received, because
+  the timeline bits change at every promotion, and it keeps increasing when the
+  standby is current. Two standbys promoted independently from the same primary
+  still pick the same timeline, so fencing stays necessary.
+- **Resilience to clock skew.** When the clock steps back, or a takeover lands on
+  a server whose clock is behind, the time-based `bigint` makes ids below earlier
+  ones and some repeats, and `uuidv7()` makes ids below earlier ones from other
+  sessions. `regionseq` keeps counting from the last id it made: no id was below an
+  earlier one in the switchover runs. A consumer that reads one origin as a
+  stream, remembering the last id it saw from that region, can rely on that.
+
+**What it costs**
+
+- **The time in the id stops being the creation time** while the clock catches up,
+  by up to the size of the step: the ids run ahead of it.
+- **State to keep correct.** The high-water mark goes through the WAL, the
+  library is preloaded, and the region number comes from a server setting that has
+  no default, because the same number on two servers makes the same ids on both.
+  The expression has none of this, and sits in the column default.
+- **A smaller key space.** 64 regions, 16 timeline values that wrap, 41 bits of
+  milliseconds. And the method is an extension that no release provides today.
+
+What the method doesn't change: the table, the index and the WAL, which are those
+of the expression, and the need for synchronous standbys and watched clocks, since
+a method fails the same way the others do when the second is missing. Each setup
+decides if these two resiliences matter. They do for a system that reads ids as a
+stream per origin and can't ask its clocks to behave; they matter less where
+`uuidv7()` or `(region, id)` runs with synchronous standbys and clocks that are
+monitored. What would change this section is a use with state that an expression
+can't hold, ranges handed out by consensus or gapless numbers, which we didn't
+test.
 
 ## What we didn't test
 
