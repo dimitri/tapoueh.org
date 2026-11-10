@@ -164,7 +164,7 @@ the cost of a random key shows, because the first change to a page after a
 checkpoint writes the whole 8 kB page to the WAL, a full-page image. Each figure
 is the median of three runs:
 
-| Key | Table | Primary key index | WAL per row | WAL per row<br>after a checkpoint | Full-page<br>images | Index pages missing<br>from `shared_buffers` |
+| Key | Table | Pkey | WAL/row | After checkpoint | FPIs | Index misses |
 |---|---|---|---|---|---|---|
 | Sequence with a step | 383 MB | 147 MB | 176 bytes | 176 bytes | 8 | 4 |
 | `(region, id)` | 422 MB | 158 MB | 183 bytes | 183 bytes | 20 | 16 |
@@ -172,7 +172,9 @@ is the median of three runs:
 | `uuidv7()` | 422 MB | 158 MB | 182 bytes | 182 bytes | 10 | 4 |
 | Time, region, counter | 383 MB | 151 MB | 175 bytes | 174 bytes | 9 | 4 |
 
-The last three columns are for the 500,000 rows inserted after the checkpoint.
+Pkey is the primary key index. The last three columns are for the 500,000 rows
+inserted after the checkpoint: WAL per row, full-page images (FPIs), and index
+pages missing from `shared_buffers` (index misses).
 The random uuid index has about 24,000 pages, and the 500,000 inserts wrote
 24,396 full-page images: nearly every page of the index was touched and written
 whole once. That's 487 bytes of WAL for each row, which carries about 183 bytes
@@ -219,7 +221,7 @@ replica identity using index t_id_region` the `UPDATE` goes through. The
 column. The single-server benchmark again, with the second index on each of the
 other four:
 
-| Key, with the companion index | Second index | Rows per second | WAL per row | After a checkpoint | Full-page images |
+| Key | 2nd index | Rows/s | WAL/row | After checkpoint | FPIs |
 |---|---|---|---|---|---|
 | Sequence with a step | 204 MB | 1.36 M (was 1.91) | 263 bytes (was 176) | 263 bytes | 11 |
 | `gen_random_uuid()` | 270 MB | **0.51 M** (was 1.17) | 301 bytes (was 197) | **954 bytes** | **57,657** |
@@ -250,7 +252,7 @@ it, and stops at "quite a big table". We measured how big, with a `parent` table
 of 1,000,000 rows and a `child` of 5,000,000 rows that has a foreign key to it
 and an index on that foreign key:
 
-| Key of `parent` | Parent: heap + indexes | Child: heap + indexes | Both | Join of all children to their parents |
+| Parent key | Parent | Child | Both | Join |
 |---|---|---|---|---|
 | `bigint` | 77 + 22 MB | 422 + 171 MB | 692 MB | 395 ms |
 | `uuid` (v4 or v7: 16 bytes) | 84 + 40 MB | 465 + 180 MB | 770 MB | 433 ms |
@@ -258,7 +260,9 @@ and an index on that foreign key:
 | `(region smallint, id bigint)`, `bigint` first in the table | 77 + 32 MB | 422 + 180 MB | 710 MB | 519 ms |
 | `(region text, id bigint)` | 89 + 52 MB | 482 + 184 MB | 807 MB | 487 ms |
 
-The join times vary by up to 20% from one run to the next, so the only thing we
+Parent and Child are the heap plus the indexes of each table, and Join is the join
+of all the children to their parents. The join times vary by up to 20% from one
+run to the next, so the only thing we
 read in them is that the `bigint` was the fastest. The sizes are the clearer
 result. A `(smallint, bigint)` key in the order we'd naturally write it, region
 first, costs what a uuid costs, 16 bytes per row in the heap and in every index
@@ -280,7 +284,7 @@ region runs 200 transactions of 100 rows a second for 10 seconds, then we wait
 for the three links to catch up and compare the row count and a digest of the
 keys on each server:
 
-| Key | Rows written | Rows on each of the three | Digests | Apply errors |
+| Key | Written | Per server | Digests | Apply errors |
 |---|---|---|---|---|
 | Sequence with a step | 612,500 | 612,500 | equal | 0 |
 | `(region, id)` | 600,300 | 600,300 | equal | 0 |
@@ -342,7 +346,7 @@ with its clock 0 to 60 seconds behind. We count the ids refused for repeating an
 id the old primary gave, and the ids made after the takeover that are below the
 highest id made before (5 to 7 million ids a run, one run per cell):
 
-| Takeover | Node 2 clock behind by | Time-based `bigint`: refused batches / ids below | `uuidv7()` |
+| Takeover | Clock behind | Time-based `bigint`: refused / below | `uuidv7()` |
 |---|---|---|---|
 | Primary killed, writes back after 34 s | 0 s or 2 s | 0 / 0 | 0 / 0 |
 | Primary killed | 60 s | 1 / 3,223,000 (61%) | 0 / 3,229,318 (61%) |
@@ -376,9 +380,10 @@ the next switchover.
 A `uuidv7()` is as ordered as the clocks that made it. We shifted the timestamp
 of three regions with the `uuidv7(interval)` form of the built-in function, as a
 skewed clock would, and inserted 180,000 rows at about 3,000 a second from the
-three of them in turn. The region shifts are the offsets of the three clocks:
+three of them in turn. The region shifts are the offsets of the three clocks, and out of order counts
+the rows with a key below one already inserted:
 
-| Region shifts | Rows with a key below one already inserted | Index size | Leaf page density |
+| Region shifts | Out of order | Index size | Leaf density |
 |---|---|---|---|
 | 0, 0, 0 | 0% | 5.7 MB | 90% |
 | 0, +5 ms, -5 ms | 66.7% | 5.5 MB | 93% |
