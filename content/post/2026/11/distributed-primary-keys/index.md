@@ -80,19 +80,44 @@ Every table below has the same columns: the key, `region smallint` and
 `payload text` (32 bytes). Region `r` of the lab is a number from 0 to 3.
 
 ~~~ sql
--- one sequence per region, interleaved: region r runs `increment by 10 start with r + 1`
-create table t (id bigint primary key, region smallint not null, payload text not null);
+-- one sequence per region, interleaved: region r runs `increment by 10 start
+-- with r + 1`
+create table t
+ (
+  id      bigint primary key,
+  region  smallint not null,
+  payload text not null
+);
 
 -- the region in the key, one sequence per region counting by 1
-create table t (region smallint not null, id bigint not null, payload text not null,
-                primary key (region, id));
+create table t
+ (
+  region  smallint not null,
+  id      bigint not null,
+  payload text not null,
+
+  primary key (region, id)
+);
 
 -- random uuid, and time-ordered uuid
-create table t (id uuid primary key, region smallint not null, payload text not null);
--- default gen_random_uuid()    /    default uuidv7()
+create table t
+ (
+  id      uuid primary key,
+  region  smallint not null,
+  payload text not null
+);
 
--- a bigint made of 41 bits of milliseconds, 4 of region and 18 of a per-region counter
-create table t (id bigint primary key, region smallint not null, payload text not null);
+-- default gen_random_uuid() / default uuidv7()
+
+-- a bigint made of 41 bits of milliseconds, 4 of region and 18 of a per-region
+-- counter
+create table t
+ (
+  id      bigint primary key,
+  region  smallint not null,
+  payload text not null
+);
+
 -- default ((ms_since_2026 << 22) | (region << 18) | (nextval('s') & 262143))
 ~~~
 
@@ -385,13 +410,32 @@ width of the column and the width of the sequence behind it are two separate
 things. What Postgres 19 builds for each way of writing an auto-numbered column:
 
 ~~~ sql
-create table t_serial    (id serial primary key);
-create table t_bigserial (id bigserial primary key);
-create table t_ident     (id int    generated always as identity primary key);
-create table t_identbig  (id bigint generated always as identity primary key);
+create table t_serial
+ (
+  id serial primary key
+);
+
+create table t_bigserial
+ (
+  id bigserial primary key
+);
+
+create table t_ident
+ (
+  id int generated always as identity primary key
+);
+
+create table t_identbig
+ (
+  id bigint generated always as identity primary key
+);
 
 create sequence s_plain;
-create table t_plain     (id int primary key default nextval('s_plain'));
+
+create table t_plain
+ (
+  id int primary key default nextval('s_plain')
+);
 ~~~
 
 ~~~ results
@@ -423,16 +467,26 @@ every upgrade. This query lists the integer columns whose owned sequence is
 wider than the column:
 
 ~~~ sql
-select c.oid::regclass as "table", a.attname as "column", a.atttypid::regtype as column_type,
-       q.oid::regclass as sequence, s.seqtypid::regtype as sequence_type, s.seqmax
+select c.oid::regclass as "table",
+       a.attname as "column",
+       a.atttypid::regtype as column_type,
+       q.oid::regclass as sequence,
+       s.seqtypid::regtype as sequence_type,
+       s.seqmax
   from pg_sequence s
   join pg_class q on q.oid = s.seqrelid
-  join pg_depend d on d.objid = q.oid and d.classid = 'pg_class'::regclass
-                  and d.refclassid = 'pg_class'::regclass and d.deptype in ('a', 'i')
+  join pg_depend d
+    on d.objid = q.oid
+   and d.classid = 'pg_class'::regclass
+   and d.refclassid = 'pg_class'::regclass
+   and d.deptype in ('a', 'i')
   join pg_class c on c.oid = d.refobjid
-  join pg_attribute a on a.attrelid = c.oid and a.attnum = d.refobjsubid
+  join pg_attribute a
+    on a.attrelid = c.oid
+   and a.attnum = d.refobjsubid
  where a.atttypid in ('int2'::regtype, 'int4'::regtype)
-   and s.seqmax > case a.atttypid when 'int2'::regtype then 32767 else 2147483647 end;
+   and s.seqmax
+     > case a.atttypid when 'int2'::regtype then 32767 else 2147483647 end;
 ~~~
 
 In a system with several writers the wall comes closer than the table size
@@ -457,18 +511,24 @@ bits that `gen_random_uuid()` already put there are the right ones for [RFC
 9562](https://www.rfc-editor.org/rfc/rfc9562).
 
 ~~~ sql
-create function public.uuidv7() returns uuid
-    language sql volatile parallel safe
-as $$
-    select encode(
-        set_bit(
-            set_bit(
-                overlay(uuid_send(gen_random_uuid())
-                        placing substring(int8send((extract(epoch from clock_timestamp()) * 1000)::bigint) from 3)
-                        from 1 for 6),
-                52, 1),
-            53, 1),
-        'hex')::uuid
+create function public.uuidv7()
+ returns uuid
+language sql
+volatile
+parallel safe
+      as $$
+select encode(
+         set_bit(
+           set_bit(
+             overlay(
+               uuid_send(gen_random_uuid()) placing substring(int8send((extract(epoch from clock_timestamp()) * 1000)::bigint) from 3) from 1 for 6
+             ),
+             52, 1
+           ),
+           53, 1
+         ),
+         'hex'
+       )::uuid
 $$;
 ~~~
 
