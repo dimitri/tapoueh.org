@@ -235,12 +235,38 @@ checkpoint cost 954 bytes each, five times the row with a sequence.
 
 The time, region and counter `bigint` doesn't need that index. Its region is in
 its bits, and a row filter may use the operators that read them, which are
-built in, on the key alone: `where ((id >> 18) & 15) = 1`. With the primary key
-as the replica identity, one index on the table and no `region` column in the
-filter, a publisher of region 1 that inserted 1,000 rows of its own and 1,000
-of region 2, then updated and deleted 100 and 50 of each, sent the subscriber
-the rows of region 1 only, updates and deletes included, with no apply error. A
-`uuidv7()` has no such bits, so it needs the second index.
+built in, so the filter reads the key and nothing else. Here is the publisher of
+region 1, with the table above, its primary key as the replica identity (the
+default), and no other index:
+
+~~~ sql
+create publication region_1
+    for table t where (((id >> 18) & 15) = 1);
+
+-- 1,000 rows made here, with region 1 in the bits of their ids
+insert into t (region, payload)
+     select 1, 'mine' from generate_series(1, 1000);
+
+-- 1,000 rows that came from region 2, with region 2 in the bits of their ids
+insert into t (id, region, payload)
+     select (2::bigint << 18) | n, 2, 'theirs' from generate_series(1, 1000) n;
+
+-- change 100 rows of each, then delete 50 of each
+update t set payload = payload || ', updated' where (id & 262143) <= 100;
+delete from t where (id & 262143) between 101 and 150;
+~~~
+
+The publisher holds the rows of both regions, and its subscriber only those of
+region 1, the updates and the deletes included, with no apply error:
+
+| `payload` | rows on the publisher | rows on the subscriber |
+|---|---|---|
+| `mine` | 850 | 850 |
+| `mine, updated` | 100 | 100 |
+| `theirs` | 850 | 0 |
+| `theirs, updated` | 100 | 0 |
+
+A `uuidv7()` has no such bits, so it needs the second index.
 
 ## What the composite key costs in the child tables
 
