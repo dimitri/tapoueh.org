@@ -663,13 +663,30 @@ which a random v4 doesn't give away.
 
 ## Which key to pick
 
-| Situation | Key | Why, and what it costs |
-|---|---|---|
-| One writer region, others only read | `bigint generated always as identity` | Nothing to coordinate; the 32-bit wall is the one trap, and the query above finds the columns that are on it |
-| Several writer regions, each row owned by one, few tables point at the key | `(region, id)`, one identity column per region, `bigint` first in the table | The filter works without a second index, no clock is involved, no step to outgrow. It costs 3% to 10% more storage in a pair of tables, and each region's sequence has to survive a failover, which a synchronous standby and a gated slot ensure |
-| Several writer regions, each row owned by one, many tables point at the key | a single-column key: the time, region and counter `bigint`, filtered on its bits (`where ((id >> 18) & 15) = 1`, no second index), or `uuidv7()` with a `region` column and a unique `(id, region)` as replica identity | 8 or 16 bytes in every child instead of 10 or 16. The `bigint` needs nothing else, and survives a promotion, but it repeats ids when a clock steps back by seconds, and it's an expression to write and keep, with 16 regions at most. `uuidv7()` is a built-in function, never repeats, and its companion index adds about 85 bytes of WAL per row |
-| Rows created anywhere, nobody filters on the owner | `uuidv7()` | 16 bytes, an index that behaves like a sequence's, nothing to coordinate. The clocks need to agree to better than the time a takeover takes |
-| The creation time must not leak | `gen_random_uuid()` | An index 27% larger, 2.7 times the WAL after a checkpoint (487 bytes a row against 182), and 5 times with a companion index (954) |
+- **One writer region, the others only read:** `bigint generated always as
+  identity`. There is nothing to coordinate, the 32-bit wall is the one trap, and
+  the query above finds the columns that are on it.
+- **Several writer regions, each row owned by one, few tables pointing at the
+  key:** `(region, id)`, with one identity column per region and the `bigint`
+  first in the table. The filter works without a second index, no clock is
+  involved and there is no step to outgrow. It takes 3% to 10% more storage in a
+  pair of tables, and each region's sequence has to survive a failover, which a
+  synchronous standby and a gated slot ensure.
+- **The same, with many tables pointing at the key:** a single-column key, which
+  takes 8 or 16 bytes in every child instead of 10 or 16. Either the time, region
+  and counter `bigint`, filtered on its bits (`where ((id >> 18) & 15) = 1`, no
+  second index), or `uuidv7()` with a `region` column and a unique `(id, region)`
+  as replica identity. The `bigint` needs nothing else and survives a promotion,
+  but it repeats ids when a clock steps back by seconds, and it is an expression
+  to write and keep, with 16 regions at most. `uuidv7()` is a built-in function
+  and never repeats, and its companion index adds about 85 bytes of WAL per row.
+- **Rows created anywhere, nobody filtering on the owner:** `uuidv7()`. It takes
+  16 bytes, has an index that behaves like a sequence's, and needs nothing to
+  coordinate, as long as the clocks agree to better than the time a takeover
+  takes.
+- **The creation time must not leak:** `gen_random_uuid()`. Its index is 27%
+  larger, it writes 2.7 times the WAL after a checkpoint (487 bytes a row against
+  182), and 5 times with a companion index (954).
 
 If we had to keep one rule: `uuidv7()` where nothing filters on the owner and the
 clocks are kept in sync, `(region, id)` where the owner is the point, a random
