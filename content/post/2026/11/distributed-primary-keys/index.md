@@ -388,14 +388,14 @@ WAL it received. We took a primary and a physical standby, a client taking
 numbers from a sequence as fast as it could, killed the primary after three
 seconds and promoted the standby by hand, so as to control how stale it was. The
 first number the new primary hands out, against the last number the client
-received:
+received, in three runs of each:
 
-| Standby | Run 1 | Run 2 | Run 3 |
-|---|---|---|---|
-| Streaming | skips 13 numbers | skips 16 | skips 3 |
-| Cut off from the primary three seconds before the kill | hands out 302,000 numbers a second time | 297,000 | 299,000 |
+| | Streaming standby | Standby cut off three seconds before the kill |
+|---|---|---|
+| Numbers skipped, which is harmless | 13, 16, 3 | 0, 0, 0 |
+| Numbers handed out twice, which are duplicates | 0, 0, 0 | 302,000, 297,000, 299,000 |
 
-{{< image src="fig-stale.svg" title="A standby whose copy of the sequence is behind hands out numbers the old primary already used." >}}
+{{< image src="fig-stale.svg" title="A standby cut off before the kill hands out numbers the old primary already used." >}}
 
 A sequence logs 32 numbers ahead of itself, so a promotion that follows an
 up-to-date standby skips a few numbers and never repeats one. When the standby
