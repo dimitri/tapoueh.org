@@ -129,11 +129,11 @@ create table t
 
 | Key | How regions avoid each other | Size of one key |
 |---|---|---|
-| One sequence per region, with a step | the ranges interleave | 8 bytes |
+| One sequence per region, with a step | the ranges interleave | 8 bytes |
 | Composite `(region, id)` | the region is in the key | 2 + 8 bytes, 16 once aligned in a row or an index entry |
-| `gen_random_uuid()` (v4) | the space is too large to collide | 16 bytes |
-| `uuidv7()` | the same, with a time prefix | 16 bytes |
-| Time, region, counter | the region is in the bits | 8 bytes |
+| `gen_random_uuid()` (v4) | the space is too large to collide | 16 bytes |
+| `uuidv7()` | the same, with a time prefix | 16 bytes |
+| Time, region, counter | the region is in the bits | 8 bytes |
 
 The last one is the Snowflake layout, written as an expression in the column
 default: time first, so that ids sort by creation, then the region, then a
@@ -164,13 +164,13 @@ the cost of a random key shows, because the first change to a page after a
 checkpoint writes the whole 8 kB page to the WAL, a full-page image. Each figure
 is the median of three runs:
 
-| Key | Table | Primary key index | WAL per row | WAL per row after a checkpoint | Full-page images | Index pages missing from `shared_buffers` |
+| Key | Table | Primary key index | WAL per row | WAL per row<br>after a checkpoint | Full-page<br>images | Index pages missing<br>from `shared_buffers` |
 |---|---|---|---|---|---|---|
-| Sequence with a step | 383 MB | 147 MB | 176 bytes | 176 bytes | 8 | 4 |
-| `(region, id)` | 422 MB | 158 MB | 183 bytes | 183 bytes | 20 | 16 |
-| `gen_random_uuid()` | 422 MB | 200 MB | 197 bytes | **487 bytes** | **24,396** | **198,663** |
-| `uuidv7()` | 422 MB | 158 MB | 182 bytes | 182 bytes | 10 | 4 |
-| Time, region, counter | 383 MB | 151 MB | 175 bytes | 174 bytes | 9 | 4 |
+| Sequence with a step | 383 MB | 147 MB | 176 bytes | 176 bytes | 8 | 4 |
+| `(region, id)` | 422 MB | 158 MB | 183 bytes | 183 bytes | 20 | 16 |
+| `gen_random_uuid()` | 422 MB | 200 MB | 197 bytes | **487 bytes** | **24,396** | **198,663** |
+| `uuidv7()` | 422 MB | 158 MB | 182 bytes | 182 bytes | 10 | 4 |
+| Time, region, counter | 383 MB | 151 MB | 175 bytes | 174 bytes | 9 | 4 |
 
 The last three columns are for the 500,000 rows inserted after the checkpoint.
 The random uuid index has about 24,000 pages, and the 500,000 inserts wrote
@@ -221,10 +221,10 @@ other four:
 
 | Key, with the companion index | Second index | Rows per second | WAL per row | After a checkpoint | Full-page images |
 |---|---|---|---|---|---|
-| Sequence with a step | 204 MB | 1.36 M (was 1.91) | 263 bytes (was 176) | 263 bytes | 11 |
-| `gen_random_uuid()` | 270 MB | **0.51 M** (was 1.17) | 301 bytes (was 197) | **954 bytes** | **57,657** |
-| `uuidv7()` | 203 MB | 1.01 M (was 1.35) | 266 bytes (was 182) | 266 bytes | 11 |
-| Time, region, counter | 211 MB | 1.10 M (was 1.51) | 260 bytes (was 175) | 259 bytes | 11 |
+| Sequence with a step | 204 MB | 1.36 M (was 1.91) | 263 bytes (was 176) | 263 bytes | 11 |
+| `gen_random_uuid()` | 270 MB | **0.51 M** (was 1.17) | 301 bytes (was 197) | **954 bytes** | **57,657** |
+| `uuidv7()` | 203 MB | 1.01 M (was 1.35) | 266 bytes (was 182) | 266 bytes | 11 |
+| Time, region, counter | 211 MB | 1.10 M (was 1.51) | 260 bytes (was 175) | 259 bytes | 11 |
 
 The second index is larger than the primary key it accompanies, because it holds
 the key and the region, and it adds about 85 bytes of WAL to every row. For a
@@ -252,11 +252,11 @@ and an index on that foreign key:
 
 | Key of `parent` | Parent: heap + indexes | Child: heap + indexes | Both | Join of all children to their parents |
 |---|---|---|---|---|
-| `bigint` | 77 + 22 MB | 422 + 171 MB | 692 MB | 395 ms |
-| `uuid` (v4 or v7: 16 bytes) | 84 + 40 MB | 465 + 180 MB | 770 MB | 433 ms |
-| `(region smallint, id bigint)`, columns in key order | 84 + 32 MB | 465 + 180 MB | 761 MB | 450 ms |
-| `(region smallint, id bigint)`, `bigint` first in the table | 77 + 32 MB | 422 + 180 MB | 710 MB | 519 ms |
-| `(region text, id bigint)` | 89 + 52 MB | 482 + 184 MB | 807 MB | 487 ms |
+| `bigint` | 77 + 22 MB | 422 + 171 MB | 692 MB | 395 ms |
+| `uuid` (v4 or v7: 16 bytes) | 84 + 40 MB | 465 + 180 MB | 770 MB | 433 ms |
+| `(region smallint, id bigint)`, columns in key order | 84 + 32 MB | 465 + 180 MB | 761 MB | 450 ms |
+| `(region smallint, id bigint)`, `bigint` first in the table | 77 + 32 MB | 422 + 180 MB | 710 MB | 519 ms |
+| `(region text, id bigint)` | 89 + 52 MB | 482 + 184 MB | 807 MB | 487 ms |
 
 The join times vary by up to 20% from one run to the next, so the only thing we
 read in them is that the `bigint` was the fastest. The sizes are the clearer
@@ -345,10 +345,10 @@ highest id made before (5 to 7 million ids a run, one run per cell):
 | Takeover | Node 2 clock behind by | Time-based `bigint`: refused batches / ids below | `uuidv7()` |
 |---|---|---|---|
 | Primary killed, writes back after 34 s | 0 s or 2 s | 0 / 0 | 0 / 0 |
-| Primary killed | 60 s | 1 / 3,223,000 (61%) | 0 / 3,229,318 (61%) |
-| `pg_autoctl perform switchover`, writes back after 2 to 4 s | 5 s | 0 / 289,000 (11%) | 0 / 527,474 (20%) |
-| Switchover | 10 s | 2 / 1,376,000 (55%) | 0 / 1,296,000 (53%) |
-| Switchover | 60 s | 0 / 1,892,000 (all) | 0 / 2,346,000 (all) |
+| Primary killed | 60 s | 1 / 3,223,000 (61%) | 0 / 3,229,318 (61%) |
+| `pg_autoctl perform switchover`, writes back after 2 to 4 s | 5 s | 0 / 289,000 (11%) | 0 / 527,474 (20%) |
+| Switchover | 10 s | 2 / 1,376,000 (55%) | 0 / 1,296,000 (53%) |
+| Switchover | 60 s | 0 / 1,892,000 (all) | 0 / 2,346,000 (all) |
 
 Whatever the key, no acknowledged row was missing on the new primary, and the
 subscriber ended with exactly the rows of the new primary: the failover slot
@@ -380,11 +380,11 @@ three of them in turn. The region shifts are the offsets of the three clocks:
 
 | Region shifts | Rows with a key below one already inserted | Index size | Leaf page density |
 |---|---|---|---|
-| 0, 0, 0 | 0% | 5.7 MB | 90% |
-| 0, +5 ms, -5 ms | 66.7% | 5.5 MB | 93% |
-| 0, +50 ms, -50 ms | 66.7% | 8.8 MB | 58% |
-| 0, +2 s, -2 s | 66.7% | 7.6 MB | 68% |
-| one region 1 hour ahead | 66.7% | 8.7 MB | 59% |
+| 0, 0, 0 | 0% | 5.7 MB | 90% |
+| 0, +5 ms, -5 ms | 66.7% | 5.5 MB | 93% |
+| 0, +50 ms, -50 ms | 66.7% | 8.8 MB | 58% |
+| 0, +2 s, -2 s | 66.7% | 7.6 MB | 68% |
+| one region 1 hour ahead | 66.7% | 8.7 MB | 59% |
 
 With a 5 ms skew two rows in three already arrive with a key lower than one
 that's in the index, and the index doesn't care: the three streams of keys land
@@ -551,8 +551,8 @@ and counted how many are smaller than the one before:
 
 | | ids smaller than the previous one | time for 1,000,000 ids |
 |---|---|---|
-| SQL function | about 500,000 | 810 ms |
-| built-in `uuidv7()` | 0 | 472 ms |
+| SQL function | about 500,000 | 810 ms |
+| built-in `uuidv7()` | 0 | 472 ms |
 
 The SQL function fills everything after the millisecond with random bits, so two
 ids made in the same millisecond come out in random order. Across milliseconds
