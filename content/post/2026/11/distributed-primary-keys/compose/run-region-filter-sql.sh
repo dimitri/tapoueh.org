@@ -17,23 +17,25 @@ psqlx pk-rfp -c "create sequence s" -c "create table t (
 )"
 psqlx pk-rfs -c "create table t (id bigint primary key, region smallint not null, payload text not null)"
 psqlx pk-rfp <<'SQL'
-create publication region_1
-    for table t where (((id >> 18) & 15) = 1);
+create publication region_1 for table t where (((id >> 18) & 15) = 1);
 SQL
 psqlx pk-rfs -c "create subscription region_1 connection 'host=pk-rfp dbname=postgres user=postgres' publication region_1" >/dev/null
 sleep 3
 psqlx pk-rfp <<'SQL'
 \c postgres
 -- 1,000 rows made here, with region 1 in the bits of their ids
-insert into t (region, payload)
-     select 1, 'mine' from generate_series(1, 1000);
+insert into t(region, payload)
+     select 1, 'mine'
+       from generate_series(1, 1000);
 
 -- 1,000 rows that came from region 2, with region 2 in the bits of their ids
-insert into t (id, region, payload)
-     select (2::bigint << 18) | n, 2, 'theirs' from generate_series(1, 1000) n;
+insert into t(id, region, payload)
+     select (2::bigint << 18) | n, 2, 'theirs'
+       from generate_series(1, 1000) n;
 
 -- change 100 rows of each, then delete 50 of each
 update t set payload = payload || ', updated' where (id & 262143) <= 100;
+
 delete from t where (id & 262143) between 101 and 150;
 SQL
 sleep 5
