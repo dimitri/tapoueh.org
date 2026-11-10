@@ -38,17 +38,20 @@ The short version:
   section](#what-each-one-costs-on-one-server) explains. A `uuidv7()` index
   behaves like a sequence's.
 - **A composite `(region, id)` key adds storage overhead in the child tables,
-  and filtering on the region adds a second index to maintain.** The composite key repeats 10 to 16
-  bytes in every table that points at it. A uuid needs a second index to be
-  filtered by region, about 85 bytes of WAL a row, and a `bigint` that holds the
-  region in its bits is filtered on the key alone.
-- **A per-region sequence is state that a failover can rewind;** a key made of
-  the clock isn't, as long as the clocks agree. Promoted from a lagging standby, a
-  sequence handed out 300,000 numbers a second time. Promoted onto a server whose
-  clock is behind, a time-based key makes ids below the old ones, and a plain
-  `bigint` of time and counter can repeat some.
-- **A clock that steps back repeats ids of that `bigint`,** and doesn't repeat
-  those of `uuidv7()`.
+  and filtering on the region adds a second index to maintain.** The composite
+  key repeats 10 to 16 bytes in every table that points at it. A uuid needs a
+  second index to be filtered by region, about 85 bytes of WAL a row, and a
+  `bigint` that holds the region in its bits is filtered on the key alone.
+- **When a standby takes over, a sequence can hand out numbers that were
+  already used; a key built from the clock can't, unless the new server's
+  clock is behind.** A sequence only knows what its standby had received:
+  promoted while the standby was a few seconds behind, ours gave out 300,000
+  numbers a second time. A time-based `bigint` (a timestamp followed by a
+  counter) carries on from the clock instead. If the new primary's clock is
+  behind the old one's, its ids are lower than the old ones, and a few of them
+  can be equal to ids already given out.
+- **A clock that steps back does the same to the time-based `bigint`,** and
+  doesn't repeat the ids of `uuidv7()`.
 - **A sequence access method for this would be nice, and isn't needed.** We wrote
   one to find out.
 - **Whatever the key, 32 bits is a wall.**
