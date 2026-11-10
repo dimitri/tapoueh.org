@@ -276,12 +276,54 @@ A `uuidv7()` has no such bits, so it needs the second index.
 ## What the composite key costs in the child tables
 
 The composite key looked cheap in the one-server table, and the overhead shows
-up in other tables: every table that points at it repeats both columns, in the
-column list and in the index on the foreign key. The 2018 article has the
-example, a `comment` table that repeats three columns of `article` to reference
-it, and stops at "quite a big table". We measured how big, with a `parent` table
-of 1,000,000 rows and a `child` of 5,000,000 rows that has a foreign key to it
-and an index on that foreign key:
+up in other tables: a table that points at the key repeats both columns, in the
+column list and in the index on the foreign key. The [2018
+article](/blog/2018/03/database-normalization-and-primary-keys/) shows it with
+an `article` keyed on three columns, whose `comment` table repeats all three,
+and stops at "quite a big table". We measured how big, with a `parent` table of
+1,000,000 rows and a `child` of 5,000,000 rows that has a foreign key to it and
+an index on that foreign key:
+
+~~~ sql
+-- a single-column key
+create table parent
+ (
+  id      bigint primary key,
+  payload text not null
+);
+
+create table child
+ (
+  cid       bigint generated always as identity primary key,
+  parent_id bigint not null references parent(id),
+  payload   text not null
+);
+
+create index on child(parent_id);
+
+-- a composite key: the child repeats both columns, in the foreign key and in
+-- its index
+create table parent
+ (
+  region  smallint,
+  id      bigint,
+  payload text not null,
+
+  primary key (region, id)
+);
+
+create table child
+ (
+  cid           bigint generated always as identity primary key,
+  parent_region smallint not null,
+  parent_id     bigint not null,
+  payload       text not null,
+
+  foreign key (parent_region, parent_id) references parent(region, id)
+);
+
+create index on child(parent_region, parent_id);
+~~~
 
 | Parent key | Parent | Child | Both | Join |
 |---|---|---|---|---|
