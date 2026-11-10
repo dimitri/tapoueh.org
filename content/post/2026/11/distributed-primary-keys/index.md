@@ -820,8 +820,8 @@ not on the key.
   milliseconds. And the method is an extension that no release provides today.
 
 What the method doesn't change: the table, the index and the WAL, which are those
-of the expression, and the need for synchronous standbys and watched clocks, since
-a method fails the same way the others do when the second is missing. Each setup
+of the expression, and the need for synchronous standbys and watched clocks:
+without them, a method fails the way the other keys do. Each setup
 decides if these two resiliences matter. They do for a system that reads ids as a
 stream per origin and can't ask its clocks to behave; they matter less where
 `uuidv7()` or `(region, id)` runs with synchronous standbys and clocks that are
