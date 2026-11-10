@@ -258,8 +258,11 @@ update t set payload = payload || ', updated' where (id & 262143) <= 100;
 delete from t where (id & 262143) between 101 and 150;
 ~~~
 
-The publisher holds the rows of both regions, and its subscriber only those of
-region 1, the updates and the deletes included, with no apply error:
+Then we count the rows by `payload` on the server that made them (the
+publisher) and on the server that receives the publication (the subscriber). The
+subscriber has the rows of region 1 with their 100 updates and 50 deletes
+applied, and no row of region 2: the filter kept them from being sent at all.
+The subscription reports no error.
 
 | `payload` | rows on the publisher | rows on the subscriber |
 |---|---|---|
