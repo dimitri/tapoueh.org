@@ -111,13 +111,17 @@ create table t
   payload text not null
 );
 
--- a bigint made of 41 bits of milliseconds since 2026-01-01, 4 bits of region
--- and 18 of a per-region counter, here region 0
+-- a bigint made of 41 bits of milliseconds since 2026-01-01 UTC, 4 bits of
+-- region and 18 of a per-region counter; each region sets app.region
 create sequence s;
 
 create table t
  (
-  id      bigint primary key default ((((extract(epoch from clock_timestamp()) * 1000)::bigint - 1767225600000) << 22) | (0::bigint << 18) | (nextval('s') & 262143)),
+  id      bigint primary key default (
+            ((extract(epoch from clock_timestamp() - timestamptz '2026-01-01 UTC') * 1000)::bigint << 22)
+            | (current_setting('app.region')::bigint << 18)
+            | (nextval('s') & 262143)
+          ),
   region  smallint not null,
   payload text not null
 );
@@ -135,6 +139,11 @@ The last one is the Snowflake layout, written as an expression in the column
 default: time first, so that ids sort by creation, then the region, then a
 counter that only has to differ between the ids that one region makes within the
 same millisecond.
+
+Each region sets its number once, for its database (`alter database postgres
+set app.region = 1`); a custom setting needs a dotted name, which is why it
+isn't just `region`. The origin is spelled in UTC, since a bare `'2026-01-01'`
+would move by hours with the `TimeZone` of the session that inserts.
 
 The UUID advice of [2018](/blog/2018/03/database-modelization-anti-patterns/)
 was to reach for them when a central sequence would be a single point of
