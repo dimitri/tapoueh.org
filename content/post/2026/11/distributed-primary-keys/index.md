@@ -37,8 +37,8 @@ The short version:
   where the new keys land in the index, which [the single-server
   section](#what-each-one-costs-on-one-server) explains. A `uuidv7()` index
   behaves like a sequence's.
-- **A composite `(region, id)` key is paid in the child tables, and a filter on
-  the region is paid in a second index.** The composite key repeats 10 to 16
+- **A composite `(region, id)` key adds storage overhead in the child tables,
+  and filtering on the region adds a second index to maintain.** The composite key repeats 10 to 16
   bytes in every table that points at it. A uuid needs a second index to be
   filtered by region, about 85 bytes of WAL a row, and a `bigint` that holds the
   region in its bits is filtered on the key alone.
@@ -66,7 +66,7 @@ directory](#going-further) of this article.
 - **Say who owns the row**, because the topology filters on it: a region
   publishes only its own rows. A row filter can only use columns that the
   replica identity covers, which a composite key does by construction and a
-  single-column key doesn't, so that is a cost we count.
+  single-column key doesn't, so we count the extra index it needs.
 - **Stay cheap to index and to join on**, since every child table repeats it.
 - **Survive a takeover:** a promotion, a switchover, a clock that is not exactly
   right.
@@ -112,7 +112,7 @@ failure, with random numbers in mind. Since then `gen_random_uuid()` became
 built in with Postgres 13 and `uuidv7()` with 18 ([the 11-18
 selection](/blog/2026/07/sql-improvements-in-postgresql-1118-a-personal-selection/#uuidv7--time-sortable-uuids-pg-18)
 has the details), so the choice is no longer between a random key and an
-extension, and the price of the random one can be measured.
+extension, and the overhead of the random one can be measured.
 
 ## What each one costs on one server
 
@@ -161,7 +161,7 @@ inserts 12 to 28 times slower for the random key at 50 million rows, a scale we
 didn't reach. Neither measures WAL or full-page images, and neither has a
 second writer.
 
-### The price of being able to filter
+### What filtering by region adds
 
 The topology publishes the rows of a region with a filter on `region`. A filter
 on `UPDATE` and `DELETE` needs the filter column in the replica identity, so a
@@ -192,19 +192,19 @@ the key and the region, and it adds about 85 bytes of WAL to every row. For a
 random uuid both indexes receive writes at random, and the rows after a
 checkpoint cost 954 bytes each, five times the row with a sequence.
 
-The time, region and counter `bigint` doesn't have to pay it. Its region is in
+The time, region and counter `bigint` doesn't need that index. Its region is in
 its bits, and a row filter may use the operators that read them, which are
 built in, on the key alone: `where ((id >> 18) & 15) = 1`. With the primary key
 as the replica identity, one index on the table and no `region` column in the
 filter, a publisher of region 1 that inserted 1,000 rows of its own and 1,000
 of region 2, then updated and deleted 100 and 50 of each, sent the subscriber
 the rows of region 1 only, updates and deletes included, with no apply error. A
-`uuidv7()` has no such bits, and pays.
+`uuidv7()` has no such bits, so it needs the second index.
 
 ## What the composite key costs in the child tables
 
-The composite key looked cheap in the one-server table, and its price is paid
-somewhere else: every table that points at it repeats both columns, in the
+The composite key looked cheap in the one-server table, and the overhead shows
+up in other tables: every table that points at it repeats both columns, in the
 column list and in the index on the foreign key. The 2018 article has the
 example, a `comment` table that repeats three columns of `article` to reference
 it, and stops at "quite a big table". We measured how big, with a `parent` table
@@ -228,7 +228,7 @@ the `bigint` first and the `smallint` after it, with the primary key still on
 `(region, id)`, keeps the heap at the size of the single `bigint` and saves 7%
 over the pair of tables. A region kept as text (`ap-southeast` is 13 bytes) is
 the most expensive, 17% more than the `bigint` for the pair, and every further
-table that points at the key pays again. We'd take the composite key where few
+table that points at the key repeats it. We'd take the composite key where few
 tables point at it, and a single-column key where many do.
 
 ## Across regions: what happens when a standby takes over
@@ -319,7 +319,7 @@ takes tens of seconds, longer than a small skew, which hides it; a controlled
 switchover takes seconds, and shows a skew of 5 s. When the new primary's clock
 is behind, its time-based ids go below what the old primary made, and the plain
 `bigint` can repeat one (the refused batches, which the writer retried);
-`uuidv7()` never repeats, at the price of the same inverted order.
+`uuidv7()` never repeats, in exchange for the same inverted order.
 
 Three things about the tool, since they came up. With Postgres's default
 `checkpoint_timeout` the promotion took 274 seconds instead of 34: the keeper
@@ -592,8 +592,8 @@ which fencing has to prevent.
 - **A clock that steps back is a rare event** that the expression turns into a
   burst of duplicate-key errors and ids lower than earlier ones. A method that
   keeps state turns it into ids that run ahead of the clock for a while, and keeps
-  the region increasing. The per-region sequence does the same without a clock, at
-  the price of a two-column key or a step. For a consumer that reads one origin as
+  the region increasing. The per-region sequence does the same without a clock, in
+  exchange for a two-column key or a step. For a consumer that reads one origin as
   a stream, the guarantee is what a method adds, and the expression can't give it.
 - **Everything else a method adds is a guard rail:** a region number that can't be
   left unset, a maximum that an `int` column must meet, and the single-column
