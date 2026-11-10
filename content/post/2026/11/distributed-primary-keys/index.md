@@ -33,7 +33,10 @@ The short version:
 
 - **On one server, the random UUID is the expensive key.** After a checkpoint it
   writes 487 bytes of WAL per row against 182 for `uuidv7()`, and its index is
-  27% larger. A `uuidv7()` index behaves like a sequence's.
+  27% larger, though both are the native 16-byte `uuid` type. The difference is
+  where the new keys land in the index, which [the single-server
+  section](#what-each-one-costs-on-one-server) explains. A `uuidv7()` index
+  behaves like a sequence's.
 - **A composite `(region, id)` key is paid in the child tables, and a filter on
   the region is paid in a second index.** The composite key repeats 10 to 16
   bytes in every table that points at it. A uuid needs a second index to be
