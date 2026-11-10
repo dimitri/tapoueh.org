@@ -22,10 +22,12 @@ listed the ways to mint ids that cannot collide, and [Part
 4](/blog/2026/11/postgres-logical-replication-beyond-one-writer/) built the
 topology that uses them, a group of nodes per region with every region
 subscribed to the others. Here we measure what each choice costs, in size, WAL,
-joins, failovers and clocks, on the same workload. We take for granted what a
-primary key is, and why a surrogate key does not replace a natural one; [an
-older article](/blog/2018/03/database-normalization-and-primary-keys/) covers
-that.
+joins, failovers and clocks, on the same workload. We take the
+basics for granted: a primary key is a unique, non-null constraint, and a
+generated id is a surrogate key that does not replace the natural key, because
+it cannot stop two rows that describe the same thing. [Database Normalization
+and Primary Keys](/blog/2018/03/database-normalization-and-primary-keys/)
+covers both, and what this article adds is where the generated id comes from.
 
 The short version:
 
