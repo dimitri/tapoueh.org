@@ -9,7 +9,7 @@ icon      = "🔑"
 A single Postgres server hands out primary keys without effort: a `bigint`
 identity column asks one sequence for the next number, and no two rows ever get
 the same one. Now put writers in several regions, each of them accepting inserts
-while the links between them are slow, down, or both. Two regions that each ask
+while the links between them are slow or down. Two regions that each ask
 their own sequence for "the next number" will hand out the same one, and the
 first time those two rows meet on a subscriber, one of them is rejected.
 
@@ -42,7 +42,7 @@ And whatever the key, 32 bits is a wall.
 
 {{< lab >}}
 All the measurements come from throwaway containers on Postgres 19 release
-candidate 1, on one laptop, with four writers unless said otherwise. The sizes
+candidate 1, on one laptop, with four writers unless stated otherwise. The sizes
 and WAL volumes are exact; the rates are only good for comparing the keys with
 each other. The scripts and the output of every run are in the [lab
 directory](#going-further) of this article.
@@ -68,17 +68,17 @@ directory](#going-further) of this article.
   were already used.** A sequence only knows what its physical standby had
   received. We promoted a standby that was a few seconds behind, and the new
   primary handed out 300,000 numbers a second time. A key built from the clock
-  doesn't have this problem, because the clock moved on during the failover,
-  unless the new primary's clock is behind the old one's. Then its ids are lower
-  than the old ones, and with the time-based `bigint` a few of them can repeat ids
-  already given out.
+  doesn't have this problem, because the clock moved on during the failover. It
+  does when the new primary's clock is behind the old one's: its ids are then
+  lower than the old ones, and with the time-based `bigint` a few of them can
+  repeat ids already given out.
 - **A clock that steps back has the same effect** on the time-based `bigint`:
   some ids repeat. `uuidv7()` ids go out of order across sessions, and never
   repeat.
 - **A sequence access method could keep a region's ids increasing through a
   failover and through a clock that steps back,** at the cost of state to
-  maintain. No release has the facility. We built a method on a patch to see what
-  it would change, and [the section](#what-a-sequence-access-method-could-change)
+  maintain. No release has the facility. We built one on top of a patch set to see
+  what it would change, and [the section](#what-a-sequence-access-method-could-change)
   lays out the trade-offs.
 - **Whatever the key, 32 bits is a wall.**
 
@@ -164,12 +164,12 @@ create table t
 The sequence per region gives each region its own numbers: with an increment of
 10, region 0 makes 1, 11, 21 and so on, and region 1 makes 2, 12, 22. The
 composite key puts the region next to a plain sequence. The two uuids count on a
-space so large that two random values don't meet, and `uuidv7()` puts the time
+space so large that two random values don't collide, and `uuidv7()` puts the time
 in front of the random part.
 
 The last one, the time-based `bigint`, is the Snowflake layout, written as an
 expression in the column default. The time comes first, so that ids sort by
-creation. The region comes next. Then a counter, which only has to differ
+creation. The region comes next. Last comes a counter, which only has to differ
 between the ids that one region makes within the same millisecond.
 
 Each region sets its number once, for its database, with `alter database
@@ -181,9 +181,9 @@ inserts.
 {{< image src="fig-bits.svg" title="The 64 bits of the time-based bigint, and the expressions that read them." >}}
 
 In [2018](/blog/2018/03/database-modelization-anti-patterns/), the advice was to
-reach for UUIDs when a central sequence would be a single point of failure, and
-random UUIDs were the kind we had in mind. Since then, `gen_random_uuid()` became
-built in with Postgres 13 and `uuidv7()` with Postgres 18 ([the 11-18
+reach for uuids when a central sequence would be a single point of failure, and
+random uuids were the kind we had in mind. Since then, `gen_random_uuid()` has
+become built in with Postgres 13, and `uuidv7()` with Postgres 18 ([the 11-18
 selection](/blog/2026/07/sql-improvements-in-postgresql-1118-a-personal-selection/#uuidv7--time-sortable-uuids-pg-18)
 has the details). The choice is no longer between a random key and an extension,
 and we can measure what the random one costs.
@@ -218,10 +218,10 @@ pages missing from `shared_buffers` (index misses).
 Here's how to read the `gen_random_uuid()` row. Its index has about 24,000
 pages, and the 500,000 inserts after the checkpoint wrote 24,396 full-page
 images: nearly every page of the index was modified, and written whole to the WAL
-once. That's 487 bytes of WAL for each row, when the row itself takes about 183
-bytes. The 198,663 index misses tell the same story from the buffer side. The
+once. That's 487 bytes of WAL for each row, when the insert itself needs about 183
+bytes, as the other keys show. The 198,663 index misses tell the same story from the buffer side. The
 index is larger than `shared_buffers`, so four inserts in ten had to fetch their
-page from outside.
+page from outside of it.
 
 The other four keys add each new row to the rightmost page of the index, or near
 it. They wrote 8 to 20 full-page images and missed 4 to 16 pages in the same
@@ -232,8 +232,8 @@ run. From the point of view of the index, `uuidv7()` behaves like a sequence.
 The size columns hold two more results.
 
 The random uuid index is 27% larger than the `uuidv7()` one, for the same
-16-byte keys. When a new key goes in the middle of a full page, the page splits
-into two halves, and those half-empty pages stay that way. Appending at the right
+16-byte keys. When a new key goes into a full page in the middle of the index, the
+page splits into two half-full pages, and random inserts leave them partly empty. Appending at the right
 end leaves the pages behind it full.
 
 The `(region, id)` table is 10% larger than the tables with a single `bigint`
@@ -244,7 +244,7 @@ costs.
 
 Others measured the same index behaviour with one writer. [A 2024
 benchmark](https://ardentperf.com/2024/02/03/uuid-benchmark-war/) found
-`uuidv7()` as fast as a `bigint`, and a random UUID about 30% slower. The
+`uuidv7()` as fast as a `bigint`, and a random uuid about 30% slower. The
 [credativ look at Postgres
 18](https://www.credativ.de/en/blog/postgresql-en/a-deeper-look-at-old-uuidv4-vs-new-uuidv7-in-postgresql-18/)
 measured the same 27% on the index, with index pages 71% full against 90%, and
@@ -293,8 +293,8 @@ and no second index.
 
 The time-based `bigint` doesn't need a second index. Its region is in its bits,
 and a row filter may use the built-in operators that read them, so the filter
-reads the key and nothing else. Here's the publisher of region 1, with the table
-of the five candidates, its primary key as the replica identity (the default),
+reads the key and nothing else. Here's the publisher of region 1, with the
+time-based `bigint` table of the five candidates, its primary key as the replica identity (the default),
 and no other index:
 
 ~~~ sql
@@ -471,7 +471,7 @@ the tree, and that costs space. Postgres splits the rightmost page of a B-tree s
 as to leave it full, but it splits any other page in the middle, which leaves
 two half-full pages. With three streams of keys, each one behind the next, two
 of them are never at the right edge. So from 50 ms of skew up, the index is 28%
-to 55% bigger, which is what a random uuid costs on one server.
+to 55% bigger: as much as a random uuid costs on one server (27%), or more.
 
 That was three streams into one server. In the three-server mesh, a subscriber's
 index starts at 68% leaf density, because the rows arrive in batches from the
@@ -519,10 +519,11 @@ numbers that the old primary already used.
 
 That's how the sequence per region, and the composite key built on it, fail. The
 other regions may already have received rows with those ids, and their
-subscriptions then stop on `insert_exists`, a duplicate key. Two things keep the
-standby current: a synchronous standby, and a logical slot that doesn't advance
-before the standby has the WAL, which is `failover = true` with
-`synchronized_standby_slots` (the next subsection runs it). After any promotion
+subscriptions then stop on `insert_exists`, a duplicate key. Two things prevent
+this: a synchronous standby, which has the WAL of every committed transaction,
+and a logical slot that sends nothing to the subscribers before the standby has
+the WAL, which is `failover = true` with `synchronized_standby_slots` (the next
+subsection uses both). After any promotion
 that may have followed a lagging standby, we also move each sequence past the
 highest id that the other regions hold for that region, with a `setval` built
 from the catalog, [the way the 2010
@@ -709,8 +710,8 @@ widen, and the order matters: widen the subscriber first, then the publisher.
 Otherwise the subscriber stops at the first value past 2,147,483,647, which can
 be days after the `ALTER TABLE`. In a mesh, where every region both publishes and
 subscribes, every region has to be widened before any of them starts making
-large ids. The cheaper way is the one of the first day: `bigint`, and
-`generated always as identity` rather than `serial`.
+large ids. The cheaper way is to get it right on the first day: `bigint`,
+and `generated always as identity` rather than `serial`.
 
 ### `uuidv7()` before Postgres 18
 
@@ -746,7 +747,7 @@ $$;
 `gen_random_uuid()` is built in from Postgres 13, and before that the `pgcrypto`
 extension provides it. On 13, 17 and 19, the function gives the version nibble 7,
 a variant of `8`, `9`, `a` or `b`, and 48 bits that read back as the current
-time. There are two differences with the built-in function. For the first one,
+time. There are two differences from the built-in function. For the first one,
 we generated a million ids in a single statement and counted how many are
 smaller than the one before:
 
@@ -790,10 +791,10 @@ Here's how we'd choose, depending on who writes and who reads:
 - **The same, with many tables pointing at the key:** a single-column key, which
   takes 8 or 16 bytes in every child row instead of 10 or 16. There are two
   options:
-  - the time-based `bigint`, filtered on its bits (`where ((id >> 18) & 15) = 1`)
+  - The time-based `bigint`, filtered on its bits (`where ((id >> 18) & 15) = 1`)
     without a second index. It needs nothing else and survives a promotion. But
     it repeats ids when a clock steps back by seconds, it's an expression to
-    write and maintain, and it allows 16 regions at most;
+    write and maintain, and it allows 16 regions at most.
   - `uuidv7()`, with a `region` column and a unique index on `(id, region)` as
     the replica identity. It's a built-in function and never repeats ids, and its
     second index adds about 85 bytes of WAL per row.
@@ -900,7 +901,7 @@ bits wrap (`1 ... 15 0 1 ... 5`), made 3,882,000 ids with no repeat, no id below
 an earlier one, and no lost row. With a current standby, the state carries the
 order, and the timeline is only the second line of defence. One case remains:
 two standbys promoted independently from the same primary pick the same timeline
-number. That's under discussion on pgsql-hackers in 2026, and fencing has to
+number. It's being discussed on pgsql-hackers, and until then fencing has to
 prevent it.
 
 So a method changes two things that the other keys leave to the system around
@@ -939,7 +940,7 @@ What the method doesn't change: the table, the index and the WAL are those of th
 expression. And it still needs synchronous standbys and watched clocks, because
 without them a method fails the way the other keys do.
 
-Each setup decides whether these two resiliences matter. They do for a system
+Each setup decides whether these two properties matter. They do for a system
 that reads ids as a stream per region and can't count on its clocks. They matter
 less where `uuidv7()` or `(region, id)` runs with synchronous standbys and
 monitored clocks. What would change this section is a use with state that an
@@ -972,8 +973,8 @@ numbers, which we didn't test.
 - **A larger formation, and the edges of the timeline bits.** We ran one region
   of two nodes, and one subscriber. We didn't run three nodes, priorities, or a
   network partition instead of a kill. Nor did we run the case that would make
-  `regionseq` repeat, a stale standby, a clock behind and sixteen promotions
-  together, or look for the shortest pause between switchovers that keeps a
+  `regionseq` repeat (a stale standby, a clock behind and sixteen promotions
+  together), or look for the shortest pause between switchovers that keeps a
   failover slot.
 - **More than three regions in the mesh,** and keys made by the application,
   with an ORM or a library: they bring their own `uuid` version and their own
