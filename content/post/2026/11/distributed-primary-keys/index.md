@@ -480,18 +480,24 @@ repeated counter value doesn't repeat the key, provided the clocks agree. In six
 runs the first id after the promotion was higher than the last one received by
 310 to 350 ms of timestamp, from a streaming standby and from a cut-off one.
 
-### A managed takeover, with the clock of the new primary behind
+### Failover and switchover with pg_auto_failover, onto a clock that is behind
 
-A region in production is managed, and its physical standby is not stale, so we
-ran that too. A region is a [pg_auto_failover](https://oss.theartofpostgresql.com/pg_auto_failover/)
-formation of a monitor and two nodes, the second a synchronous physical
-standby. A logical subscriber in another region follows it with a logical slot created with
-`failover = true`, which pg_auto_failover keeps synchronized to the standby and
-gates with `synchronized_standby_slots`. A writer inserts 1,000 ids per
-statement through a two-host URI, the primary goes away, and node 2 is promoted
-with its clock 0 to 60 seconds behind. We count the ids refused for repeating an
-id the old primary gave, and the ids made after the takeover that are below the
-highest id made before (5 to 7 million ids a run, one run per cell):
+The stale standby above is a situation we forced by hand. In production, a
+region runs under a tool that manages its failovers and keeps a synchronous
+standby, so the standby has all the WAL when it is promoted. We ran that setup
+too, with [pg_auto_failover](https://oss.theartofpostgresql.com/pg_auto_failover/).
+
+The region is a formation of a monitor and two nodes, the second one a
+synchronous physical standby. A logical subscriber in another region follows the
+region with a slot created with `failover = true`, which pg_auto_failover copies
+to the standby and holds back with `synchronized_standby_slots` until the
+standby has the WAL. A writer inserts 1,000 ids per statement through a
+two-host connection string. Then we either kill the primary (a failover) or run
+`pg_autoctl perform switchover` (a planned switchover), and node 2 becomes the
+primary with its clock 0 to 60 seconds behind. We count two things: the ids
+refused because the old primary had already made them, and the ids made after
+the takeover that are below the highest id made before. Each run makes 5 to 7
+million ids, and there is one run per cell:
 
 | Takeover | Clock behind | Time-based `bigint`: refused / below | `uuidv7()` |
 |---|---|---|---|
@@ -526,16 +532,16 @@ the next switchover.
 
 ### A clock that steps back inside a region
 
-A clock that steps back inside a region is a different matter from a skew between
-regions, since it makes the same millisecond come round twice. It is also what a
-takeover onto a server whose clock is behind looks like. At full speed, with four writers and the
-clock of the server stepped back while they insert, 183 to 197 of about 71,000
-transactions of the time-based `bigint` failed on a duplicate key when the step
-was 2 seconds, and none at 50 or 200 ms; the `uuidv7()` ones never failed. A
-repeat needs the millisecond to come round with the same counter value, so it
-takes a step long enough for the counters to line up, and a narrower counter
-lines up more often. The failure is loud, bounded to the transactions of the
-window, and retried by the application.
+A clock that steps back inside a region is a different matter from a skew
+between regions, since it makes the same millisecond come round twice. It is
+also what a takeover onto a server whose clock is behind looks like. At full
+speed, with four writers and the clock of the server stepped back while they
+insert, 183 to 197 of about 71,000 transactions of the time-based `bigint`
+failed on a duplicate key when the step was 2 seconds, and none at 50 or 200 ms;
+the `uuidv7()` ones never failed. A repeat needs the millisecond to come round
+with the same counter value, so it takes a step long enough for the counters to
+line up, and a narrower counter lines up more often. The failure is loud,
+bounded to the transactions of the window, and retried by the application.
 
 ## Two traps on the way
 
