@@ -31,7 +31,7 @@ covers both, and what this article adds is where the generated id comes from.
 
 **TL;DR** We compared five primary keys for a table that several regions write
 at once, on size, WAL, joins, failovers and clocks. A sequence per region is the
-trap: when a standby takes over, it can hand out numbers that were already used.
+trap: when a region's standby takes over, it can hand out numbers that were already used.
 `uuidv7()` is cheap and needs nothing to coordinate, a composite `(region, id)`
 key lets a publication filter on the region without a second index, and a
 `bigint` that holds a timestamp, the region and a counter does the same with a
@@ -64,7 +64,7 @@ directory](#going-further) of this article.
   `bigint` that holds the region in its bits is filtered on the key alone.
 - **When a standby takes over, a sequence can hand out numbers that were
   already used; a key built from the clock can't, unless the new server's
-  clock is behind.** A sequence only knows what its standby had received:
+  clock is behind.** A sequence only knows what its physical standby had received:
   promoted while the standby was a few seconds behind, ours gave out 300,000
   numbers a second time. A time-based `bigint` (a timestamp followed by a
   counter) carries on from the clock instead. If the new primary's clock is
@@ -372,7 +372,12 @@ the most expensive, 17% more than the `bigint` for the pair, and every further
 table that points at the key repeats it. We'd take the composite key where few
 tables point at it, and a single-column key where many do.
 
-## Across regions: what happens when a standby takes over
+## Three regions that write to each other
+
+Between regions the only link is logical replication: each region publishes its
+own rows and every other region is a subscriber that receives them. A subscriber
+gets rows, never the state of a sequence, so what a key has to do here is arrive
+without colliding and without wrecking the subscriber's index.
 
 ### Writers in three regions at once
 
@@ -399,10 +404,50 @@ of one region reached the other two before their first batch, and the writers of
 those two stopped at the first insert on a duplicate key, which is why only
 203,300 rows were written.
 
+### Clocks that disagree between regions
+
+A `uuidv7()` is as ordered as the clocks that made it. We shifted the timestamp
+of three regions with the `uuidv7(interval)` form of the built-in function, as a
+skewed clock would, and inserted 180,000 rows at about 3,000 a second from the
+three of them in turn. The region shifts are the offsets of the three clocks, and out of order counts
+the rows with a key below one already inserted:
+
+| Region shifts | Out of order | Index size | Leaf density |
+|---|---|---|---|
+| 0, 0, 0 | 0% | 5.7 MB | 90% |
+| 0, +5 ms, -5 ms | 66.7% | 5.5 MB | 93% |
+| 0, +50 ms, -50 ms | 66.7% | 8.8 MB | 58% |
+| 0, +2 s, -2 s | 66.7% | 7.6 MB | 68% |
+| one region 1 hour ahead | 66.7% | 8.7 MB | 59% |
+
+With a 5 ms skew two rows in three already arrive with a key lower than one
+that's in the index, and the index doesn't care: the three streams of keys land
+within the same few pages. At 50 ms and beyond they land on separate parts of
+the tree. Only the rightmost page of a B-tree is split to leave it full; any
+other page splits in the middle and leaves two half-full pages, and with three
+streams of keys, each behind the next, two of them are never at the right edge.
+So the index is 28% to 55% bigger from 50 ms of skew up, which is what the
+random uuid cost on one server. That is three streams into one server. In the
+three-server mesh the index starts at 68% leaf density because the rows arrive
+in batches from the apply workers, and a skew of 50 ms or 2 s moved it by 1 to
+5 points for `uuidv7()` and for the time-based `bigint`. Uniqueness and
+correctness don't depend on the clocks, since the region is in the bits of the
+`bigint` and the rest of the uuid is random; the order of keys across regions
+does, and so does the index a little.
+
+## When a region's standby takes over
+
+Inside a region, availability comes from a physical standby: a streaming copy of
+the primary, which is promoted when the primary goes. This is where state
+matters, because a sequence's copy on the standby can be older than the rows that
+the other regions' subscribers have already received. We use "standby" for that
+physical standby only, and "subscriber" for a region that receives rows through
+logical replication.
+
 ### A stale standby
 
-A sequence is state, and a standby's copy of it is as old as the last piece of
-WAL it received. We took a primary and a physical standby, a client taking
+A sequence is state, and a physical standby's copy of it is as old as the last
+piece of WAL it received. We took a primary and a physical standby, a client taking
 numbers from a sequence as fast as it could, killed the primary after three
 seconds and promoted the standby by hand, so as to control how stale it was. The
 first number the new primary hands out, against the last number the client
@@ -421,9 +466,9 @@ hadn't received the last seconds of WAL, the new primary starts where the
 standby's copy was and hands out numbers the old primary already used. That is
 the failure of the per-region sequence and of the composite key built on it: the
 state has to be at least as new as the rows other regions have already
-received, or their subscriptions stop on `insert_exists`. A synchronous standby
+received, or the subscribers of the other regions stop on `insert_exists`. A synchronous standby
 and a logical slot that doesn't advance before the standby has the WAL (`failover
-= true` with `synchronized_standby_slots`, which the next section runs) keep the
+= true` with `synchronized_standby_slots`, which the next subsection runs) keep the
 state current. After any promotion that may follow a lagging standby we also
 move each sequence past the highest id that the other regions hold for that
 region, with a `setval` built from the catalog [the way the 2010
@@ -437,10 +482,10 @@ runs the first id after the promotion was higher than the last one received by
 
 ### A managed takeover, with the clock of the new primary behind
 
-A region in production is managed, and its standby is not stale, so we ran that
-too. A region is a [pg_auto_failover](https://oss.theartofpostgresql.com/pg_auto_failover/)
-formation of a monitor and two nodes, the second a synchronous standby. A
-subscriber in another region follows it with a logical slot created with
+A region in production is managed, and its physical standby is not stale, so we
+ran that too. A region is a [pg_auto_failover](https://oss.theartofpostgresql.com/pg_auto_failover/)
+formation of a monitor and two nodes, the second a synchronous physical
+standby. A logical subscriber in another region follows it with a logical slot created with
 `failover = true`, which pg_auto_failover keeps synchronized to the standby and
 gates with `synchronized_standby_slots`. A writer inserts 1,000 ids per
 statement through a two-host URI, the primary goes away, and node 2 is promoted
@@ -476,42 +521,14 @@ set `checkpoint_completion_target = 0`. With 2 seconds of pause between two swit
 logical slot was gone from both nodes and the subscription had to be recreated,
 because the demoted node hadn't had time to receive the slot before the next
 promotion; with 30 seconds between switchovers the slot was on both nodes after
-each of twenty. A rolling maintenance should check the slot on the standby before
+each of twenty. A rolling maintenance should check that the slot has reached the standby before
 the next switchover.
 
-### Clocks that disagree, and clocks that step back
+### A clock that steps back inside a region
 
-A `uuidv7()` is as ordered as the clocks that made it. We shifted the timestamp
-of three regions with the `uuidv7(interval)` form of the built-in function, as a
-skewed clock would, and inserted 180,000 rows at about 3,000 a second from the
-three of them in turn. The region shifts are the offsets of the three clocks, and out of order counts
-the rows with a key below one already inserted:
-
-| Region shifts | Out of order | Index size | Leaf density |
-|---|---|---|---|
-| 0, 0, 0 | 0% | 5.7 MB | 90% |
-| 0, +5 ms, -5 ms | 66.7% | 5.5 MB | 93% |
-| 0, +50 ms, -50 ms | 66.7% | 8.8 MB | 58% |
-| 0, +2 s, -2 s | 66.7% | 7.6 MB | 68% |
-| one region 1 hour ahead | 66.7% | 8.7 MB | 59% |
-
-With a 5 ms skew two rows in three already arrive with a key lower than one
-that's in the index, and the index doesn't care: the three streams of keys land
-within the same few pages. At 50 ms and beyond they land on separate parts of
-the tree. Only the rightmost page of a B-tree is split to leave it full; any
-other page splits in the middle and leaves two half-full pages, and with three
-streams of keys, each behind the next, two of them are never at the right edge.
-So the index is 28% to 55% bigger from 50 ms of skew up, which is what the
-random uuid cost on one server. That is three streams into one server. In the
-three-server mesh the index starts at 68% leaf density because the rows arrive
-in batches from the apply workers, and a skew of 50 ms or 2 s moved it by 1 to
-5 points for `uuidv7()` and for the time-based `bigint`. Uniqueness and
-correctness don't depend on the clocks, since the region is in the bits of the
-`bigint` and the rest of the uuid is random; the order of keys across regions
-does, and so does the index a little.
-
-A clock that steps back inside one region is a different matter, since it makes
-the same millisecond come round twice. At full speed, with four writers and the
+A clock that steps back inside a region is a different matter from a skew between
+regions, since it makes the same millisecond come round twice. It is also what a
+takeover onto a server whose clock is behind looks like. At full speed, with four writers and the
 clock of the server stepped back while they insert, 183 to 197 of about 71,000
 transactions of the time-based `bigint` failed on a duplicate key when the step
 was 2 seconds, and none at 50 or 200 ms; the `uuidv7()` ones never failed. A
