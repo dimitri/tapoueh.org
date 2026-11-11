@@ -1,0 +1,75 @@
+CREATE FUNCTION
+== version nibble, variant nibble, and the clock it carries
+ version | rfc_variant | clock_within_1s 
+---------+-------------+-----------------
+ 7       | t           | t
+(1 row)
+
+== which uuidv7() is resolved
+       oid        |  nspname   
+------------------+------------
+ uuidv7()         | pg_catalog
+ uuidv7(interval) | pg_catalog
+ public.uuidv7()  | public
+(3 rows)
+
+ both_callable 
+---------------
+ t
+(1 row)
+
+== one statement, 1,000,000 ids: how many are smaller than the one before
+SELECT 1000000
+ sql_inversions 
+----------------
+         499567
+(1 row)
+
+Timing is on.
+  count  
+---------
+ 1000000
+(1 row)
+
+Time: 810.026 ms
+Timing is off.
+== native uuidv7() and the SQL one defined above, on the same server
+                                                           version                                                           
+-----------------------------------------------------------------------------------------------------------------------------
+ PostgreSQL 19rc1 (Debian 19~rc1-1.pgdg13+1) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+(1 row)
+
+       oid        |  nspname   
+------------------+------------
+ uuidv7()         | pg_catalog
+ uuidv7(interval) | pg_catalog
+ public.uuidv7()  | public
+(3 rows)
+
+ pg_typeof | native_version 
+-----------+----------------
+ uuid      |              7
+(1 row)
+
+== which one an unqualified call runs
+     QUERY PLAN     
+--------------------
+ Result
+   Output: uuidv7()
+(2 rows)
+
+== native, one statement, 1,000,000 ids: inversions
+SELECT 1000000
+ native_inversions 
+-------------------
+                 0
+(1 row)
+
+Timing is on.
+  count  
+---------
+ 1000000
+(1 row)
+
+Time: 472.186 ms
+Timing is off.
