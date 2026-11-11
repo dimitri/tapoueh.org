@@ -332,6 +332,8 @@ The subscription reported no error.
 
 A `uuidv7()` has no such bits, so a uuid key needs the second index.
 
+{{< image src="fig-replica-identity.svg" title="What a row filter on the region can read, for updates and deletes, with each key." >}}
+
 ## What the composite key costs in the child tables
 
 The composite key looked cheap on one server. Its overhead shows up in the other
@@ -409,6 +411,8 @@ time to join all the children to their parents. The join times vary by up to
   more than the `bigint` for the pair, and every further table that points at
   the key repeats it.
 
+{{< image src="fig-padding.svg" title="The same two columns in a row: region first pads the bigint to the next multiple of 8 bytes, bigint first doesn't." >}}
+
 So we'd take the composite key where few tables point at it, and a single-column
 key where many do.
 
@@ -473,6 +477,8 @@ two half-full pages. With three streams of keys, each one behind the next, two
 of them are never at the right edge. So from 50 ms of skew up, the index is 28%
 to 55% bigger: as much as a random uuid costs on one server (27%), or more.
 
+{{< image src="fig-skew-streams.svg" title="Three regions whose clocks disagree, inserting into one index: from 50 ms of skew, two streams of keys split pages in the middle." >}}
+
 That was three streams into one server. In the three-server mesh, a subscriber's
 index starts at 68% leaf density, because the rows arrive in batches from the
 apply workers, and a skew of 50 ms or 2 s moved it by only 1 to 5 points, for
@@ -488,6 +494,8 @@ Inside a region, high availability comes from a physical standby: a streaming
 copy of the primary, which is promoted when the primary goes away. In this
 section, "standby" always means that physical standby, and "subscriber" means
 another region, which receives rows through logical replication.
+
+{{< image src="fig-region.svg" title="A region: the standby gets all the WAL, the state of the sequence included; the other regions get rows only." >}}
 
 This is where the state of a sequence matters. A standby's copy of a sequence can
 be older than the rows that the subscribers have already received. If the
