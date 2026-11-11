@@ -178,7 +178,7 @@ it's `app.region` and not just `region`. The origin is spelled in UTC: a bare
 `'2026-01-01'` would move by hours with the `TimeZone` of the session that
 inserts.
 
-{{< image src="fig-bits.svg" title="The 63 bits of the time-based bigint, and the expressions that read them." >}}
+{{< image src="fig-bits.svg" title="The 64 bits of the time-based bigint, and the expressions that read them." >}}
 
 In [2018](/blog/2018/03/database-modelization-anti-patterns/), the advice was to
 reach for UUIDs when a central sequence would be a single point of failure, and
@@ -227,7 +227,7 @@ The other four keys add each new row to the rightmost page of the index, or near
 it. They wrote 8 to 20 full-page images and missed 4 to 16 pages in the same
 run. From the point of view of the index, `uuidv7()` behaves like a sequence.
 
-{{< image src="fig-btree.svg" title="Where the new rows land in the index: random pages cost a full-page image each, the last page costs one." >}}
+{{< image src="fig-btree.svg" title="Where the new rows land in the index, and how full the pages stay: random pages cost a full-page image each, the last page costs one." >}}
 
 The size columns hold two more results.
 
@@ -509,7 +509,7 @@ with the last number the client received. Three runs of each:
 | Numbers skipped, which is harmless | 13, 16, 3 | 0, 0, 0 |
 | Numbers handed out twice, which are duplicates | 0, 0, 0 | 302,000, 297,000, 299,000 |
 
-{{< image src="fig-stale.svg" title="A standby cut off before the kill hands out numbers the old primary already used." >}}
+{{< image src="fig-stale.svg" title="A streaming standby carries on after the last number; a standby cut off before the kill hands out numbers the old primary already used." >}}
 
 A sequence writes to the WAL 32 numbers ahead of the one it hands out. So a
 standby that was streaming up to the kill starts a little ahead of the client,
@@ -857,7 +857,7 @@ killed repeatedly. What counts is how many promotions happen within the seconds
 or minutes that a standby or a clock is wrong. Since a method makes the same kind
 of `bigint` as the expression, the table, the index and the WAL are the same too.
 
-{{< image src="fig-bits-regionseq.svg" title="The 63 bits of a regionseq id." >}}
+{{< image src="fig-bits-regionseq.svg" title="The 64 bits of a regionseq id, and the expressions that read them." >}}
 
 What a key can promise comes in three levels:
 
