@@ -162,7 +162,7 @@ create table t5
   id      bigint primary key default (
             ((extract(epoch from clock_timestamp() - timestamptz '2026-01-01 UTC') * 1000)::bigint << 22)
             | (current_setting('app.region')::bigint << 18)
-            | (nextval('s5') & 262143)
+            | (nextval('s5') & 0x3FFFF)
           ),
   region  smallint not null,
   payload text not null
@@ -191,6 +191,10 @@ The last one, the time-based `bigint`, is the Snowflake layout, written as an
 expression in the column default. The time comes first, so that ids sort by
 creation. The region comes next. Last comes a counter, which only has to differ
 between the ids that one region makes within the same millisecond.
+
+The masks are written in hex, which SQL accepts since Postgres 16: `0x3FFFF` is
+18 bits set to 1, the width of the counter, and `0xF` is the 4 bits of the
+region. In decimal they are 262143 and 15.
 
 Each region sets its number once, for its database, with `alter database
 postgres set app.region = 1`. A custom setting needs a dotted name, which is why
@@ -379,7 +383,7 @@ reads the key and nothing else. Here's the publisher of region 1, with table
 `t5`, its primary key as the replica identity (the default), and no other index:
 
 ~~~ sql
-create publication region_1 for table t5 where (((id >> 18) & 15) = 1);
+create publication region_1 for table t5 where (((id >> 18) & 0xF) = 1);
 
 -- 1,000 rows made here, with region 1 in the bits of their ids
 insert into t5(region, payload)
@@ -392,9 +396,9 @@ insert into t5(id, region, payload)
        from generate_series(1, 1000) n;
 
 -- change 100 rows of each, then delete 50 of each
-update t5 set payload = payload || ', updated' where (id & 262143) <= 100;
+update t5 set payload = payload || ', updated' where (id & 0x3FFFF) <= 100;
 
-delete from t5 where (id & 262143) between 101 and 150;
+delete from t5 where (id & 0x3FFFF) between 101 and 150;
 ~~~
 
 Then we count the rows by `payload` on the publisher, the server where the rows
@@ -880,7 +884,7 @@ Here's how we'd choose, depending on who writes and who reads:
 - **The same, with many tables pointing at the key:** a single-column key, which
   takes 8 or 16 bytes in every referencing row instead of 10 or 16. There are two
   options:
-  - The time-based `bigint`, filtered on its bits (`where ((id >> 18) & 15) = 1`)
+  - The time-based `bigint`, filtered on its bits (`where ((id >> 18) & 0xF) = 1`)
     without a second index. It needs nothing else and survives a promotion. But
     it repeats ids when a clock steps back by seconds, it's an expression to
     write and maintain, and it allows 16 regions at most.
