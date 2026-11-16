@@ -58,9 +58,9 @@ directory](#going-further) of this article.
   `uuid` type: the difference comes from where the new keys land in the index, as
   [the single-server section](#what-each-one-costs-on-one-server) shows. A
   `uuidv7()` index behaves like a sequence's.
-- **A composite `(region, id)` key makes the child tables bigger, and a
-  single-column key needs a second index to be filtered by region.** Every table
-  that points at a composite key repeats 10 to 16 bytes per row. A uuid key needs
+- **A composite `(region, id)` key makes the tables that reference it bigger,
+  and a single-column key needs a second index to be filtered by region.** Each
+  of their rows repeats both columns of the key, 10 to 16 bytes. A uuid key needs
   a second index before a publication can filter it by region, and that index
   adds about 85 bytes of WAL per row. A time-based `bigint` holds the region in
   its bits, so the filter reads the key alone.
@@ -95,7 +95,8 @@ regions write:
   sends to find the row on the subscriber, the primary key by default. A
   composite key includes the region and a single-column key doesn't, so we count
   the extra index that the single-column key needs.
-- **Stay cheap to index and to join on**, since every child table repeats it.
+- **Stay cheap to index and to join on**, since every table that references it
+  repeats it in each of its rows.
 - **Survive a failover**: a promotion, planned or not, and a clock that isn't
   exactly right.
 
@@ -334,7 +335,7 @@ A `uuidv7()` has no such bits, so a uuid key needs the second index.
 
 {{< image src="fig-replica-identity.svg" title="What a row filter on the region can read, for updates and deletes, with each key." >}}
 
-## What the composite key costs in the child tables
+## What the composite key costs in the tables that reference it
 
 The composite key looked cheap on one server. Its overhead shows up in the other
 tables: a table that points at the key repeats both columns, in its own rows and
@@ -793,11 +794,11 @@ Here's how we'd choose, depending on who writes and who reads:
   point at the key:** `(region, id)`, with one identity column per region and the
   `bigint` declared first in the table. The publication filters on the key
   without a second index, no clock is involved, and there's no increment to
-  outgrow. It takes 3% to 10% more storage over a parent and child pair, and each
-  region's sequence has to survive a failover: a synchronous standby and a
-  failover slot take care of that.
+  outgrow. It takes 3% to 10% more storage over our parent and child tables,
+  and each region's sequence has to survive a failover: a synchronous standby
+  and a failover slot take care of that.
 - **The same, with many tables pointing at the key:** a single-column key, which
-  takes 8 or 16 bytes in every child row instead of 10 or 16. There are two
+  takes 8 or 16 bytes in every referencing row instead of 10 or 16. There are two
   options:
   - The time-based `bigint`, filtered on its bits (`where ((id >> 18) & 15) = 1`)
     without a second index. It needs nothing else and survives a promotion. But
