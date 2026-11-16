@@ -84,6 +84,13 @@ directory](#going-further) of this article.
 
 ## What a key has to do here
 
+Picture four regions: London, Paris, Amsterdam and Frankfurt. Each region is a
+primary with its physical standby, and it's linked to the other three by logical
+replication in both directions. Every region inserts its own rows and receives
+the rows of the other three. The lab runs three such regions.
+
+{{< image src="fig-regions-map.svg" title="Four regions that write at the same time: each one makes its keys without asking the other three." >}}
+
 Before measuring anything, here's what we expect from a primary key when several
 regions write:
 
