@@ -6,10 +6,10 @@ categories = ["PostgreSQL", "Architecture"]
 icon      = "🔑"
 +++
 
-A single Postgres server hands out primary keys without effort: a `bigint`
-identity column asks one sequence for the next number, and no two rows ever get
-the same one. Now put writers in several regions, each of them accepting inserts
-while the links between them are slow or down. Two regions that each ask
+On a single Postgres server, primary keys stay unique because only one sequence
+hands out the numbers: a `bigint` identity column asks it for the next one, and
+no two rows ever get the same. Now put writers in several regions, each of them
+accepting inserts while the links between them are slow or down. Two regions that each ask
 their own sequence for "the next number" will hand out the same one, and the
 first time those two rows meet on a subscriber, one of them is rejected.
 
