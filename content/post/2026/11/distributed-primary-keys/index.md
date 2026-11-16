@@ -111,50 +111,58 @@ regions write:
 
 Every table in this article has the same three columns: the key, `region
 smallint`, and a 32-byte `payload text`. Region numbers go from 0 to 3, one per
-writer. Here's the DDL of the five keys:
+writer. Here's the DDL of the five keys, in tables `t1` to `t5`:
 
 ~~~ sql
--- one sequence per region, interleaved: region r runs `increment by 10 start
--- with r + 1`, here region 0
-create sequence s increment by 10 start with 1;
+-- 1. one sequence per region, interleaved: region r runs `increment by 10
+-- start with r + 1`, here region 0
+create sequence s1 increment by 10 start with 1;
 
-create table t
+create table t1
  (
-  id      bigint primary key default nextval('s'),
+  id      bigint primary key default nextval('s1'),
   region  smallint not null,
   payload text not null
 );
 
--- the region in the key, one sequence per region counting by 1
-create sequence s;
+-- 2. the region in the key, one sequence per region counting by 1
+create sequence s2;
 
-create table t
+create table t2
  (
   region  smallint not null default 0,
-  id      bigint not null default nextval('s'),
+  id      bigint not null default nextval('s2'),
   payload text not null,
 
   primary key (region, id)
 );
 
--- random uuid, and time-ordered uuid
-create table t
+-- 3. random uuid
+create table t3
  (
-  id      uuid primary key default gen_random_uuid(),  -- or default uuidv7()
+  id      uuid primary key default gen_random_uuid(),
   region  smallint not null,
   payload text not null
 );
 
--- a bigint made of 41 bits of milliseconds since 2026-01-01 UTC, 4 bits of
--- region and 18 of a per-region counter; each region sets app.region
-create sequence s;
+-- 4. time-ordered uuid
+create table t4
+ (
+  id      uuid primary key default uuidv7(),
+  region  smallint not null,
+  payload text not null
+);
 
-create table t
+-- 5. a bigint made of 41 bits of milliseconds since 2026-01-01 UTC, 4 bits of
+-- region and 18 of a per-region counter; each region sets app.region
+create sequence s5;
+
+create table t5
  (
   id      bigint primary key default (
             ((extract(epoch from clock_timestamp() - timestamptz '2026-01-01 UTC') * 1000)::bigint << 22)
             | (current_setting('app.region')::bigint << 18)
-            | (nextval('s') & 262143)
+            | (nextval('s5') & 262143)
           ),
   region  smallint not null,
   payload text not null
@@ -263,13 +271,13 @@ a second writer.
 ### What filtering by region adds
 
 Each region publishes its own rows with a row filter on the region, as in
-`create publication region_1 for table t where (region = 1)`. For an `INSERT`,
+`create publication region_1 for table t3 where (region = 1)`. For an `INSERT`,
 that's all it takes. For an `UPDATE` or a `DELETE`, Postgres requires the
-columns of the filter to be part of the replica identity, so a table keyed on
-`id` alone refuses the first `UPDATE`:
+columns of the filter to be part of the replica identity, so `t3`, keyed on
+`id` alone, refuses the first `UPDATE`:
 
 ~~~ results
-ERROR:  cannot update table "t"
+ERROR:  cannot update table "t3"
 DETAIL:  Column used in the publication WHERE expression is not part of the replica identity.
 ~~~
 
@@ -277,9 +285,9 @@ The fix is a second unique index that holds both columns, set as the replica
 identity:
 
 ~~~ sql
-create unique index t_id_region on t (id, region);
+create unique index t3_id_region on t3 (id, region);
 
-alter table t replica identity using index t_id_region;
+alter table t3 replica identity using index t3_id_region;
 ~~~
 
 With it, the `UPDATE` goes through. The `(region, id)` key doesn't need any of
@@ -301,27 +309,26 @@ and no second index.
 
 The time-based `bigint` doesn't need a second index. Its region is in its bits,
 and a row filter may use the built-in operators that read them, so the filter
-reads the key and nothing else. Here's the publisher of region 1, with the
-time-based `bigint` table of the five candidates, its primary key as the replica identity (the default),
-and no other index:
+reads the key and nothing else. Here's the publisher of region 1, with table
+`t5`, its primary key as the replica identity (the default), and no other index:
 
 ~~~ sql
-create publication region_1 for table t where (((id >> 18) & 15) = 1);
+create publication region_1 for table t5 where (((id >> 18) & 15) = 1);
 
 -- 1,000 rows made here, with region 1 in the bits of their ids
-insert into t(region, payload)
+insert into t5(region, payload)
      select 1, 'mine'
        from generate_series(1, 1000);
 
 -- 1,000 rows that came from region 2, with region 2 in the bits of their ids
-insert into t(id, region, payload)
+insert into t5(id, region, payload)
      select (2::bigint << 18) | n, 2, 'theirs'
        from generate_series(1, 1000) n;
 
 -- change 100 rows of each, then delete 50 of each
-update t set payload = payload || ', updated' where (id & 262143) <= 100;
+update t5 set payload = payload || ', updated' where (id & 262143) <= 100;
 
-delete from t where (id & 262143) between 101 and 150;
+delete from t5 where (id & 262143) between 101 and 150;
 ~~~
 
 Then we count the rows by `payload` on the publisher, the server where the rows
