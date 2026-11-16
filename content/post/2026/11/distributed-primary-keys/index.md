@@ -169,13 +169,17 @@ create table t5
 );
 ~~~
 
-| Key | How regions avoid each other | Size of one key |
-|---|---|---|
-| Sequence per region | each region has its own numbers | 8 bytes |
-| Composite `(region, id)` | the region is in the key | 2 + 8 bytes, 16 once aligned in a row or an index entry |
-| `gen_random_uuid()` (v4) | the space is too large to collide | 16 bytes |
-| `uuidv7()` | the same, with a time prefix | 16 bytes |
-| Time-based `bigint` | the region is in the bits | 8 bytes |
+| Key | How regions avoid each other | Key | Row | Index entry |
+|---|---|---|---|---|
+| Sequence per region | each region has its own numbers | 8 bytes | 72 bytes | 16 bytes |
+| Composite `(region, id)` | the region is in the key | 2 + 8 bytes | 80 bytes | 24 bytes |
+| `gen_random_uuid()` (v4) | the space is too large to collide | 16 bytes | 80 bytes | 24 bytes |
+| `uuidv7()` | the same, with a time prefix | 16 bytes | 80 bytes | 24 bytes |
+| Time-based `bigint` | the region is in the bits | 8 bytes | 72 bytes | 16 bytes |
+
+Row and Index entry are what one row of these tables and one entry of their
+primary key take on a page, padding included, as
+[measured](#how-much-room-a-key-takes) on Postgres 19rc1.
 
 The sequence per region gives each region its own numbers: with an increment of
 10, region 0 makes 1, 11, 21 and so on, and region 1 makes 2, 12, 22. The
@@ -203,6 +207,41 @@ become built in with Postgres 13, and `uuidv7()` with Postgres 18 ([the 11-18
 selection](/blog/2026/07/sql-improvements-in-postgresql-1118-a-personal-selection/#uuidv7--time-sortable-uuids-pg-18)
 has the details). The choice is no longer between a random key and an extension,
 and we can measure what the random one costs.
+
+### How much room a key takes
+
+A key of 10 bytes doesn't take 10 bytes on a page. Postgres pads values so that
+each one starts where the CPU can read it in one go, and the rules are in the
+source code:
+
+- **Each type has an alignment**, the `typalign` of `pg_type`. A `bigint` starts
+  on a multiple of 8 bytes and a `smallint` on a multiple of 2. A `uuid` is
+  stored as 16 bytes with no alignment. A `text` value shorter than 127 bytes
+  gets a 1-byte length and no alignment either (`heap_compute_data_size()`).
+- **A row** starts with a 23-byte header, padded to 24 (`t_hoff`). The columns
+  follow in table order, each at its alignment. The page then stores the row
+  padded to a multiple of 8 (`PageAddItemExtended()`), plus a 4-byte line
+  pointer that says where the row is.
+- **An index entry** starts with an 8-byte header: the address of the row in the
+  table and the size of the entry (`IndexTupleData`). The key columns follow,
+  each at its alignment, and the entry is padded to a multiple of 8
+  (`index_form_tuple()`). It also gets a 4-byte line pointer.
+
+With a `smallint` region and a 32-byte payload, here's what each key costs.
+`pageinspect` on Postgres 19rc1 reads the same sizes:
+
+{{< image src="fig-sizes.svg" title="A row and a primary key entry under each key, byte by byte: the padding is what makes 2 + 8 bytes cost as much as 16." >}}
+
+A `bigint` key gives a 72-byte row. A `(region, id)` key adds 6 bytes of padding
+between the two columns, so that the `bigint` starts on a multiple of 8: that's
+73 bytes, padded to 80. A uuid gives 75 bytes, also padded to 80. In the index,
+a `bigint` entry takes 16 bytes, and both the `(region, id)` and the uuid
+entries take 24.
+
+Declaring the `bigint` column first in the table, with the primary key still on
+`(region, id)`, brings the row back to 72 bytes. It doesn't change the index
+entry: the index keeps the order of the key, and an 18-byte entry is padded to
+24 anyway.
 
 ## What each one costs on one server
 
@@ -245,18 +284,45 @@ run. From the point of view of the index, `uuidv7()` behaves like a sequence.
 
 {{< image src="fig-btree.svg" title="Where the new rows land in the index, and how full the pages stay: random pages cost a full-page image each, the last page costs one." >}}
 
-The size columns hold two more results.
+The size columns hold three more results.
+
+The `(region, id)` and uuid tables are 10% larger than the tables with a
+`bigint` key: 80-byte rows instead of 72, as [the padding](#how-much-room-a-key-takes)
+predicts. In the heap, a composite key of this shape costs what a uuid costs.
 
 The random uuid index is 27% larger than the `uuidv7()` one, for the same
-16-byte keys. When a new key goes into a full page in the middle of the index, the
-page splits into two half-full pages, and random inserts leave them partly empty. Appending at the right
-end leaves the pages behind it full.
+24-byte entries. When a new key goes into a full page in the middle of the
+index, the page splits into two half-full pages, and random inserts leave them
+partly empty. Appending at the right end leaves the pages behind it full.
 
-The `(region, id)` table is 10% larger than the tables with a single `bigint`
-key. A `bigint` has to start on a multiple of 8 bytes, so a `smallint` followed
-by a `bigint` takes 16 bytes, and the whole row is then padded to the next
-multiple of 8. In the heap, a composite key of this shape costs what a uuid
-costs.
+The `bigint` indexes are only 4% to 7% smaller than the `uuidv7()` one, when
+their entries are a third smaller. Their pages are less full. We loaded
+1,000,000 rows with the same four writers and read the leaf pages with
+`pgstatindex()`:
+
+| Key | Index entry | Leaf pages filled |
+|---|---|---|
+| Sequence per region | 16 bytes | 67% |
+| `(region, id)` | 24 bytes | 90% |
+| `gen_random_uuid()` | 24 bytes | 72% |
+| `uuidv7()` | 24 bytes | 90% |
+| Time-based `bigint` | 16 bytes | 71% |
+
+When the rightmost page of an index splits, Postgres leaves the left page 90%
+full, the default fillfactor of a B-tree, because it expects more increasing
+keys to come. Any other leaf page splits in the middle (`_bt_findsplitloc()`).
+Four writers on a sequence per region don't make one increasing series: a writer
+that falls a little behind inserts its next id just left of the latest ones,
+often on a page that is no longer the rightmost, and that page splits in half. The time-based
+`bigint` does the same within each millisecond, where the ids of region 0 sort
+before those of region 3, whichever comes first. `uuidv7()` stays in insertion order across sessions, since its time
+counts fractions of a millisecond.
+
+The `(region, id)` index has a rule of its own. In a multi-column index, when a
+new entry continues the group of its left neighbour, here the same region with a
+higher id, the page splits right after the new entry
+(`_bt_afternewitemoff()`), and each region's pages stay 90% full. Single-column
+indexes are left out of that rule.
 
 Others measured the same index behaviour with one writer. [A 2024
 benchmark](https://ardentperf.com/2024/02/03/uuid-benchmark-war/) found

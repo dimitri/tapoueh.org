@@ -10,6 +10,7 @@ Results are in `../results/`, named after the script that made them.
 | Script | What it runs | Results |
 |---|---|---|
 | `run-single.sh <variant> [run]`, `run-single-all.sh` | five keys, with and without the companion index (`+`): 4 writers, 5,000,000 rows, then 500,000 rows after a checkpoint | `30-single-*.out`, `summarize-single.py` makes `30-single-summary.txt` |
+| `run-sizes.sh` | one row and one primary key entry under each key, read with `pageinspect`, then how full the primary key's leaf pages stay with four writers and 1,000,000 rows (`pgstatindex()`) | `150-sizes.out` |
 | `run-child.sh` | 1,000,000 parents and 5,000,000 children under each key | `95-child.out` |
 | `run-mesh.sh <variant>` | three regions writing at once, each subscribed to the other two | `80-mesh-*.out` |
 | `run-failover.sh <insync\|lagging> [run]` | a standby promoted after the primary is killed, and what its sequence hands out | `70-failover-*.out` |
