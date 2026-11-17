@@ -1,0 +1,20 @@
+# pk-seqam-ft plus pg_auto_failover (monitor extension and keeper), built against the same server.
+# pg_auto_failover main manages synchronized_standby_slots, sync_replication_slots and the dbname of
+# primary_conninfo itself (its docs/cdc.rst), which is what the logical subscription of the drill needs.
+#   docker build -t pk-pgaf -f compose/seqam/Dockerfile.pgaf compose/seqam
+FROM pk-seqam-ft
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      libkrb5-dev libncurses-dev libpam0g-dev libxslt1-dev libselinux1-dev libzstd-dev liblz4-dev libsqlite3-dev \
+    && rm -rf /var/lib/apt/lists/*
+# The first make generates git-version.h and fails at the test runner, which we don't need.
+# Three build fixes for gcc 14 and the meson-built server: no -Werror (the server's flags add
+# -Wmissing-variable-declarations), and -lm, -lz, -lzstd, -llz4 at the end of the link line.
+RUN git clone --depth 1 https://github.com/hapostgres/pg_auto_failover.git /src/pgaf \
+    && cd /src/pgaf && git log -1 --format='pg_auto_failover %h %ad' \
+    && sed -i 's/^DEFAULT_CFLAGS += -Werror/DEFAULT_CFLAGS += -Wno-error/; s/^LIBS += -lpq$/LIBS += -lpq -lm/' src/bin/common/Makefile.common \
+    && sed -i 's/^LIBS += -lpgfeutils -lpgcommon -lpgport$/LIBS += -lpgfeutils -lpgcommon -lpgport -lz -lzstd -llz4 -lm/' src/bin/pg_autoctl/Makefile \
+    && (make -s PG_CONFIG=/usr/local/pgsql/bin/pg_config bin >/dev/null 2>&1 || true) \
+    && make -s PG_CONFIG=/usr/local/pgsql/bin/pg_config -C src/bin/pg_autoctl \
+    && make -s PG_CONFIG=/usr/local/pgsql/bin/pg_config -C src/monitor install \
+    && cp src/bin/pg_autoctl/pg_autoctl /usr/local/pgsql/bin/
+ENV LD_LIBRARY_PATH=/usr/local/pgsql/lib/aarch64-linux-gnu
