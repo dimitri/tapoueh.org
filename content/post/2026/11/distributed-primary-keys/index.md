@@ -1,6 +1,6 @@
 +++
 title     = "Distributed primary keys"
-date      = "2026-11-09T18:00:00+0100"
+date      = "2026-11-17T11:52:00+0100"
 tags      = ["PostgreSQL", "Replication", "Data Modeling", "Architecture"]
 categories = ["PostgreSQL", "Architecture"]
 icon      = "🔑"
